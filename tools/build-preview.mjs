@@ -27,8 +27,8 @@ import { fileURLToPath } from 'node:url';
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = resolve(REPO, 'preview/pwa');
 
-const PROD_URI = 'https://jackamo-8bit.github.io/gecko-intranet/';
-const PREVIEW_URI = 'https://jackamo-8bit.github.io/gecko-intranet/preview/pwa/';
+const PROD_URI = 'https://gecko-it-services.github.io/gecko-intranet/';
+const PREVIEW_URI = 'https://gecko-it-services.github.io/gecko-intranet/preview/pwa/';
 
 const html = await readFile(resolve(REPO, 'index.html'), 'utf8');
 const manifest = JSON.parse(await readFile(resolve(REPO, 'manifest.webmanifest'), 'utf8'));
