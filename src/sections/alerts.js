@@ -14,7 +14,7 @@
    ║   NOTE: no top-level `window` access in this file.                ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
-import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
+import { graphFetch, resolveSiteId, fetchAllLists, clearListsCache } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
 
 export const MAILBOX     = 'support@gecko-it.com';
@@ -38,7 +38,13 @@ const ALR = {
   loading: false,
   error: null,
   clients: null,     // Clients list rows, loaded on first "Email client"
+  entries: [],       // parsed alert emails, kept so a resolve can re-triage without re-reading mail
+  resolutions: new Map(),
+  resolutionsListId: null,
+  resolutionsMissing: false,
+  showResolved: false,
 };
+export const RESOLUTIONS_LIST = 'GeckoAlertResolutions';
 const CLIENTS_LIST = 'Clients';
 
 // ─── Parsing (pure) ───────────────────────────────────────────────────
@@ -62,6 +68,7 @@ export function parseAteraEmail(body) {
   const out = [];
   for (const part of parts) {
     const url = part.slice(0, 800).match(/href="(https:\/\/app\.atera\.com[^"]*\/device\/[^"]*)"/i);
+    const resolve = part.match(/href="(https:\/\/app\.atera\.com[^"]*\/alerts\/resolve\/[^"]*)"/i);
     const text = decode(part.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
     const m = text.match(/^(.*?)\s*Status:\s*(\w+)\s*(.*?)\s*(?:Created at\b.*|Mark alert as resolved.*|_{3,}.*)?$/i);
     const head = (m ? m[1] : text).trim();
@@ -71,6 +78,7 @@ export function parseAteraEmail(body) {
       device:    (dc ? dc[1] : head).trim() || 'Unknown device',
       client:    (dc ? dc[2] : '').trim() || 'Unknown client',
       deviceUrl: url ? decode(url[1]) : '',
+      resolveUrl: resolve ? decode(resolve[1]) : '',
       status:    m ? m[2] : 'Problem',
       message:   m ? m[3].trim() : '',
     });
@@ -171,11 +179,16 @@ export function describe(issue) {
 }
 
 /**
+ * resolutions: Map of issue key → { at: Date, by, note, id } from the
+ * GeckoAlertResolutions list. An issue resolved after its last alert is
+ * returned with level 'resolved'; one that alerted again afterwards comes
+ * back with `reopened` set.
+ *
  * Raw alert entries → triaged issues. One issue per client + device + kind
  * (+ drive / service). Repeats are counted, not listed.
  * Atera's "Resolved" emails, if switched on, close the issue.
  */
-export function buildIssues(entries, now = new Date()) {
+export function buildIssues(entries, now = new Date(), resolutions = new Map()) {
   const map = new Map();
   for (const e of entries || []) {
     const when = e.when instanceof Date ? e.when : new Date(e.when);
@@ -188,7 +201,7 @@ export function buildIssues(entries, now = new Date()) {
         key, client: e.client, device: e.device, deviceUrl: e.deviceUrl || '',
         kind: c.kind, drive: c.drive || '', service: c.service || '', state: c.state || '',
         message: e.message, count: 0, first: when, last: when, peak: 0, current: 0,
-        dayset: new Set(), resolvedAt: null, link: e.link || '',
+        dayset: new Set(), resolvedAt: null, link: e.link || '', resolveUrl: '',
       };
       map.set(key, is);
     }
@@ -201,6 +214,7 @@ export function buildIssues(entries, now = new Date()) {
     if (when < is.first) is.first = when;
     if (when >= is.last) {
       is.last = when; is.message = e.message; is.link = e.link || is.link;
+      if (e.resolveUrl) is.resolveUrl = e.resolveUrl;
       if (c.state) is.state = c.state;
       if (typeof c.value === 'number') is.current = c.value;
     }
@@ -208,7 +222,7 @@ export function buildIssues(entries, now = new Date()) {
     if (e.deviceUrl) is.deviceUrl = e.deviceUrl;
   }
 
-  const RANK = { critical: 0, important: 1, noise: 2 };
+  const RANK = { critical: 0, important: 1, noise: 2, resolved: 3 };
   const issues = [];
   for (const is of map.values()) {
     if (!is.count) continue;                                   // only a Resolved seen
@@ -223,10 +237,39 @@ export function buildIssues(entries, now = new Date()) {
     is.level = (is.quiet && a.level === 'important') ? 'noise' : a.level;
     is.why = (is.quiet && a.level === 'important') ? `${a.why}; quiet for ${Math.floor((now - is.last) / DAY_MS)} days` : a.why;
     is.label = describe(is);
+    const r = resolutions.get(is.key);
+    if (r && r.at >= is.last) {
+      is.level = 'resolved';
+      is.resolution = r;
+      is.why = `Resolved by ${r.by || 'someone'}${r.note ? `: ${r.note}` : ''}`;
+    } else if (r) {
+      // Alerted again after we said it was fixed: never stay hidden, and
+      // never sit in the filtered pile either.
+      is.reopened = r;
+      if (is.level === 'noise') is.level = 'important';
+      is.why = `Back after being resolved by ${r.by || 'someone'} on ${r.at.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' })}. ${a.why}`;
+    }
     issues.push(is);
   }
   issues.sort((a, b) => RANK[a.level] - RANK[b.level] || b.last - a.last);
   return issues;
+}
+
+/** GeckoAlertResolutions items → Map(issue key → latest resolution). */
+export function resolutionsFromItems(items) {
+  const map = new Map();
+  for (const it of items || []) {
+    const key = String(it.fields?.Title || '').toLowerCase();
+    const at = new Date(it.createdDateTime || it.fields?.Created);
+    if (!key || Number.isNaN(at.getTime())) continue;
+    const prev = map.get(key);
+    if (prev && prev.at >= at) continue;
+    map.set(key, {
+      id: it.id, at, note: it.fields?.Note || '',
+      by: it.createdBy?.user?.displayName || it.fields?.ResolvedBy || '',
+    });
+  }
+  return map;
 }
 
 // ─── Client email (pure, unit-tested) ─────────────────────────────────
@@ -344,7 +387,7 @@ export function outlookComposeUrl({ to, subject, body }) {
 }
 
 export function summarise(issues, alertCount) {
-  const s = { critical: 0, important: 0, noise: 0, alerts: alertCount, noiseAlerts: 0 };
+  const s = { critical: 0, important: 0, noise: 0, resolved: 0, alerts: alertCount, noiseAlerts: 0 };
   for (const i of issues) { s[i.level]++; if (i.level === 'noise') s.noiseAlerts += i.count; }
   return s;
 }
@@ -389,12 +432,14 @@ async function load({ interactive = false } = {}) {
   setBusy(true);
   render();
   try {
-    const { entries, capped } = await fetchEntries(ALR.days, { interactive });
+    const [{ entries, capped }] = await Promise.all([
+      fetchEntries(ALR.days, { interactive }),
+      loadResolutions(),
+    ]);
     if (seq !== loadSeq) return;
-    const alerts = entries.filter(e => !/^resolved$/i.test(e.status)).length;
-    ALR.issues = buildIssues(entries);
-    ALR.stats = summarise(ALR.issues, alerts);
+    ALR.entries = entries;
     ALR.capped = capped;
+    retriage();
     const stamp = document.getElementById('alrLastSync');
     if (stamp) stamp.textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
@@ -412,6 +457,41 @@ async function load({ interactive = false } = {}) {
   }
 }
 
+function retriage() {
+  const alerts = ALR.entries.filter(e => !/^resolved$/i.test(e.status)).length;
+  ALR.issues = buildIssues(ALR.entries, new Date(), ALR.resolutions);
+  ALR.stats = summarise(ALR.issues, alerts);
+}
+
+async function resolutionsListId() {
+  if (ALR.resolutionsListId) return ALR.resolutionsListId;
+  const find = lists => lists.find(l => l.displayName === RESOLUTIONS_LIST || l.name === RESOLUTIONS_LIST);
+  let list = find(await fetchAllLists());
+  if (!list) { clearListsCache(); list = find(await fetchAllLists()); }
+  if (!list) { const e = new Error(`${RESOLUTIONS_LIST} list not found`); e.code = 'LIST_MISSING'; throw e; }
+  return (ALR.resolutionsListId = list.id);
+}
+
+/** Never fails the page: without the list, issues just can't be marked resolved. */
+async function loadResolutions() {
+  try {
+    const siteId = await resolveSiteId();
+    const listId = await resolutionsListId();
+    const items = [];
+    let next = `/sites/${siteId}/lists/${listId}/items?expand=fields($select=Title,Note)&$select=id,createdDateTime,createdBy&$top=999`;
+    while (next) {
+      const res = await graphFetch(next);
+      items.push(...(res?.value || []));
+      next = res?.['@odata.nextLink'] || null;
+    }
+    ALR.resolutions = resolutionsFromItems(items);
+    ALR.resolutionsMissing = false;
+  } catch (err) {
+    ALR.resolutionsMissing = err?.code === 'LIST_MISSING';
+    if (!ALR.resolutionsMissing) toast('Could not read resolved alerts: ' + (err?.message || 'error'), 'error');
+  }
+}
+
 function setBusy(busy) {
   const btn = document.getElementById('alrRefresh');
   if (btn) { btn.disabled = busy; btn.classList.toggle('spinning', busy); }
@@ -422,8 +502,8 @@ function setBusy(busy) {
 const fmtWhen = d => d.toLocaleString('en-GB', {
   timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
 });
-const BADGE = { critical: 'badge-red', important: 'badge-amber', noise: 'badge-blue' };
-const LEVEL = { critical: 'Act today', important: 'This week', noise: 'Filtered' };
+const BADGE = { critical: 'badge-red', important: 'badge-amber', noise: 'badge-blue', resolved: 'badge-green' };
+const LEVEL = { critical: 'Act today', important: 'This week', noise: 'Filtered', resolved: 'Resolved' };
 
 const consentMessage = () => `
   <div class="bkp-error">
@@ -445,8 +525,8 @@ export function renderKpis(stats) {
     <div class="bkp-kpi alr-kpi"><span class="bkp-kpi-val" style="color:var(${color})">${val}</span><span class="bkp-kpi-lbl">${label}</span></div>`;
   return tile(v('critical'), 'Act today', '--red')
        + tile(v('important'), 'This week', '--amber')
-       + tile(v('noise'), 'Filtered issues', '--muted')
-       + tile(v('alerts'), 'Alert emails read', '--white');
+       + tile(v('resolved'), 'Resolved', '--green')
+       + tile(v('noise'), `Filtered${stats ? ` (${stats.alerts} emails read)` : ''}`, '--muted');
 }
 
 export function renderIssue(is) {
@@ -455,7 +535,7 @@ export function renderIssue(is) {
     : '1 alert';
   return `
     <tr class="alr-row alr-${is.level}">
-      <td><span class="badge ${BADGE[is.level]}">${LEVEL[is.level]}</span></td>
+      <td><span class="badge ${BADGE[is.level]}">${LEVEL[is.level]}</span>${is.reopened ? '<span class="badge badge-purple alr-back">Back again</span>' : ''}</td>
       <td class="bkp-what"><strong>${escapeHtml(is.client)}</strong>
         <span class="bkp-sub">${is.deviceUrl
           ? `<a href="${escapeHtml(is.deviceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(is.device)}</a>`
@@ -464,7 +544,9 @@ export function renderIssue(is) {
         <span class="bkp-sub">${escapeHtml(is.why)}</span></td>
       <td class="bkp-mono">${escapeHtml(seen)}<span class="bkp-sub">first ${escapeHtml(fmtWhen(is.first))}</span>${is.link ? `<a class="bkp-sub" href="${escapeHtml(is.link)}" target="_blank" rel="noopener noreferrer">view alert</a>` : ''}</td>
       <td class="bkp-mono">${escapeHtml(fmtWhen(is.last))}${is.quiet ? '<span class="bkp-sub">quiet since</span>' : ''}</td>
-      <td><button type="button" class="alr-email" data-alr-email="${escapeHtml(is.key)}">Email client</button></td>
+      <td class="alr-actions">${is.level === 'resolved'
+        ? `<span class="bkp-sub">${escapeHtml(fmtWhen(is.resolution.at))}</span><button type="button" class="alr-email" data-alr-undo="${escapeHtml(is.key)}">Undo</button>`
+        : `<button type="button" class="alr-email" data-alr-email="${escapeHtml(is.key)}">Email client</button><button type="button" class="alr-email alr-resolve" data-alr-resolve="${escapeHtml(is.key)}">Resolved</button>`}</td>
     </tr>`;
 }
 
@@ -490,6 +572,8 @@ function render() {
   if (kpis) kpis.innerHTML = renderKpis(ALR.error ? null : ALR.stats);
   const toggle = document.getElementById('alrShowNoise');
   if (toggle) toggle.checked = ALR.showNoise;
+  const rtoggle = document.getElementById('alrShowResolved');
+  if (rtoggle) rtoggle.checked = ALR.showResolved;
 
   if (ALR.loading && !ALR.issues) { mount.innerHTML = '<p class="bkp-empty">Reading Atera alerts from the support mailbox…</p>'; return; }
   if (ALR.error === 'CONSENT')   { mount.innerHTML = consentMessage(); return; }
@@ -502,7 +586,8 @@ function render() {
 
   const q = ALR.query.toLowerCase();
   const match = is => !q || `${is.client} ${is.device} ${is.label}`.toLowerCase().includes(q);
-  const actionable = ALR.issues.filter(i => i.level !== 'noise' && match(i));
+  const actionable = ALR.issues.filter(i => (i.level === 'critical' || i.level === 'important') && match(i));
+  const resolved = ALR.issues.filter(i => i.level === 'resolved' && match(i));
   const noise = ALR.issues.filter(i => i.level === 'noise' && match(i));
 
   const main = actionable.length
@@ -513,11 +598,19 @@ function render() {
     ? `<h3 class="alr-h">Filtered (${noise.length} issues, ${ALR.stats.noiseAlerts} emails)</h3>${table(noise.map(renderIssue).join(''))}`
     : '';
 
+  const resolvedPart = ALR.showResolved
+    ? (resolved.length
+        ? `<h3 class="alr-h">Resolved (${resolved.length})</h3>${table(resolved.map(renderIssue).join(''))}`
+        : '<h3 class="alr-h">Resolved</h3><p class="bkp-empty">Nothing marked resolved in this window yet.</p>')
+    : '';
+
   mount.innerHTML = `
+    ${ALR.resolutionsMissing ? `<p class="bkp-note">The Resolved button needs a SharePoint list called ${RESOLUTIONS_LIST}. Press Resolved on any alert to see how to set it up.</p>` : ''}
     ${ALR.capped ? `<p class="bkp-note">Showing the newest ${SAFETY_LIMIT.toLocaleString('en-GB')} emails. Pick a shorter window for the full picture.</p>` : ''}
     ${main}
     ${noisePart}
-    <p class="bkp-foot">Repeats are folded into one row per device and problem. Atera doesn't email when an alert clears, so anything quiet for ${QUIET_DAYS}+ days drops to Filtered unless it's critical. Turn on "Resolved" emails in Atera to close issues for certain.</p>`;
+    ${resolvedPart}
+    <p class="bkp-foot">Press Resolved once an issue is dealt with: it disappears for everyone and comes back, marked "Back again", only if Atera alerts on it again. Repeats are folded into one row per device and problem. Atera doesn't email when an alert clears, so anything quiet for ${QUIET_DAYS}+ days drops to Filtered unless it's critical. Turn on "Resolved" emails in Atera to close issues for certain.</p>`;
   syncTableLabels(mount);
 }
 
@@ -557,9 +650,7 @@ async function openEmail(key) {
   const backdrop = document.getElementById('alrBackdrop');
   const body = document.getElementById('alrModalBody');
   if (!issue || !backdrop || !body) return;
-  focusBeforeModal = document.activeElement;
-  body.innerHTML = '<p class="bkp-sub">Preparing the email…</p>';
-  backdrop.removeAttribute('hidden');
+  openModal('Email the client', '<p class="bkp-sub">Preparing the email…</p>');
 
   const contact = matchClient(issue.client, await loadContacts());
   const draft = composeEmail(issue, contact, senderName());
@@ -598,6 +689,92 @@ async function openEmail(key) {
   });
 }
 
+// ─── Resolve / undo ───────────────────────────────────────────────────
+
+const setupMessage = () => `
+  <div class="prj-form">
+    <p><strong>One-off setup.</strong> Resolved alerts are kept in a SharePoint list so you and Jack see the same thing.</p>
+    <p class="bkp-sub">On the portal SharePoint site (GeckoITClientPortal), create a list called
+      <code>${RESOLUTIONS_LIST}</code> and add one column: <code>Note</code> (Multiple lines of text, plain text).
+      Nothing else is needed: the issue goes in Title, and SharePoint records who resolved it and when.</p>
+    <div class="prj-form-actions">
+      <button type="button" id="alrResolveCancel">Close</button>
+      <button type="button" class="prj-primary" id="alrRetryList">I've created it</button>
+    </div>
+  </div>`;
+
+function openModal(title, html) {
+  const backdrop = document.getElementById('alrBackdrop');
+  if (!backdrop) return false;
+  focusBeforeModal = document.activeElement;
+  document.getElementById('alrModalTitle').textContent = title;
+  document.getElementById('alrModalBody').innerHTML = html;
+  backdrop.removeAttribute('hidden');
+  return true;
+}
+
+function openResolve(key) {
+  const issue = ALR.issues?.find(i => i.key === key);
+  if (!issue) return;
+  if (ALR.resolutionsMissing) {
+    openModal('Mark as resolved', setupMessage());
+    document.getElementById('alrResolveCancel')?.addEventListener('click', closeModal);
+    document.getElementById('alrRetryList')?.addEventListener('click', async () => {
+      ALR.resolutionsListId = null;
+      await loadResolutions();
+      if (ALR.resolutionsMissing) { toast(`Still can't find ${RESOLUTIONS_LIST}. Check the name`, 'error'); return; }
+      retriage(); render(); openResolve(key);
+    });
+    return;
+  }
+  openModal('Mark as resolved', `
+    <form class="prj-form" id="alrResolveForm">
+      <p><strong>${escapeHtml(issue.client)}</strong> · ${escapeHtml(issue.device)}<br><span class="bkp-sub">${escapeHtml(issue.label)}</span></p>
+      <label>What was done? (optional)<textarea id="alrResolveNote" rows="3" placeholder="e.g. Cleared 40 GB of temp files, D: now at 61%"></textarea></label>
+      ${issue.resolveUrl ? `<p class="bkp-sub">Atera keeps its own copy of the alert. <a href="${escapeHtml(issue.resolveUrl)}" target="_blank" rel="noopener noreferrer">Clear it in Atera too</a> (opens Atera).</p>` : ''}
+      <div class="prj-form-actions">
+        <button type="button" id="alrResolveCancel">Cancel</button>
+        <button type="submit" class="prj-primary">Mark resolved</button>
+      </div>
+    </form>`);
+  document.getElementById('alrResolveNote')?.focus();
+  document.getElementById('alrResolveCancel')?.addEventListener('click', closeModal);
+  document.getElementById('alrResolveForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+      const siteId = await resolveSiteId();
+      const listId = await resolutionsListId();
+      await graphFetch(`/sites/${siteId}/lists/${listId}/items`, {
+        method: 'POST',
+        body: JSON.stringify({ fields: { Title: issue.key, Note: document.getElementById('alrResolveNote').value.trim() } }),
+      });
+      await loadResolutions();
+      retriage(); render(); closeModal();
+      toast(`${issue.device} marked resolved`, 'success');
+    } catch (err) {
+      submit.disabled = false;
+      toast(err?.message || 'Could not save', 'error');
+    }
+  });
+}
+
+async function undoResolve(key) {
+  const r = ALR.resolutions.get(key);
+  if (!r) return;
+  try {
+    const siteId = await resolveSiteId();
+    const listId = await resolutionsListId();
+    await graphFetch(`/sites/${siteId}/lists/${listId}/items/${r.id}`, { method: 'DELETE' });
+    await loadResolutions();
+    retriage(); render();
+    toast('Back on the list', 'success');
+  } catch (err) {
+    toast(err?.message || 'Could not undo', 'error');
+  }
+}
+
 // ─── Section lifecycle ────────────────────────────────────────────────
 
 export function init() {
@@ -617,6 +794,10 @@ export function init() {
     }));
   document.getElementById('alrShowNoise')?.addEventListener('change', event => {
     ALR.showNoise = event.target.checked;
+    render();
+  });
+  document.getElementById('alrShowResolved')?.addEventListener('change', event => {
+    ALR.showResolved = event.target.checked;
     render();
   });
   document.getElementById('alrSearch')?.addEventListener('input', event => {
@@ -644,6 +825,10 @@ export function init() {
   document.getElementById('alrBoard')?.addEventListener('click', event => {
     const emailBtn = event.target.closest?.('[data-alr-email]');
     if (emailBtn) { openEmail(emailBtn.dataset.alrEmail); return; }
+    const resolveBtn = event.target.closest?.('[data-alr-resolve]');
+    if (resolveBtn) { openResolve(resolveBtn.dataset.alrResolve); return; }
+    const undoBtn = event.target.closest?.('[data-alr-undo]');
+    if (undoBtn) { undoBtn.disabled = true; undoResolve(undoBtn.dataset.alrUndo); return; }
     if (event.target.closest?.('#alrRetry')) load();
     if (event.target.closest?.('#alrGrant')) {
       load({ interactive: true }).then(() => { if (!ALR.error) toast('Mailbox access granted', 'success'); });

@@ -6891,7 +6891,10 @@ body::before {
       <div class="bkp-kpis" id="alrKpis"></div>
 
       <div class="alr-toolbar">
-        <label class="alr-toggle" for="alrShowNoise"><input type="checkbox" id="alrShowNoise"> Show filtered</label>
+        <span class="alr-toggles">
+          <label class="alr-toggle" for="alrShowNoise"><input type="checkbox" id="alrShowNoise"> Show filtered</label>
+          <label class="alr-toggle" for="alrShowResolved"><input type="checkbox" id="alrShowResolved"> Show resolved</label>
+        </span>
         <span>
           <label for="alrSearch" class="sr-only">Filter alerts</label>
           <input class="bkp-search" id="alrSearch" type="search" placeholder="Filter client or device">

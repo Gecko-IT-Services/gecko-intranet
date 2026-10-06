@@ -35,3 +35,7 @@
 #section-alerts .bkp-mono a.bkp-sub { color: var(--muted); text-decoration: underline; }
 .alr-modal { width: min(640px, 100%); }
 .alr-modal textarea { min-height: 260px; line-height: 1.5; }
+#section-alerts .alr-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+#section-alerts .alr-resolve:hover { border-color: var(--green); color: var(--green); }
+#section-alerts .alr-back { margin-top: 4px; display: inline-block; }
+#section-alerts .alr-toggles { display: inline-flex; gap: 16px; flex-wrap: wrap; }
