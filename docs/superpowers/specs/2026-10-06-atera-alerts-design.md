@@ -96,6 +96,32 @@ only Jenny's PC and the FP Server surface, the quiet Sage PC drops out, and
 a Resolved email closes an issue.
 `tests/portal-accessibility-smoke.mjs` nav count 11 → 12.
 
+## Resolved button (added 6 Oct 2026)
+
+Atera sends no "Resolved" email (setting is Critical-only), so without this
+a critical issue stays until it ages out of the window.
+
+- SharePoint list **`GeckoAlertResolutions`**, created by hand: `Title` (the
+  issue key: client|device|kind|drive|service, lower case) and `Note`
+  (multi-line plain text). Who and when come from SharePoint's own
+  Created / Created By, so there is nothing to fill in or fake.
+- An issue whose latest resolution is after its last alert is `resolved`:
+  hidden, viewable via "Show resolved", with Undo (deletes that row).
+- An issue that alerts again after being resolved comes back flagged
+  "Back again" and is never filtered as noise, so a fix that didn't hold
+  can't hide.
+- The resolve dialog links to Atera's own "Mark alert as resolved" URL from
+  the email, so the Atera console can be cleared in the same step.
+- List missing → a one-off setup note on the page; the rest of the page
+  still works.
+
+## Email client (added 6 Oct 2026)
+
+"Email client" drafts a plain-English message asking permission to fix the
+issue, prefilled from the `Clients` list (`PrimaryContact`, `Email`),
+greeting the person named in the device ("Jenny's PC" → "Hi Jenny"). Opens
+in Outlook on the web; never sends by itself; no new permissions.
+
 ## Fix at source (recommended, separate)
 
 Turn off SNMP monitoring for the Onsite printers, and either raise the Atera

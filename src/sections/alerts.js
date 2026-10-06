@@ -14,7 +14,7 @@
    ║   NOTE: no top-level `window` access in this file.                ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
-import { graphFetch } from '../core/graph.js';
+import { graphFetch, resolveSiteId, fetchAllLists, clearListsCache } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
 
 export const MAILBOX     = 'support@gecko-it.com';
@@ -37,19 +37,21 @@ const ALR = {
   capped: false,
   loading: false,
   error: null,
+  clients: null,     // Clients list rows, loaded on first "Email client"
+  entries: [],       // parsed alert emails, kept so a resolve can re-triage without re-reading mail
+  resolutions: new Map(),
+  resolutionsListId: null,
+  resolutionsMissing: false,
+  showResolved: false,
 };
+export const RESOLUTIONS_LIST = 'GeckoAlertResolutions';
+const CLIENTS_LIST = 'Clients';
 
 // ─── Parsing (pure) ───────────────────────────────────────────────────
 
 const decode = s => String(s || '')
   .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
   .replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'");
-
-const htmlToLines = html => decode(String(html || '')
-  .replace(/<br\s*\/?>/gi, '\n')
-  .replace(/<\/(div|p|tr|td|li|h\d)>/gi, '\n')
-  .replace(/<[^>]+>/g, ''))
-  .split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
 /**
  * One Atera email → one or more alert entries. A single email can carry
@@ -58,28 +60,28 @@ const htmlToLines = html => decode(String(html || '')
  * plain text when that is all there is.
  */
 export function parseAteraEmail(body) {
-  const html = String(body || '');
-  const parts = html.split(/Device:\s*/).slice(1);
+  // Flatten each block to one line of text and parse that. The live
+  // messages from Graph do NOT keep line breaks between Atera's <div>s,
+  // so anything line-based reads the whole email as the device name.
+  const html = String(body || '').replace(/&nbsp;/gi, ' ');
+  const parts = html.split(/Device:\s*/i).slice(1);
   const out = [];
   for (const part of parts) {
-    let device = '', client = '', deviceUrl = '';
-    const linked = part.match(/^<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>\s*\(([^<\n]*)\)/i);
-    if (linked) {
-      deviceUrl = decode(linked[1]);
-      device = decode(linked[2].replace(/<[^>]+>/g, '')).trim();
-      client = decode(linked[3]).trim();
-    } else {
-      // Plain text: "Karen's PC (Home) (Freeston Water Treatment)" — the client is the LAST bracket.
-      const firstLine = decode(part.replace(/<[^>]+>/g, '')).split(/\r?\n/)[0].trim();
-      const m = firstLine.match(/^(.*)\(([^()]*)\)\s*$/);
-      if (m) { device = m[1].trim(); client = m[2].trim(); } else { device = firstLine; }
-    }
-    const lines = htmlToLines(part);
-    const statusIdx = lines.findIndex(l => /^Status:/i.test(l));
-    const status = statusIdx >= 0 ? lines[statusIdx].replace(/^Status:\s*/i, '').trim() : 'Problem';
-    const message = (statusIdx >= 0 ? lines.slice(statusIdx + 1) : lines.slice(1))
-      .find(l => !/^(Created at|Mark alert as resolved|_{3,})/i.test(l)) || '';
-    out.push({ device: device || 'Unknown device', client: client || 'Unknown client', deviceUrl, status, message });
+    const url = part.slice(0, 800).match(/href="(https:\/\/app\.atera\.com[^"]*\/device\/[^"]*)"/i);
+    const resolve = part.match(/href="(https:\/\/app\.atera\.com[^"]*\/alerts\/resolve\/[^"]*)"/i);
+    const text = decode(part.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+    const m = text.match(/^(.*?)\s*Status:\s*(\w+)\s*(.*?)\s*(?:Created at\b.*|Mark alert as resolved.*|_{3,}.*)?$/i);
+    const head = (m ? m[1] : text).trim();
+    // "Karen's PC (Home) (Freeston Water Treatment)": the client is the LAST bracket.
+    const dc = head.match(/^(.*)\(([^()]*)\)\s*$/);
+    out.push({
+      device:    (dc ? dc[1] : head).trim() || 'Unknown device',
+      client:    (dc ? dc[2] : '').trim() || 'Unknown client',
+      deviceUrl: url ? decode(url[1]) : '',
+      resolveUrl: resolve ? decode(resolve[1]) : '',
+      status:    m ? m[2] : 'Problem',
+      message:   m ? m[3].trim() : '',
+    });
   }
   return out;
 }
@@ -177,11 +179,16 @@ export function describe(issue) {
 }
 
 /**
+ * resolutions: Map of issue key → { at: Date, by, note, id } from the
+ * GeckoAlertResolutions list. An issue resolved after its last alert is
+ * returned with level 'resolved'; one that alerted again afterwards comes
+ * back with `reopened` set.
+ *
  * Raw alert entries → triaged issues. One issue per client + device + kind
  * (+ drive / service). Repeats are counted, not listed.
  * Atera's "Resolved" emails, if switched on, close the issue.
  */
-export function buildIssues(entries, now = new Date()) {
+export function buildIssues(entries, now = new Date(), resolutions = new Map()) {
   const map = new Map();
   for (const e of entries || []) {
     const when = e.when instanceof Date ? e.when : new Date(e.when);
@@ -194,7 +201,7 @@ export function buildIssues(entries, now = new Date()) {
         key, client: e.client, device: e.device, deviceUrl: e.deviceUrl || '',
         kind: c.kind, drive: c.drive || '', service: c.service || '', state: c.state || '',
         message: e.message, count: 0, first: when, last: when, peak: 0, current: 0,
-        dayset: new Set(), resolvedAt: null, link: e.link || '',
+        dayset: new Set(), resolvedAt: null, link: e.link || '', resolveUrl: '',
       };
       map.set(key, is);
     }
@@ -207,6 +214,7 @@ export function buildIssues(entries, now = new Date()) {
     if (when < is.first) is.first = when;
     if (when >= is.last) {
       is.last = when; is.message = e.message; is.link = e.link || is.link;
+      if (e.resolveUrl) is.resolveUrl = e.resolveUrl;
       if (c.state) is.state = c.state;
       if (typeof c.value === 'number') is.current = c.value;
     }
@@ -214,7 +222,7 @@ export function buildIssues(entries, now = new Date()) {
     if (e.deviceUrl) is.deviceUrl = e.deviceUrl;
   }
 
-  const RANK = { critical: 0, important: 1, noise: 2 };
+  const RANK = { critical: 0, important: 1, noise: 2, resolved: 3 };
   const issues = [];
   for (const is of map.values()) {
     if (!is.count) continue;                                   // only a Resolved seen
@@ -229,14 +237,157 @@ export function buildIssues(entries, now = new Date()) {
     is.level = (is.quiet && a.level === 'important') ? 'noise' : a.level;
     is.why = (is.quiet && a.level === 'important') ? `${a.why}; quiet for ${Math.floor((now - is.last) / DAY_MS)} days` : a.why;
     is.label = describe(is);
+    const r = resolutions.get(is.key);
+    if (r && r.at >= is.last) {
+      is.level = 'resolved';
+      is.resolution = r;
+      is.why = `Resolved by ${r.by || 'someone'}${r.note ? `: ${r.note}` : ''}`;
+    } else if (r) {
+      // Alerted again after we said it was fixed: never stay hidden, and
+      // never sit in the filtered pile either.
+      is.reopened = r;
+      if (is.level === 'noise') is.level = 'important';
+      is.why = `Back after being resolved by ${r.by || 'someone'} on ${r.at.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' })}. ${a.why}`;
+    }
     issues.push(is);
   }
   issues.sort((a, b) => RANK[a.level] - RANK[b.level] || b.last - a.last);
   return issues;
 }
 
+/** GeckoAlertResolutions items → Map(issue key → latest resolution). */
+export function resolutionsFromItems(items) {
+  const map = new Map();
+  for (const it of items || []) {
+    const key = String(it.fields?.Title || '').toLowerCase();
+    const at = new Date(it.createdDateTime || it.fields?.Created);
+    if (!key || Number.isNaN(at.getTime())) continue;
+    const prev = map.get(key);
+    if (prev && prev.at >= at) continue;
+    map.set(key, {
+      id: it.id, at, note: it.fields?.Note || '',
+      by: it.createdBy?.user?.displayName || it.fields?.ResolvedBy || '',
+    });
+  }
+  return map;
+}
+
+// ─── Client email (pure, unit-tested) ─────────────────────────────────
+
+/** Loose client-name key: "Technix Rubber & Plastics Ltd" ≈ "technix rubber and plastics". */
+export const clientKey = s => String(s || '').toLowerCase()
+  .replace(/&/g, ' and ').replace(/\b(ltd|limited|plc|llp)\b\.?/g, ' ')
+  .replace(/[^a-z0-9]+/g, ' ').trim();
+
+/** Find the Clients-list row for an Atera client name. Exact key first, then containment. */
+export function matchClient(name, clients) {
+  const k = clientKey(name);
+  if (!k) return null;
+  const list = (clients || []).filter(c => c && c.name);
+  return list.find(c => clientKey(c.name) === k)
+      || list.find(c => { const ck = clientKey(c.name); return ck && (ck.includes(k) || k.includes(ck)); })
+      || null;
+}
+
+/** "Jenny's PC" → "Jenny"; "Darren Laptop (New)" → "Darren"; "FP Server" → "". */
+export function ownerFromDevice(device) {
+  const d = String(device || '').trim();
+  let m = d.match(/^([A-Z][a-z]+)['’]s\b/);
+  if (m) return m[1];
+  m = d.match(/^([A-Z][a-z]+)\s+(Laptop|PC|Desktop|Mac|Surface)\b/i);
+  if (m && !/^(sage|file|database|office|spare|main|new|old|warranty|admin)$/i.test(m[1])) return m[1];
+  return '';
+}
+
+const firstName = s => String(s || '').trim().split(/\s+/)[0] || '';
+
+/**
+ * The plain-English explanation and the fix we are asking permission for,
+ * per kind of problem. Written for the person at the desk, not for IT.
+ */
+export function explain(issue) {
+  const dev = issue.device;
+  const pct = (issue.current || issue.peak || 0).toFixed(0);
+  switch (issue.kind) {
+    case 'disk': {
+      const full = (issue.current || issue.peak || 0) >= 99;
+      return {
+        short: full ? `${dev} has run out of storage space` : `${dev} is running out of storage space`,
+        what: full
+          ? `Our monitoring shows that ${dev} has run out of storage space: the ${issue.drive}: drive is completely full. When a drive is full, the computer slows down, files can fail to save, and Windows updates and backups can stop working.`
+          : `Our monitoring shows that ${dev} is almost out of storage space: the ${issue.drive}: drive is ${pct}% full. When a drive fills up, the computer slows down, files can fail to save, and Windows updates and backups can stop working.`,
+        fix: `We'd like to connect remotely and free up space by clearing temporary files, old Windows update files and the recycle bin, and check what is taking up the room. We won't delete any of your own documents without asking you first. It takes about 20 to 30 minutes and you can carry on working while we do it.`,
+      };
+    }
+    case 'service':
+      return {
+        short: `the backup software on ${dev} has stopped`,
+        what: `Our monitoring shows that the backup software on ${dev} has stopped running, which means the computer may not be being backed up at the moment.`,
+        fix: `We'd like to connect remotely, restart the backup service and run a test backup to make sure everything is protected again. It takes about 10 minutes and shouldn't interrupt your work.`,
+      };
+    case 'offline':
+      return {
+        short: `${dev} has stopped checking in with us`,
+        what: `${dev} hasn't checked in with our monitoring since ${issue.last.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London' })}. That usually means it has been switched off, disconnected or replaced, but it can also mean something has stopped working on it.`,
+        fix: `If it's been retired or replaced, just let us know and we'll tidy up our records. If it should be running, we'd like to take a look remotely, or arrange a visit if we can't reach it.`,
+      };
+    case 'cpu':
+    case 'memory':
+      return {
+        short: `${dev} is running slowly`,
+        what: `Our monitoring shows that ${dev} has been working flat out (${issue.kind === 'cpu' ? 'processor' : 'memory'} at ${pct}%) for long periods, which will make it feel slow and can cause programs to freeze.`,
+        fix: `We'd like to connect remotely, find out what is using the resources and sort it out. It takes about 20 minutes.`,
+      };
+    default:
+      return {
+        short: `our monitoring has flagged a problem with ${dev}`,
+        what: `Our monitoring has flagged a problem with ${dev}: "${issue.message}".`,
+        fix: `We'd like to connect remotely and look into it. It shouldn't take long.`,
+      };
+  }
+}
+
+/**
+ * Draft for the client: what's wrong in plain English, what we'd do, and a
+ * request for permission. `contact` is the Clients-list row (may be null).
+ */
+export function composeEmail(issue, contact, sender = '') {
+  const e = explain(issue);
+  const owner = ownerFromDevice(issue.device);
+  const hello = owner || firstName(contact?.primaryContact);
+  const server = isServer(issue.device);
+  const short = e.short.charAt(0).toUpperCase() + e.short.slice(1);
+  const lines = [
+    `Hi ${hello || 'there'},`,
+    '',
+    e.what,
+    '',
+    e.fix,
+    '',
+    server
+      ? `As this is a server, we'll agree a time with you first so nobody loses their work.`
+      : `Are you happy for us to go ahead? If now isn't a good time, just reply with a time that suits you.`,
+    '',
+    'Kind regards,',
+    sender || 'The Gecko IT team',
+    'Gecko IT Services',
+    '02381 800171 | support@gecko-it.com',
+  ];
+  return {
+    to: contact?.email || '',
+    subject: `${short}: OK for us to fix it?`,
+    body: lines.join('\n'),
+  };
+}
+
+/** Outlook on the web compose window, prefilled. Opens in a new tab. */
+export function outlookComposeUrl({ to, subject, body }) {
+  const q = new URLSearchParams({ to: to || '', subject, body });
+  return `https://outlook.office.com/mail/deeplink/compose?${q.toString().replace(/\+/g, '%20')}`;
+}
+
 export function summarise(issues, alertCount) {
-  const s = { critical: 0, important: 0, noise: 0, alerts: alertCount, noiseAlerts: 0 };
+  const s = { critical: 0, important: 0, noise: 0, resolved: 0, alerts: alertCount, noiseAlerts: 0 };
   for (const i of issues) { s[i.level]++; if (i.level === 'noise') s.noiseAlerts += i.count; }
   return s;
 }
@@ -281,12 +432,14 @@ async function load({ interactive = false } = {}) {
   setBusy(true);
   render();
   try {
-    const { entries, capped } = await fetchEntries(ALR.days, { interactive });
+    const [{ entries, capped }] = await Promise.all([
+      fetchEntries(ALR.days, { interactive }),
+      loadResolutions(),
+    ]);
     if (seq !== loadSeq) return;
-    const alerts = entries.filter(e => !/^resolved$/i.test(e.status)).length;
-    ALR.issues = buildIssues(entries);
-    ALR.stats = summarise(ALR.issues, alerts);
+    ALR.entries = entries;
     ALR.capped = capped;
+    retriage();
     const stamp = document.getElementById('alrLastSync');
     if (stamp) stamp.textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
@@ -304,6 +457,41 @@ async function load({ interactive = false } = {}) {
   }
 }
 
+function retriage() {
+  const alerts = ALR.entries.filter(e => !/^resolved$/i.test(e.status)).length;
+  ALR.issues = buildIssues(ALR.entries, new Date(), ALR.resolutions);
+  ALR.stats = summarise(ALR.issues, alerts);
+}
+
+async function resolutionsListId() {
+  if (ALR.resolutionsListId) return ALR.resolutionsListId;
+  const find = lists => lists.find(l => l.displayName === RESOLUTIONS_LIST || l.name === RESOLUTIONS_LIST);
+  let list = find(await fetchAllLists());
+  if (!list) { clearListsCache(); list = find(await fetchAllLists()); }
+  if (!list) { const e = new Error(`${RESOLUTIONS_LIST} list not found`); e.code = 'LIST_MISSING'; throw e; }
+  return (ALR.resolutionsListId = list.id);
+}
+
+/** Never fails the page: without the list, issues just can't be marked resolved. */
+async function loadResolutions() {
+  try {
+    const siteId = await resolveSiteId();
+    const listId = await resolutionsListId();
+    const items = [];
+    let next = `/sites/${siteId}/lists/${listId}/items?expand=fields($select=Title,Note)&$select=id,createdDateTime,createdBy&$top=999`;
+    while (next) {
+      const res = await graphFetch(next);
+      items.push(...(res?.value || []));
+      next = res?.['@odata.nextLink'] || null;
+    }
+    ALR.resolutions = resolutionsFromItems(items);
+    ALR.resolutionsMissing = false;
+  } catch (err) {
+    ALR.resolutionsMissing = err?.code === 'LIST_MISSING';
+    if (!ALR.resolutionsMissing) toast('Could not read resolved alerts: ' + (err?.message || 'error'), 'error');
+  }
+}
+
 function setBusy(busy) {
   const btn = document.getElementById('alrRefresh');
   if (btn) { btn.disabled = busy; btn.classList.toggle('spinning', busy); }
@@ -314,8 +502,8 @@ function setBusy(busy) {
 const fmtWhen = d => d.toLocaleString('en-GB', {
   timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
 });
-const BADGE = { critical: 'badge-red', important: 'badge-amber', noise: 'badge-blue' };
-const LEVEL = { critical: 'Act today', important: 'This week', noise: 'Filtered' };
+const BADGE = { critical: 'badge-red', important: 'badge-amber', noise: 'badge-blue', resolved: 'badge-green' };
+const LEVEL = { critical: 'Act today', important: 'This week', noise: 'Filtered', resolved: 'Resolved' };
 
 const consentMessage = () => `
   <div class="bkp-error">
@@ -337,8 +525,8 @@ export function renderKpis(stats) {
     <div class="bkp-kpi alr-kpi"><span class="bkp-kpi-val" style="color:var(${color})">${val}</span><span class="bkp-kpi-lbl">${label}</span></div>`;
   return tile(v('critical'), 'Act today', '--red')
        + tile(v('important'), 'This week', '--amber')
-       + tile(v('noise'), 'Filtered issues', '--muted')
-       + tile(v('alerts'), 'Alert emails read', '--white');
+       + tile(v('resolved'), 'Resolved', '--green')
+       + tile(v('noise'), `Filtered${stats ? ` (${stats.alerts} emails read)` : ''}`, '--muted');
 }
 
 export function renderIssue(is) {
@@ -347,16 +535,18 @@ export function renderIssue(is) {
     : '1 alert';
   return `
     <tr class="alr-row alr-${is.level}">
-      <td><span class="badge ${BADGE[is.level]}">${LEVEL[is.level]}</span></td>
+      <td><span class="badge ${BADGE[is.level]}">${LEVEL[is.level]}</span>${is.reopened ? '<span class="badge badge-purple alr-back">Back again</span>' : ''}</td>
       <td class="bkp-what"><strong>${escapeHtml(is.client)}</strong>
         <span class="bkp-sub">${is.deviceUrl
           ? `<a href="${escapeHtml(is.deviceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(is.device)}</a>`
           : escapeHtml(is.device)}</span></td>
       <td class="bkp-what"><strong>${escapeHtml(is.label)}</strong>
         <span class="bkp-sub">${escapeHtml(is.why)}</span></td>
-      <td class="bkp-mono">${escapeHtml(seen)}<span class="bkp-sub">first ${escapeHtml(fmtWhen(is.first))}</span></td>
+      <td class="bkp-mono">${escapeHtml(seen)}<span class="bkp-sub">first ${escapeHtml(fmtWhen(is.first))}</span>${is.link ? `<a class="bkp-sub" href="${escapeHtml(is.link)}" target="_blank" rel="noopener noreferrer">view alert</a>` : ''}</td>
       <td class="bkp-mono">${escapeHtml(fmtWhen(is.last))}${is.quiet ? '<span class="bkp-sub">quiet since</span>' : ''}</td>
-      <td>${is.link ? `<a href="${escapeHtml(is.link)}" target="_blank" rel="noopener noreferrer">Email</a>` : ''}</td>
+      <td class="alr-actions">${is.level === 'resolved'
+        ? `<span class="bkp-sub">${escapeHtml(fmtWhen(is.resolution.at))}</span><button type="button" class="alr-email" data-alr-undo="${escapeHtml(is.key)}">Undo</button>`
+        : `<button type="button" class="alr-email" data-alr-email="${escapeHtml(is.key)}">Email client</button><button type="button" class="alr-email alr-resolve" data-alr-resolve="${escapeHtml(is.key)}">Resolved</button>`}</td>
     </tr>`;
 }
 
@@ -382,6 +572,8 @@ function render() {
   if (kpis) kpis.innerHTML = renderKpis(ALR.error ? null : ALR.stats);
   const toggle = document.getElementById('alrShowNoise');
   if (toggle) toggle.checked = ALR.showNoise;
+  const rtoggle = document.getElementById('alrShowResolved');
+  if (rtoggle) rtoggle.checked = ALR.showResolved;
 
   if (ALR.loading && !ALR.issues) { mount.innerHTML = '<p class="bkp-empty">Reading Atera alerts from the support mailbox…</p>'; return; }
   if (ALR.error === 'CONSENT')   { mount.innerHTML = consentMessage(); return; }
@@ -394,7 +586,8 @@ function render() {
 
   const q = ALR.query.toLowerCase();
   const match = is => !q || `${is.client} ${is.device} ${is.label}`.toLowerCase().includes(q);
-  const actionable = ALR.issues.filter(i => i.level !== 'noise' && match(i));
+  const actionable = ALR.issues.filter(i => (i.level === 'critical' || i.level === 'important') && match(i));
+  const resolved = ALR.issues.filter(i => i.level === 'resolved' && match(i));
   const noise = ALR.issues.filter(i => i.level === 'noise' && match(i));
 
   const main = actionable.length
@@ -405,12 +598,181 @@ function render() {
     ? `<h3 class="alr-h">Filtered (${noise.length} issues, ${ALR.stats.noiseAlerts} emails)</h3>${table(noise.map(renderIssue).join(''))}`
     : '';
 
+  const resolvedPart = ALR.showResolved
+    ? (resolved.length
+        ? `<h3 class="alr-h">Resolved (${resolved.length})</h3>${table(resolved.map(renderIssue).join(''))}`
+        : '<h3 class="alr-h">Resolved</h3><p class="bkp-empty">Nothing marked resolved in this window yet.</p>')
+    : '';
+
   mount.innerHTML = `
+    ${ALR.resolutionsMissing ? `<p class="bkp-note">The Resolved button needs a SharePoint list called ${RESOLUTIONS_LIST}. Press Resolved on any alert to see how to set it up.</p>` : ''}
     ${ALR.capped ? `<p class="bkp-note">Showing the newest ${SAFETY_LIMIT.toLocaleString('en-GB')} emails. Pick a shorter window for the full picture.</p>` : ''}
     ${main}
     ${noisePart}
-    <p class="bkp-foot">Repeats are folded into one row per device and problem. Atera doesn't email when an alert clears, so anything quiet for ${QUIET_DAYS}+ days drops to Filtered unless it's critical. Turn on "Resolved" emails in Atera to close issues for certain.</p>`;
+    ${resolvedPart}
+    <p class="bkp-foot">Press Resolved once an issue is dealt with: it disappears for everyone and comes back, marked "Back again", only if Atera alerts on it again. Repeats are folded into one row per device and problem. Atera doesn't email when an alert clears, so anything quiet for ${QUIET_DAYS}+ days drops to Filtered unless it's critical. Turn on "Resolved" emails in Atera to close issues for certain.</p>`;
   syncTableLabels(mount);
+}
+
+// ─── Email client (modal) ─────────────────────────────────────────────
+
+async function loadContacts() {
+  if (ALR.clients) return ALR.clients;
+  try {
+    const siteId = await resolveSiteId();
+    const list = (await fetchAllLists()).find(l => l.displayName === CLIENTS_LIST || l.name === CLIENTS_LIST);
+    if (!list) return (ALR.clients = []);
+    const res = await graphFetch(`/sites/${siteId}/lists/${list.id}/items?expand=fields($select=Title,PrimaryContact,Email)&$top=999`);
+    ALR.clients = (res.value || []).map(i => ({
+      name: i.fields?.Title || '', primaryContact: i.fields?.PrimaryContact || '', email: i.fields?.Email || '',
+    })).filter(c => c.name);
+  } catch {
+    ALR.clients = [];   // the draft still works; the To field is just empty
+  }
+  return ALR.clients;
+}
+
+function senderName() {
+  const n = document.getElementById('userName')?.textContent?.trim() || '';
+  return /not signed in/i.test(n) ? '' : n;
+}
+
+let focusBeforeModal = null;
+
+function closeModal() {
+  document.getElementById('alrBackdrop')?.setAttribute('hidden', '');
+  focusBeforeModal?.isConnected && focusBeforeModal.focus();
+  focusBeforeModal = null;
+}
+
+async function openEmail(key) {
+  const issue = ALR.issues?.find(i => i.key === key);
+  const backdrop = document.getElementById('alrBackdrop');
+  const body = document.getElementById('alrModalBody');
+  if (!issue || !backdrop || !body) return;
+  openModal('Email the client', '<p class="bkp-sub">Preparing the email…</p>');
+
+  const contact = matchClient(issue.client, await loadContacts());
+  const draft = composeEmail(issue, contact, senderName());
+  const note = contact
+    ? `To: ${escapeHtml(contact.primaryContact || contact.name)}, the contact on the Clients list for ${escapeHtml(contact.name)}. Change it if someone else uses ${escapeHtml(issue.device)}.`
+    : `No contact found for ${escapeHtml(issue.client)} on the Clients list. Add the address below.`;
+
+  body.innerHTML = `
+    <form class="prj-form" id="alrEmailForm">
+      <p class="bkp-sub">${note}</p>
+      <label>To<input id="alrEmailTo" type="email" value="${escapeHtml(draft.to)}" placeholder="name@client.co.uk"></label>
+      <label>Subject<input id="alrEmailSubject" value="${escapeHtml(draft.subject)}"></label>
+      <label>Message<textarea id="alrEmailBody" rows="14">${escapeHtml(draft.body)}</textarea></label>
+      <div class="prj-form-actions">
+        <button type="button" id="alrEmailCancel">Cancel</button>
+        <button type="button" id="alrEmailCopy">Copy text</button>
+        <button type="submit" class="prj-primary">Open in Outlook</button>
+      </div>
+    </form>`;
+  document.getElementById('alrEmailSubject')?.focus();
+  document.getElementById('alrEmailCancel')?.addEventListener('click', closeModal);
+  document.getElementById('alrEmailCopy')?.addEventListener('click', async () => {
+    const text = `${document.getElementById('alrEmailSubject').value}\n\n${document.getElementById('alrEmailBody').value}`;
+    try { await navigator.clipboard.writeText(text); toast('Email copied', 'success'); }
+    catch { toast('Could not copy. Select the text and copy it instead', 'error'); }
+  });
+  document.getElementById('alrEmailForm')?.addEventListener('submit', event => {
+    event.preventDefault();
+    const url = outlookComposeUrl({
+      to: document.getElementById('alrEmailTo').value.trim(),
+      subject: document.getElementById('alrEmailSubject').value,
+      body: document.getElementById('alrEmailBody').value,
+    });
+    window.open(url, '_blank', 'noopener');
+    closeModal();
+  });
+}
+
+// ─── Resolve / undo ───────────────────────────────────────────────────
+
+const setupMessage = () => `
+  <div class="prj-form">
+    <p><strong>One-off setup.</strong> Resolved alerts are kept in a SharePoint list so you and Jack see the same thing.</p>
+    <p class="bkp-sub">On the portal SharePoint site (GeckoITClientPortal), create a list called
+      <code>${RESOLUTIONS_LIST}</code> and add one column: <code>Note</code> (Multiple lines of text, plain text).
+      Nothing else is needed: the issue goes in Title, and SharePoint records who resolved it and when.</p>
+    <div class="prj-form-actions">
+      <button type="button" id="alrResolveCancel">Close</button>
+      <button type="button" class="prj-primary" id="alrRetryList">I've created it</button>
+    </div>
+  </div>`;
+
+function openModal(title, html) {
+  const backdrop = document.getElementById('alrBackdrop');
+  if (!backdrop) return false;
+  focusBeforeModal = document.activeElement;
+  document.getElementById('alrModalTitle').textContent = title;
+  document.getElementById('alrModalBody').innerHTML = html;
+  backdrop.removeAttribute('hidden');
+  return true;
+}
+
+function openResolve(key) {
+  const issue = ALR.issues?.find(i => i.key === key);
+  if (!issue) return;
+  if (ALR.resolutionsMissing) {
+    openModal('Mark as resolved', setupMessage());
+    document.getElementById('alrResolveCancel')?.addEventListener('click', closeModal);
+    document.getElementById('alrRetryList')?.addEventListener('click', async () => {
+      ALR.resolutionsListId = null;
+      await loadResolutions();
+      if (ALR.resolutionsMissing) { toast(`Still can't find ${RESOLUTIONS_LIST}. Check the name`, 'error'); return; }
+      retriage(); render(); openResolve(key);
+    });
+    return;
+  }
+  openModal('Mark as resolved', `
+    <form class="prj-form" id="alrResolveForm">
+      <p><strong>${escapeHtml(issue.client)}</strong> · ${escapeHtml(issue.device)}<br><span class="bkp-sub">${escapeHtml(issue.label)}</span></p>
+      <label>What was done? (optional)<textarea id="alrResolveNote" rows="3" placeholder="e.g. Cleared 40 GB of temp files, D: now at 61%"></textarea></label>
+      ${issue.resolveUrl ? `<p class="bkp-sub">Atera keeps its own copy of the alert. <a href="${escapeHtml(issue.resolveUrl)}" target="_blank" rel="noopener noreferrer">Clear it in Atera too</a> (opens Atera).</p>` : ''}
+      <div class="prj-form-actions">
+        <button type="button" id="alrResolveCancel">Cancel</button>
+        <button type="submit" class="prj-primary">Mark resolved</button>
+      </div>
+    </form>`);
+  document.getElementById('alrResolveNote')?.focus();
+  document.getElementById('alrResolveCancel')?.addEventListener('click', closeModal);
+  document.getElementById('alrResolveForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+      const siteId = await resolveSiteId();
+      const listId = await resolutionsListId();
+      await graphFetch(`/sites/${siteId}/lists/${listId}/items`, {
+        method: 'POST',
+        body: JSON.stringify({ fields: { Title: issue.key, Note: document.getElementById('alrResolveNote').value.trim() } }),
+      });
+      await loadResolutions();
+      retriage(); render(); closeModal();
+      toast(`${issue.device} marked resolved`, 'success');
+    } catch (err) {
+      submit.disabled = false;
+      toast(err?.message || 'Could not save', 'error');
+    }
+  });
+}
+
+async function undoResolve(key) {
+  const r = ALR.resolutions.get(key);
+  if (!r) return;
+  try {
+    const siteId = await resolveSiteId();
+    const listId = await resolutionsListId();
+    await graphFetch(`/sites/${siteId}/lists/${listId}/items/${r.id}`, { method: 'DELETE' });
+    await loadResolutions();
+    retriage(); render();
+    toast('Back on the list', 'success');
+  } catch (err) {
+    toast(err?.message || 'Could not undo', 'error');
+  }
 }
 
 // ─── Section lifecycle ────────────────────────────────────────────────
@@ -434,11 +796,39 @@ export function init() {
     ALR.showNoise = event.target.checked;
     render();
   });
+  document.getElementById('alrShowResolved')?.addEventListener('change', event => {
+    ALR.showResolved = event.target.checked;
+    render();
+  });
   document.getElementById('alrSearch')?.addEventListener('input', event => {
     ALR.query = event.target.value.trim();
     render();
   });
+  // The draft-email modal, added once. Reuses the Projects modal styles.
+  const section = document.getElementById('section-alerts');
+  if (section && !document.getElementById('alrBackdrop')) {
+    section.insertAdjacentHTML('beforeend', `
+      <div class="prj-backdrop" id="alrBackdrop" hidden>
+        <div class="prj-modal alr-modal" role="dialog" aria-modal="true" aria-labelledby="alrModalTitle">
+          <h3 id="alrModalTitle">Email the client</h3>
+          <div id="alrModalBody"></div>
+        </div>
+      </div>`);
+    document.getElementById('alrBackdrop').addEventListener('click', event => {
+      if (event.target.id === 'alrBackdrop') closeModal();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !document.getElementById('alrBackdrop')?.hasAttribute('hidden')) closeModal();
+    });
+  }
+
   document.getElementById('alrBoard')?.addEventListener('click', event => {
+    const emailBtn = event.target.closest?.('[data-alr-email]');
+    if (emailBtn) { openEmail(emailBtn.dataset.alrEmail); return; }
+    const resolveBtn = event.target.closest?.('[data-alr-resolve]');
+    if (resolveBtn) { openResolve(resolveBtn.dataset.alrResolve); return; }
+    const undoBtn = event.target.closest?.('[data-alr-undo]');
+    if (undoBtn) { undoBtn.disabled = true; undoResolve(undoBtn.dataset.alrUndo); return; }
     if (event.target.closest?.('#alrRetry')) load();
     if (event.target.closest?.('#alrGrant')) {
       load({ interactive: true }).then(() => { if (!ALR.error) toast('Mailbox access granted', 'success'); });

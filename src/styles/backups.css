@@ -6,66 +6,66 @@
 
 /* — Section head controls. ID-scoped, same reason as projects.css: the
      inline stylesheet loads after this file. — */
-#section-backups .bkp-head-actions {
+:is(#section-backups, #section-alerts) .bkp-head-actions {
   display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap;
 }
-#section-backups .bkp-window {
+:is(#section-backups, #section-alerts) .bkp-window {
   display: inline-flex; border: 1px solid var(--border-dim);
   border-radius: var(--radius-pill); overflow: hidden;
 }
-#section-backups .bkp-window button {
+:is(#section-backups, #section-alerts) .bkp-window button {
   border: 0; background: transparent; color: var(--muted);
   padding: 7px 14px; font-family: var(--font-body); font-size: 12px;
   cursor: pointer; transition: background var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
 }
-#section-backups .bkp-window button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
-#section-backups .bkp-refresh {
+:is(#section-backups, #section-alerts) .bkp-window button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+:is(#section-backups, #section-alerts) .bkp-refresh {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: var(--radius-pill);
   background: transparent; border: 1px solid var(--border-dim);
   color: var(--muted); font-family: var(--font-body);
   font-size: 12px; cursor: pointer; transition: all .15s;
 }
-#section-backups .bkp-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
-#section-backups .bkp-refresh:disabled { opacity: .5; cursor: not-allowed; }
-#section-backups .bkp-refresh.spinning svg { animation: spin 1s linear infinite; }
-#section-backups .bkp-last-sync { font-size: 11px; color: var(--muted); margin-left: auto; }
+:is(#section-backups, #section-alerts) .bkp-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
+:is(#section-backups, #section-alerts) .bkp-refresh:disabled { opacity: .5; cursor: not-allowed; }
+:is(#section-backups, #section-alerts) .bkp-refresh.spinning svg { animation: spin 1s linear infinite; }
+:is(#section-backups, #section-alerts) .bkp-last-sync { font-size: 11px; color: var(--muted); margin-left: auto; }
 
 /* — KPI strip: same shape as the Compliance strip, but each tile filters. — */
-#section-backups .bkp-kpis {
+:is(#section-backups, #section-alerts) .bkp-kpis {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 14px 0; border: 1px solid var(--border-dim); border-radius: var(--radius);
   overflow: hidden; background: var(--card); box-shadow: var(--shadow-sm);
 }
-#section-backups .bkp-kpi {
+:is(#section-backups, #section-alerts) .bkp-kpi {
   padding: 14px 16px; border: 0; border-right: 1px solid var(--border-dim);
   background: transparent; color: inherit; font: inherit; text-align: center; cursor: pointer;
   transition: background var(--dur-2) var(--ease);
 }
-#section-backups .bkp-kpi:last-child { border-right: 0; }
-#section-backups .bkp-kpi:hover { background: var(--row-hover); }
-#section-backups .bkp-kpi[aria-pressed="true"] { background: var(--inset); box-shadow: inset 0 -3px 0 var(--green); }
-#section-backups .bkp-kpi-val {
+:is(#section-backups, #section-alerts) .bkp-kpi:last-child { border-right: 0; }
+:is(#section-backups, #section-alerts) .bkp-kpi:hover { background: var(--row-hover); }
+:is(#section-backups, #section-alerts) .bkp-kpi[aria-pressed="true"] { background: var(--inset); box-shadow: inset 0 -3px 0 var(--green); }
+:is(#section-backups, #section-alerts) .bkp-kpi-val {
   display: block; font-family: var(--font-body); font-size: 24px; font-weight: 800;
   letter-spacing: .02em; font-variant-numeric: tabular-nums;
 }
-#section-backups .bkp-kpi-lbl {
+:is(#section-backups, #section-alerts) .bkp-kpi-lbl {
   display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .07em;
   color: var(--muted); margin-top: 2px;
 }
 @media (max-width: 560px) {
-  #section-backups .bkp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #section-backups .bkp-kpi:nth-child(2) { border-right: 0; }
-  #section-backups .bkp-kpi:nth-child(-n+2) { border-bottom: 1px solid var(--border-dim); }
+  :is(#section-backups, #section-alerts) .bkp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  :is(#section-backups, #section-alerts) .bkp-kpi:nth-child(2) { border-right: 0; }
+  :is(#section-backups, #section-alerts) .bkp-kpi:nth-child(-n+2) { border-bottom: 1px solid var(--border-dim); }
 }
 
-#section-backups .bkp-search {
+:is(#section-backups, #section-alerts) .bkp-search {
   width: 260px; max-width: 100%; padding: 8px 12px;
   border: 1px solid var(--border-dim); border-radius: var(--radius-sm);
   background: var(--card); color: var(--white); font: inherit; font-size: 13px;
 }
-#section-backups .bkp-search:focus { outline: none; border-color: var(--green); }
-#section-backups .bkp-toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+:is(#section-backups, #section-alerts) .bkp-search:focus { outline: none; border-color: var(--green); }
+:is(#section-backups, #section-alerts) .bkp-toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
 
 /* — States — */
 .bkp-empty,

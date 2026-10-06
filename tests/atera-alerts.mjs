@@ -7,8 +7,8 @@ globalThis.window = {
 };
 
 import {
-  parseAteraEmail, classify, assess, isServer, isKeyMachine, isHomeMachine,
-  buildIssues, summarise, messagesPath, renderIssue, SENDER, MAILBOX
+  parseAteraEmail, classify, matchClient, clientKey, ownerFromDevice, explain, composeEmail, outlookComposeUrl, assess, isServer, isKeyMachine, isHomeMachine,
+  buildIssues, summarise, resolutionsFromItems, messagesPath, renderIssue, SENDER, MAILBOX
 } from '../src/sections/alerts.js';
 
 // — parseAteraEmail: the real HTML shape, two devices in one email —
@@ -30,6 +30,19 @@ assert.deepEqual(
 assert.equal(parsed[0].deviceUrl, 'https://app.atera.com/Admin#/rmm/device/6744/agent', 'keeps the Atera device link');
 assert.equal(parsed[1].device, "Stacey's New Laptop", 'entities decoded');
 assert.match(parsed[1].message, /^The Disk Usage\(C:\) 90.61%/);
+
+// — the format Graph actually returns live: no line breaks between the divs —
+const live = parseAteraEmail(`<div>Alert Summary</div><div>Device: <a href="https://app.atera.com/Admin#/rmm/device/abc/agent" target="_blank" rel="noopener noreferrer" data-auth="NotApplicable">Jenny's PC</a> (Hillcrest Engineering)</div><div>Status: Problem</div><div>&nbsp;</div><div>The Disk Usage(D:) 100.00% is greater than the threshold of 90.00%</div><div>&nbsp;</div><div>Created at 10/05/2026 08:49:10</div><div><a href="https://app.atera.com/Admin#/alerts/resolve/1">Mark alert as resolved</a></div>`);
+assert.deepEqual(
+  { device: live[0].device, client: live[0].client, status: live[0].status, message: live[0].message, url: live[0].deviceUrl },
+  { device: "Jenny's PC", client: 'Hillcrest Engineering', status: 'Problem',
+    message: 'The Disk Usage(D:) 100.00% is greater than the threshold of 90.00%',
+    url: 'https://app.atera.com/Admin#/rmm/device/abc/agent' },
+  'live single-line HTML parses into client, device and message'
+);
+const flat = parseAteraEmail("Device: Jenny's PC (Hillcrest Engineering)Status: Problem The Disk Usage(D:) 100.00% is greater than the threshold of 90.00% Created at 10/05/2026 08:49:10 Mark alert as resolved");
+assert.equal(flat[0].client, 'Hillcrest Engineering', 'flattened text, as seen on the live page');
+assert.equal(flat[0].device, "Jenny's PC");
 
 const plain = parseAteraEmail("Alert Summary\r\n\r\nDevice: Karen's PC (Home) (Freeston Water Treatment)\r\nStatus: Problem\r\n\r\nThe Disk Usage(C:) 90.20% is greater than the threshold of 90.00%\r\n\r\nCreated at 10/05/2026 14:07:17");
 assert.deepEqual([plain[0].device, plain[0].client], ["Karen's PC (Home)", 'Freeston Water Treatment'],
@@ -136,5 +149,79 @@ assert.ok(decoded.includes('$select=subject,receivedDateTime,body,webLink'), 'ne
 // — renderIssue escapes everything —
 const html = renderIssue({ ...jenny, client: '<script>x</script>', device: '<img src=x>', deviceUrl: '' });
 assert.ok(!html.includes('<script>') && !html.includes('<img'), 'escaped');
+
+// — Resolved button: our own resolutions —
+const fpIssue = issues.find(i => i.device === 'FP Server');
+const items = [
+  { id: '1', createdDateTime: '2026-10-05T10:00:00Z', createdBy: { user: { displayName: 'Philip Morris' } }, fields: { Title: jenny.key, Note: 'Cleared 40 GB' } },
+  { id: '2', createdDateTime: '2026-10-01T10:00:00Z', createdBy: { user: { displayName: 'Jack Morris' } }, fields: { Title: jenny.key } },
+  { id: '3', createdDateTime: '2026-10-01T10:00:00Z', createdBy: { user: { displayName: 'Jack Morris' } }, fields: { Title: fpIssue.key.toUpperCase() } },
+  { id: '4', createdDateTime: 'nope', fields: { Title: 'x' } },
+];
+const res = resolutionsFromItems(items);
+assert.equal(res.get(jenny.key).id, '1', 'latest resolution per issue wins');
+assert.equal(res.get(jenny.key).by, 'Philip Morris');
+assert.ok(res.has(fpIssue.key), 'keys are case-insensitive');
+
+const after = buildIssues(replay, NOW, res);
+const j2 = after.find(i => i.device === "Jenny's PC");
+assert.equal(j2.level, 'resolved', 'resolved after its last alert (5 Oct 07:50 < 10:00): hidden');
+assert.match(j2.why, /Resolved by Philip Morris: Cleared 40 GB/);
+const fp2 = after.find(i => i.device === 'FP Server');
+assert.equal(fp2.level, 'critical', 'resolved 1 Oct but alerted again 2 Oct: back on the list');
+assert.ok(fp2.reopened, 'flagged as back again');
+assert.match(fp2.why, /^Back after being resolved by Jack Morris on 1 Oct/);
+
+const sage2 = buildIssues(replay, NOW, new Map([[issues.find(i => i.device === 'Sage PC').key, { id: '9', at: new Date('2026-10-01T00:00:00Z'), by: 'Jack' }]]))
+  .find(i => i.device === 'Sage PC');
+assert.equal(sage2.level, 'important', 'a recurrence is never hidden in Filtered, even when quiet');
+const s2 = summarise(after, 10);
+assert.equal(s2.resolved, 1);
+assert.equal(s2.critical, 1);
+
+const clients = [
+  { name: 'Hillcrest Engineering Ltd', primaryContact: 'Jenny Smith', email: 'jenny@hillcrest.example' },
+  { name: 'Technix Rubber and Plastics', primaryContact: 'Lewis Lynch', email: 'lewis@technix.example' },
+  { name: 'West Country Fires', primaryContact: 'Martin Home', email: 'martin@wcf.example' },
+];
+assert.equal(clientKey('Technix Rubber & Plastics Ltd'), 'technix rubber and plastics');
+assert.equal(matchClient('Technix Rubber & Plastics', clients).email, 'lewis@technix.example', '& vs and, Ltd ignored');
+assert.equal(matchClient('Hillcrest Engineering', clients).email, 'jenny@hillcrest.example');
+assert.equal(matchClient('Nobody Ltd', clients), null);
+
+assert.equal(ownerFromDevice("Jenny's PC"), 'Jenny');
+assert.equal(ownerFromDevice('Darren Laptop (New)'), 'Darren');
+assert.equal(ownerFromDevice('Sage PC'), '', 'machine roles are not people');
+assert.equal(ownerFromDevice('FP Server'), '');
+
+const draft = composeEmail(jenny, matchClient(jenny.client, clients), 'Philip Morris');
+assert.equal(draft.to, 'jenny@hillcrest.example');
+assert.equal(draft.subject, "Jenny's PC has run out of storage space: OK for us to fix it?");
+assert.match(draft.body, /^Hi Jenny,/, 'greets the device owner');
+assert.match(draft.body, /D: drive is completely full/);
+assert.match(composeEmail({ ...jenny, current: 96 }, null).body, /almost out of storage space: the D: drive is 96% full/);
+assert.match(draft.body, /Are you happy for us to go ahead\?/, 'asks permission');
+assert.match(draft.body, /Philip Morris\nGecko IT Services/);
+assert.ok(!/Disk Usage|threshold|SNMP|Acronis Agent Core/i.test(draft.body), 'no monitoring jargon');
+
+const fp = issues.find(i => i.device === 'FP Server');
+const fpDraft = composeEmail(fp, matchClient(fp.client, clients));
+assert.match(fpDraft.body, /^Hi Martin,/, 'no person in the device name: greet the client contact');
+assert.match(fpDraft.body, /backup software on FP Server has stopped/);
+assert.match(fpDraft.body, /As this is a server/, 'servers get a scheduled fix, not "go ahead now"');
+assert.match(fpDraft.body, /The Gecko IT team/, 'fallback signature');
+assert.equal(composeEmail(fp, null).to, '', 'no contact: empty To, not a guess');
+assert.match(composeEmail({ ...fp, device: 'Thing' }, null).body, /^Hi there,/);
+
+for (const kind of ['disk', 'service', 'offline', 'cpu', 'memory', 'other']) {
+  const e = explain({ ...jenny, kind, message: 'x' });
+  assert.ok(e.short && e.what && e.fix, `wording exists for ${kind}`);
+}
+
+const url = new URL(outlookComposeUrl(draft));
+assert.equal(url.origin + url.pathname, 'https://outlook.office.com/mail/deeplink/compose');
+assert.equal(url.searchParams.get('to'), 'jenny@hillcrest.example');
+assert.equal(url.searchParams.get('body'), draft.body, 'body survives the round trip, line breaks included');
+assert.ok(!outlookComposeUrl(draft).includes('+'), 'spaces encoded as %20 for Outlook');
 
 console.log('atera-alerts: all assertions passed');
