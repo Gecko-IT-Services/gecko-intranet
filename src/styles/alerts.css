@@ -1,0 +1,26 @@
+/* ═══ ALERTS (ATERA TRIAGE) ═════════════════════════════════════════════
+   Section-scoped styles for src/sections/alerts.js. Most of the look is
+   shared with Backups (.bkp-* classes in backups.css); only what differs
+   lives here. Existing tokens only.
+   ═══════════════════════════════════════════════════════════════════ */
+
+#section-alerts .alr-head-actions {
+  display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap;
+}
+#section-alerts .alr-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 10px;
+}
+#section-alerts .alr-toggle {
+  display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer;
+}
+#section-alerts .alr-kpi { cursor: default; }
+#section-alerts .alr-kpi:hover { background: transparent; }
+#section-alerts .alr-h {
+  margin: 18px 0 10px; font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted);
+}
+#section-alerts .alr-card { padding: 0; overflow: hidden; }
+#section-alerts .alr-row.alr-critical td:first-child { box-shadow: inset 4px 0 0 var(--red); }
+#section-alerts .alr-row.alr-important td:first-child { box-shadow: inset 4px 0 0 var(--amber); }
+#section-alerts .alr-row.alr-noise { opacity: .75; }

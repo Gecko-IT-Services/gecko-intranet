@@ -69,6 +69,7 @@
      ═══════════════════════════════════════════════════════════════════ -->
 <link rel="stylesheet" href="src/styles/projects.css">
 <link rel="stylesheet" href="src/styles/backups.css">
+<link rel="stylesheet" href="src/styles/alerts.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -6234,6 +6235,9 @@ body::before {
       <button class="sb-link" type="button" data-section="backups" onclick="navTo('backups')">
         <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg></span><span class="lbl">Backups</span>
       </button>
+      <button class="sb-link" type="button" data-section="alerts" onclick="navTo('alerts')">
+        <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span><span class="lbl">Alerts</span>
+      </button>
 
       <div class="sb-nav-label">System</div>
       <button class="sb-link" type="button" data-section="settings" onclick="navTo('settings')">
@@ -6854,6 +6858,48 @@ body::before {
       <div id="bkpBoard">
         <!-- Rendered by src/sections/backups.js. Shown if that module never loads. -->
         <p class="bkp-empty">Loading backup status…</p>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         ALERTS SECTION (Atera triage)
+         — Markup is a mount point only. All rendering lives in
+           src/sections/alerts.js — triage rules are assess() there.
+         — Read-only: Atera alert emails in support@gecko-it.com via Graph.
+         — Lazy-loaded on first nav via window.GeckoSections (see navTo).
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="section" id="section-alerts">
+
+      <div class="section-head">
+        <h1>Atera <span>Alerts</span></h1>
+        <p>Only the alerts that need a person. Noise filtered out.</p>
+        <div class="alr-head-actions">
+          <div class="bkp-window" role="group" aria-label="Time window">
+            <button type="button" data-alr-days="7" aria-pressed="true">7 days</button>
+            <button type="button" data-alr-days="14" aria-pressed="false">14 days</button>
+            <button type="button" data-alr-days="30" aria-pressed="false">30 days</button>
+          </div>
+          <button class="bkp-refresh" id="alrRefresh" type="button" title="Re-read the support mailbox">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="bkp-last-sync" id="alrLastSync"></span>
+        </div>
+      </div>
+
+      <div class="bkp-kpis" id="alrKpis"></div>
+
+      <div class="alr-toolbar">
+        <label class="alr-toggle" for="alrShowNoise"><input type="checkbox" id="alrShowNoise"> Show filtered</label>
+        <span>
+          <label for="alrSearch" class="sr-only">Filter alerts</label>
+          <input class="bkp-search" id="alrSearch" type="search" placeholder="Filter client or device">
+        </span>
+      </div>
+
+      <div id="alrBoard">
+        <p class="bkp-empty">Loading alerts…</p>
       </div>
 
     </section>
@@ -7521,6 +7567,7 @@ const SECTION_TITLES = {
   leave:         'ANNUAL LEAVE',
   compliance:    'COMPLIANCE',
   backups:       'BACKUPS',
+  alerts:        'ALERTS',
   settings:      'SETTINGS'
 };
 
