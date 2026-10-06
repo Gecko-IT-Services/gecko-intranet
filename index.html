@@ -1499,6 +1499,14 @@ body {
   display: flex; align-items: center; gap: 7px;
 }
 #section-profitability .prf-xero-import h4 svg { color: var(--amber); }
+/* Live feed status (2026-10-06) — one line above each import card's body. */
+#section-profitability .prf-feed {
+  font-size: 12px; line-height: 1.45; padding: 7px 10px; margin: 0 0 10px;
+  border-radius: 6px; border: 1px solid var(--green-line); background: var(--green-glow);
+}
+#section-profitability .prf-feed.warn { border-color: var(--amber-border); background: var(--amber-dim); }
+#section-profitability .prf-feed.bad  { border-color: var(--red); background: var(--red-dim); }
+#section-profitability .prf-feed button { margin-left: 8px; padding: 3px 10px; font-size: 11px; }
 #section-profitability .prf-drop-zone {
   flex: 1; min-width: 240px;
   border: 2px dashed var(--border); border-radius: 10px;
@@ -9293,8 +9301,12 @@ const PRF = {
     total:     0,       // sum of Seller Cost across the whole file
     warning:   null,    // null | { ratio, baseline }
     confirmed: false,   // user ticked "I've checked this is a full month"
-    applying:  false    // an apply is in flight; keeps Apply disabled regardless of ticks
-  }
+    applying:  false,   // an apply is in flight; keeps Apply disabled regardless of ticks
+    invoice:   null     // TD SYNNEX invoice number when the preview came from the live feed
+  },
+  // Live feed (2026-10-06): a scheduled job writes Xero revenue and the
+  // latest TD SYNNEX invoice to a JSON file; see src/core/profit-feed.js.
+  feed: { state: 'idle', data: null, error: null, problems: [] }
 };
 
 // Categories — single source of truth for pill colours, filter buttons, dropdowns
@@ -9440,6 +9452,7 @@ async function prfRefreshData(silent = false) {
   try {
     await prfResolveListIds();
     await Promise.all([prfLoadClients(), prfLoadServices()]);
+    await prfLoadFeed();   // never throws: a feed problem is shown, not fatal
     prfRenderAll();
     const last = document.getElementById('prfLastSync');
     if (last) {
@@ -10192,6 +10205,99 @@ function prfXeroMatchName(xeroName, portalClients) {
  * Process a Xero CSV file: parse, detect month, match names, populate
  * Xero reconciliation fields, save to SharePoint.
  */
+/* ─── Live feed (2026-10-06) ──────────────────────────────────────────
+   A scheduled job writes Gecko Dashboard Data/profitability-feed.json in
+   the portal site's Documents: Xero revenue per contact per month, and the
+   latest TD SYNNEX CSP invoice per customer. Revenue is applied
+   automatically (it only mirrors Xero). Costs still go through the CSP
+   preview, because Apply rewrites GeckoServices rows. */
+async function prfLoadFeed() {
+  const F = window.ProfitFeed;
+  if (!F) return;
+  PRF.feed = { state: 'loading', data: null, error: null, problems: [] };
+  try {
+    const siteId = PRF.siteId || await resolveSiteId();
+    let meta;
+    try {
+      meta = await graphFetch(`/sites/${siteId}/drive/root:/${encodeURI(F.FEED_PATH)}?$select=lastModifiedDateTime,@microsoft.graph.downloadUrl`);
+    } catch (err) {
+      if (/Graph 404/.test(err.message || '')) { PRF.feed.state = 'missing'; return; }
+      throw err;
+    }
+    const url = meta && meta['@microsoft.graph.downloadUrl'];
+    if (!url) throw new Error('no download link for the feed file');
+    // Pre-authenticated link: no bearer token, and never a cached copy.
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`feed download ${res.status}`);
+    const data = await res.json();
+    const check = F.validateFeed(data);
+    PRF.feed = { state: check.ok ? 'ok' : 'invalid', data, error: null, problems: check.errors };
+    if (check.ok) await prfApplyFeedXero(data);
+  } catch (err) {
+    console.error('Profitability feed failed:', err);
+    PRF.feed = { state: 'error', data: null, error: err.message || 'unknown error', problems: [] };
+  }
+}
+
+/** Write Xero totals from the feed into XeroHistory, only where they changed. */
+async function prfApplyFeedXero(feed) {
+  const F = window.ProfitFeed;
+  const shown = PRF.selectedMonth || prfCurrentMonth();
+  for (const [month, perContact] of F.xeroMonths(feed)) {
+    const { matched, unmatched } = F.totalsByClient(perContact, name => prfXeroMatchName(name, PRF.clients));
+    // A CSV imported this session owns the unmatched list; don't replace it.
+    if (month === shown && !PRF.xeroImported) {
+      PRF.xeroUnmatched = unmatched;
+      PRF.xeroMonth = month;
+    }
+    const saves = [];
+    for (const { client, total } of matched) {
+      if (prfGetXero(client, month) === total) continue;
+      prfSetXeroLocal(client, month, total);
+      saves.push(prfSaveXeroHistory(client.id, client.xeroHistory)
+        .catch(err => console.error(`Feed: could not save Xero for ${client.name}:`, err)));
+    }
+    await Promise.all(saves);
+  }
+}
+
+/** One status line for the Xero ('xero') or CSP ('csp') card. */
+function prfRenderFeedStatus(kind) {
+  const F = window.ProfitFeed;
+  const f = PRF.feed || {};
+  if (!F || f.state === 'idle' || f.state === 'loading') return '';
+  const box = (cls, html) => `<div class="prf-feed ${cls}" role="status">${html}</div>`;
+  if (f.state === 'missing') {
+    return box('warn', `Automatic updates are not set up yet: there is no <strong>${escapeHtml(F.FEED_PATH)}</strong> in the portal's Documents. The manual import below still works.`);
+  }
+  if (f.state === 'error') {
+    return box('bad', `Could not read the automatic feed (${escapeHtml(f.error)}). Figures shown are from the last successful update. Refresh to try again.`);
+  }
+  if (f.state === 'invalid') {
+    return box('bad', `The automatic feed was rejected and nothing was applied: ${escapeHtml(f.problems.slice(0, 3).join('; '))}.`);
+  }
+  const data  = f.data;
+  const when  = escapeHtml(F.describeWhen(data.generatedAt));
+  const stale = F.isStale(data);
+  const staleNote = stale ? ' The nightly update looks to have stopped, so these may be out of date.' : '';
+
+  if (kind === 'xero') {
+    return box(stale ? 'warn' : 'ok', `Automatic from Xero, updated ${when}.${staleNote}`);
+  }
+
+  const c = data.csp;
+  if (!c) {
+    const why = data.cspError ? ` ${escapeHtml(data.cspError)}` : '';
+    return box('warn', `No TD SYNNEX invoice in the latest update.${why} Use the manual import below if costs need changing.`);
+  }
+  const last = cspReadLastImport();
+  const applied = last && last.invoice === c.invoice;
+  const label = `TD SYNNEX invoice <strong>${escapeHtml(c.invoice)}</strong> (${escapeHtml(c.date || '')}), ${escapeHtml(prfMonthLabel(c.month))} charges, ${prfFmtForce(c.netTotal)} net`;
+  if (applied) return box(stale ? 'warn' : 'ok', `${label}. Already applied.${staleNote}`);
+  return box('warn', `${label}. Not applied yet.${staleNote}
+    <button type="button" class="prf-refresh" onclick="cspLoadFromFeed()">Review costs from this invoice</button>`);
+}
+
 async function prfImportXeroCsv(file) {
   if (!file) return;
   showLoading(true);
@@ -10421,6 +10527,7 @@ function prfRenderXeroImport() {
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           Xero Reconciliation
         </h4>
+        ${prfRenderFeedStatus('xero')}
         <div class="prf-drop-zone" id="prfDropZone"
              ondragover="event.preventDefault();this.classList.add('drag-over')"
              ondragleave="this.classList.remove('drag-over')"
@@ -10532,7 +10639,36 @@ async function cspImportFile(file) {
       return;
     }
 
-    const aggregated = window.CspCosts.aggregateByCustomer(rows);
+    PRF.csp.invoice = null;
+    cspBuildPreview(window.CspCosts.aggregateByCustomer(rows), seq);
+  } catch (err) {
+    toast('Could not read that file: ' + (err.message || 'unknown error'), 'error', 6000);
+  } finally {
+    showLoading(false);
+  }
+}
+
+/** Load the preview from the live feed's latest TD SYNNEX invoice. Writes nothing. */
+function cspLoadFromFeed() {
+  const c = PRF.feed?.data?.csp;
+  if (!c) return;
+  if (PRF.csp.applying) {
+    toast('An import is still being applied — wait for it to finish.', 'error', 4000);
+    return;
+  }
+  const seq = ++cspImportSeq;
+  PRF.csp.month   = c.month;
+  PRF.csp.invoice = c.invoice;
+  cspBuildPreview(window.ProfitFeed.cspAggregated(PRF.feed.data), seq);
+  document.getElementById('prfCspImportCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Match every customer to a client and an m365 row, and render the preview.
+ * Shared by the CSV import and the live feed. Writes nothing.
+ */
+function cspBuildPreview(aggregated, seq) {
+  {
     const previewRows = [];
     const unmatched   = [];
 
@@ -10616,10 +10752,6 @@ async function cspImportFile(file) {
 
     prfRenderAll();
     toast(`Parsed ${previewRows.length} client(s). Review before applying.`, 'success', 4000);
-  } catch (err) {
-    toast('Could not read that file: ' + (err.message || 'unknown error'), 'error', 6000);
-  } finally {
-    showLoading(false);
   }
 }
 
@@ -10709,8 +10841,9 @@ function cspRenderImport() {
     </div>`;
 
   let body = `
+    ${prfRenderFeedStatus('csp')}
     <p class="csp-hint">
-      TD SYNNEX → StreamOne Ion → Reports → <strong>Microsoft CSP Billing Customers Report</strong>.
+      Manual alternative: TD SYNNEX → StreamOne Ion → Reports → <strong>Microsoft CSP Billing Customers Report</strong>.
       Set <strong>Date Range to exactly one full month</strong> before exporting. The file
       carries no date range, so nothing here can tell a part-month export (which understates
       every cost) from one spanning two months (which overstates them).
@@ -10791,7 +10924,7 @@ function cspReadLastImport() {
 
 function cspWriteLastImport(month, total) {
   try {
-    localStorage.setItem(CSP_LAST_IMPORT_KEY, JSON.stringify({ month, total }));
+    localStorage.setItem(CSP_LAST_IMPORT_KEY, JSON.stringify({ month, total, invoice: PRF.csp.invoice || null }));
   } catch (err) {
     console.warn('Could not record the CSP import baseline', err);
   }
