@@ -13,10 +13,12 @@
  * Adding an extracted section later is two lines: import it, register it.
  */
 import * as projects from './sections/projects.js';
+import * as backups from './sections/backups.js';
 import * as cspCosts from './core/csp-costs.js';
 
 window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
+window.GeckoSections.backups  = { init: backups.init };
 
 // Pure logic used by the Profitability section, which still lives in
 // index.html's classic script and therefore cannot import modules itself.

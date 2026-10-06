@@ -1,0 +1,137 @@
+/* ═══ BACKUPS BOARD ═════════════════════════════════════════════════════
+   Section-scoped styles for src/sections/backups.js.
+   Existing design tokens only — never a hardcoded colour. Status colours
+   come from the shared .badge-green / -amber / -red classes.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* — Section head controls. ID-scoped, same reason as projects.css: the
+     inline stylesheet loads after this file. — */
+#section-backups .bkp-head-actions {
+  display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap;
+}
+#section-backups .bkp-window {
+  display: inline-flex; border: 1px solid var(--border-dim);
+  border-radius: var(--radius-pill); overflow: hidden;
+}
+#section-backups .bkp-window button {
+  border: 0; background: transparent; color: var(--muted);
+  padding: 7px 14px; font-family: var(--font-body); font-size: 12px;
+  cursor: pointer; transition: background var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
+}
+#section-backups .bkp-window button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+#section-backups .bkp-refresh {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--radius-pill);
+  background: transparent; border: 1px solid var(--border-dim);
+  color: var(--muted); font-family: var(--font-body);
+  font-size: 12px; cursor: pointer; transition: all .15s;
+}
+#section-backups .bkp-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
+#section-backups .bkp-refresh:disabled { opacity: .5; cursor: not-allowed; }
+#section-backups .bkp-refresh.spinning svg { animation: spin 1s linear infinite; }
+#section-backups .bkp-last-sync { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+/* — KPI strip: same shape as the Compliance strip, but each tile filters. — */
+#section-backups .bkp-kpis {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 14px 0; border: 1px solid var(--border-dim); border-radius: var(--radius);
+  overflow: hidden; background: var(--card); box-shadow: var(--shadow-sm);
+}
+#section-backups .bkp-kpi {
+  padding: 14px 16px; border: 0; border-right: 1px solid var(--border-dim);
+  background: transparent; color: inherit; font: inherit; text-align: center; cursor: pointer;
+  transition: background var(--dur-2) var(--ease);
+}
+#section-backups .bkp-kpi:last-child { border-right: 0; }
+#section-backups .bkp-kpi:hover { background: var(--row-hover); }
+#section-backups .bkp-kpi[aria-pressed="true"] { background: var(--inset); box-shadow: inset 0 -3px 0 var(--green); }
+#section-backups .bkp-kpi-val {
+  display: block; font-family: var(--font-body); font-size: 24px; font-weight: 800;
+  letter-spacing: .02em; font-variant-numeric: tabular-nums;
+}
+#section-backups .bkp-kpi-lbl {
+  display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--muted); margin-top: 2px;
+}
+@media (max-width: 560px) {
+  #section-backups .bkp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #section-backups .bkp-kpi:nth-child(2) { border-right: 0; }
+  #section-backups .bkp-kpi:nth-child(-n+2) { border-bottom: 1px solid var(--border-dim); }
+}
+
+#section-backups .bkp-search {
+  width: 260px; max-width: 100%; padding: 8px 12px;
+  border: 1px solid var(--border-dim); border-radius: var(--radius-sm);
+  background: var(--card); color: var(--white); font: inherit; font-size: 13px;
+}
+#section-backups .bkp-search:focus { outline: none; border-color: var(--green); }
+#section-backups .bkp-toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+
+/* — States — */
+.bkp-empty,
+.bkp-error {
+  padding: 28px 22px; border: 1px solid var(--border-dim); border-radius: var(--radius);
+  background: var(--card); color: var(--muted); text-align: center;
+}
+.bkp-error strong { display: block; color: var(--white); margin-bottom: 6px; }
+.bkp-error button {
+  display: block; margin: 14px auto 0; padding: 9px 16px; border: 0;
+  border-radius: var(--radius-pill); background: var(--ink); color: var(--on-ink);
+  font: inherit; font-weight: 600; cursor: pointer; transition: opacity var(--dur-2) var(--ease);
+}
+.bkp-error button:hover { opacity: .85; }
+.bkp-note { color: var(--amber); font-size: 12px; margin: 0 0 10px; }
+.bkp-foot { color: var(--faint); font-size: 11px; margin-top: 14px; }
+.bkp-sub { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+.bkp-mono { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* — Alerts — */
+.bkp-card {
+  background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius);
+  padding: 16px 18px; box-shadow: var(--shadow-sm); margin-bottom: 14px;
+}
+.bkp-card h3 {
+  margin: 0 0 10px; font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted);
+}
+.bkp-card h3 .bkp-sub { display: inline; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+.bkp-alerts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.bkp-alert { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: start; }
+.bkp-alert-body { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.bkp-alert-detail { display: block; color: var(--muted); }
+.bkp-alerts a, .bkp-tbl-wrap a { color: var(--green); }
+
+/* — Client groups — */
+.bkp-clients { display: grid; gap: 10px; }
+.bkp-client {
+  background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); overflow: hidden; border-left: 4px solid var(--green);
+}
+.bkp-client-warn { border-left-color: var(--amber); }
+.bkp-client-fail { border-left-color: var(--red); }
+.bkp-client > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+}
+.bkp-client > summary::-webkit-details-marker { display: none; }
+.bkp-client > summary:hover { background: var(--row-hover); }
+.bkp-client-name { min-width: 0; flex: 1; font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+.bkp-counts { display: flex; gap: 6px; flex-shrink: 0; }
+.bkp-count {
+  min-width: 28px; padding: 2px 8px; border-radius: var(--radius-pill); text-align: center;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.bkp-count-ok   { background: var(--green-glow); color: var(--green); }
+.bkp-count-warn { background: var(--amber-dim);  color: var(--amber); }
+.bkp-count-fail { background: var(--red-dim);    color: var(--red); }
+.bkp-count.is-zero { opacity: .35; }
+
+.bkp-tbl-wrap { border-top: 1px solid var(--hair); overflow-x: auto; }
+.bkp-tbl-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bkp-tbl-wrap th {
+  text-align: left; padding: 8px 16px; background: var(--panel);
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+}
+.bkp-tbl-wrap td { padding: 10px 16px; border-top: 1px solid var(--hair); vertical-align: top; }
+.bkp-what { min-width: 200px; }
+.bkp-reason { display: block; color: var(--white); font-size: 12px; margin-top: 2px; }

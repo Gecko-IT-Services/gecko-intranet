@@ -68,6 +68,7 @@
      has defined navTo, graphFetch, toast and MSAL setup.
      ═══════════════════════════════════════════════════════════════════ -->
 <link rel="stylesheet" href="src/styles/projects.css">
+<link rel="stylesheet" href="src/styles/backups.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -6230,6 +6231,9 @@ body::before {
       <button class="sb-link" type="button" data-section="compliance" onclick="navTo('compliance')">
         <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="lbl">Compliance</span>
       </button>
+      <button class="sb-link" type="button" data-section="backups" onclick="navTo('backups')">
+        <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg></span><span class="lbl">Backups</span>
+      </button>
 
       <div class="sb-nav-label">System</div>
       <button class="sb-link" type="button" data-section="settings" onclick="navTo('settings')">
@@ -6809,6 +6813,47 @@ body::before {
           <h3 id="prjModalTitle">—</h3>
           <div id="prjModalBody"></div>
         </div>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         BACKUPS SECTION
+         — Markup is a mount point only. All rendering lives in
+           src/sections/backups.js — see that file's header.
+         — Read-only: Acronis job emails in support@gecko-it.com via Graph.
+         — Needs Mail.Read.Shared (requested by this section only).
+         — Lazy-loaded on first nav via window.GeckoSections (see navTo).
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="section" id="section-backups">
+
+      <div class="section-head">
+        <h1>Backup <span>Status</span></h1>
+        <p>Latest Acronis result for every client backup job.</p>
+        <div class="bkp-head-actions">
+          <div class="bkp-window" role="group" aria-label="Time window">
+            <button type="button" data-bkp-hours="24" aria-pressed="true">24 h</button>
+            <button type="button" data-bkp-hours="48" aria-pressed="false">48 h</button>
+            <button type="button" data-bkp-hours="168" aria-pressed="false">7 days</button>
+          </div>
+          <button class="bkp-refresh" id="bkpRefresh" type="button" title="Re-read the support mailbox">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="bkp-last-sync" id="bkpLastSync"></span>
+        </div>
+      </div>
+
+      <div class="bkp-kpis" id="bkpKpis"></div>
+
+      <div class="bkp-toolbar">
+        <label for="bkpSearch" class="sr-only">Filter backups</label>
+        <input class="bkp-search" id="bkpSearch" type="search" placeholder="Filter client, device or plan">
+      </div>
+
+      <div id="bkpBoard">
+        <!-- Rendered by src/sections/backups.js. Shown if that module never loads. -->
+        <p class="bkp-empty">Loading backup status…</p>
       </div>
 
     </section>
@@ -7475,6 +7520,7 @@ const SECTION_TITLES = {
   timesheets:    'TIMESHEETS',
   leave:         'ANNUAL LEAVE',
   compliance:    'COMPLIANCE',
+  backups:       'BACKUPS',
   settings:      'SETTINGS'
 };
 
@@ -7793,6 +7839,39 @@ async function getToken() {
 }
 
 
+/**
+ * Token for a scope only one section needs (incremental consent), e.g.
+ * Mail.Read.Shared for Backups. Kept apart from getToken() on purpose:
+ *  - CONFIG.SCOPES stays as it is, so a permission that has not been
+ *    granted yet can never break sign-in or any other section;
+ *  - an interaction-required failure here must NOT call markAuthExpired()
+ *    and bounce the user to the sign-in screen. It throws CONSENT_REQUIRED
+ *    for the section to handle, and only opens a consent prompt when the
+ *    caller says the request came from a user tap (interactive: true).
+ */
+async function getScopedToken(scopes, { interactive = false } = {}) {
+  if (!activeAccount) throw new Error('No active account');
+  const request = { scopes, account: activeAccount };
+  try {
+    return (await msalInstance.acquireTokenSilent(request)).accessToken;
+  } catch (err) {
+    if (!isInteractionRequiredAuthError(err)) throw err;
+    if (!interactive) {
+      const e = new Error('Permission needed: ' + scopes.join(', '));
+      e.code = 'CONSENT_REQUIRED';
+      throw e;
+    }
+    // Same popup/redirect split as sign-in: installed iOS webviews cannot
+    // hold a popup. A redirect navigates away and never resolves here.
+    if (isStandaloneDisplay()) {
+      await msalInstance.acquireTokenRedirect(request);
+      return new Promise(() => {});
+    }
+    return (await msalInstance.acquireTokenPopup(request)).accessToken;
+  }
+}
+
+
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   MICROSOFT GRAPH HELPERS                                         ║
    ║   Thin wrapper around fetch() so every section uses the same      ║
@@ -7800,20 +7879,23 @@ async function getToken() {
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
 async function graphFetch(path, options = {}) {
-  const token = await getToken();
+  // options.scopes: request a section-specific scope instead of the sign-in
+  // set (see getScopedToken). Stripped before the options reach fetch().
+  const { scopes, interactive, ...fetchOptions } = options;
+  const token = scopes ? await getScopedToken(scopes, { interactive }) : await getToken();
   const url   = path.startsWith('http') ? path : CONFIG.GRAPH_BASE + path;
   const res   = await fetch(url, {
-    ...options,
+    ...fetchOptions,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type':  'application/json',
       'Accept':        'application/json',
-      ...(options.headers || {})
+      ...(fetchOptions.headers || {})
     }
   });
   if (!res.ok) {
     const txt = await res.text();
-    if (res.status === 401 || /InvalidAuthenticationToken|Access token has expired|CompactToken/i.test(txt)) {
+    if (!scopes && (res.status === 401 || /InvalidAuthenticationToken|Access token has expired|CompactToken/i.test(txt))) {
       markAuthExpired(`Graph ${res.status}`);
       throw new Error('Microsoft session expired — sign in again');
     }
