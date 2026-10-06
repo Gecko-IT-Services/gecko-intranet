@@ -24,3 +24,14 @@
 #section-alerts .alr-row.alr-critical td:first-child { box-shadow: inset 4px 0 0 var(--red); }
 #section-alerts .alr-row.alr-important td:first-child { box-shadow: inset 4px 0 0 var(--amber); }
 #section-alerts .alr-row.alr-noise { opacity: .75; }
+
+/* — "Email client" action and its draft modal (modal shell from projects.css) — */
+#section-alerts .alr-email {
+  padding: 6px 12px; border: 1px solid var(--border-dim); border-radius: var(--radius-pill);
+  background: var(--card); color: var(--white); font: inherit; font-size: 12px; font-weight: 600;
+  white-space: nowrap; cursor: pointer; transition: border-color var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
+}
+#section-alerts .alr-email:hover { border-color: var(--green); color: var(--green); }
+#section-alerts .bkp-mono a.bkp-sub { color: var(--muted); text-decoration: underline; }
+.alr-modal { width: min(640px, 100%); }
+.alr-modal textarea { min-height: 260px; line-height: 1.5; }
