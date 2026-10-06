@@ -10217,19 +10217,26 @@ async function prfLoadFeed() {
   PRF.feed = { state: 'loading', data: null, error: null, problems: [] };
   try {
     const siteId = PRF.siteId || await resolveSiteId();
+    const item = `/sites/${siteId}/drive/root:/${encodeURI(F.FEED_PATH)}:`;
     let meta;
     try {
-      meta = await graphFetch(`/sites/${siteId}/drive/root:/${encodeURI(F.FEED_PATH)}?$select=lastModifiedDateTime,@microsoft.graph.downloadUrl`);
+      // No $select: Graph only includes the download link in a full item.
+      meta = await graphFetch(item);
     } catch (err) {
       if (/Graph 404/.test(err.message || '')) { PRF.feed.state = 'missing'; return; }
       throw err;
     }
+    let data;
     const url = meta && meta['@microsoft.graph.downloadUrl'];
-    if (!url) throw new Error('no download link for the feed file');
-    // Pre-authenticated link: no bearer token, and never a cached copy.
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`feed download ${res.status}`);
-    const data = await res.json();
+    if (url) {
+      // Pre-authenticated link: no bearer token, and never a cached copy.
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`feed download ${res.status}`);
+      data = await res.json();
+    } else {
+      // Fallback: Graph's /content endpoint redirects to the same file.
+      data = await graphFetch(`${item}/content`);
+    }
     const check = F.validateFeed(data);
     PRF.feed = { state: check.ok ? 'ok' : 'invalid', data, error: null, problems: check.errors };
     if (check.ok) await prfApplyFeedXero(data);
