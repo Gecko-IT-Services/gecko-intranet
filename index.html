@@ -9501,11 +9501,25 @@ async function prfRefreshData(silent = false) {
 function prfClientServices(clientName) {
   return PRF.services.filter(s => s.clientName === clientName);
 }
+/**
+ * True while the feed is supplying Clook invoices. Then hosting cost comes
+ * from those invoices in the month they are dated, and whatever was typed
+ * on a hosting service line (an annual fee divided by twelve) is ignored
+ * rather than counted a second time. Philip, 7 Oct 2026: "I want that
+ * cost to sit in the month it was invoiced."
+ */
+function prfHostingCostFromInvoices() {
+  return !!(PRF.feed && PRF.feed.state === 'ok' && PRF.feed.data && PRF.feed.data.clook);
+}
+/** The cost a service line contributes to totals. */
+function prfRowCost(s) {
+  return (s.category === 'hosting' && prfHostingCostFromInvoices()) ? 0 : s.cost;
+}
 function prfClientTotals(clientName, category = 'all') {
   const allServices = prfClientServices(clientName);
   const all = category === 'all' ? allServices : allServices.filter(s => s.category === category);
   const sell    = all.reduce((a, s) => a + s.sell, 0);
-  const cost    = all.reduce((a, s) => a + s.cost, 0);
+  const cost    = all.reduce((a, s) => a + prfRowCost(s), 0);
   const sellRet = all.filter(s => s.category === 'retainer').reduce((a, s) => a + s.sell, 0);
   const sellSt  = sell - sellRet;
   const gp      = sell - cost;
@@ -9527,9 +9541,16 @@ function prfMonthInvoiced(month = PRF.selectedMonth || prfCurrentMonth()) {
 }
 /** This client's supplier-invoice lines for the month (all-services view only). */
 function prfClientInvoiced(client, month = PRF.selectedMonth || prfCurrentMonth()) {
-  if ((PRF.filterCat || 'all') !== 'all') return null;
+  const cat = PRF.filterCat || 'all';
   const inv = prfMonthInvoiced(month);
-  return inv ? (inv.byClient.get(client.id) || null) : null;
+  const e = inv ? inv.byClient.get(client.id) : null;
+  if (!e) return null;
+  if (cat === 'all') return e;
+  if (cat !== 'hosting') return null;
+  // Hosting view: only the Clook lines, so the filter stays truthful.
+  const lines = e.lines.filter(l => l.supplier === 'Clook');
+  if (!lines.length) return null;
+  return { client: e.client, lines, total: round2(lines.reduce((a, l) => a + l.net, 0)) };
 }
 
 /**
@@ -9577,7 +9598,7 @@ function prfGrandTotals() {
       }
     }
     clientServices.forEach(s => {
-      cost += s.cost; sell += s.sell;
+      cost += prfRowCost(s); sell += s.sell;
       if (s.category === 'retainer') sellRet += s.sell;
     });
   });
@@ -9985,12 +10006,16 @@ function prfRenderServiceRow(s) {
       <td>${prfRenderRowActions(s.id)}</td>
     </tr>`;
   }
-  const sgm = s.sell - s.cost;
+  const cost = prfRowCost(s);
+  const fromInv = s.category === 'hosting' && prfHostingCostFromInvoices();
+  const sgm = s.sell - cost;
   const sp  = s.sell > 0 ? sgm / s.sell : 0;
   return `<tr data-svc-id="${s.id}">
     <td><span class="prf-ct ${prfCatClass(s.category)}">${escapeHtml(s.category)}</span></td>
     <td class="prf-sn"><div class="n">${escapeHtml(s.name)}</div><div class="d">${escapeHtml(s.notes || '')}</div></td>
-    <td class="prf-nr prf-nc">${prfFmt(s.cost)}</td>
+    <td class="prf-nr prf-nc">${fromInv
+      ? `<span class="prf-isub" title="Hosting cost is charged from Clook invoices in the month they are dated; the ${prfFmtForce(s.cost)} on this line is not counted">from invoices</span>`
+      : prfFmt(cost)}</td>
     <td class="prf-nr prf-ns">${prfFmt(s.sell)}</td>
     <td class="prf-nr ${sgm >= 0 ? 'prf-ng' : 'prf-nc'}">${prfFmt(sgm)}</td>
     <td class="prf-nr"><span class="prf-mpill ${prfMpClass(sp)}">${prfFmtPct(sp)}</span></td>

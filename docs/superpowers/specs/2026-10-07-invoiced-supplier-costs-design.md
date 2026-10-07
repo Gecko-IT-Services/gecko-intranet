@@ -16,8 +16,11 @@ TD SYNNEX (M365), Atera and VoIP are monthly bills: the invoiced month is the mo
 - **Feed box.** Shared and unassigned lines for the shown month are listed ("tell Felix which client"), so they sit in the grand total but on no card and the gap is visible.
 - **Grand total / strip.** Total Cost includes all supplier lines; the strip says how much.
 
-## What Philip must do once (listed in the PR)
-Reduce the cost on hosting and "M365 + Exclaimer" service lines to the monthly part only, or the annual part is counted twice: once spread, once in its month.
+## Hosting lines (amended same day)
+Philip: "I don't want that cost divided over the year." So while the feed carries Clook invoices, the cost typed on any `hosting` service line is ignored in every total and the line shows "from invoices" (with the typed figure in the tooltip). Hosting cost is then only ever the Clook invoice in its month. Sell on the line is untouched. This replaces the earlier plan of asking Philip to zero those lines by hand; the earlier "Rejected" entry below is superseded for hosting because the page now says what it is doing instead of hiding it.
+
+## What Philip must still do once
+"M365 + Exclaimer" and similar bundle lines carry Exclaimer's annual fee spread monthly inside one cost figure that cannot be separated in code. Rename them "M365 Reselling" and Apply from the CSP panel (or edit the cost to the M365-only figure), or Exclaimer is counted twice for those clients.
 
 ## Consequence, by design
 A hosting client shows its cost in the month Clook bills Gecko and its revenue in the month Xero bills the client. Those are often different months, so single-month margins swing. Both figures are true.
