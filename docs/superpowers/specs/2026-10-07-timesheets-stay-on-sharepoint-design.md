@@ -1,6 +1,6 @@
 # Timesheets and SSA balances: plan for the Supabase move — design
 
-Status: proposed, 7 Oct 2026. Part of `2026-10-07-supabase-migration-design.md` (phase 5).
+Status: **decided by Philip, 7 Oct 2026** ("yes, keep Timesheets on SharePoint"). Part of `2026-10-07-supabase-migration-design.md` (phase 5).
 
 ## Philip's requirement (7 Oct)
 "We regularly use the Microsoft Lists Timesheets and want this to be updated as well with
@@ -17,7 +17,7 @@ writes to it via Graph and would like to keep that."
 - **Create Timesheets Table Email** and **Archive Old Timesheet Entries** also read these lists.
 - Philip and Jack read and use the list directly in Microsoft Lists.
 
-## Recommendation: Timesheets and the SSA `Clients` list stay on SharePoint, as the master
+## Decision: Timesheets and the SSA `Clients` list stay on SharePoint, as the master
 No change to how timesheets are saved. The dashboard keeps writing every entry to the
 Timesheets list through Graph exactly as now, the three flows keep running untouched, and
 SSA balances keep coming from `HoursUsed`. This is the deliberate exception to the move.

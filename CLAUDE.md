@@ -78,8 +78,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   MileageClients in SharePoint are no longer updated. **Clients + Services are on
   Supabase** since 7 Oct (`gecko_clients`, `gecko_services`; one flag moves Clients,
   Profitability and Overview together via `clientList*` helpers); GeckoClients and
-  GeckoServices in SharePoint are no longer updated. Timesheets, the SSA `Clients` list
-  and the feed file are still SharePoint. Projects/Compliance/P&L are not moving.
+  GeckoServices in SharePoint are no longer updated. **Timesheets and the SSA `Clients`
+  list stay on SharePoint for good** (Philip, 7 Oct): the master, written via Graph, flows
+  untouched — never mirror them as a second writable copy. The feed file is still in
+  SharePoint Documents. Projects/Compliance/P&L are not moving.
 - Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
   and a policy (`tests/supabase-migration.mjs` enforces it). Only the publishable key
   is in the site. Sign-in is the Microsoft ID token (`src/core/supabase.js`).
