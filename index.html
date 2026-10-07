@@ -6435,6 +6435,10 @@ body::before {
         <h1>Mileage <span>Tracker</span></h1>
         <p>HMRC-compliant journey log · Tax Year <span id="milTaxYear">2026/27</span> · Philip Morris &amp; Jack Morris</p>
         <div class="mil-head-actions">
+          <button class="mil-refresh" id="milClaimEmailBtn" type="button" onclick="milEmailClaim()" title="Email your unclaimed journeys since your last claim">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email my claim
+          </button>
           <button class="mil-refresh" id="milRefresh" type="button" onclick="milRefreshData()" title="Reload from SharePoint">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
@@ -7558,6 +7562,7 @@ const CONFIG = {
 
   // — Annual Leave —
   LEAVE_APPROVER_EMAIL: 'philip@gecko-it.com',
+  MILEAGE_CLAIM_EMAIL:  'philip@gecko-it.com',   // where "Email my claim" on Mileage goes
 
   // — Scopes requested at sign-in —
   // Sites.ReadWrite.All — required for SharePoint list access.
@@ -13147,6 +13152,7 @@ async function milAddJourney(ev) {
     milRenderAll();
     document.getElementById('milForm').reset();
     milSetDefaultDate();
+    milSetDefaultDriver();
     toast(`Journey added — ${milFmt(data.amount)} reimbursement`, 'success');
   } catch (err) {
     console.error('Add journey failed:', err);
@@ -13562,6 +13568,101 @@ function milDownloadCsv() {
 
 
 // ─── Date helpers ─────────────────────────────────────────────────────
+/**
+ * The signed-in person as one of the two drivers, or null. Matched on the
+ * first name of the account (Philip / Jack) so it survives either sign-in
+ * (philip@ or jack@) and whichever display name Entra holds.
+ */
+function milCurrentDriver() {
+  const acct = (typeof activeAccount !== 'undefined' && activeAccount) ? activeAccount : null;
+  if (!acct) return null;
+  const hay = `${acct.name || ''} ${acct.username || ''}`.toLowerCase();
+  return MIL.drivers.find(d => hay.includes(d.split(' ')[0].toLowerCase())) || null;
+}
+
+/** Default the Driver picker to whoever is signed in. Philip, 7 Oct 2026. */
+function milSetDefaultDriver() {
+  const sel = document.getElementById('milDriver');
+  const me  = milCurrentDriver();
+  if (sel && me) sel.value = me;
+}
+
+/**
+ * Email the signed-in driver's unclaimed journeys to the person who pays
+ * them (CONFIG.MILEAGE_CLAIM_EMAIL), sent from the driver's own mailbox so
+ * it sits in their Sent Items too. "Since last claim" = everything with no
+ * ClaimedDate; the last ClaimedDate for this driver is quoted for context.
+ * Nothing is marked claimed here: that happens when the claim is paid.
+ */
+async function milEmailClaim() {
+  const me = milCurrentDriver();
+  if (!me) { toast('Could not tell which driver you are from your sign-in.', 'error', 4000); return; }
+  const mine = MIL.journeys.filter(j => milNormaliseDriver(j.driver) === me);
+  const open = mine.filter(j => !j.claimedDate).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  if (open.length === 0) { toast('Nothing to claim: every journey of yours is already marked claimed.', 'info', 4000); return; }
+  const lastClaim = mine.filter(j => j.claimedDate).map(j => j.claimedDate).sort().pop() || null;
+  const miles  = open.reduce((a, j) => a + (Number(j.miles)  || 0), 0);
+  const amount = open.reduce((a, j) => a + (Number(j.amount) || 0), 0);
+  const first  = open[0].date, last = open[open.length - 1].date;
+  const since  = lastClaim ? `since the last claim on ${milFmtDate(lastClaim)}` : 'with no previous claim on record';
+  if (!confirm(`Email ${open.length} unclaimed journey${open.length === 1 ? '' : 's'} (${miles.toFixed(1)} miles, £${amount.toFixed(2)}) ${since} to ${CONFIG.MILEAGE_CLAIM_EMAIL}?`)) return;
+
+  const rows = open.map(j => `
+      <tr>
+        <td style="padding:4px 8px;border-bottom:1px solid #ddd;white-space:nowrap">${escapeHtml(milFmtDate(j.date))}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid #ddd">${escapeHtml(j.destination)}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid #ddd">${escapeHtml(j.purpose)}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid #ddd;text-align:right">${(Number(j.miles) || 0).toFixed(1)}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid #ddd;text-align:right;white-space:nowrap">${escapeHtml(j.rate)}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid #ddd;text-align:right">£${(Number(j.amount) || 0).toFixed(2)}</td>
+      </tr>`).join('');
+  const portalUrl = `${window.location.origin}${window.location.pathname}`;
+  const subject = `Mileage claim — ${me} — ${milFmtDate(first)} to ${milFmtDate(last)} — £${amount.toFixed(2)}`;
+  const html = `
+    <p>${escapeHtml(me)} is claiming mileage for <strong>${open.length}</strong> journey${open.length === 1 ? '' : 's'} ${escapeHtml(since)}.</p>
+    <p><strong>Total: ${miles.toFixed(1)} miles, £${amount.toFixed(2)}</strong> (HMRC approved rates; tax year ${escapeHtml(MIL.taxYear ? MIL.taxYear.label : '')}).</p>
+    <table style="border-collapse:collapse;font-size:13px">
+      <thead><tr>
+        <th style="text-align:left;padding:4px 8px;border-bottom:2px solid #999">Date</th>
+        <th style="text-align:left;padding:4px 8px;border-bottom:2px solid #999">Destination</th>
+        <th style="text-align:left;padding:4px 8px;border-bottom:2px solid #999">Purpose</th>
+        <th style="text-align:right;padding:4px 8px;border-bottom:2px solid #999">Miles</th>
+        <th style="text-align:right;padding:4px 8px;border-bottom:2px solid #999">Rate</th>
+        <th style="text-align:right;padding:4px 8px;border-bottom:2px solid #999">Amount</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr>
+        <td colspan="3" style="padding:6px 8px;font-weight:bold">Total</td>
+        <td style="padding:6px 8px;text-align:right;font-weight:bold">${miles.toFixed(1)}</td>
+        <td></td>
+        <td style="padding:6px 8px;text-align:right;font-weight:bold">£${amount.toFixed(2)}</td>
+      </tr></tfoot>
+    </table>
+    <p>When paid, mark these journeys claimed in the portal (Mileage → Mark Claimed…):<br><a href="${portalUrl}">${portalUrl}</a></p>
+    <p style="color:#888;font-size:12px">Sent from the Gecko portal.</p>`;
+  const btn = document.getElementById('milClaimEmailBtn');
+  if (btn) btn.disabled = true;
+  try {
+    await graphFetch('/me/sendMail', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: {
+          subject,
+          body: { contentType: 'HTML', content: html },
+          toRecipients: [{ emailAddress: { address: CONFIG.MILEAGE_CLAIM_EMAIL } }]
+        },
+        saveToSentItems: true
+      })
+    });
+    toast(`Claim emailed to ${CONFIG.MILEAGE_CLAIM_EMAIL}: ${open.length} journeys, £${amount.toFixed(2)}`, 'success', 5000);
+  } catch (err) {
+    console.error('Mileage claim email failed:', err);
+    toast('Could not send the claim: ' + (err.message || 'unknown error'), 'error', 7000);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 function milSetDefaultDate() {
   const el = document.getElementById('milDate');
   if (el && !el.value) {
@@ -13652,6 +13753,7 @@ async function initMileage() {
   document.getElementById('milExpJackRole').textContent   = `· ${jack.role} · ${jack.vehicle}`;
 
   milSetDefaultDate();
+  milSetDefaultDriver();
 
   // Modal: close on ESC (covers both the delete-confirm and claim modals)
   document.addEventListener('keydown', e => {
