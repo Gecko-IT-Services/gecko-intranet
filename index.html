@@ -3174,6 +3174,15 @@ body {
   transition: color .15s;
 }
 #section-timesheets .tsh-ssa-link:hover { color: var(--green); text-decoration-color: var(--green); }
+#section-timesheets .tsh-ssa-link.muted { color: var(--muted); margin-left: auto; }
+#section-timesheets .tsh-ssa-archived { margin-top: 14px; border: 1px dashed var(--border-dim); border-radius: var(--radius); padding: 10px 14px; }
+#section-timesheets .tsh-ssa-archived summary { cursor: pointer; font-size: 12px; color: var(--muted); font-weight: 600; }
+#section-timesheets .tsh-ssa-archived-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+#section-timesheets .tsh-ssa-archived-row { display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: .8; }
+#section-timesheets .tsh-ssa-archived-row .tsh-ssa-av { width: 26px; height: 26px; font-size: 10px; }
+#section-timesheets .tsh-ssa-archived-name { font-weight: 600; }
+#section-timesheets .tsh-ssa-archived-hours { color: var(--muted); }
+#section-timesheets .tsh-ssa-archived-row .tsh-ssa-link { margin-left: auto; }
 #section-timesheets .tsh-ssa-note {
   margin-top: 14px; padding: 10px 14px;
   background: var(--green-glow); border: 1px solid var(--border);
@@ -8758,6 +8767,7 @@ async function ovwLoadSsaClients() {
       name:            f.Title || '',
       hoursPurchased:  Number(f.HoursPurchased) || 0,
       hoursUsed:       Number(f.HoursUsed) || 0,
+      archived:        tshIsTrue(f.Archived),
       hoursRemaining
     };
   }).filter(c => c.name && c.hoursPurchased > 0); // Only SSA clients
@@ -8874,13 +8884,14 @@ function ovwComputeHoursThisWeek() {
  * Returns { count, topNames: string[] } — top 3 most urgent.
  */
 function ovwComputeSsaAtRisk() {
-  const atRisk = OVW.ssaClients
+  const live = OVW.ssaClients.filter(c => !c.archived);
+  const atRisk = live
     .filter(c => c.hoursRemaining !== null && c.hoursRemaining < 2.0)
     .sort((a, b) => (a.hoursRemaining ?? 0) - (b.hoursRemaining ?? 0));
   return {
     count: atRisk.length,
     topNames: atRisk.slice(0, 3).map(c => c.name),
-    totalSsa: OVW.ssaClients.length
+    totalSsa: live.length
   };
 }
 
@@ -13828,6 +13839,7 @@ async function cliLoadSsaClients() {
       primaryContact:  f.PrimaryContact || '',
       email:           f.Email || '',
       hoursPurchased:  Number(f.HoursPurchased) || 0,
+      archived:        tshIsTrue(f.Archived),
       hoursUsed:       Number(f.HoursUsed) || 0,
       hoursRemaining:  hoursRemaining,
       clientFolder:    f.ClientFolder || ''
@@ -14518,7 +14530,8 @@ const TSH = {
   siteId:      null,
   listIds:     { timesheets: null, clients: null },
   entries:     [],   // [{ id, clientName, clientLookupId, engineer, date, hours, workType, description, workDescription, internalNotes, ateraId, archived }]
-  ssaClients:  [],   // [{ id, name, hoursPurchased, hoursUsed, hoursRemaining, primaryContact, email, clientFolder }]
+  ssaClients:  [],   // [{ id, name, hoursPurchased, hoursUsed, hoursRemaining, primaryContact, email, clientFolder, archived }]
+  showArchived: false,   // the Archived <details> on the SSA tab stays open across re-renders
   activeTab:   'log',
   filter:      'all',         // engineer filter: 'all' | 'Philip' | 'Jack'
   dateRange:   'month',       // 'week' | 'month' | 'all'
@@ -14771,7 +14784,10 @@ async function tshLoadSsaClients() {
       hoursRemaining:  hoursRemaining,
       primaryContact:  f.PrimaryContact || '',
       email:           f.Email || '',
-      clientFolder:    f.ClientFolder || ''
+      clientFolder:    f.ClientFolder || '',
+      // "Archived" is a Yes/No column on the Clients list (added Oct 2026).
+      // Off the SSA programme: kept for history, hidden from day-to-day lists.
+      archived:        tshIsTrue(f.Archived)
     };
   }).filter(c => c.name);
 }
@@ -14844,7 +14860,7 @@ async function tshRefreshData(silent = false) {
       last.textContent = 'Synced ' + TSH.lastSync.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
     if (!silent) {
-      toast(`Refreshed — ${TSH.entries.length} entries, ${TSH.ssaClients.filter(c => c.hoursPurchased > 0).length} SSA clients`, 'success', 2500);
+      toast(`Refreshed — ${TSH.entries.length} entries, ${TSH.ssaClients.filter(c => c.hoursPurchased > 0 && !c.archived).length} SSA clients`, 'success', 2500);
     }
   } catch (err) {
     console.error('Timesheets refresh failed:', err);
@@ -14877,7 +14893,7 @@ function tshPopulateClientDropdown() {
   // Keep the placeholder option
   sel.innerHTML = '<option value="">Select client…</option>';
   // Sort clients alphabetically
-  const sorted = TSH.ssaClients.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const sorted = TSH.ssaClients.filter(c => !c.archived).sort((a, b) => a.name.localeCompare(b.name));
   for (const c of sorted) {
     const hasSsa = c.hoursPurchased > 0;
     const opt = document.createElement('option');
@@ -15135,12 +15151,29 @@ function tshRenderSsa() {
   const wrap = document.getElementById('tshSsaWrap');
   if (!wrap) return;
 
-  // Only SSA clients (hoursPurchased > 0)
-  const ssaList = TSH.ssaClients.filter(c => c.hoursPurchased > 0)
+  // Only SSA clients (hoursPurchased > 0) that are still on the programme
+  const ssaList = TSH.ssaClients.filter(c => c.hoursPurchased > 0 && !c.archived)
     .sort((a, b) => (a.hoursRemaining ?? 999) - (b.hoursRemaining ?? 999));
+  const archived = TSH.ssaClients.filter(c => c.archived)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const archivedHtml = archived.length ? `
+    <details class="tsh-ssa-archived" ${TSH.showArchived ? 'open' : ''} ontoggle="TSH.showArchived = this.open">
+      <summary>Archived — off the SSA programme (${archived.length})</summary>
+      <div class="tsh-ssa-archived-list">
+        ${archived.map(c => `
+          <div class="tsh-ssa-archived-row">
+            <span class="tsh-ssa-av">${escapeHtml(initialsFor(c.name))}</span>
+            <span class="tsh-ssa-archived-name">${escapeHtml(c.name)}</span>
+            <span class="tsh-ssa-archived-hours">${tshFmtHours(c.hoursUsed)} used of ${tshFmtHours(c.hoursPurchased)}</span>
+            <button class="tsh-ssa-link" type="button" onclick="tshSetArchived('${jsAttr(c.id)}', false)">Restore</button>
+          </div>`).join('')}
+      </div>
+      <div class="tsh-ssa-note">Archived clients keep their logged hours and history but are left out of the SSA cards, the client picker and the Overview count.</div>
+    </details>` : '';
 
   if (ssaList.length === 0) {
-    wrap.innerHTML = '<div class="tsh-empty"><h3>No SSA Clients</h3><p>No clients have an active SSA agreement (Hours Purchased &gt; 0).</p></div>';
+    wrap.innerHTML = '<div class="tsh-empty"><h3>No SSA Clients</h3><p>No clients have an active SSA agreement (Hours Purchased &gt; 0).</p></div>' + archivedHtml;
     return;
   }
 
@@ -15177,13 +15210,44 @@ function tshRenderSsa() {
       <div class="tsh-ssa-actions">
         <button class="tsh-ssa-link" type="button" onclick="tshViewEntries('${jsAttr(c.name)}')">View entries</button>
         <button class="tsh-ssa-link" type="button" onclick="navTo('clients')">Jump to Directory</button>
+        <button class="tsh-ssa-link muted" type="button" title="Take this client off the SSA programme. Hours and history are kept." onclick="tshSetArchived('${jsAttr(c.id)}', true)">Archive</button>
       </div>
     </div>`;
   }).join('');
 
   wrap.innerHTML = `
     <div class="tsh-ssa-grid">${cards}</div>
-    <div class="tsh-ssa-note">SSA hours sync from SharePoint. If the Power App was used recently, click Refresh to get the latest totals.</div>`;
+    <div class="tsh-ssa-note">SSA hours sync from SharePoint. If the Power App was used recently, click Refresh to get the latest totals.</div>
+    ${archivedHtml}`;
+}
+
+/**
+ * Archive (or restore) an SSA client: sets the Yes/No "Archived" column on
+ * the Clients list. Nothing is deleted: timesheet entries, hours purchased
+ * and used all stay, so history and billing are untouched.
+ */
+async function tshSetArchived(clientId, archived) {
+  const c = TSH.ssaClients.find(x => x.id === clientId);
+  if (!c) return;
+  if (archived && !confirm(`Archive ${c.name}? They come off the SSA cards and the client picker. Their ${tshFmtHours(c.hoursUsed)} logged hours and all entries are kept, and you can restore them here any time.`)) return;
+  const was = c.archived;
+  c.archived = archived;                      // optimistic; reverted on failure
+  tshRenderSsa();
+  try {
+    await graphFetch(`/sites/${TSH.siteId}/lists/${TSH.listIds.clients}/items/${clientId}/fields`, {
+      method: 'PATCH', body: JSON.stringify({ Archived: archived })
+    });
+    tshPopulateClientDropdown();
+    toast(archived ? `${c.name} archived` : `${c.name} restored to the SSA programme`, 'success', 2500);
+  } catch (err) {
+    c.archived = was;
+    tshRenderSsa();
+    console.error('Archive failed:', err);
+    const missing = /Archived|does not exist|not found|invalid/i.test(err.message || '');
+    toast(missing
+      ? 'Could not archive: the Clients list needs a Yes/No column called "Archived". Add it in SharePoint (list settings → add column → Yes/No, name "Archived"), then try again.'
+      : 'Could not update the client: ' + (err.message || 'unknown error'), 'error', 8000);
+  }
 }
 
 /** Switch to Log tab filtered by a specific client */
