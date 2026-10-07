@@ -77,7 +77,74 @@ export function validateFeed(feed) {
       }
     }
   }
+  // Supplier invoices charged to clients in the month they are dated
+  // (2026-10-07). Both sections are optional; a present one must be whole.
+  if (feed.exclaimer != null) {
+    const subs = feed.exclaimer.subscriptions;
+    if (!Array.isArray(subs)) errors.push('exclaimer.subscriptions missing');
+    else subs.forEach((r, i) => {
+      if (!r || !DAY.test(r.date || '')) errors.push(`exclaimer line ${i + 1}: date is not YYYY-MM-DD`);
+      else if (!String(r.endUser || '').trim()) errors.push(`exclaimer ${r.invoice || i + 1}: no end user`);
+      else if (!isMoney(r.net)) errors.push(`exclaimer ${r.invoice || i + 1}: "${r.net}" is not a number`);
+    });
+  }
+  if (feed.clook != null) {
+    const invs = feed.clook.invoices;
+    if (!Array.isArray(invs)) errors.push('clook.invoices missing');
+    else invs.forEach((inv, i) => {
+      if (!inv || !inv.invoice) { errors.push(`clook invoice ${i + 1}: no invoice number`); return; }
+      if (!DAY.test(inv.date || '')) { errors.push(`clook ${inv.invoice}: date is not YYYY-MM-DD`); return; }
+      if (!Array.isArray(inv.lines) || !inv.lines.length) { errors.push(`clook ${inv.invoice}: no lines`); return; }
+      for (const l of inv.lines) {
+        if (!l || !String(l.item || '').trim()) errors.push(`clook ${inv.invoice}: a line has no item`);
+        else if (!isMoney(l.net)) errors.push(`clook ${inv.invoice} ${l.item}: "${l.net}" is not a number`);
+      }
+    });
+  }
   return { ok: errors.length === 0, errors };
+}
+
+const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+
+/**
+ * Supplier invoices dated in one month, charged to the client they were
+ * for. Exclaimer lines match by end-user name; Clook lines carry the
+ * client name the job assigned from its domain map (null when it could
+ * not). A Clook line marked shared (the reseller hosting plan) belongs to
+ * no client. Nothing here is spread across months: an annual renewal
+ * lands whole in the month it was invoiced, which is the point.
+ *
+ * Returns { byClient: Map(clientId -> { client, total, lines }),
+ *           unassigned: [line + name], shared: [line], total }.
+ */
+export function invoicedCosts(feed, month, match) {
+  const byClient = new Map(), unassigned = [], shared = [];
+  let total = 0;
+  const add = (client, line) => {
+    total = round2(total + line.net);
+    const e = byClient.get(client.id) || { client, total: 0, lines: [] };
+    e.total = round2(e.total + line.net);
+    e.lines.push(line);
+    byClient.set(client.id, e);
+  };
+  for (const s of feed?.exclaimer?.subscriptions || []) {
+    if (!String(s.date || '').startsWith(month + '-')) continue;
+    const line = { supplier: 'Exclaimer', desc: `${s.product} — ${s.users} users, ${s.months} mo`, date: s.date, net: round2(s.net), ref: s.invoice };
+    const client = match(s.endUser);
+    if (client) add(client, line);
+    else { unassigned.push({ ...line, name: s.endUser }); total = round2(total + line.net); }
+  }
+  for (const inv of feed?.clook?.invoices || []) {
+    if (!String(inv.date || '').startsWith(month + '-')) continue;
+    for (const l of inv.lines) {
+      const line = { supplier: 'Clook', desc: l.item, date: inv.date, net: round2(l.net), ref: inv.invoice };
+      if (l.shared) { shared.push(line); total = round2(total + line.net); continue; }
+      const client = l.client ? match(l.client) : null;
+      if (client) add(client, line);
+      else { unassigned.push({ ...line, name: l.client || l.domain || l.item }); total = round2(total + line.net); }
+    }
+  }
+  return { byClient, unassigned, shared, total };
 }
 
 function cspSum(c) {

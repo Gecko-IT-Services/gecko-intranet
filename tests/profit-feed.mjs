@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   validateFeed, xeroMonths, totalsByClient, cspAggregated,
-  isStale, feedAgeHours, describeWhen, FEED_PATH, hasSplit, splitByClient
+  isStale, feedAgeHours, describeWhen, FEED_PATH, hasSplit, splitByClient, invoicedCosts
 } from '../src/core/profit-feed.js';
 
 const good = () => ({
@@ -98,3 +98,41 @@ console.log('profit-feed: all assertions passed');
   assert.equal(validateFeed(f).ok, false, 'string recurring refused'); }
 
 console.log('profit-feed split: ok');
+
+// — invoiced supplier costs —
+{
+  const f = good();
+  f.exclaimer = { subscriptions: [
+    { invoice: '2434295', date: '2026-08-14', product: 'Exclaimer Starter Edition for Office 365', users: 12, endUser: 'Technix Rubber and Plastics Ltd', months: 12, net: 93.6, periodStart: '2026-08-13', periodEnd: '2027-08-12' },
+    { invoice: '2472823', date: '2026-09-30', product: 'Exclaimer Starter Edition for Office 365', users: 10, endUser: 'MSA Safety', months: 1, net: 6.5, periodStart: '2026-09-26', periodEnd: '2026-10-25' },
+    { invoice: '2455613', date: '2026-09-10', product: 'Exclaimer Standard Edition for Office 365', users: 15, endUser: 'Gecko IT Services', months: 12, net: 185.4, periodStart: '2026-09-02', periodEnd: '2027-09-01' }
+  ] };
+  f.clook = { invoices: [
+    { invoice: '523904', date: '2026-09-19', lines: [{ item: 'Domain Renewal - hampshire-glass.co.uk - 1 Year/s', domain: 'hampshire-glass.co.uk', client: 'Hampshire Glass and Window Solutions Ltd', net: 7.99 }] },
+    { invoice: '522796', date: '2026-09-15', lines: [{ item: 'Reseller-Enterprise - gecko-it.com', domain: 'gecko-it.com', client: null, shared: true, net: 29.99 }] },
+    { invoice: '516780', date: '2026-07-14', lines: [{ item: 'Domain Renewal - slaterfamily.me.uk - 1 Year/s', domain: 'slaterfamily.me.uk', client: null, net: 7.99 }] }
+  ] };
+  assert.equal(validateFeed(f).ok, true, 'exclaimer and clook sections are accepted');
+
+  const clients = { 'MSA Safety': { id: 'msa' }, 'Hampshire Glass and Window Solutions Ltd': { id: 'hg' }, 'Technix Rubber and Plastics Ltd': { id: 'tx' } };
+  const sep = invoicedCosts(f, '2026-09', n => clients[n] || null);
+  assert.equal(sep.byClient.get('msa').total, 6.5);
+  assert.equal(sep.byClient.get('hg').total, 7.99);
+  assert.equal(sep.byClient.has('tx'), false, 'August invoice does not land in September');
+  assert.deepEqual(sep.shared.map(l => l.net), [29.99], 'reseller plan is shared, not a client cost');
+  assert.deepEqual(sep.unassigned.map(l => l.name), ['Gecko IT Services'], 'unknown end user is listed, never dropped');
+  assert.equal(sep.total, 229.88, 'total includes shared and unassigned so nothing is lost');
+
+  const jul = invoicedCosts(f, '2026-07', n => clients[n] || null);
+  assert.deepEqual(jul.unassigned.map(l => l.name), ['slaterfamily.me.uk'], 'a Clook line with no client falls back to its domain');
+  assert.equal(invoicedCosts(good(), '2026-09', () => null).total, 0, 'older feeds have no invoiced costs');
+}
+{ const f = good(); f.clook = { invoices: [{ invoice: '1', date: '19/09/2026', lines: [{ item: 'x', net: 1 }] }] };
+  assert.match(validateFeed(f).errors.join(), /not YYYY-MM-DD/); }
+{ const f = good(); f.clook = { invoices: [{ invoice: '1', date: '2026-09-19', lines: [{ item: 'x', net: '7.99' }] }] };
+  assert.equal(validateFeed(f).ok, false, 'string net refused'); }
+{ const f = good(); f.exclaimer = { subscriptions: [{ invoice: '1', date: '2026-09-19', endUser: '', net: 1 }] };
+  assert.match(validateFeed(f).errors.join(), /no end user/); }
+{ const f = good(); f.exclaimer = null; f.clook = null; assert.equal(validateFeed(f).ok, true); }
+
+console.log('profit-feed invoiced: ok');
