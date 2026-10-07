@@ -83,7 +83,13 @@ Phases (each is its own PR, its own design-note update, Philip approves each):
    every field matched. **Switched 7 Oct** by Philip after a fresh copy. After the
    switch, entitlements are edited in Supabase › Table Editor › leave_entitlements (they
    were edited by hand in the SharePoint list before; the page has never edited them).
-3. **Mileage**: MileageJourneys, MileageClients (HMRC records: 6-year retention kept).
+3. **Mileage (built 7 Oct)** — `…_mileage.sql`: `mileage_journeys`, `mileage_clients`.
+   One flag, `CONFIG.DATA_BACKEND.mileage`, moves both the Mileage section and Overview's
+   mileage tiles (Overview reads journeys too), so they never disagree. Overview shows a
+   Connect card if the database needs a click. Copy to Supabase (Philip only) shows rows,
+   miles and £ totals side by side; a penny out fails. Reads page through Supabase's
+   1000-row cap (`selectAllPages`), so a long journey history is never cut short. HMRC
+   records: 6-year retention kept; nothing deletes on a schedule.
 4. **Clients, Services.**
 5. **Timesheets + SSA** with the trigger, flow switch-off, Renewal and Archive. Done on
    a quiet day with Jack aware, because of the flow cutover.

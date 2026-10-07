@@ -73,7 +73,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Supabase GitHub integration on merge to `main` (never change schema by hand).
 - `CONFIG.DATA_BACKEND.<section>` says where a section's data lives. **Leave is on
   Supabase** since 7 Oct (`leave_requests`, `leave_entitlements`); its SharePoint lists
-  are no longer updated. Everything else is SharePoint. Projects/Compliance/P&L are not moving.
+  are no longer updated. Mileage is built and copyable (`mileage_journeys`,
+  `mileage_clients`; one flag also moves Overview's mileage tiles) and switches when
+  Philip says. Everything else is SharePoint. Projects/Compliance/P&L are not moving.
 - Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
   and a policy (`tests/supabase-migration.mjs` enforces it). Only the publishable key
   is in the site. Sign-in is the Microsoft ID token (`src/core/supabase.js`).
