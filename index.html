@@ -3196,6 +3196,9 @@ body {
 #section-timesheets .tsh-renew-xero-t th { text-align: left; font-weight: 500; color: var(--muted); padding: 3px 12px 3px 0; white-space: nowrap; vertical-align: top; width: 1%; }
 #section-timesheets .tsh-renew-xero-t td { padding: 3px 0; overflow-wrap: anywhere; }
 #section-timesheets .tsh-renew-xero .tsh-mm-actions { margin-top: 12px; }
+#section-timesheets .tsh-renew-undo { color: var(--red); }
+#section-timesheets .tsh-renew-actions { flex-wrap: wrap; }
+#section-timesheets .tsh-renew-actions .btn { white-space: nowrap; }
 #section-timesheets .tsh-ssa-archived { margin-top: 14px; border: 1px dashed var(--border-dim); border-radius: var(--radius); padding: 10px 14px; }
 #section-timesheets .tsh-ssa-archived summary { cursor: pointer; font-size: 12px; color: var(--muted); font-weight: 600; }
 #section-timesheets .tsh-ssa-archived-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
@@ -15481,11 +15484,11 @@ async function tshFetchClientRow(clientId) {
   };
 }
 
-function tshOpenRenew(clientId) {
+function tshOpenRenew(clientId, fresh = false) {
   const R = window.SsaRenewal;
   if (!R) { toast('The renewal module did not load — hard-refresh the page (Cmd+Shift+R) and try again.', 'error', 6000); return; }
-  if (TSH.renew && TSH.renew.clientId === String(clientId) && TSH.renew.started && !TSH.renew.finished) {
-    tshRenewRender();   // a run in progress: show it, never start a second
+  if (TSH.renew && TSH.renew.clientId === String(clientId) && TSH.renew.started && !fresh) {
+    tshRenewRender();   // in progress, or done with Undo still on offer: show it, never start a second silently
     return;
   }
   const c = TSH.ssaClients.find(x => String(x.id) === String(clientId));
@@ -15536,7 +15539,25 @@ function tshRenewRender() {
     const s = r.steps[key] || { state: 'todo' };
     return `<li class="tsh-renew-step ${s.state}"><span class="tsh-renew-ic" aria-hidden="true">${icon(s.state)}</span><span><strong>${escapeHtml(label)}</strong>${s.text ? `<br><span class="tsh-renew-sub">${escapeHtml(s.text)}</span>` : ''}</span></li>`;
   };
-  const canRetry = r.steps.credit?.state === 'done' && !r.emailed && !r.running;
+  const canRetry = r.steps.credit?.state === 'done' && !r.emailed && !r.running && !r.undo;
+  // Undo only once the flow has applied the credit: deleting it before then
+  // races the flow, which could still add it to the balance afterwards.
+  const canUndo = r.steps.applied?.state === 'done' && !r.running && !r.undo;
+  if (r.undo) {
+    tshOpenModal(`Renew SSA — ${r.name}`, `
+      <ol class="tsh-renew-steps">
+        ${step('undoDraft', 'Draft email removed')}
+        ${step('undoCredit', `Credit +${hours} hours removed`)}
+        ${step('undoBalance', 'Balance put back')}
+        ${step('undoFile', 'Gecko Docs copy removed')}
+      </ol>
+      ${r.undo.done ? `<p class="tsh-renew-warn">Renewal undone. Do not raise the Xero invoice for it.</p>` : ''}
+      <div class="tsh-mm-actions">
+        ${r.undo.done ? `<button class="btn btn-ghost" type="button" onclick="tshOpenRenew('${jsAttr(r.clientId)}', true)">New renewal</button>` : ''}
+        <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">${r.undo.done ? 'Done' : 'Hide'}</button>
+      </div>`);
+    return;
+  }
   const xero = r.emailed ? `
       <div class="tsh-renew-xero">
         <div class="tsh-renew-xero-h">Raise in Xero</div>
@@ -15562,9 +15583,11 @@ function tshRenewRender() {
       ${step('archive', 'Copy saved to Gecko Docs')}
     </ol>
     ${xero}
-    <div class="tsh-mm-actions">
+    <div class="tsh-mm-actions tsh-renew-actions">
       ${r.draftLink ? `<a class="btn" href="${escapeHtml(r.draftLink)}" target="_blank" rel="noopener">Open the draft</a>` : ''}
       ${canRetry ? `<button class="btn" type="button" onclick="tshRenewSend()">Try again</button>` : ''}
+      ${canUndo ? `<button class="btn btn-ghost tsh-renew-undo" type="button" onclick="tshRenewUndo()">Undo this renewal</button>` : ''}
+      ${r.finished ? `<button class="btn btn-ghost" type="button" onclick="tshOpenRenew('${jsAttr(r.clientId)}', true)">New renewal</button>` : ''}
       <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">${r.finished ? 'Done' : 'Hide'}</button>
     </div>`);
 }
@@ -15692,6 +15715,7 @@ async function tshRenewSend(fromGo = false) {
     }
     r.emailed = true;
     r.draftLink = draft?.webLink || null;
+    r.draftId = draft?.id || null;
     const count = `${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`;
     tshRenewSet('email', 'done', drafting
       ? `In your Outlook Drafts, from ${CONFIG.SSA_FROM_MAILBOX} to ${to.join(', ')}, ${count}. Check it, then press Send.`
@@ -15705,7 +15729,8 @@ async function tshRenewSend(fromGo = false) {
       if (!docs) throw new Error('no "Gecko Docs" library on the portal site');
       const name = R.archiveFileName(client.name, new Date());
       const path = ['clients', client.clientFolder, name].map(encodeURIComponent).join('/');
-      await graphFetch(`/drives/${docs.id}/root:/${path}:/content`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html });
+      const file = await graphFetch(`/drives/${docs.id}/root:/${path}:/content`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html });
+      r.archiveFile = file?.id ? { driveId: docs.id, itemId: file.id } : null;
       tshRenewSet('archive', 'done', `Gecko Docs › clients › ${client.clientFolder} › ${name}`);
     } catch (err) {
       tshRenewSet('archive', 'fail', 'Not saved: ' + (err.message || 'unknown error') + (drafting ? '. The draft is in your Drafts.' : '. The email was sent.'));
@@ -15718,6 +15743,81 @@ async function tshRenewSend(fromGo = false) {
   } finally {
     r.running = false;
     tshRenewRender();
+  }
+}
+
+/**
+ * Reverse the renewal just made in this dialog: draft (if still a draft),
+ * credit entry, the balance, the Gecko Docs copy. The balance flow only
+ * reacts to new entries, so deleting the credit alone would leave the hours
+ * on — the one place the portal writes HoursUsed, and only to take back the
+ * exact credit it added (Philip asked for Undo, 7 Oct 2026). Relative to the
+ * current value, so anything logged since is kept.
+ */
+async function tshRenewUndo() {
+  const r = TSH.renew;
+  if (!r || r.running || r.undo || r.steps.applied?.state !== 'done') return;
+  const hours = r.creditHours;
+  if (!confirm(`Undo the ${r.name} renewal?\n\nThis removes the draft email (if not yet sent), deletes the +${hours} hours credit, takes ${hours} hours back off the balance and removes the Gecko Docs copy.`)) return;
+  r.running = true;
+  r.undo = { done: false };
+  const set = (k, st, t) => { r.steps[k] = { state: st, text: t }; tshRenewRender(); };
+  try {
+    // 1 — the draft, before anyone can send it.
+    if (r.draftId) {
+      set('undoDraft', 'doing', 'Checking the draft…');
+      let msg = null;
+      try {
+        msg = await graphFetch(`/me/messages/${encodeURIComponent(r.draftId)}?$select=isDraft`, { scopes: ['Mail.ReadWrite'], interactive: true });
+      } catch (err) {
+        if (!/Graph 404/.test(err.message || '')) throw err;
+      }
+      if (msg && msg.isDraft) {
+        await graphFetch(`/me/messages/${encodeURIComponent(r.draftId)}`, { method: 'DELETE', scopes: ['Mail.ReadWrite'], interactive: true });
+        set('undoDraft', 'done', 'Moved to Deleted Items. The client never saw it.');
+      } else {
+        set('undoDraft', 'fail', 'The email has already been sent, so it cannot be recalled. You may want to tell the client the credit was a mistake.');
+      }
+    } else if (r.emailed) {
+      set('undoDraft', 'fail', 'The email was sent directly, so it cannot be recalled. You may want to tell the client the credit was a mistake.');
+    } else {
+      set('undoDraft', 'done', 'No email had been made.');
+    }
+
+    // 2 + 3 — the credit and the balance, together.
+    set('undoCredit', 'doing', 'Deleting the credit entry…');
+    await tshDeleteEntry(r.creditId);
+    set('undoCredit', 'done', 'Deleted from the Timesheets list.');
+    set('undoBalance', 'doing', 'Putting the balance back…');
+    const now = await tshFetchClientRow(r.clientId);
+    await graphFetch(`/sites/${TSH.siteId}/lists/${TSH.listIds.clients}/items/${r.clientId}/fields`, {
+      method: 'PATCH', body: JSON.stringify({ HoursUsed: now.hoursUsed + hours })
+    });
+    set('undoBalance', 'done', `${tshFmtHours(hours)} taken back off. Remaining now ${tshFmtHours(now.hoursRemaining - hours)}.`);
+
+    // 4 — the copy (to the SharePoint recycle bin).
+    if (r.archiveFile) {
+      try {
+        await graphFetch(`/drives/${r.archiveFile.driveId}/items/${r.archiveFile.itemId}`, { method: 'DELETE' });
+        set('undoFile', 'done', 'Moved to the SharePoint recycle bin.');
+      } catch (err) {
+        set('undoFile', 'fail', 'Not removed: ' + (err.message || 'unknown error') + '. Delete it by hand in Gecko Docs if you want.');
+      }
+    } else {
+      set('undoFile', 'done', 'No copy had been saved.');
+    }
+    r.undo.done = true;
+  } catch (err) {
+    console.error('SSA renewal undo failed:', err);
+    const k = ['undoDraft', 'undoCredit', 'undoBalance', 'undoFile'].find(x => r.steps[x]?.state === 'doing') || 'undoCredit';
+    const hint = k === 'undoBalance'
+      ? ` The credit entry is deleted but the balance still includes it: add ${hours} to Hours Used on the Clients list for ${r.name} by hand.`
+      : ' Nothing after this step was changed.';
+    set(k, 'fail', (err.message || 'unknown error') + hint);
+  } finally {
+    r.running = false;
+    tshRenewRender();
+    tshRefreshData(true);
   }
 }
 

@@ -47,6 +47,25 @@ Archived entries are included (the flow does not filter them).
 The flow describes every credit as "Credit – 10 hours (SSA renewal)", even a 20-hour one (Cowan,
 30 Sep: "+20.00 … Credit – 10 hours"). The portal uses the real figure.
 
+## Undo (added 7 Oct 2026, Philip: "just in case there is an issue")
+**Undo this renewal** appears in the dialog once the flow has applied the credit (never before:
+deleting the credit while the flow may still pick it up would race it). It:
+1. Deletes the draft if it is still a draft (to Deleted Items). If it was already sent, says so —
+   a sent email cannot be recalled.
+2. Deletes the credit entry.
+3. Adds the credit's hours back to `HoursUsed`, relative to the current value so anything logged
+   since is kept. The balance flow ignores deletions, so without this the hours would stay on.
+   This is the only place the portal writes `HoursUsed` for a renewal, and only to take back the
+   exact credit it just added; existing balances are otherwise never touched.
+4. Moves the Gecko Docs copy to the recycle bin.
+5. Says not to raise the Xero invoice.
+
+The last renewal (and its Undo) stays in the dialog while the page is open: reopening Renew… on
+that client shows it, with **New renewal** to start another. A page reload forgets it; after
+that, undo by hand (delete the credit in SharePoint and add the hours back to Hours Used).
+
+If a step fails, the dialog says which, and what is left to do by hand.
+
 ## Permissions
 - Draft mode needs **Mail.ReadWrite**; send mode needs **Mail.Send.Shared**. Each is requested by
   this button only, through `graphFetch(path, { scopes, interactive: true })`, never added to
