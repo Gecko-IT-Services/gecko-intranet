@@ -7634,6 +7634,11 @@ const CONFIG = {
   // SSA renewal timesheet email: sent as the support mailbox (needs Send As on
   // it, and the one-off Mail.Send.Shared consent requested by that button only).
   SSA_FROM_MAILBOX:     'support@gecko-it.com',
+  // 'draft': the timesheet email is saved to the signed-in person's Outlook
+  // Drafts (From: support@) to check and send by hand — Philip's choice while
+  // the button is new. 'send': sent straight away. Draft needs Mail.ReadWrite,
+  // send needs Mail.Send.Shared; both requested by the Renew button only.
+  SSA_EMAIL_MODE:       'draft',
   SSA_TIMESHEET_CC:     ['jack@gecko-it.com', 'philip@gecko-it.com'],
 
   // — Scopes requested at sign-in —
@@ -15515,7 +15520,7 @@ function tshRenewRender() {
       </div>
       <ol class="tsh-renew-plan">
         <li>Adds a System credit of <strong>+${hours} hours</strong> to the timesheet. SharePoint's balance flow applies it within about a minute.</li>
-        <li>Emails the latest timesheet from <strong>${escapeHtml(CONFIG.SSA_FROM_MAILBOX)}</strong> to ${to.length ? escapeHtml(to.join(', ')) : '<em>no address</em>'}, copied to ${escapeHtml(CONFIG.SSA_TIMESHEET_CC.join(', '))}, and saves a copy in Gecko Docs.</li>
+        <li>${CONFIG.SSA_EMAIL_MODE === 'send' ? 'Emails' : 'Puts in <strong>your Outlook Drafts</strong>'} the latest timesheet from <strong>${escapeHtml(CONFIG.SSA_FROM_MAILBOX)}</strong> to ${to.length ? escapeHtml(to.join(', ')) : '<em>no address</em>'}, copied to ${escapeHtml(CONFIG.SSA_TIMESHEET_CC.join(', '))}${CONFIG.SSA_EMAIL_MODE === 'send' ? '' : ', for you to check and send'}, and saves a copy in Gecko Docs.</li>
         <li>Shows the Xero invoice to raise: ${inv.quantity} × ${escapeHtml(inv.itemCode)}, ${money(inv.total)} inc VAT.</li>
       </ol>
       ${noEmail}
@@ -15553,12 +15558,13 @@ function tshRenewRender() {
     <ol class="tsh-renew-steps">
       ${step('credit', `Credit +${hours} hours added`)}
       ${step('applied', 'Balance updated by SharePoint')}
-      ${step('email', 'Timesheet emailed')}
+      ${step('email', CONFIG.SSA_EMAIL_MODE === 'send' ? 'Timesheet emailed' : 'Timesheet email saved to your Drafts')}
       ${step('archive', 'Copy saved to Gecko Docs')}
     </ol>
     ${xero}
     <div class="tsh-mm-actions">
-      ${canRetry ? '<button class="btn" type="button" onclick="tshRenewSend()">Try sending again</button>' : ''}
+      ${r.draftLink ? `<a class="btn" href="${escapeHtml(r.draftLink)}" target="_blank" rel="noopener">Open the draft</a>` : ''}
+      ${canRetry ? `<button class="btn" type="button" onclick="tshRenewSend()">Try again</button>` : ''}
       <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">${r.finished ? 'Done' : 'Hide'}</button>
     </div>`);
 }
@@ -15606,7 +15612,7 @@ async function tshRenewGo() {
     while (!R.creditApplied(before.hoursUsed, now.hoursUsed, creditHours)) {
       if (Date.now() - t0 > TSH_RENEW_WAIT_MS) {
         r.running = false;
-        tshRenewSet('applied', 'fail', `SharePoint has not applied the credit after ${Math.round(TSH_RENEW_WAIT_MS / 60000)} minutes, so the email was not sent (it would show the old balance). The credit is saved. Wait a minute, then press "Try sending again".`);
+        tshRenewSet('applied', 'fail', `SharePoint has not applied the credit after ${Math.round(TSH_RENEW_WAIT_MS / 60000)} minutes, so no email was made (it would show the old balance). The credit is saved. Wait a minute, then press "Try again".`);
         return;
       }
       await new Promise(res => setTimeout(res, TSH_RENEW_POLL_MS));
@@ -15622,7 +15628,7 @@ async function tshRenewGo() {
     if (key === 'credit') { r.started = false; }   // nothing was written: back to the form
     r.running = false;
     if (key === 'credit') { toast('Could not add the credit: ' + (err.message || 'unknown error') + '. Nothing was changed.', 'error', 8000); tshRenewRender(); }
-    else tshRenewSet(key, 'fail', (err.message || 'unknown error') + ' The credit is saved; press "Try sending again".');
+    else tshRenewSet(key, 'fail', (err.message || 'unknown error') + ' The credit is saved; press "Try again".');
   } finally {
     tshRefreshData(true);
   }
@@ -15639,7 +15645,7 @@ async function tshRenewSend(fromGo = false) {
     if (r.steps.applied?.state !== 'done') {
       // Retry after a timeout: send only once the flow has applied the credit.
       if (!R.creditApplied(r.beforeUsed, client.hoursUsed, r.creditHours)) {
-        tshRenewSet('applied', 'fail', 'SharePoint still has not applied the credit, so nothing was sent. Wait a minute and try again. If it never applies, check the "Update Client Balances" flow in Power Automate.');
+        tshRenewSet('applied', 'fail', 'SharePoint still has not applied the credit, so no email was made. Wait a minute and try again. If it never applies, check the "Update Client Balances" flow in Power Automate.');
         return;
       }
       tshRenewSet('applied', 'done', `Balance now ${tshFmtHours(client.hoursRemaining)} remaining.`);
@@ -15647,39 +15653,51 @@ async function tshRenewSend(fromGo = false) {
     const to = R.recipients(client.email);
     if (!to.length) throw new Error(`No email address on the Clients list for ${client.name}. Add one in its Email column in SharePoint.`);
 
-    tshRenewSet('email', 'doing', `Sending from ${CONFIG.SSA_FROM_MAILBOX}…`);
+    const drafting = CONFIG.SSA_EMAIL_MODE !== 'send';
+    tshRenewSet('email', 'doing', drafting ? 'Saving the email to your Drafts…' : `Sending from ${CONFIG.SSA_FROM_MAILBOX}…`);
     const rows = R.timesheetEntries(await tshFetchClientEntries(r.clientId)).map(R.emailRow);
     const html = R.emailHtml({
       clientName: client.name, primaryContact: client.primaryContact,
       runDateKey: today(), hoursRemaining: client.hoursRemaining, rows
     });
+    const message = {
+      subject: R.EMAIL_SUBJECT,
+      body: { contentType: 'HTML', content: html },
+      toRecipients: to.map(address => ({ emailAddress: { address } })),
+      ccRecipients: CONFIG.SSA_TIMESHEET_CC.map(address => ({ emailAddress: { address } }))
+    };
+    let draft = null;
     try {
-      await graphFetch(`/users/${encodeURIComponent(CONFIG.SSA_FROM_MAILBOX)}/sendMail`, {
-        method: 'POST', scopes: ['Mail.Send.Shared'], interactive: true,
-        body: JSON.stringify({
-          message: {
-            subject: R.EMAIL_SUBJECT,
-            body: { contentType: 'HTML', content: html },
-            toRecipients: to.map(address => ({ emailAddress: { address } })),
-            ccRecipients: CONFIG.SSA_TIMESHEET_CC.map(address => ({ emailAddress: { address } }))
-          },
-          saveToSentItems: true
-        })
-      });
+      if (drafting) {
+        // From: support@ is kept on the draft; Outlook sends it as support@ when Send is pressed.
+        draft = await graphFetch('/me/messages', {
+          method: 'POST', scopes: ['Mail.ReadWrite'], interactive: true,
+          body: JSON.stringify({ ...message, from: { emailAddress: { address: CONFIG.SSA_FROM_MAILBOX } } })
+        });
+      } else {
+        await graphFetch(`/users/${encodeURIComponent(CONFIG.SSA_FROM_MAILBOX)}/sendMail`, {
+          method: 'POST', scopes: ['Mail.Send.Shared'], interactive: true,
+          body: JSON.stringify({ message, saveToSentItems: true })
+        });
+      }
     } catch (err) {
       const m = String(err.message || err);
       if (/SendAs|ErrorSendAsDenied|not have permission to send/i.test(m)) {
         throw new Error(`Your account is not allowed to send as ${CONFIG.SSA_FROM_MAILBOX}. In the Exchange admin centre: Recipients › Mailboxes › ${CONFIG.SSA_FROM_MAILBOX} › Delegation › Send as › add yourself.`);
       }
       if (/popup|user_cancelled|interaction/i.test(m)) {
-        throw new Error('Microsoft needed your one-off permission to send from the support mailbox, and its window was blocked or closed. Allow pop-ups for this site, then try again.');
+        throw new Error(`Microsoft needed your one-off permission to ${drafting ? 'save drafts in your mailbox' : 'send from the support mailbox'}, and its window was blocked or closed. Allow pop-ups for this site, then try again.`);
       }
       throw err;
     }
     r.emailed = true;
-    tshRenewSet('email', 'done', `Sent to ${to.join(', ')} with ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}.`);
+    r.draftLink = draft?.webLink || null;
+    const count = `${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`;
+    tshRenewSet('email', 'done', drafting
+      ? `In your Outlook Drafts, from ${CONFIG.SSA_FROM_MAILBOX} to ${to.join(', ')}, ${count}. Check it, then press Send.`
+      : `Sent to ${to.join(', ')} with ${count}.`);
 
-    // The copy the flow keeps in Gecko Docs/clients/<folder>/. The email has gone; a failure here is reported, not retried.
+    // The copy the flow keeps in Gecko Docs/clients/<folder>/. The email is made; a failure here is reported, not retried.
     try {
       if (!client.clientFolder) throw new Error('the Clients list has no Client Folder for this client');
       const drives = (await graphFetch(`/sites/${TSH.siteId}/drives?$select=id,name`)).value || [];
@@ -15690,7 +15708,7 @@ async function tshRenewSend(fromGo = false) {
       await graphFetch(`/drives/${docs.id}/root:/${path}:/content`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html });
       tshRenewSet('archive', 'done', `Gecko Docs › clients › ${client.clientFolder} › ${name}`);
     } catch (err) {
-      tshRenewSet('archive', 'fail', 'Not saved: ' + (err.message || 'unknown error') + '. The email was sent.');
+      tshRenewSet('archive', 'fail', 'Not saved: ' + (err.message || 'unknown error') + (drafting ? '. The draft is in your Drafts.' : '. The email was sent.'));
     }
     r.finished = true;
     tshRenewRender();

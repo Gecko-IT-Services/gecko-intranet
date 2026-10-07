@@ -22,9 +22,13 @@ hours, see who the email goes to and what Xero will need, then **Renew & send**:
    `HoursUsed`** (Philip's rule, 7 Oct 2026; see `2026-10-07-ssa-double-count-design.md`).
 2. Polls the Clients row every 10 s until the flow has applied the credit (a drop of more than
    half the credit, so a 15-minute entry logged in the same minute does not stall it). Up to 3 min.
-3. Builds the email exactly as the flow does (same greeting, card, balance badge, columns) and
-   sends it **as support@gecko-it.com** via `/users/support@…/sendMail`, cc Jack and Philip,
-   saved to the mailbox's Sent Items.
+3. Builds the email exactly as the flow does (same greeting, card, balance badge, columns).
+   `CONFIG.SSA_EMAIL_MODE` decides what happens to it:
+   - `'draft'` (the setting at launch — Philip's choice, so every email is checked first): saved to
+     the signed-in person's Outlook **Drafts** (`POST /me/messages`, `from` = support@, cc Jack and
+     Philip). The dialog links to the draft; Outlook sends it as support@ when Send is pressed.
+   - `'send'`: sent straight away as support@ (`/users/support@…/sendMail`), saved to the support
+     mailbox's Sent Items. Switch when the drafts have been right for a while.
 4. Saves the same HTML to `Gecko Docs/clients/<Client Folder>/Timesheet Summary - <Client> -
    yyyy-MM-dd - HHmm.html`, as the flow does.
 5. Shows the Xero invoice lines with **Copy details** and **Open Xero**.
@@ -44,9 +48,11 @@ The flow describes every credit as "Credit – 10 hours (SSA renewal)", even a 2
 30 Sep: "+20.00 … Credit – 10 hours"). The portal uses the real figure.
 
 ## Permissions
-- Sending as support@ needs **Mail.Send.Shared**, requested by this button only through
-  `graphFetch(path, { scopes, interactive: true })`; not added to `CONFIG.SCOPES`. Each user
-  approves it once in a Microsoft pop-up.
+- Draft mode needs **Mail.ReadWrite**; send mode needs **Mail.Send.Shared**. Each is requested by
+  this button only, through `graphFetch(path, { scopes, interactive: true })`, never added to
+  `CONFIG.SCOPES`. Each user approves it once in a Microsoft pop-up.
+- In draft mode the credit (and the Gecko Docs copy) are made before anyone reads the draft;
+  deleting the draft does not remove the credit.
 - The sender also needs **Send As** on the support mailbox in Exchange. The flow already sends
   "From: support@" as whoever presses its button, so Philip and Jack are expected to have it.
   If not, the step fails with the exact admin-centre path to add it.
@@ -55,9 +61,9 @@ The flow describes every credit as "Credit – 10 hours (SSA renewal)", even a 2
 - No email on the Clients row → Renew is disabled, with the column to fill in.
 - Credit could not be created → back to the form; nothing written.
 - Credit added but not applied within 3 min → no email (it would show the old balance);
-  "Try sending again" checks the balance has moved before sending.
+  "Try again" checks the balance has moved first.
 - Email refused (Send As, blocked pop-up, Graph error) → the step shows why; the credit stays;
-  "Try sending again" sends without adding a second credit.
+  "Try again" makes the email without adding a second credit.
 - Copy to Gecko Docs failed → reported, not retried; the email has gone.
 - Second renewal within 15 min for the same client → confirm first (double-click / two people).
 

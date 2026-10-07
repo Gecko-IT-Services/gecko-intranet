@@ -101,8 +101,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   created (System credits included). Code that creates entries must never also write `HoursUsed`.
 
 - **SSA renewal** (Timesheets › SSA › Renew…): System credit entry → waits for the "Update
-  Client Balances" flow → timesheet email sent as `CONFIG.SSA_FROM_MAILBOX` (support@, needs
-  Mail.Send.Shared via scoped graphFetch + Send As) → copy in Gecko Docs → Xero lines to type in.
+  Client Balances" flow → timesheet email from `CONFIG.SSA_FROM_MAILBOX` (support@) → copy in
+  Gecko Docs → Xero lines to type in. `CONFIG.SSA_EMAIL_MODE` is 'draft' (Outlook Drafts of the
+  person clicking, Mail.ReadWrite) until Philip says switch to 'send' (Mail.Send.Shared + Send As).
   Logic in `src/core/ssa-renewal.js`. Flows involved (Power Automate, shared with Philip, owned by
   Jack): Update Client Balances, Create Timesheets Table Email, Archive Old Timesheet Entries.
 
