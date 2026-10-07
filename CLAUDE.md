@@ -94,6 +94,12 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   journeys since their last claim to `CONFIG.MILEAGE_CLAIM_EMAIL` via
   `/me/sendMail`. Sending does not mark anything claimed.
 
+## SSA hours (Philip's rule, 7 Oct 2026 — "this is king")
+- Never adjust existing SSA balances (`HoursUsed` on Clients) or past Timesheets entries, even
+  where historic double counting is visible. No corrections, credits or recalculations.
+- A SharePoint flow adds every new Timesheets entry's hours to `HoursUsed` ~30s after it is
+  created (System credits included). Code that creates entries must never also write `HoursUsed`.
+
 ## Open items (ask Philip before acting)
 - Exclaimer subscriptions billed to "Gecko IT Services" (15-user Standard £185.40/yr
   Sep 2026; 10-user Starter £78/yr Jul 2026): whose are they? Shown as unassigned.
