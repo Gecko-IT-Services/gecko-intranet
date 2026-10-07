@@ -75,10 +75,11 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Supabase** since 7 Oct (`leave_requests`, `leave_entitlements`); its SharePoint lists
   are no longer updated. **Mileage is on Supabase** since 7 Oct (`mileage_journeys`,
   `mileage_clients`; the same flag moves Overview's mileage tiles); MileageJourneys and
-  MileageClients in SharePoint are no longer updated. Clients + Services are built and
-  copyable (`gecko_clients`, `gecko_services`; one flag moves Clients, Profitability and
-  Overview together via `clientList*` helpers) and switch when Philip says. Timesheets,
-  SSA `Clients` and the feed are still SharePoint. Projects/Compliance/P&L are not moving.
+  MileageClients in SharePoint are no longer updated. **Clients + Services are on
+  Supabase** since 7 Oct (`gecko_clients`, `gecko_services`; one flag moves Clients,
+  Profitability and Overview together via `clientList*` helpers); GeckoClients and
+  GeckoServices in SharePoint are no longer updated. Timesheets, the SSA `Clients` list
+  and the feed file are still SharePoint. Projects/Compliance/P&L are not moving.
 - Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
   and a policy (`tests/supabase-migration.mjs` enforces it). Only the publishable key
   is in the site. Sign-in is the Microsoft ID token (`src/core/supabase.js`).
