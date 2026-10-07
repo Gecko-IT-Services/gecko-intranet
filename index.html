@@ -3197,6 +3197,8 @@ body {
 #section-timesheets .tsh-renew-xero-t td { padding: 3px 0; overflow-wrap: anywhere; }
 #section-timesheets .tsh-renew-xero .tsh-mm-actions { margin-top: 12px; }
 #section-timesheets .tsh-renew-undo { color: var(--red); }
+#section-timesheets .tsh-renew-actions { flex-wrap: wrap; }
+#section-timesheets .tsh-renew-actions .btn { white-space: nowrap; }
 #section-timesheets .tsh-ssa-archived { margin-top: 14px; border: 1px dashed var(--border-dim); border-radius: var(--radius); padding: 10px 14px; }
 #section-timesheets .tsh-ssa-archived summary { cursor: pointer; font-size: 12px; color: var(--muted); font-weight: 600; }
 #section-timesheets .tsh-ssa-archived-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
@@ -15581,7 +15583,7 @@ function tshRenewRender() {
       ${step('archive', 'Copy saved to Gecko Docs')}
     </ol>
     ${xero}
-    <div class="tsh-mm-actions">
+    <div class="tsh-mm-actions tsh-renew-actions">
       ${r.draftLink ? `<a class="btn" href="${escapeHtml(r.draftLink)}" target="_blank" rel="noopener">Open the draft</a>` : ''}
       ${canRetry ? `<button class="btn" type="button" onclick="tshRenewSend()">Try again</button>` : ''}
       ${canUndo ? `<button class="btn btn-ghost tsh-renew-undo" type="button" onclick="tshRenewUndo()">Undo this renewal</button>` : ''}
