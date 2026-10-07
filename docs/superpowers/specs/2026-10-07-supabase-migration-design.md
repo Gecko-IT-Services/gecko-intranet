@@ -48,6 +48,9 @@ Non-goal: leaving Microsoft 365. The company still runs on it; only the dashboar
   to `signInWithIdToken({ provider: 'azure' })`. One Microsoft sign-in; Supabase keeps
   its own session. Silent where possible, a "Connect" button otherwise. Microsoft
   sign-out drops the Supabase session; a session left by another person is discarded.
+  The installed app can't hold a popup, so there the click redirects to Microsoft; the
+  raw nonce waits in localStorage and `completeDatabaseRedirect()` in `init()` finishes
+  the sign-in and reopens the section (Philip uses the installed app).
 - The email check is only sound because the Entra app is **single tenant** (only the
   Gecko tenant can issue its tokens). Confirm "Supported account types: this
   organisation only" before any section switches.
@@ -76,7 +79,8 @@ Phases (each is its own PR, its own design-note update, Philip approves each):
    table and adds `leave_requests` / `leave_entitlements`; `src/core/store.js`; Leave
    branches on `CONFIG.DATA_BACKEND.leave` (still `'sharepoint'`); Copy to Supabase on
    Leave (Philip only) copies both lists and shows rows, hours totals and any field that
-   differs. Switch = set the flag to `'supabase'` once Philip has seen it green. After the
+   differs. First copy 7 Oct: 17 requests, 232h, 0 entitlements (no list; 140h default),
+   every field matched. Switch = a fresh copy, then set the flag to `'supabase'`. After the
    switch, entitlements are edited in Supabase › Table Editor › leave_entitlements (they
    were edited by hand in the SharePoint list before; the page has never edited them).
 3. **Mileage**: MileageJourneys, MileageClients (HMRC records: 6-year retention kept).
@@ -116,8 +120,5 @@ Phases (each is its own PR, its own design-note update, Philip approves each):
 - Access: philip@ and jack@ via `public.staff` until Philip says otherwise.
 
 ## Deferred
-- Installed iOS app: if the silent Microsoft token fails there is no redirect leg yet, so
-  the person connects once from Safari (ponytail in `getIdTokenForNonce`). Solve before
-  Projects switches.
 - Supabase Storage for documents; realtime updates; moving the feed's producer off the
   Claude scheduled task.
