@@ -18,6 +18,7 @@ import * as alerts from './sections/alerts.js';
 import * as cspCosts from './core/csp-costs.js';
 import * as profitFeed from './core/profit-feed.js';
 import * as ssaRenewal from './core/ssa-renewal.js';
+import * as supabase from './core/supabase.js';
 
 window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
@@ -30,3 +31,5 @@ window.CspCosts = cspCosts;
 window.ProfitFeed = profitFeed;
 // Timesheets › SSA › Renew (also classic script).
 window.SsaRenewal = ssaRenewal;
+// Supabase session is dropped on Microsoft sign-out (classic script calls this).
+window.forgetSupabaseSession = supabase.forgetSupabaseSession;

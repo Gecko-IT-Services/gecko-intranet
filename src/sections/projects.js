@@ -9,6 +9,10 @@
    ║     GeckoProjects — Title, ClientName, Owner, Status, WaitingOn,  ║
    ║                     NextAction, AteraRef, Notes                   ║
    ║                                                                   ║
+   ║   Supabase table used once CONFIG.DATA_BACKEND.projects is        ║
+   ║   'supabase': public.projects (supabase/migrations/). Until then  ║
+   ║   the header offers "Copy to Supabase", which reconciles.         ║
+   ║                                                                   ║
    ║   NOTE: no top-level `window` access in this file. tests/         ║
    ║   projects-board.mjs imports it under Node. Registration into     ║
    ║   window.GeckoSections lives in src/main.js.                      ║
@@ -16,6 +20,7 @@
 
 import { graphFetch, resolveSiteId, fetchAllLists, clearListsCache } from '../core/graph.js';
 import { toast, escapeHtml } from '../core/ui.js';
+import { connectSupabase } from '../core/supabase.js';
 
 const LIST_NAME        = 'GeckoProjects';
 const CLIENTS_LIST_NAME = 'GeckoClients';
@@ -79,7 +84,98 @@ export function groupByStatus(projects) {
   return groups;
 }
 
+// ─── SharePoint ⇄ Supabase mapping (pure, unit-tested) ───────────────
+
+/** Form/SharePoint field name → Supabase column. One to one, nothing dropped. */
+export const FIELD_COLUMNS = {
+  Title:      'title',
+  ClientName: 'client_name',
+  Owner:      'owner',
+  Status:     'status',
+  WaitingOn:  'waiting_on',
+  NextAction: 'next_action',
+  AteraRef:   'atera_ref',
+  Notes:      'notes'
+};
+
+/** Form fields (SharePoint names) → a Supabase row. */
+export function fieldsToRow(fields) {
+  const row = {};
+  for (const [field, column] of Object.entries(FIELD_COLUMNS)) {
+    if (field in fields) row[column] = fields[field] ?? '';
+  }
+  return row;
+}
+
+/** Supabase row → the flat shape the renderers use (same as mapItem). */
+export function rowToProject(row) {
+  return {
+    id:         String(row.id),
+    title:      row.title       || '(untitled)',
+    client:     row.client_name || '',
+    owner:      row.owner       || '',
+    status:     row.status      || 'Quoted',
+    waitingOn:  row.waiting_on  || '',
+    nextAction: row.next_action || '',
+    ateraRef:   row.atera_ref   || '',
+    notes:      row.notes       || '',
+    modified:   row.modified_at || ''
+  };
+}
+
+/**
+ * SharePoint list item → the row the import inserts. Keeps the item's own
+ * Created/Modified so the 21-day staleness flag survives the move.
+ */
+export function spItemToRow(item) {
+  const f = item.fields || {};
+  const row = fieldsToRow(Object.fromEntries(
+    Object.keys(FIELD_COLUMNS).map(k => [k, typeof f[k] === 'string' ? f[k] : (f[k] ?? '')])
+  ));
+  if (!row.title) row.title = '(untitled)';
+  if (!STATUSES.includes(row.status)) row.status = 'Quoted';
+  row.sharepoint_id = String(item.id);
+  row.created_at  = f.Created  || item.createdDateTime      || new Date().toISOString();
+  row.modified_at = f.Modified || item.lastModifiedDateTime || row.created_at;
+  return row;
+}
+
+/**
+ * Compare what SharePoint holds with what Supabase now holds, field by field.
+ * Returns { ok, spCount, dbCount, mismatches: [{ sharepointId, problem }] }.
+ */
+export function reconcile(spRows, dbRows) {
+  const bySp = new Map(dbRows.map(r => [String(r.sharepoint_id), r]));
+  const mismatches = [];
+  for (const sp of spRows) {
+    const db = bySp.get(sp.sharepoint_id);
+    if (!db) { mismatches.push({ sharepointId: sp.sharepoint_id, problem: 'missing in Supabase' }); continue; }
+    for (const column of Object.values(FIELD_COLUMNS)) {
+      if ((db[column] ?? '') !== (sp[column] ?? '')) {
+        mismatches.push({ sharepointId: sp.sharepoint_id, problem: `${column} differs` });
+      }
+    }
+  }
+  if (dbRows.length !== spRows.length) {
+    mismatches.push({ sharepointId: '', problem: `row count ${spRows.length} vs ${dbRows.length}` });
+  }
+  return { ok: mismatches.length === 0, spCount: spRows.length, dbCount: dbRows.length, mismatches };
+}
+
 // ─── Data ─────────────────────────────────────────────────────────────
+
+/** 'sharepoint' | 'supabase'. CONFIG is the site's classic-script const. */
+function backend() {
+  // eslint-disable-next-line no-undef
+  const cfg = typeof CONFIG !== 'undefined' ? CONFIG : undefined;
+  return cfg?.DATA_BACKEND?.projects === 'supabase' ? 'supabase' : 'sharepoint';
+}
+
+/** Throws Supabase's error rather than letting a failed call look like no rows. */
+function must({ data, error }) {
+  if (error) throw new Error(error.message || 'Database request failed');
+  return data;
+}
 
 /** Graph list item → the flat shape the renderers use. */
 function mapItem(item) {
@@ -128,6 +224,10 @@ async function resolveListId() {
  * ponytail: unpaged. Add @odata.nextLink following if this ever exceeds 999.
  */
 async function fetchProjects() {
+  if (backend() === 'supabase') {
+    const sb = await connectSupabase();
+    return must(await sb.from('projects').select('*').order('id')).map(rowToProject);
+  }
   const siteId = await resolveSiteId();
   const listId = await resolveListId();
   const res = await graphFetch(
@@ -162,6 +262,11 @@ async function fetchClientNames() {
  * ponytail: last-write-wins. Add If-Match/ETag if a third person ever uses this.
  */
 async function patchFields(id, fields) {
+  if (backend() === 'supabase') {
+    const sb = await connectSupabase();
+    must(await sb.from('projects').update(fieldsToRow(fields)).eq('id', id).select('id').single());
+    return;
+  }
   const siteId = await resolveSiteId();
   const listId = await resolveListId();
   await graphFetch(`/sites/${siteId}/lists/${listId}/items/${id}/fields`, {
@@ -188,7 +293,8 @@ async function load() {
       { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
     if (seq !== loadSeq) return;
-    PRJ.error = err.code === 'LIST_MISSING' ? 'LIST_MISSING' : (err.message || 'Load failed');
+    PRJ.error = err.code === 'LIST_MISSING' || err.code === 'DB_SIGNIN_REQUIRED'
+      ? err.code : (err.message || 'Load failed');
   } finally {
     if (seq === loadSeq) {
       PRJ.loading = false;
@@ -297,6 +403,19 @@ function render() {
   }
   if (PRJ.error === 'LIST_MISSING') {
     mount.innerHTML = SETUP_MESSAGE;
+    return;
+  }
+  if (PRJ.error === 'DB_SIGNIN_REQUIRED') {
+    mount.innerHTML = `
+      <div class="prj-error">
+        <strong>Projects now live in the Gecko database.</strong>
+        Connect once with your Microsoft account to load them.
+        <button type="button" id="prjConnect">Connect</button>
+      </div>`;
+    document.getElementById('prjConnect')?.addEventListener('click', async () => {
+      try { await connectSupabase({ interactive: true }); load(); }
+      catch (err) { toast(err.message || 'Could not connect', 'error'); }
+    });
     return;
   }
   if (PRJ.error) {
@@ -459,6 +578,10 @@ async function submitModal(event) {
     if (target) {
       await patchFields(target, fields);
       toast('Project saved', 'success');
+    } else if (backend() === 'supabase') {
+      const sb = await connectSupabase();
+      must(await sb.from('projects').insert(fieldsToRow(fields)).select('id').single());
+      toast('Project created', 'success');
     } else {
       const siteId = await resolveSiteId();
       const listId = await resolveListId();
@@ -488,9 +611,14 @@ async function deleteProject(id) {
   const btn = document.getElementById('prjDelete');
   if (btn) btn.disabled = true;
   try {
-    const siteId = await resolveSiteId();
-    const listId = await resolveListId();
-    await graphFetch(`/sites/${siteId}/lists/${listId}/items/${id}`, { method: 'DELETE' });
+    if (backend() === 'supabase') {
+      const sb = await connectSupabase();
+      must(await sb.from('projects').delete().eq('id', id).select('id').single());
+    } else {
+      const siteId = await resolveSiteId();
+      const listId = await resolveListId();
+      await graphFetch(`/sites/${siteId}/lists/${listId}/items/${id}`, { method: 'DELETE' });
+    }
     toast('Project deleted', 'success');
     // Reload before closing, so focus is restored into the rebuilt board.
     await load();
@@ -500,12 +628,62 @@ async function deleteProject(id) {
   }
 }
 
+// ─── Copy to Supabase (only before the switch) ────────────────────────
+
+/**
+ * Copy the whole GeckoProjects list into public.projects, then read it back
+ * and compare field by field. Replaces the table's contents, so it is only
+ * offered while SharePoint is still the live store; SharePoint is read only.
+ * ponytail: delete-then-insert is not one transaction. A failure halfway shows
+ * as a mismatch and the copy is simply run again.
+ */
+async function copyToSupabase() {
+  if (backend() === 'supabase') return;
+  if (!window.confirm('Copy every project from SharePoint into the Gecko database?\n\n'
+    + 'This replaces what the database holds for Projects. SharePoint is not changed.')) return;
+  const btn = document.getElementById('prjCopy');
+  const out = document.getElementById('prjCopyResult');
+  if (btn) btn.disabled = true;
+  if (out) out.textContent = 'Copying…';
+  try {
+    const sb     = await connectSupabase({ interactive: true });
+    const siteId = await resolveSiteId();
+    const listId = await resolveListId();
+    const res    = await graphFetch(`/sites/${siteId}/lists/${listId}/items?expand=fields&$top=999`);
+    const spRows = (res.value || []).map(spItemToRow);
+
+    must(await sb.from('projects').delete().not('id', 'is', null));
+    if (spRows.length) must(await sb.from('projects').insert(spRows));
+    const result = reconcile(spRows, must(await sb.from('projects').select('*')));
+
+    if (out) {
+      out.textContent = result.ok
+        ? `Copied: SharePoint ${result.spCount}, database ${result.dbCount}. Every field matches.`
+        : `Not matching (${result.mismatches.length}): `
+          + result.mismatches.slice(0, 5).map(m => `${m.sharepointId} ${m.problem}`.trim()).join('; ');
+      out.dataset.state = result.ok ? 'ok' : 'bad';
+    }
+    toast(result.ok ? 'Projects copied and checked' : 'Copy finished but does not match',
+      result.ok ? 'success' : 'error');
+  } catch (err) {
+    if (out) { out.textContent = 'Copy failed: ' + (err.message || err); out.dataset.state = 'bad'; }
+    toast(err.message || 'Copy failed', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 // ─── Section lifecycle ────────────────────────────────────────────────
 
 /** Called once, by navTo, on first visit to the section. */
 export function init() {
   document.getElementById('prjRefresh')?.addEventListener('click', refresh);
   document.getElementById('prjAdd')?.addEventListener('click', () => openModal('new'));
+  const copy = document.getElementById('prjCopy');
+  if (copy) {
+    copy.hidden = backend() === 'supabase';
+    copy.addEventListener('click', copyToSupabase);
+  }
   // Delegated once: #prjBoard survives every render, so this covers the
   // empty state, the error state and the board itself. Binding per render
   // missed the empty state, whose early return skipped the wiring.
