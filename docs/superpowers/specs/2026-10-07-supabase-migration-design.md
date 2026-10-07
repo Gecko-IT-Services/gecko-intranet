@@ -39,10 +39,19 @@ Non-goal: leaving Microsoft 365. The company still runs on it; only the dashboar
 - Only the Supabase *publishable/anon* key goes in the browser. It is meant to be public.
   The service-role key never enters this repo or the site.
 - Row-level security on every table, on from the first migration: a row is readable and
-  writable only by a signed-in user whose verified email ends `@gecko-it.com`.
-  No table is ever created without a policy. Anonymous visitors get nothing.
-- Sign-in: Supabase Auth with the Azure (Microsoft) provider, restricted to the Gecko
-  tenant. The Entra client secret lives in Supabase's dashboard, not in the site.
+  writable only by a signed-in user whose email is in `public.staff` (seeded with
+  philip@ and jack@; add people there). `is_gecko_staff()` is the one check every
+  policy calls. `tests/supabase-migration.mjs` fails if any table lacks RLS or a policy.
+- Sign-in (built in phase 1): MSAL asks Microsoft for a fresh ID token carrying
+  sha256(nonce) (`getIdTokenForNonce` in index.html), and `src/core/supabase.js` hands it
+  to `signInWithIdToken({ provider: 'azure' })`. One Microsoft sign-in; Supabase keeps
+  its own session. Silent where possible, a "Connect" button otherwise. Microsoft
+  sign-out drops the Supabase session; a session left by another person is discarded.
+- The email check is only sound because the Entra app is **single tenant** (only the
+  Gecko tenant can issue its tokens). Confirm "Supported account types: this
+  organisation only" before any section switches.
+- Outsider ≠ empty: `connectSupabase()` asks `is_gecko_staff()` and throws NOT_STAFF,
+  because RLS answers an outsider with empty tables.
 
 ## How the switch happens — one section at a time
 The code gets a small data layer (`src/core/store.js`) with the operations each
@@ -56,9 +65,13 @@ user, then shows the reconciliation (rows, totals) side by side. Re-runnable; it
 replaces the table's contents only before that section has switched.
 
 Phases (each is its own PR, its own design-note update, Philip approves each):
-1. **Foundations** — `supabase/` folder, first migration (all tables + RLS), Supabase
-   sign-in alongside Microsoft, `store.js`, import screen. No section switched.
-2. **Low-risk first**: Projects, Compliance. Prove the pattern.
+1. **Foundations + Projects (built 7 Oct)** — `supabase/migrations/…_foundations_projects.sql`
+   (staff, `is_gecko_staff()`, `projects`), Supabase sign-in, Projects reads/writes either
+   store by `CONFIG.DATA_BACKEND.projects`, and a "Copy to Supabase" button that copies
+   GeckoProjects and reconciles field by field. Still `'sharepoint'`: nothing switched.
+   Each later section brings its own migration, so every table is reviewed with its import
+   (changed from "all tables up front").
+2. **Compliance**, then switch Projects + Compliance once Philip has seen them reconcile.
 3. **Mileage**: MileageJourneys, MileageClients (HMRC records: 6-year retention kept).
 4. **Clients, Services, P&L reports, Leave.**
 5. **Timesheets + SSA** with the trigger, flow switch-off, Renewal and Archive. Done on
@@ -81,13 +94,23 @@ Phases (each is its own PR, its own design-note update, Philip approves each):
 - **Supabase email/password logins**: a second set of passwords for two people who
   already have Microsoft accounts.
 
-## Open questions for Philip
-1. Confirm the scope above (data moves; email, documents and Microsoft sign-in stay).
-2. The Supabase project's publishable (anon) key — safe to share, it is public by design.
-3. In Supabase › Integrations › GitHub: which branch deploys migrations, and is the
-   Supabase directory set to `supabase`?
-4. Who is allowed in: just philip@ and jack@, or anyone `@gecko-it.com`?
+## Setup Philip does once (before "Copy to Supabase" works)
+1. Supabase › Integrations › GitHub: Supabase directory `supabase`, production branch
+   `main`, deploy to production on. Migrations apply when the PR merges.
+2. Entra › App registrations › Gecko Mileage Tracker: confirm single tenant; Token
+   configuration › add optional claim `email` to the ID token; Certificates & secrets ›
+   new client secret (Supabase's form requires one).
+3. Supabase › Authentication › Sign In / Providers › Azure: on; Client ID
+   `c41290c7-3747-4fc3-8e79-c452a7cab1f7`; the secret from step 2; Azure Tenant URL
+   `https://login.microsoftonline.com/e508283a-b42d-4afa-bdc2-eb16dcd9933d`.
+
+## Settled
+- Scope as above (Philip, 7 Oct). Publishable key in `CONFIG.SUPABASE_KEY`.
+- Access: philip@ and jack@ via `public.staff` until Philip says otherwise.
 
 ## Deferred
+- Installed iOS app: if the silent Microsoft token fails there is no redirect leg yet, so
+  the person connects once from Safari (ponytail in `getIdTokenForNonce`). Solve before
+  Projects switches.
 - Supabase Storage for documents; realtime updates; moving the feed's producer off the
   Claude scheduled task.

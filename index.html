@@ -6889,11 +6889,14 @@ body::before {
         <p>Where every live project is up to — quoted through to done.</p>
         <div class="prj-head-actions">
           <button class="prj-add" id="prjAdd" type="button">+ New project</button>
-          <button class="prj-refresh" id="prjRefresh" type="button" title="Reload from SharePoint">
+          <button class="prj-refresh" id="prjRefresh" type="button" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="prj-last-sync" id="prjLastSync"></span>
+          <button class="prj-refresh" id="prjCopy" type="button" hidden
+                  title="One-off: copy this board from SharePoint into the Gecko database and check it">Copy to Supabase</button>
+          <span class="prj-last-sync prj-copy-result" id="prjCopyResult" role="status"></span>
         </div>
       </div>
 
@@ -7644,6 +7647,16 @@ const CONFIG = {
   SSA_EMAIL_MODE:       'draft',
   SSA_TIMESHEET_CC:     ['jack@gecko-it.com', 'philip@gecko-it.com'],
 
+  // — Supabase (docs/superpowers/specs/2026-10-07-supabase-migration-design.md) —
+  // The publishable key is public by design; row-level security does the guarding.
+  SUPABASE_URL: 'https://nkobrqzsogtyxriqqwnq.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_9-Krnct-4TD9Ri_ci7Bgpw_tNV0lOrB',
+  // Where each section's data lives. A section moves to 'supabase' only after
+  // its import has reconciled; flipping back is the rollback.
+  DATA_BACKEND: {
+    projects: 'sharepoint'
+  },
+
   // — Scopes requested at sign-in —
   // Sites.ReadWrite.All — required for SharePoint list access.
   // User.Read           — required to display the signed-in user's name.
@@ -7887,7 +7900,14 @@ async function signIn() {
   }
 }
 
+/** The signed-in Microsoft account's address (src/core/supabase.js matches its session to it). */
+function activeAccountEmail() {
+  return activeAccount?.username || '';
+}
+
 async function signOut() {
+  // The database session must never outlive the Microsoft one (shared devices).
+  window.forgetSupabaseSession?.();
   // Same popup problem as sign-in: an installed iOS webview cannot hold a
   // popup handshake, so sign-out has to redirect there too. Without this the
   // installed app signs in but can never sign out.
@@ -8019,6 +8039,36 @@ async function getScopedToken(scopes, { interactive = false } = {}) {
       return new Promise(() => {});
     }
     return (await msalInstance.acquireTokenPopup(request)).accessToken;
+  }
+}
+
+/**
+ * A fresh Microsoft ID token carrying `nonce`, for signing in to Supabase
+ * (src/core/supabase.js). Supabase checks the token's nonce against the hash
+ * of the raw one it is given, so the caller passes the hashed value here.
+ *
+ * Silent first (the person is already signed in to Microsoft). A popup only
+ * when the caller says the request came from a click; otherwise it throws
+ * DB_SIGNIN_REQUIRED for the section to show a "Connect" button.
+ * ponytail: no redirect leg, so an installed iOS app whose silent attempt
+ * fails must connect once from Safari. Solve before a section switches.
+ */
+async function getIdTokenForNonce(nonce, { interactive = false } = {}) {
+  if (!activeAccount) throw new Error('No active account');
+  const request = {
+    scopes:    ['openid', 'profile', 'email'],
+    loginHint: activeAccount.username,
+    nonce
+  };
+  try {
+    return (await msalInstance.ssoSilent(request)).idToken;
+  } catch (err) {
+    if (!interactive || isStandaloneDisplay()) {
+      const e = new Error('Database sign-in needs a click');
+      e.code = 'DB_SIGNIN_REQUIRED';
+      throw e;
+    }
+    return (await msalInstance.loginPopup(request)).idToken;
   }
 }
 
