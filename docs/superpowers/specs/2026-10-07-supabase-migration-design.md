@@ -13,7 +13,8 @@ to the data, and row-level security.
 ## What moves and what stays
 | Thing | Today | After |
 |---|---|---|
-| Lists: GeckoClients, GeckoServices, Clients (SSA), Timesheets, MileageJourneys, MileageClients, GeckoLeaveRequests, GeckoLeaveEntitlements, GeckoProjects, GeckoCompliance, GeckoPnLReports | SharePoint lists | Supabase tables |
+| Lists: GeckoClients, GeckoServices, Clients (SSA), Timesheets, MileageJourneys, MileageClients, GeckoLeaveRequests, GeckoLeaveEntitlements | SharePoint lists | Supabase tables |
+| GeckoProjects, GeckoCompliance, GeckoPnLReports | Lists behind sections Philip took off the menu (6 Oct) | **Not moved.** Left in SharePoint untouched |
 | "Update Client Balances" flow (adds new Timesheets hours to `HoursUsed`) | Power Automate | Postgres trigger, same rule; flow switched off at the same moment |
 | Profitability feed | JSON file in Documents | Unchanged at first; later the scheduled task writes a Supabase row instead (phase 5) |
 | Sign-in | Microsoft (MSAL) | Still Microsoft. Supabase trusts the Microsoft sign-in, so there is still one button |
@@ -54,26 +55,32 @@ Non-goal: leaving Microsoft 365. The company still runs on it; only the dashboar
   because RLS answers an outsider with empty tables.
 
 ## How the switch happens — one section at a time
-The code gets a small data layer (`src/core/store.js`) with the operations each
-section needs (list, get, create, update). Each section reads a flag:
+The code gets a small data layer (`src/core/store.js`): one SharePoint-field →
+column mapping per list, and list/create/patch calls that hand back the same
+`{ id, fields }` shape Graph does, so a classic-script section keeps its own logic
+and only its fetch/create/patch calls branch. Each section reads a flag:
 `CONFIG.DATA_BACKEND.<section> = 'sharepoint' | 'supabase'`. A section moves only when
 its import has reconciled. Rolling back is flipping the flag back.
 
-Copying data needs no secrets: an admin-only **Import from SharePoint** button reads
+Copying data needs no secrets: a Philip-only **Copy to Supabase** button reads
 the list through the existing Graph sign-in and writes to Supabase as that signed-in
 user, then shows the reconciliation (rows, totals) side by side. Re-runnable; it
 replaces the table's contents only before that section has switched.
 
 Phases (each is its own PR, its own design-note update, Philip approves each):
-1. **Foundations + Projects (built 7 Oct)** — `supabase/migrations/…_foundations_projects.sql`
-   (staff, `is_gecko_staff()`, `projects`), Supabase sign-in, Projects reads/writes either
-   store by `CONFIG.DATA_BACKEND.projects`, and a "Copy to Supabase" button that copies
-   GeckoProjects and reconciles field by field. Still `'sharepoint'`: nothing switched.
-   Each later section brings its own migration, so every table is reviewed with its import
-   (changed from "all tables up front").
-2. **Compliance**, then switch Projects + Compliance once Philip has seen them reconcile.
+1. **Foundations (merged 7 Oct, PR #27)** — staff, `is_gecko_staff()`, Supabase sign-in.
+   It also wired Projects as the trial section; Projects turned out to be off the menu,
+   so the next change removes that again. Each section brings its own migration, so
+   every table is reviewed with its copy (changed from "all tables up front").
+2. **Leave (built 7 Oct)** — `…_leave_drop_projects.sql` drops the unused `projects`
+   table and adds `leave_requests` / `leave_entitlements`; `src/core/store.js`; Leave
+   branches on `CONFIG.DATA_BACKEND.leave` (still `'sharepoint'`); Copy to Supabase on
+   Leave (Philip only) copies both lists and shows rows, hours totals and any field that
+   differs. Switch = set the flag to `'supabase'` once Philip has seen it green. After the
+   switch, entitlements are edited in Supabase › Table Editor › leave_entitlements (they
+   were edited by hand in the SharePoint list before; the page has never edited them).
 3. **Mileage**: MileageJourneys, MileageClients (HMRC records: 6-year retention kept).
-4. **Clients, Services, P&L reports, Leave.**
+4. **Clients, Services.**
 5. **Timesheets + SSA** with the trigger, flow switch-off, Renewal and Archive. Done on
    a quiet day with Jack aware, because of the flow cutover.
 6. **Feed** to a table; scheduled task updated in the same change. Then the SharePoint
