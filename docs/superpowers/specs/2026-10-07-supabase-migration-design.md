@@ -89,7 +89,8 @@ Phases (each is its own PR, its own design-note update, Philip approves each):
    Connect card if the database needs a click. Copy to Supabase (Philip only) shows rows,
    miles and £ totals side by side; a penny out fails. Reads page through Supabase's
    1000-row cap (`selectAllPages`), so a long journey history is never cut short. HMRC
-   records: 6-year retention kept; nothing deletes on a schedule.
+   records: 6-year retention kept; nothing deletes on a schedule. Copy 7 Oct: 74 journeys,
+   1671.4 mi, £834.11, 28 destinations, every field matched. **Switched 7 Oct** by Philip.
 4. **Clients, Services.**
 5. **Timesheets + SSA** with the trigger, flow switch-off, Renewal and Archive. Done on
    a quiet day with Jack aware, because of the flow cutover.
