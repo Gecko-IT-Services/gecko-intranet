@@ -89,6 +89,25 @@ assert.equal(jr.ok, true);
 assert.deepEqual(jr.totals, { miles: [30, 30], amount: [13.5, 13.5] });
 assert.equal(reconcile('mileage_journeys', [journey], [{ id: 1, ...journey, amount: 9.91 }]).ok, false, 'a penny out fails');
 
+// — Clients/services: XeroHistory JSON copied byte for byte; money totals. —
+const xh = '{"2026-09":{"total":265.51,"recurring":215.9,"oneOff":49.61}}';
+const client = spItemToRow('gecko_clients', { id: '5', fields: {
+  Title: 'Technix', Status: 'Active', ContractStart: '2025-12-31T23:00:00Z', XeroHistory: xh
+} }, v => (String(v).startsWith('2025-12-31T23') ? '2026-01-01' : String(v).slice(0, 10)));
+assert.equal(client.xero_history, xh, 'XeroHistory text untouched');
+assert.equal(client.contract_start, '2026-01-01');
+assert.equal(rowToItem('gecko_clients', { id: 1, ...client }).fields.XeroHistory, xh);
+assert.equal(spItemToRow('gecko_clients', { id: '6', fields: { Title: 'New' } }, dateKey).contract_start, null);
+assert.deepEqual(fieldsToRow('gecko_clients', { ContractStart: null }), { contract_start: null }, 'clearing a start date');
+assert.equal(reconcile('gecko_clients', [client], [{ id: 1, ...client, xero_history: xh.replace('265.51', '265.5') }]).ok,
+  false, 'any change to XeroHistory fails');
+const svc = spItemToRow('gecko_services', { id: '8', fields: {
+  Title: 'Retainer', ClientName: 'Technix', Category: 'retainer', CostPerMonth: 0, SellPerMonth: 210.9
+} }, dateKey);
+const sr = reconcile('gecko_services', [svc], [{ id: 1, ...svc }]);
+assert.equal(sr.ok, true);
+assert.deepEqual(sr.totals, { cost_per_month: [0, 0], sell_per_month: [210.9, 210.9] });
+
 // — Paging: Supabase caps a response at 1000 rows; every row must still arrive. —
 const all = Array.from({ length: 2345 }, (_, i) => ({ id: i + 1 }));
 const calls = [];

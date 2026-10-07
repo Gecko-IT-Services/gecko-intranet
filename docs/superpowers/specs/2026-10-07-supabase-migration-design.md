@@ -91,7 +91,15 @@ Phases (each is its own PR, its own design-note update, Philip approves each):
    1000-row cap (`selectAllPages`), so a long journey history is never cut short. HMRC
    records: 6-year retention kept; nothing deletes on a schedule. Copy 7 Oct: 74 journeys,
    1671.4 mi, £834.11, 28 destinations, every field matched. **Switched 7 Oct** by Philip.
-4. **Clients, Services.**
+4. **Clients + Services (built 7 Oct)** — `…_clients_services.sql`: `gecko_clients`
+   (incl. `xero_history`, the same JSON text) and `gecko_services`. Three sections read
+   and write them (Clients, Profitability, Overview), so all go through one set of
+   helpers (`clientListItems/Create/Patch/Delete`) behind one flag,
+   `CONFIG.DATA_BACKEND.clients`. Services join clients by name, as in SharePoint; no
+   SharePoint id is stored anywhere, so new ids break nothing. Copy to Supabase sits on
+   Clients and totals monthly cost and sell. Not copied: GeckoClients/GeckoServices
+   columns the dashboard never reads. Projects and Compliance (off the menu) keep reading
+   the SharePoint GeckoClients list for their dropdowns, which goes stale after the switch.
 5. **Timesheets + SSA** with the trigger, flow switch-off, Renewal and Archive. Done on
    a quiet day with Jack aware, because of the flow cutover.
 6. **Feed** to a table; scheduled task updated in the same change. Then the SharePoint

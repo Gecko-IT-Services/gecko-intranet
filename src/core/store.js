@@ -64,6 +64,27 @@ export const TABLES = {
       Title:        ['title',         'text'],
       TypicalMiles: ['typical_miles', 'number']
     }
+  },
+  gecko_clients: {
+    list: 'GeckoClients',
+    columns: {
+      Title:         ['title',          'text'],
+      Status:        ['status',         'text'],
+      ContractStart: ['contract_start', 'date'],
+      Notes:         ['notes',          'text'],
+      XeroHistory:   ['xero_history',   'text']
+    }
+  },
+  gecko_services: {
+    list: 'GeckoServices',
+    columns: {
+      Title:        ['title',          'text'],
+      ClientName:   ['client_name',    'text'],
+      Category:     ['category',       'text'],
+      CostPerMonth: ['cost_per_month', 'number'],
+      SellPerMonth: ['sell_per_month', 'number'],
+      Notes:        ['notes',          'text']
+    }
   }
 };
 
