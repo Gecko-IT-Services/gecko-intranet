@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   validateFeed, xeroMonths, totalsByClient, cspAggregated,
-  isStale, feedAgeHours, describeWhen, FEED_PATH
+  isStale, feedAgeHours, describeWhen, FEED_PATH, hasSplit, splitByClient
 } from '../src/core/profit-feed.js';
 
 const good = () => ({
@@ -64,3 +64,37 @@ assert.equal(describeWhen('2026-10-05T05:52:00Z', new Date('2026-10-06T12:00:00Z
 assert.equal(describeWhen('2026-10-01T05:52:00Z', new Date('2026-10-06T12:00:00Z')), '1 Oct');
 
 console.log('profit-feed: all assertions passed');
+
+// — recurring / one-off split —
+{
+  const f = good();
+  f.xero.recurring = { '2026-09': { 'Cowan Consultancy': 776.55, 'CDA Ltd': 277.53 } };
+  assert.equal(validateFeed(f).ok, true, 'a valid recurring section is accepted');
+  assert.equal(hasSplit(f, '2026-09'), true);
+  assert.equal(hasSplit(f, '2026-10'), false, 'no split for a month the feed did not split');
+  assert.equal(hasSplit(good(), '2026-09'), false, 'older feeds have no split');
+
+  const clients = { 'Cowan Consultancy': { id: 'c1' }, 'CDA Ltd': { id: 'c2' }, 'Voip Unlimited': { id: 'c3' } };
+  const s = splitByClient(f, '2026-09', n => clients[n] || null);
+  assert.deepEqual([s.get('c1').total, s.get('c1').recurring, s.get('c1').oneOff], [3074.55, 776.55, 2298]);
+  assert.equal(s.get('c2').oneOff, 0, 'all-recurring client has no one-off');
+  assert.deepEqual([s.get('c3').recurring, s.get('c3').oneOff], [0, 638.36], 'a contact missing from recurring is all one-off');
+  assert.equal(splitByClient(good(), '2026-09', n => clients[n]).size, 0);
+
+  const one = { id: 'x' };
+  const g = good();
+  g.xero.months['2026-09'] = { 'Acme': 100, 'Acme Ltd': 50 };
+  g.xero.recurring = { '2026-09': { 'Acme': 100 } };
+  const merged = splitByClient(g, '2026-09', () => one).get('x');
+  assert.deepEqual([merged.total, merged.recurring, merged.oneOff], [150, 100, 50], 'two contacts for one client are summed');
+}
+{ const f = good(); f.xero.recurring = { '2026-09': { 'CDA Ltd': 300 } };
+  assert.match(validateFeed(f).errors.join(), /more than its total/); }
+{ const f = good(); f.xero.recurring = { '2026-09': { 'Nobody': 1 } };
+  assert.match(validateFeed(f).errors.join(), /not in that month's totals/); }
+{ const f = good(); f.xero.recurring = { '2026-07': {} };
+  assert.match(validateFeed(f).errors.join(), /no matching month/); }
+{ const f = good(); f.xero.recurring = { '2026-09': { 'CDA Ltd': '1' } };
+  assert.equal(validateFeed(f).ok, false, 'string recurring refused'); }
+
+console.log('profit-feed split: ok');

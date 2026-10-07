@@ -40,6 +40,22 @@ export function validateFeed(feed) {
           if (!isMoney(v)) errors.push(`xero ${m} ${name}: "${v}" is not a number`);
         }
       }
+      // Optional: the part of each contact's total that came from Xero
+      // repeating invoices. One-off = total - recurring, so recurring can
+      // never name a contact or month the totals don't, or exceed its total.
+      if (feed.xero.recurring != null) {
+        if (typeof feed.xero.recurring !== 'object') errors.push('xero.recurring is not an object');
+        else for (const [m, perContact] of Object.entries(feed.xero.recurring)) {
+          const totals = feed.xero.months[m];
+          if (!totals) { errors.push(`xero.recurring ${m} has no matching month`); continue; }
+          if (!perContact || typeof perContact !== 'object') { errors.push(`xero.recurring ${m} is not an object`); continue; }
+          for (const [name, v] of Object.entries(perContact)) {
+            if (!isMoney(v)) { errors.push(`xero.recurring ${m} ${name}: "${v}" is not a number`); continue; }
+            if (!(name in totals)) errors.push(`xero.recurring ${m} ${name} is not in that month's totals`);
+            else if (v > totals[name] + 0.005) errors.push(`xero.recurring ${m} ${name} is more than its total`);
+          }
+        }
+      }
     }
   }
 
@@ -101,6 +117,36 @@ export function totalsByClient(perContact, match) {
     byClient.set(client.id, e);
   }
   return { matched: [...byClient.values()], unmatched };
+}
+
+/** True when the feed says which part of a month's Xero billing is recurring. */
+export function hasSplit(feed, month) {
+  return !!(feed?.xero?.recurring?.[month] && feed?.xero?.months?.[month]);
+}
+
+/**
+ * Recurring (Xero repeating invoices) vs one-off billing per client for one
+ * month: Map clientId -> { client, total, recurring, oneOff }. Contacts that
+ * match the same client are summed. Unmatched contacts are left to
+ * totalsByClient, which already reports them. Empty map when the feed has
+ * no split for that month (older feeds, manual CSV months).
+ */
+export function splitByClient(feed, month, match) {
+  const out = new Map();
+  if (!hasSplit(feed, month)) return out;
+  const totals = feed.xero.months[month];
+  const rec    = feed.xero.recurring[month];
+  for (const [name, total] of Object.entries(totals)) {
+    const client = match(name);
+    if (!client) continue;
+    const e = out.get(client.id) || { client, total: 0, recurring: 0, oneOff: 0 };
+    const r = rec[name] || 0;
+    e.total     = round2(e.total + total);
+    e.recurring = round2(e.recurring + r);
+    e.oneOff    = round2(e.total - e.recurring);
+    out.set(client.id, e);
+  }
+  return out;
 }
 
 /** Matches CspCosts.aggregateByCustomer: [{ customer, cost }]. */
