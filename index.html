@@ -1333,6 +1333,10 @@ body {
 #section-profitability .prf-vc { color: var(--red); }
 #section-profitability .prf-vs { color: var(--white); }
 #section-profitability .prf-vg { color: var(--green); }
+#section-profitability .prf-vo { color: var(--blue); }
+#section-profitability .prf-xsplit { display: flex; align-items: center; gap: 14px; justify-content: flex-end; flex-wrap: wrap; font-size: 10px; color: var(--muted); }
+#section-profitability .prf-xsplit strong { font-family: var(--font-body); color: var(--white); font-size: 13px; }
+#section-profitability .prf-xsplit .prf-vo strong { color: var(--blue); }
 
 /* — Margin pill — */
 #section-profitability .prf-mpill {
@@ -9306,7 +9310,11 @@ const PRF = {
   },
   // Live feed (2026-10-06): a scheduled job writes Xero revenue and the
   // latest TD SYNNEX invoice to a JSON file; see src/core/profit-feed.js.
-  feed: { state: 'idle', data: null, error: null, problems: [] }
+  feed: { state: 'idle', data: null, error: null, problems: [] },
+  // Xero recurring vs one-off per client, from the feed (2026-10-07):
+  // { 'YYYY-MM': Map(clientId -> { total, recurring, oneOff }) }. Only the
+  // months in the latest feed; other months fall back to service lines.
+  xeroSplit: {}
 };
 
 // Categories — single source of truth for pill colours, filter buttons, dropdowns
@@ -9499,6 +9507,37 @@ function prfClientTotals(clientName, category = 'all') {
 function prfClientViewTotals(clientName) {
   return prfClientTotals(clientName, PRF.filterCat || 'all');
 }
+
+/** True when the feed split this month's Xero billing into recurring and one-off. */
+function prfMonthHasSplit(month = PRF.selectedMonth || prfCurrentMonth()) {
+  return !!PRF.xeroSplit[month];
+}
+
+/**
+ * What a card's headline shows. With a Xero split for the month and the
+ * all-services view, revenue is Xero's recurring billing (Xero is the record
+ * of what was billed) and one-off work is shown beside it, never mixed in.
+ * Otherwise revenue is the service lines, as before. Cost is always the
+ * service lines: Xero holds no per-client cost.
+ */
+function prfClientHeadline(client) {
+  const view = prfClientViewTotals(client.name);
+  const month = PRF.selectedMonth || prfCurrentMonth();
+  const all = (PRF.filterCat || 'all') === 'all';
+  if (!all || !prfMonthHasSplit(month)) {
+    return { cost: view.cost, sell: view.sell, gp: view.gp, margin: view.margin, oneOff: 0, fromXero: false, billed: true };
+  }
+  const x = PRF.xeroSplit[month].get(client.id);
+  const sell = x ? x.recurring : 0;
+  const gp = sell - view.cost;
+  return {
+    cost: view.cost, sell, gp,
+    margin: sell > 0 ? gp / sell : 0,
+    oneOff: x ? x.oneOff : 0,
+    fromXero: true,
+    billed: !!x
+  };
+}
 function prfGrandTotals() {
   let cost = 0, sell = 0, sellRet = 0, xero = 0, xeroCount = 0, activeClients = 0;
   const selMonth = PRF.selectedMonth || prfCurrentMonth();
@@ -9522,7 +9561,15 @@ function prfGrandTotals() {
   const sellStack = sell - sellRet;
   const gp        = sell - cost;
   const margin    = sell > 0 ? gp / sell : 0;
-  return { cost, sell, sellStack, sellRet, gp, margin, xero, xeroCount, activeClients, category: cat };
+  // Recurring vs one-off from Xero, when the feed split this month.
+  let split = null;
+  if (cat === 'all' && prfMonthHasSplit(selMonth)) {
+    let recurring = 0, oneOff = 0;
+    for (const e of PRF.xeroSplit[selMonth].values()) { recurring += e.recurring; oneOff += e.oneOff; }
+    const stackGp = recurring - cost;
+    split = { recurring, oneOff, stackGp, stackMargin: recurring > 0 ? stackGp / recurring : 0 };
+  }
+  return { cost, sell, sellStack, sellRet, gp, margin, xero, xeroCount, activeClients, category: cat, split };
 }
 
 
@@ -9611,6 +9658,32 @@ function prfRenderSummary() {
   const varianceSub = hasXero
     ? `<div class="prf-sum-sub ${varCls}">${varSign}${prfFmt(variance)} (${varSign}${variancePct.toFixed(1)}%)</div>`
     : '';
+
+  if (t.split) {
+    const sp = t.split;
+    return `
+    <div class="prf-sum-strip">
+      <div class="prf-sum-s"><div class="prf-sum-v">${t.activeClients}</div><div class="prf-sum-l">Active Clients</div></div>
+      <div class="prf-sum-s">
+        <div class="prf-sum-v">${prfFmt(sp.recurring)}</div><div class="prf-sum-l">Recurring Revenue</div>
+        <div class="prf-sum-sub amber">From Xero · services say ${prfFmt(t.sell)}</div>
+      </div>
+      <div class="prf-sum-s">
+        <div class="prf-sum-v">${prfFmt(t.cost)}</div><div class="prf-sum-l">Total Cost</div>
+      </div>
+      <div class="prf-sum-s">
+        <div class="prf-sum-v" style="color:var(--green)">${prfFmt(sp.stackGp)}</div><div class="prf-sum-l">Recurring Profit</div>
+      </div>
+      <div class="prf-sum-s">
+        <div class="prf-sum-v">${prfFmtPct(sp.stackMargin)}</div><div class="prf-sum-l">Recurring Margin</div>
+      </div>
+      <div class="prf-sum-s">
+        <div class="prf-sum-v" style="color:var(--blue)">${prfFmt(sp.oneOff)}</div>
+        <div class="prf-sum-l">One-off Work</div>
+        <div class="prf-sum-sub neutral">Xero total ${prfFmt(sp.recurring + sp.oneOff)}</div>
+      </div>
+    </div>`;
+  }
 
   return `
     <div class="prf-sum-strip">
@@ -9710,15 +9783,16 @@ function prfRankedClients() {
       const totals = prfClientTotals(c.name, cat);
       const fullTotals = prfClientTotals(c.name);
       const xero = prfGetXero(c, month);
-      return { client: c, totals, fullTotals, xero };
+      const head = prfClientHeadline(c);
+      return { client: c, totals, fullTotals, xero, head };
     })
     .filter(r => cat === 'all' || r.totals.all.length > 0);
 
   const byName = (a, b) => a.client.name.localeCompare(b.client.name);
   const sorters = {
-    profitDesc:  (a, b) => (b.totals.gp - a.totals.gp) || byName(a, b),
-    revenueDesc: (a, b) => (b.totals.sell - a.totals.sell) || byName(a, b),
-    marginDesc:  (a, b) => (b.totals.margin - a.totals.margin) || (b.totals.gp - a.totals.gp) || byName(a, b),
+    profitDesc:  (a, b) => (b.head.gp - a.head.gp) || byName(a, b),
+    revenueDesc: (a, b) => (b.head.sell - a.head.sell) || byName(a, b),
+    marginDesc:  (a, b) => (b.head.margin - a.head.margin) || (b.head.gp - a.head.gp) || byName(a, b),
     costDesc:    (a, b) => (b.totals.cost - a.totals.cost) || byName(a, b),
     varianceAsc: (a, b) => {
       const av = a.xero === null ? Number.POSITIVE_INFINITY : Math.abs(a.xero - a.fullTotals.sell);
@@ -9732,6 +9806,7 @@ function prfRankedClients() {
 
 function prfRenderCard(client) {
   const t = prfClientViewTotals(client.name);
+  const h = prfClientHeadline(client);
   const fullTotals = prfClientTotals(client.name);
   const allServices = prfClientServices(client.name);
   const cats = [...new Set(allServices.map(s => s.category))].join(',');
@@ -9775,6 +9850,26 @@ function prfRenderCard(client) {
   const xeroVal = prfGetXero(client, selMonth);
   const xeroValStr = xeroVal !== null ? xeroVal : '';
   const xeroStatus = xeroVal !== null ? prfXeroStatus(fullTotals.sell, xeroVal) : { cls: 'prf-xsp', text: 'No data this month', delta: '' };
+  const split = (!scoped && prfMonthHasSplit(selMonth)) ? (PRF.xeroSplit[selMonth].get(client.id) || { total: 0, recurring: 0, oneOff: 0 }) : null;
+  const splitStatus = split
+    ? (split.total === 0
+        ? { cls: 'prf-xsd', text: 'No Xero invoice this month', delta: '' }
+        : prfXeroStatus(fullTotals.sell, split.recurring))
+    : null;
+  const xeroRowHtml = split ? `
+            <tr class="prf-xrow">
+              <td colspan="2"><span class="prf-xlbl">📊 Xero this month (ex VAT) — recurring is checked against the services above</span></td>
+              <td colspan="4">
+                <div class="prf-xsplit">
+                  <span>Services: <strong>${prfFmtForce(fullTotals.sell)}</strong></span>
+                  <span>Xero recurring: <strong>${prfFmtForce(split.recurring)}</strong></span>
+                  <span class="prf-xst ${splitStatus.cls}">${splitStatus.text}</span>
+                  <span class="prf-vo">One-off: <strong>${prfFmtForce(split.oneOff)}</strong></span>
+                  <span>Total: <strong>${prfFmtForce(split.total)}</strong></span>
+                </div>
+              </td>
+              <td class="prf-nr">${splitStatus.delta}</td>
+            </tr>` : null;
 
   return `
     <div class="${cls.join(' ')}" data-cats="${cats}" data-client-id="${client.id}" data-client-name="${escapeHtml(client.name).toLowerCase()}">
@@ -9785,10 +9880,11 @@ function prfRenderCard(client) {
         <div class="prf-cn" title="${escapeHtml(client.name)}">${escapeHtml(client.name)}</div>
         ${badge}
         <div class="prf-cnums">
-          <div class="prf-cnum"><div class="v prf-vc">${prfFmt(t.cost)}</div><div class="l">Cost</div></div>
-          <div class="prf-cnum keep"><div class="v prf-vs">${prfFmt(t.sell)}</div><div class="l">Revenue</div></div>
-          <div class="prf-cnum keep"><div class="v prf-vg">${prfFmt(t.gp)}</div><div class="l">Profit</div></div>
-          <span class="prf-mpill ${prfMpClass(t.margin)} keep">${prfFmtPct(t.margin)}</span>
+          <div class="prf-cnum"><div class="v prf-vc">${prfFmt(h.cost)}</div><div class="l">Cost</div></div>
+          <div class="prf-cnum keep" ${h.fromXero ? 'title="Recurring billing in Xero this month"' : ''}><div class="v prf-vs">${h.fromXero && !h.billed ? '£0.00' : prfFmt(h.sell)}</div><div class="l">${h.fromXero ? 'Recurring' : 'Revenue'}</div></div>
+          <div class="prf-cnum keep"><div class="v prf-vg" ${h.gp < 0 ? 'style="color:var(--red)"' : ''}>${h.gp < 0 ? '−' + prfFmtForce(-h.gp) : prfFmt(h.gp)}</div><div class="l">Profit</div></div>
+          <span class="prf-mpill ${prfMpClass(h.margin)} keep">${prfFmtPct(h.margin)}</span>
+          ${h.oneOff > 0 ? `<div class="prf-cnum" title="One-off billing in Xero this month, not in profit"><div class="v prf-vo">+${prfFmt(h.oneOff)}</div><div class="l">One-off</div></div>` : ''}
         </div>
         <!-- Client metadata managed in Directory (Phase 5). Service CRUD unchanged. -->
         <div class="prf-chev">▼</div>
@@ -9811,7 +9907,7 @@ function prfRenderCard(client) {
               <td class="prf-nr"><span class="prf-mpill ${prfMpClass(t.margin)}">${prfFmtPct(t.margin)}</span></td>
               <td></td>
             </tr>
-            <tr class="prf-xrow">
+            ${xeroRowHtml || `<tr class="prf-xrow">
               <td colspan="2"><span class="prf-xlbl">📊 Xero reconciliation — actual invoiced amount (ex VAT)</span></td>
               <td colspan="4">
                 <div class="prf-xctrl">
@@ -9826,7 +9922,7 @@ function prfRenderCard(client) {
                 </div>
               </td>
               <td class="prf-nr" data-xdelta="${client.id}">${xeroStatus.delta}</td>
-            </tr>
+            </tr>`}
           </tfoot>
         </table>
       </div>
@@ -9877,6 +9973,25 @@ function prfRenderGrandTotal() {
   const xeroMargin = hasXero && t.xero > 0 ? xeroGp / t.xero : 0;
   const variance = hasXero ? t.xero - t.sell : 0;
   const varSign = variance >= 0 ? '+' : '';
+
+  if (t.split) {
+    const sp = t.split;
+    return `
+    <div class="prf-gtot">
+      <div class="prf-gtlbl">
+        <strong>GRAND TOTAL — <span>ALL CLIENTS</span></strong>
+        <p>Revenue is what Xero billed in ${prfMonthLabel(selMonth)}: repeating invoices count as recurring, everything else as one-off. Cost is from the service lines.</p>
+      </div>
+      <div class="prf-gtstats">
+        <div class="prf-gtst"><span class="v" style="color:var(--red)">${prfFmt(t.cost)}</span><span class="l">Total Cost</span></div>
+        <div class="prf-gtst"><span class="v">${prfFmt(sp.recurring)}</span><span class="l">Recurring Rev.</span></div>
+        <div class="prf-gtst"><span class="v" style="color:var(--green)">${prfFmt(sp.stackGp)}</span><span class="l">Recurring Profit</span></div>
+        <div class="prf-gtst"><span class="v" style="color:var(--green)">${prfFmtPct(sp.stackMargin)}</span><span class="l">Recurring Margin</span></div>
+        <div class="prf-gtst"><span class="v" style="color:var(--blue)">${prfFmt(sp.oneOff)}</span><span class="l">One-off Work</span></div>
+        <div class="prf-gtst"><span class="v" style="color:var(--amber)">${prfFmt(sp.recurring + sp.oneOff)}</span><span class="l">Xero Total</span></div>
+      </div>
+    </div>`;
+  }
 
   return `
     <div class="prf-gtot">
@@ -10006,7 +10121,9 @@ function prfChangeMonth(delta) {
   if (m > 12) { m = 1;  y++; }
   PRF.selectedMonth = y + '-' + String(m).padStart(2, '0');
   prfUpdateMonthUI();
-  prfApplyXeroForMonth();
+  // Card headlines depend on the month once Xero splits recurring from
+  // one-off billing, so redraw everything rather than patching inputs.
+  prfRenderAll();
 }
 
 function prfUpdateMonthUI() {
@@ -10250,7 +10367,11 @@ async function prfLoadFeed() {
 async function prfApplyFeedXero(feed) {
   const F = window.ProfitFeed;
   const shown = PRF.selectedMonth || prfCurrentMonth();
+  PRF.xeroSplit = {};
   for (const [month, perContact] of F.xeroMonths(feed)) {
+    if (F.hasSplit(feed, month)) {
+      PRF.xeroSplit[month] = F.splitByClient(feed, month, name => prfXeroMatchName(name, PRF.clients));
+    }
     const { matched, unmatched } = F.totalsByClient(perContact, name => prfXeroMatchName(name, PRF.clients));
     // A CSV imported this session owns the unmatched list; don't replace it.
     if (month === shown && !PRF.xeroImported) {
