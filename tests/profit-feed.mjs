@@ -136,3 +136,28 @@ console.log('profit-feed split: ok');
 { const f = good(); f.exclaimer = null; f.clook = null; assert.equal(validateFeed(f).ok, true); }
 
 console.log('profit-feed invoiced: ok');
+
+// — TD SYNNEX invoices in the month dated —
+{
+  const f = good();
+  f.cspInvoices = [
+    { invoice: '8284668977', date: '2026-09-16', netTotal: 100.71, customers: [
+      { customer: 'ALS Locksmiths', cost: 47.51 },
+      { customer: 'Onsite Services Southern Ltd', client: 'Onsite Commercial Services', cost: 53.2 } ] },
+    { invoice: '8284050000', date: '2026-08-16', netTotal: 12.84, customers: [{ customer: 'CDA Ltd', cost: 12.84 }] }
+  ];
+  assert.equal(validateFeed(f).ok, true, 'cspInvoices accepted');
+  const clients = { 'ALS Locksmiths': { id: 'als' }, 'Onsite Commercial Services': { id: 'onsite' }, 'CDA Ltd': { id: 'cda' } };
+  const sep = invoicedCosts(f, '2026-09', n => clients[n] || null);
+  assert.equal(sep.byClient.get('als').total, 47.51);
+  assert.equal(sep.byClient.get('onsite').total, 53.2, 'job-assigned client name wins over the printed end user');
+  assert.equal(sep.byClient.has('cda'), false, 'August invoice stays in August');
+  assert.equal(sep.byClient.get('als').lines[0].supplier, 'TD SYNNEX');
+  const aug = invoicedCosts(f, '2026-08', n => clients[n] || null);
+  assert.equal(aug.byClient.get('cda').total, 12.84);
+}
+{ const f = good(); f.cspInvoices = [{ invoice: '1', date: '2026-09-16', netTotal: 10, customers: [{ customer: 'X', cost: 5 }] }];
+  assert.match(validateFeed(f).errors.join(), /add up to 5.00/, 'a CSP invoice whose lines do not add up is refused'); }
+{ const f = good(); f.cspInvoices = [{ invoice: '1', date: '16/09/2026', netTotal: 5, customers: [{ customer: 'X', cost: 5 }] }];
+  assert.match(validateFeed(f).errors.join(), /not YYYY-MM-DD/); }
+console.log('profit-feed csp invoices: ok');

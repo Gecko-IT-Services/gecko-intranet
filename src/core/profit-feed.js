@@ -59,23 +59,30 @@ export function validateFeed(feed) {
     }
   }
 
-  if (feed.csp != null) {
-    const c = feed.csp;
-    if (!c.invoice) errors.push('csp.invoice missing');
-    if (!MONTH.test(c.month || '')) errors.push('csp.month is not YYYY-MM');
-    if (!isMoney(c.netTotal)) errors.push('csp.netTotal missing');
-    if (!Array.isArray(c.customers) || !c.customers.length) errors.push('csp.customers missing');
+  const checkCsp = (c, label, needMonth) => {
+    if (!c.invoice) errors.push(`${label}.invoice missing`);
+    if (needMonth && !MONTH.test(c.month || '')) errors.push(`${label}.month is not YYYY-MM`);
+    if (!needMonth && !DAY.test(c.date || '')) errors.push(`${label}.date is not YYYY-MM-DD`);
+    if (!isMoney(c.netTotal)) errors.push(`${label}.netTotal missing`);
+    if (!Array.isArray(c.customers) || !c.customers.length) errors.push(`${label}.customers missing`);
     else {
       for (const r of c.customers) {
-        if (!r || !String(r.customer || '').trim()) errors.push('csp customer with no name');
-        else if (!isMoney(r.cost)) errors.push(`csp ${r.customer}: "${r.cost}" is not a number`);
+        if (!r || !String(r.customer || '').trim()) errors.push(`${label} customer with no name`);
+        else if (!isMoney(r.cost)) errors.push(`${label} ${r.customer}: "${r.cost}" is not a number`);
       }
       // The job checks this too; checking again here means a mis-read
-      // invoice can never reach the preview looking plausible.
+      // invoice can never reach the page looking plausible.
       if (isMoney(c.netTotal) && Math.abs(cspSum(c) - c.netTotal) > 0.05) {
-        errors.push(`csp lines add up to ${cspSum(c).toFixed(2)}, invoice says ${c.netTotal.toFixed(2)}`);
+        errors.push(`${label} lines add up to ${cspSum(c).toFixed(2)}, invoice says ${c.netTotal.toFixed(2)}`);
       }
     }
+  };
+  if (feed.csp != null) checkCsp(feed.csp, 'csp', true);
+  // Every TD SYNNEX CSP invoice the job has kept (13 months), so each lands
+  // in the month it is dated. `csp` above stays as the latest for older code.
+  if (feed.cspInvoices != null) {
+    if (!Array.isArray(feed.cspInvoices)) errors.push('cspInvoices is not a list');
+    else feed.cspInvoices.forEach((c, i) => c ? checkCsp(c, `cspInvoices[${c.invoice || i}]`, false) : errors.push(`cspInvoices[${i}] is empty`));
   }
   // Supplier invoices charged to clients in the month they are dated
   // (2026-10-07). Both sections are optional; a present one must be whole.
@@ -108,7 +115,8 @@ const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
 /**
  * Supplier invoices dated in one month, charged to the client they were
- * for. Exclaimer lines match by end-user name; Clook lines carry the
+ * for. TD SYNNEX lines match by the client name the job assigned (its
+ * customer map) or the end-user name as printed; Exclaimer lines match by end-user name; Clook lines carry the
  * client name the job assigned from its domain map (null when it could
  * not). A Clook line marked shared (the reseller hosting plan) belongs to
  * no client. Nothing here is spread across months: an annual renewal
@@ -127,6 +135,15 @@ export function invoicedCosts(feed, month, match) {
     e.lines.push(line);
     byClient.set(client.id, e);
   };
+  for (const c of feed?.cspInvoices || []) {
+    if (!String(c.date || '').startsWith(month + '-')) continue;
+    for (const r of c.customers) {
+      const line = { supplier: 'TD SYNNEX', desc: `Microsoft 365 licences — ${r.customer}`, date: c.date, net: round2(r.cost), ref: c.invoice };
+      const client = match(r.client || r.customer);
+      if (client) add(client, line);
+      else { unassigned.push({ ...line, name: r.client || r.customer }); total = round2(total + line.net); }
+    }
+  }
   for (const s of feed?.exclaimer?.subscriptions || []) {
     if (!String(s.date || '').startsWith(month + '-')) continue;
     const line = { supplier: 'Exclaimer', desc: `${s.product} — ${s.users} users, ${s.months} mo`, date: s.date, net: round2(s.net), ref: s.invoice };

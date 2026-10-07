@@ -9345,6 +9345,7 @@ const prfFmtForce = v => {
   const n = Number(v) || 0;
   return '£' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
+const prfFmtSigned = v => (Number(v) || 0) < 0 ? '−' + prfFmtForce(-v) : prfFmt(v);
 const prfFmtPct = v => {
   if (!isFinite(v) || v === 0) return '—';
   return (v * 100).toFixed(1) + '%';
@@ -9511,9 +9512,23 @@ function prfClientServices(clientName) {
 function prfHostingCostFromInvoices() {
   return !!(PRF.feed && PRF.feed.state === 'ok' && PRF.feed.data && PRF.feed.data.clook);
 }
+/**
+ * True while the feed carries TD SYNNEX invoices. Then M365 cost (and the
+ * Exclaimer folded into "M365 + Exclaimer" lines) comes from those invoices
+ * in the month they are dated, and the typed cost on an m365 line is not
+ * counted. Philip, 7 Oct 2026: the TD SYNNEX invoice must populate on its
+ * own, with nothing to apply by hand.
+ */
+function prfM365CostFromInvoices() {
+  return !!(PRF.feed && PRF.feed.state === 'ok' && PRF.feed.data && Array.isArray(PRF.feed.data.cspInvoices));
+}
+function prfCostFromInvoices(s) {
+  return (s.category === 'hosting' && prfHostingCostFromInvoices())
+      || (s.category === 'm365'    && prfM365CostFromInvoices());
+}
 /** The cost a service line contributes to totals. */
 function prfRowCost(s) {
-  return (s.category === 'hosting' && prfHostingCostFromInvoices()) ? 0 : s.cost;
+  return prfCostFromInvoices(s) ? 0 : s.cost;
 }
 /**
  * The sell a service line contributes. Hosting is billed annually, so its
@@ -9652,7 +9667,6 @@ function prfRenderAll() {
   // — Normal render: Xero import + KPIs + filter bar + legend + cards + grand total —
   wrap.innerHTML =
     prfRenderXeroImport() +
-    cspRenderImport() +
     prfRenderSummary() +
     prfRenderControls() +
     prfRenderLegend() +
@@ -9738,7 +9752,7 @@ function prfRenderSummary() {
         ${t.invoiced ? `<div class="prf-sum-sub neutral">incl. ${prfFmtForce(t.invoiced.total)} supplier invoices</div>` : ''}
       </div>
       <div class="prf-sum-s">
-        <div class="prf-sum-v" style="color:var(--green)">${prfFmt(sp.stackGp)}</div><div class="prf-sum-l">Recurring Profit</div>
+        <div class="prf-sum-v" style="color:${sp.stackGp < 0 ? 'var(--red)' : 'var(--green)'}">${prfFmtSigned(sp.stackGp)}</div><div class="prf-sum-l">Recurring Profit</div>
       </div>
       <div class="prf-sum-s">
         <div class="prf-sum-v">${prfFmtPct(sp.stackMargin)}</div><div class="prf-sum-l">Recurring Margin</div>
@@ -10022,7 +10036,7 @@ function prfRenderServiceRow(s) {
     </tr>`;
   }
   const cost = prfRowCost(s);
-  const fromInv  = s.category === 'hosting' && prfHostingCostFromInvoices();
+  const fromInv  = prfCostFromInvoices(s);
   const fromXero = s.category === 'hosting' && prfHostingSellFromXero();
   const sell = prfRowSell(s);
   const sgm = sell - cost;
@@ -10031,13 +10045,13 @@ function prfRenderServiceRow(s) {
     <td><span class="prf-ct ${prfCatClass(s.category)}">${escapeHtml(s.category)}</span></td>
     <td class="prf-sn"><div class="n">${escapeHtml(s.name)}</div><div class="d">${escapeHtml(s.notes || '')}</div></td>
     <td class="prf-nr prf-nc">${fromInv
-      ? `<span class="prf-isub" title="Hosting cost is charged from Clook invoices in the month they are dated; the ${prfFmtForce(s.cost)} on this line is not counted">from invoices</span>`
+      ? `<span class="prf-isub" title="${s.category === 'm365' ? 'Licence cost is charged from TD SYNNEX (and Exclaimer) invoices in the month they are dated' : 'Hosting cost is charged from Clook invoices in the month they are dated'}; the ${prfFmtForce(s.cost)} on this line is not counted">from invoices</span>`
       : prfFmt(cost)}</td>
     <td class="prf-nr prf-ns">${fromXero
       ? `<span class="prf-isub" title="Hosting is billed annually; its revenue is the Xero invoice in the month it is raised. The ${prfFmtForce(s.sell)} on this line is not counted">from Xero</span>`
       : prfFmt(sell)}</td>
-    <td class="prf-nr ${sgm >= 0 ? 'prf-ng' : 'prf-nc'}">${fromXero && fromInv ? '—' : prfFmt(sgm)}</td>
-    <td class="prf-nr">${fromXero && fromInv ? '—' : `<span class="prf-mpill ${prfMpClass(sp)}">${prfFmtPct(sp)}</span>`}</td>
+    <td class="prf-nr ${sgm >= 0 ? 'prf-ng' : 'prf-nc'}" ${fromInv ? 'title="Margin is on the client total: this line\'s cost is the invoice below"' : ''}>${fromInv ? '—' : prfFmt(sgm)}</td>
+    <td class="prf-nr">${fromInv ? '—' : `<span class="prf-mpill ${prfMpClass(sp)}">${prfFmtPct(sp)}</span>`}</td>
     <td>${prfRenderRowActions(s.id)}</td>
   </tr>`;
 }
@@ -10075,7 +10089,7 @@ function prfRenderGrandTotal() {
       <div class="prf-gtstats">
         <div class="prf-gtst"><span class="v" style="color:var(--red)">${prfFmt(t.cost)}</span><span class="l">Total Cost</span></div>
         <div class="prf-gtst"><span class="v">${prfFmt(sp.recurring)}</span><span class="l">Recurring Rev.</span></div>
-        <div class="prf-gtst"><span class="v" style="color:var(--green)">${prfFmt(sp.stackGp)}</span><span class="l">Recurring Profit</span></div>
+        <div class="prf-gtst"><span class="v" style="color:${sp.stackGp < 0 ? 'var(--red)' : 'var(--green)'}">${prfFmtSigned(sp.stackGp)}</span><span class="l">Recurring Profit</span></div>
         <div class="prf-gtst"><span class="v" style="color:var(--green)">${prfFmtPct(sp.stackMargin)}</span><span class="l">Recurring Margin</span></div>
         <div class="prf-gtst"><span class="v" style="color:var(--blue)">${prfFmt(sp.oneOff)}</span><span class="l">One-off Work</span></div>
         <div class="prf-gtst"><span class="v" style="color:var(--amber)">${prfFmt(sp.recurring + sp.oneOff)}</span><span class="l">Xero Total</span></div>
@@ -10517,11 +10531,26 @@ function prfRenderFeedStatus(kind) {
   if (kind === 'xero') {
     let extra = '';
     const inv = prfMonthInvoiced();
+    if (inv) {
+      // Which supplier invoices were charged to clients this month.
+      const seen = new Map();
+      const all = [...inv.byClient.values()].flatMap(e => e.lines).concat(inv.shared, inv.unassigned);
+      for (const l of all) {
+        const k = l.supplier;
+        const e = seen.get(k) || { n: 0, total: 0, refs: new Set() };
+        e.n++; e.total = round2(e.total + l.net); e.refs.add(String(l.ref || '')); seen.set(k, e);
+      }
+      const parts = [...seen].map(([sup, e]) => `${escapeHtml(sup)} ${e.refs.size === 1 ? `invoice ${escapeHtml([...e.refs][0])}` : `${e.refs.size} invoices`}, ${prfFmtForce(e.total)}`);
+      const month = prfMonthLabel(PRF.selectedMonth || prfCurrentMonth());
+      extra += box('ok', parts.length
+        ? `Supplier invoices charged to ${escapeHtml(month)}: ${parts.join(' · ')}. Each sits on its client in the month it is dated; nothing to apply by hand.`
+        : `No supplier invoices dated ${escapeHtml(month)} yet. TD SYNNEX bills around the 16th, so until then licence cost for the month is nil.`);
+    }
     if (inv && (inv.shared.length || inv.unassigned.length)) {
       const li = l => `<li>${escapeHtml(l.supplier)}: ${escapeHtml(l.name ? l.name + ' — ' : '')}${escapeHtml(l.desc)} ${prfFmtForce(l.net)} (${escapeHtml(l.date)})</li>`;
       const sharedHtml = inv.shared.length ? `<div>Shared, not charged to any client:</div><ul>${inv.shared.map(li).join('')}</ul>` : '';
       const unHtml = inv.unassigned.length ? `<div>Not tied to a client — tell Felix which client these belong to:</div><ul>${inv.unassigned.map(li).join('')}</ul>` : '';
-      extra = box(inv.unassigned.length ? 'warn' : 'ok', `Supplier invoices this month that sit in the total but on no card. ${sharedHtml}${unHtml}`);
+      extra += box(inv.unassigned.length ? 'warn' : 'ok', `Supplier invoices this month that sit in the total but on no card. ${sharedHtml}${unHtml}`);
     }
     return box(stale ? 'warn' : 'ok', `Automatic from Xero, updated ${when}.${staleNote}`) + extra;
   }
@@ -11070,6 +11099,10 @@ function cspRenderPreviewRow(row, index) {
     </tr>`;
 }
 
+// ponytail: the CSP import panel is no longer rendered (TD SYNNEX invoices
+// arrive through the feed and land in their month, 7 Oct 2026). The code
+// below stays one release so the manual path can be restored if the feed
+// ever stops; remove once the automatic path has run a full month.
 function cspRenderImport() {
   const dropZone = `
     <div class="prf-drop-zone" id="cspDropZone"
