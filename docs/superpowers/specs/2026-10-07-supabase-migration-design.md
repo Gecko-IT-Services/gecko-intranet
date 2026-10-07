@@ -102,8 +102,10 @@ Phases (each is its own PR, its own design-note update, Philip approves each):
    the SharePoint GeckoClients list for their dropdowns, which goes stale after the switch.
    Copy 7 Oct: 29 clients, 55 service lines, £1683.02 cost / £6027.66 sell a month, every
    field matched. **Switched 7 Oct** by Philip.
-5. **Timesheets + SSA** with the trigger, flow switch-off, Renewal and Archive. Done on
-   a quiet day with Jack aware, because of the flow cutover.
+5. **Timesheets + SSA: not moving** (Philip, 7 Oct). The Microsoft Lists Timesheets list
+   stays the master, the dashboard keeps writing it through Graph, the three flows keep
+   running, `HoursUsed` stays the SSA balance. See
+   `2026-10-07-timesheets-stay-on-sharepoint-design.md`.
 6. **Feed** to a table; scheduled task updated in the same change. Then the SharePoint
    lists are left read-only for 3 months (ponytail) before anyone deletes them.
 
