@@ -15597,10 +15597,30 @@ function tshRenewSet(key, state, text = '') {
   tshRenewRender();
 }
 
+/**
+ * Ask Microsoft for the mail permission straight from the click. Browsers only
+ * allow a pop-up within a few seconds of a click; asked after the wait for the
+ * balance flow (a minute later), the consent window was blocked (Freeston,
+ * 7 Oct 2026). Once granted this returns silently.
+ */
+async function tshRenewMailPermission() {
+  const scopes = CONFIG.SSA_EMAIL_MODE === 'send' ? ['Mail.Send.Shared'] : ['Mail.ReadWrite'];
+  try {
+    await getScopedToken(scopes, { interactive: true });
+    return true;
+  } catch (err) {
+    console.error('Mail permission not granted:', err);
+    toast('Microsoft needs your permission to ' + (CONFIG.SSA_EMAIL_MODE === 'send' ? 'send from the support mailbox' : 'save drafts in your mailbox')
+      + ', but its window was blocked or closed. In Chrome, click the blocked pop-up icon at the right of the address bar, choose "Always allow", then try again. Nothing was changed.', 'error', 10000);
+    return false;
+  }
+}
+
 async function tshRenewGo() {
   const R = window.SsaRenewal;
   const r = TSH.renew;
   if (!r || r.started) return;
+  if (!(await tshRenewMailPermission())) return;   // before anything is written
   const blocks = R.validBlocks(r.blocks);
   if (!blocks) return;
   const credit = R.creditEntry(blocks);
@@ -15662,6 +15682,7 @@ async function tshRenewSend(fromGo = false) {
   const R = window.SsaRenewal;
   const r = TSH.renew;
   if (!r || r.emailed || (r.running && !fromGo)) return;
+  if (!fromGo && !(await tshRenewMailPermission())) return;   // "Try again" is a click: ask here
   r.running = true;
   try {
     const client = await tshFetchClientRow(r.clientId);
@@ -15709,7 +15730,7 @@ async function tshRenewSend(fromGo = false) {
         throw new Error(`Your account is not allowed to send as ${CONFIG.SSA_FROM_MAILBOX}. In the Exchange admin centre: Recipients › Mailboxes › ${CONFIG.SSA_FROM_MAILBOX} › Delegation › Send as › add yourself.`);
       }
       if (/popup|user_cancelled|interaction/i.test(m)) {
-        throw new Error(`Microsoft needed your one-off permission to ${drafting ? 'save drafts in your mailbox' : 'send from the support mailbox'}, and its window was blocked or closed. Allow pop-ups for this site, then try again.`);
+        throw new Error(`Microsoft needed your one-off permission to ${drafting ? 'save drafts in your mailbox' : 'send from the support mailbox'}, and its window was blocked or closed. Press "Try again" — it asks straight away. If Chrome still blocks it, click the blocked pop-up icon at the right of the address bar and choose "Always allow".`);
       }
       throw err;
     }

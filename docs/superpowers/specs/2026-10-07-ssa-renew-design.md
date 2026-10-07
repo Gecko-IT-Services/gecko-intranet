@@ -67,6 +67,10 @@ that, undo by hand (delete the credit in SharePoint and add the hours back to Ho
 If a step fails, the dialog says which, and what is left to do by hand.
 
 ## Permissions
+- The mail permission is requested **at the click** (Renew & send, Try again), before anything is
+  written. First live use (Freeston, 7 Oct 2026) asked only after the ~1 min wait for the balance
+  flow; Chrome blocked that consent pop-up because it was no longer tied to a click. The credit
+  went in once and applied correctly; only the draft failed.
 - Draft mode needs **Mail.ReadWrite**; send mode needs **Mail.Send.Shared**. Each is requested by
   this button only, through `graphFetch(path, { scopes, interactive: true })`, never added to
   `CONFIG.SCOPES`. Each user approves it once in a Microsoft pop-up.
