@@ -99,6 +99,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   where historic double counting is visible. No corrections, credits or recalculations.
 - A SharePoint flow adds every new Timesheets entry's hours to `HoursUsed` ~30s after it is
   created (System credits included). Code that creates entries must never also write `HoursUsed`.
+  Sole exception: the renewal dialog's Undo, which takes back the exact credit it just added.
 
 - **SSA renewal** (Timesheets › SSA › Renew…): System credit entry → waits for the "Update
   Client Balances" flow → timesheet email from `CONFIG.SSA_FROM_MAILBOX` (support@) → copy in
