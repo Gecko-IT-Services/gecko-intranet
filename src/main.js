@@ -17,6 +17,7 @@ import * as backups from './sections/backups.js';
 import * as alerts from './sections/alerts.js';
 import * as cspCosts from './core/csp-costs.js';
 import * as profitFeed from './core/profit-feed.js';
+import * as ssaRenewal from './core/ssa-renewal.js';
 
 window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
@@ -27,3 +28,5 @@ window.GeckoSections.alerts   = { init: alerts.init };
 // index.html's classic script and therefore cannot import modules itself.
 window.CspCosts = cspCosts;
 window.ProfitFeed = profitFeed;
+// Timesheets › SSA › Renew (also classic script).
+window.SsaRenewal = ssaRenewal;
