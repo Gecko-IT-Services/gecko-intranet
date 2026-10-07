@@ -15148,14 +15148,15 @@ async function tshAddEntry(ev) {
       internalNotes
     });
 
-    // Update HoursUsed on Clients list if billable
+    // Do NOT write HoursUsed here. A SharePoint flow on the Timesheets list
+    // adds every new entry's hours to the client's HoursUsed about 30s after
+    // it is created (it is what the Power App relies on). Writing it here as
+    // well counted every portal-logged entry twice from May to Oct 2026 — see
+    // docs/superpowers/specs/2026-10-07-ssa-double-count-design.md.
     const ssaClient = tshFindSsaClient(clientName);
     if (billable && ssaClient && ssaClient.hoursPurchased > 0) {
-      const newUsed = ssaClient.hoursUsed + hours;
-      await tshUpdateHoursUsed(ssaClient.id, newUsed);
-
-      // Check if this pushes remaining below 0
-      const newRemaining = ssaClient.hoursPurchased - newUsed;
+      // Warn on the balance the flow is about to produce.
+      const newRemaining = ssaClient.hoursPurchased - (ssaClient.hoursUsed + hours);
       if (newRemaining < 0) {
         toast(`${clientName} now has ${tshFmtHours(newRemaining)} remaining — consider invoicing for additional hours`, 'warning', 5000);
       }
