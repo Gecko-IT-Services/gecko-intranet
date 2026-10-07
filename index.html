@@ -1575,6 +1575,8 @@ body {
   font-family: var(--font-body); font-weight: 700;
   color: var(--muted); font-size: 13px; min-width: 70px;
 }
+#section-profitability .prf-xero-unmatched .xu-row { flex-wrap: wrap; row-gap: 6px; }
+#section-profitability .prf-xero-unmatched .xu-row select { max-width: 100%; min-width: 0; flex: 1 1 180px; }
 #section-profitability .prf-xero-unmatched .xu-row select {
   padding: 3px 8px; border-radius: 6px;
   background: var(--dark); border: 1px solid var(--border);
@@ -5172,7 +5174,11 @@ body::before {
     width: 100%;
     justify-content: space-between;
     gap: 10px;
+    flex-wrap: wrap;
   }
+  /* On the invoiced basis cost is the number that moves month to month,
+     so it earns its place on a phone alongside recurring and profit. */
+  #section-profitability .prf-cnums .prf-cnum:not(.keep) { display: block; }
 
   #section-profitability .prf-mpill {
     margin-left: auto;
@@ -5851,6 +5857,49 @@ body::before {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  /* Profitability's table footer (CLIENT TOTAL and the Xero line) is not a
+     data row, so the tbody rules above do not reach it. Left as a table
+     row it kept its desktop width (~526px on a 390px phone) and forced
+     the whole page to lay out wider than the screen, so everything
+     rendered zoomed out. Stack it like the cards instead. */
+  #portalShell table[data-rt] > tfoot { display: block !important; }
+  #portalShell table[data-rt] > tfoot > tr {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+    padding: 6px 13px 8px !important;
+    margin-bottom: 9px;
+    border: 1px solid var(--border-dim) !important;
+    border-radius: var(--radius-sm);
+    background: var(--card) !important;
+  }
+  #portalShell table[data-rt] > tfoot > tr > td {
+    display: block !important;
+    width: auto !important;
+    min-width: 0;
+    padding: 5px 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+  #portalShell table[data-rt] > tfoot > tr > td[colspan] { grid-column: 1 / -1; }
+  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr::before {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 9.5px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 2px;
+  }
+  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr:nth-child(2)::before { content: 'Cost'; }
+  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr:nth-child(3)::before { content: 'Revenue'; }
+  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr:nth-child(4)::before { content: 'Profit'; }
+  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr:nth-child(5)::before { content: 'Margin'; }
+  #section-profitability .prf-stbl > tfoot .prf-xsplit,
+  #section-profitability .prf-stbl > tfoot .prf-xctrl { justify-content: flex-start; }
+  #section-profitability .prf-stbl > tfoot .prf-xrow td { background: transparent !important; }
+  /* Read-only supplier-invoice rows have no actions; drop the empty cell. */
+  #section-profitability .prf-stbl > tbody > tr.prf-irow > td:last-child { display: none !important; }
 
   /* Row actions become a footer strip on the card, whether the column had
      a header or not. The label is dropped: the controls carry their own
