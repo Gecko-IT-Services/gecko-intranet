@@ -2611,6 +2611,12 @@ body {
 #section-clients .cli-head-actions {
   margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
 }
+#section-clients .cli-refresh[hidden] { display: none; }
+/* Copy-to-Supabase result: own line, green when it reconciles, red when not. */
+#section-clients .cli-copy-result { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+#section-clients .cli-copy-result:empty { display: none; }
+#section-clients .cli-copy-result[data-state="ok"]  { color: var(--green); }
+#section-clients .cli-copy-result[data-state="bad"] { color: var(--red); }
 #section-clients .cli-add-btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: 999px;
@@ -6857,11 +6863,14 @@ body::before {
               Cards
             </button>
           </div>
-          <button class="cli-refresh" id="cliRefresh" type="button" onclick="cliRefreshData()" title="Reload from SharePoint">
+          <button class="cli-refresh" id="cliRefresh" type="button" onclick="cliRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="cli-last-sync" id="cliLastSync"></span>
+          <button class="cli-refresh" id="cliCopy" type="button" hidden onclick="cliCopyToSupabase()"
+                  title="One-off, Philip only: copy clients and service lines from SharePoint into the Gecko database and check every field">Copy to Supabase</button>
+          <span class="cli-copy-result" id="cliCopyResult" role="status"></span>
         </div>
       </div>
 
@@ -7674,7 +7683,8 @@ const CONFIG = {
   // its import has reconciled; flipping back is the rollback.
   DATA_BACKEND: {
     leave:   'supabase',   // switched 7 Oct 2026 by Philip after a green copy
-    mileage: 'supabase'    // Mileage + Overview's mileage tiles; switched 7 Oct 2026 by Philip (74 journeys, 1671.4 mi, £834.11)
+    mileage: 'supabase',   // Mileage + Overview's mileage tiles; switched 7 Oct 2026 by Philip (74 journeys, 1671.4 mi, £834.11)
+    clients: 'sharepoint'  // GeckoClients + GeckoServices: Clients, Profitability and Overview together
   },
 
   // — Scopes requested at sign-in —
@@ -7946,6 +7956,54 @@ async function spFetchAllItems(listId, top = CONFIG.GRAPH_PAGE_SIZE) {
     if (items.length > CONFIG.GRAPH_SAFETY_LIMIT) throw new Error('More items than the safety limit');
   }
   return items;
+}
+
+/**
+ * GeckoClients / GeckoServices items from wherever CONFIG.DATA_BACKEND.clients
+ * points. Clients, Profitability and Overview all read and write these two
+ * lists, so they all go through here and can never disagree about where the
+ * data lives. `table` is the Supabase table; siteId/listId are the caller's
+ * SharePoint ids (unused on Supabase).
+ */
+async function clientListItems(table, siteId, listId, top) {
+  if (dataBackend('clients') === 'supabase') return geckoStore().listItems(table);
+  return (await graphFetch(`/sites/${siteId}/lists/${listId}/items?expand=fields&$top=${top}`)).value || [];
+}
+async function clientListCreate(table, siteId, listId, fields) {
+  if (dataBackend('clients') === 'supabase') return geckoStore().createItem(table, fields);
+  return graphFetch(`/sites/${siteId}/lists/${listId}/items`, { method: 'POST', body: JSON.stringify({ fields }) });
+}
+async function clientListPatch(table, siteId, listId, id, fields) {
+  if (dataBackend('clients') === 'supabase') return geckoStore().patchItem(table, id, fields);
+  return graphFetch(`/sites/${siteId}/lists/${listId}/items/${id}/fields`, { method: 'PATCH', body: JSON.stringify(fields) });
+}
+async function clientListDelete(table, siteId, listId, id) {
+  if (dataBackend('clients') === 'supabase') return geckoStore().deleteItem(table, id);
+  return graphFetch(`/sites/${siteId}/lists/${listId}/items/${id}`, { method: 'DELETE' });
+}
+
+/**
+ * The error card for a section whose load failed. DB_SIGNIN_REQUIRED gets a
+ * Connect button (calls `retryFn` by name after connecting), never an empty state.
+ */
+function sectionErrorHtml(err, retryFn, cls) {
+  if (err?.code === 'DB_SIGNIN_REQUIRED') {
+    return `<div class="${cls}"><h3>Connect to the Gecko database</h3>
+      <p>This section now lives in the database. Connect once with your Microsoft account.<br>
+      <button type="button" onclick="dbConnectThen('${retryFn}')">Connect</button></p></div>`;
+  }
+  return `<div class="${cls}"><h3>Could not load data</h3>
+    <p>${escapeHtml(err?.message || 'Unknown error')}<br>Click Refresh to try again.</p></div>`;
+}
+
+/** Connect (a click: may open a Microsoft popup/redirect), then re-run a section's refresh. */
+async function dbConnectThen(retryFn) {
+  try {
+    await geckoStore().connect({ interactive: true });
+    await window[retryFn]?.();
+  } catch (err) {
+    toast('Could not connect: ' + (err.message || err), 'error', 7000);
+  }
 }
 
 /** The signed-in Microsoft account's address (src/core/supabase.js matches its session to it). */
@@ -8885,9 +8943,8 @@ async function ovwLoadJourneys() {
 }
 
 async function ovwLoadServices() {
-  const url = `/sites/${OVW.siteId}/lists/${OVW.listIds.services}/items?expand=fields&$top=2000`;
-  const res = await graphFetch(url);
-  OVW.services = (res.value || []).map(it => {
+  const items = await clientListItems('gecko_services', OVW.siteId, OVW.listIds.services, 2000);
+  OVW.services = items.map(it => {
     const f = it.fields || {};
     return {
       category: (f.Category || 'other').toLowerCase(),
@@ -8898,9 +8955,8 @@ async function ovwLoadServices() {
 }
 
 async function ovwLoadClients() {
-  const url = `/sites/${OVW.siteId}/lists/${OVW.listIds.clients}/items?expand=fields&$top=500`;
-  const res = await graphFetch(url);
-  OVW.clients = (res.value || []).map(it => {
+  const items = await clientListItems('gecko_clients', OVW.siteId, OVW.listIds.clients, 500);
+  OVW.clients = items.map(it => {
     const f = it.fields || {};
     return {
       status: f.Status || 'Active'
@@ -9445,7 +9501,7 @@ async function ovwRefreshData(silent = false) {
       wrap.innerHTML = `
         <div class="ovw-error">
           <h3>Connect to the Gecko database</h3>
-          <p>Mileage now lives in the database. Connect once with your Microsoft account.<br>
+          <p>Overview now reads the database. Connect once with your Microsoft account.<br>
           <button type="button" class="ovw-refresh" onclick="ovwConnect()">Connect</button></p>
         </div>`;
     } else if (wrap) {
@@ -9597,9 +9653,8 @@ async function prfResolveListIds() {
 
 // ─── SharePoint helpers — load lists ──────────────────────────────────
 async function prfLoadClients() {
-  const url = `/sites/${PRF.siteId}/lists/${PRF.listIds.clients}/items?expand=fields&$top=500`;
-  const res = await graphFetch(url);
-  PRF.clients = (res.value || []).map(it => {
+  const items = await clientListItems('gecko_clients', PRF.siteId, PRF.listIds.clients, 500);
+  PRF.clients = items.map(it => {
     const f = it.fields || {};
     // Phase 10: XeroHistory stores JSON like {"2026-04":265.51,"2026-03":248.00}
     let xh = {};
@@ -9618,9 +9673,8 @@ async function prfLoadClients() {
 }
 
 async function prfLoadServices() {
-  const url = `/sites/${PRF.siteId}/lists/${PRF.listIds.services}/items?expand=fields&$top=2000`;
-  const res = await graphFetch(url);
-  PRF.services = (res.value || []).map(it => {
+  const items = await clientListItems('gecko_services', PRF.siteId, PRF.listIds.services, 2000);
+  PRF.services = items.map(it => {
     const f = it.fields || {};
     return {
       id:         it.id,
@@ -9640,19 +9694,13 @@ async function prfCreateClient(c) {
   const fields = { Title: c.name, Status: c.status || 'Active' };
   if (c.contractStart) fields.ContractStart = c.contractStart;
   if (c.notes)         fields.Notes = c.notes;
-  return graphFetch(`/sites/${PRF.siteId}/lists/${PRF.listIds.clients}/items`, {
-    method: 'POST', body: JSON.stringify({ fields })
-  });
+  return clientListCreate('gecko_clients', PRF.siteId, PRF.listIds.clients, fields);
 }
 async function prfPatchClient(id, patch) {
-  return graphFetch(`/sites/${PRF.siteId}/lists/${PRF.listIds.clients}/items/${id}/fields`, {
-    method: 'PATCH', body: JSON.stringify(patch)
-  });
+  return clientListPatch('gecko_clients', PRF.siteId, PRF.listIds.clients, id, patch);
 }
 async function prfDeleteClient(id) {
-  return graphFetch(`/sites/${PRF.siteId}/lists/${PRF.listIds.clients}/items/${id}`, {
-    method: 'DELETE'
-  });
+  return clientListDelete('gecko_clients', PRF.siteId, PRF.listIds.clients, id);
 }
 
 async function prfCreateService(s) {
@@ -9664,19 +9712,13 @@ async function prfCreateService(s) {
     SellPerMonth: Number(s.sell) || 0
   };
   if (s.notes) fields.Notes = s.notes;
-  return graphFetch(`/sites/${PRF.siteId}/lists/${PRF.listIds.services}/items`, {
-    method: 'POST', body: JSON.stringify({ fields })
-  });
+  return clientListCreate('gecko_services', PRF.siteId, PRF.listIds.services, fields);
 }
 async function prfPatchService(id, patch) {
-  return graphFetch(`/sites/${PRF.siteId}/lists/${PRF.listIds.services}/items/${id}/fields`, {
-    method: 'PATCH', body: JSON.stringify(patch)
-  });
+  return clientListPatch('gecko_services', PRF.siteId, PRF.listIds.services, id, patch);
 }
 async function prfDeleteService(id) {
-  return graphFetch(`/sites/${PRF.siteId}/lists/${PRF.listIds.services}/items/${id}`, {
-    method: 'DELETE'
-  });
+  return clientListDelete('gecko_services', PRF.siteId, PRF.listIds.services, id);
 }
 
 
@@ -9704,13 +9746,7 @@ async function prfRefreshData(silent = false) {
     toast('Could not load profitability data: ' + (err.message || 'unknown error'), 'error', 6000);
     // Render an error state inside the wrap so the section isn't blank
     const wrap = document.getElementById('prfWrap');
-    if (wrap) {
-      wrap.innerHTML = `
-        <div class="prf-empty">
-          <h3>Could not load data</h3>
-          <p>${escapeHtml(err.message || 'Unknown error')}<br>Click Refresh to try again.</p>
-        </div>`;
-    }
+    if (wrap) wrap.innerHTML = sectionErrorHtml(err, 'prfRefreshData', 'prf-empty');
   } finally {
     if (refreshBtn) { refreshBtn.classList.remove('spinning'); refreshBtn.disabled = false; }
     showLoading(false);
@@ -14181,9 +14217,8 @@ async function cliResolveListIds() {
 
 // ─── SharePoint helpers — load each list ──────────────────────────────
 async function cliLoadGeckoClients() {
-  const url = `/sites/${CLI.siteId}/lists/${CLI.listIds.geckoClients}/items?expand=fields&$top=500`;
-  const res = await graphFetch(url);
-  CLI.geckoClients = (res.value || []).map(it => {
+  const items = await clientListItems('gecko_clients', CLI.siteId, CLI.listIds.geckoClients, 500);
+  CLI.geckoClients = items.map(it => {
     const f = it.fields || {};
     return {
       id:            it.id,
@@ -14234,9 +14269,8 @@ async function cliLoadServices() {
   // We only need ClientName + SellPerMonth for the revenue column.
   // Same list Profitability uses; not deduped because lazy-load timing
   // means PRF may not have loaded yet when Directory is opened first.
-  const url = `/sites/${CLI.siteId}/lists/${CLI.listIds.services}/items?expand=fields&$top=2000`;
-  const res = await graphFetch(url);
-  CLI.services = (res.value || []).map(it => {
+  const items = await clientListItems('gecko_services', CLI.siteId, CLI.listIds.services, 2000);
+  CLI.services = items.map(it => {
     const f = it.fields || {};
     return {
       clientName: f.ClientName || '',
@@ -14253,19 +14287,13 @@ async function cliCreateClient(c) {
   const fields = { Title: c.name, Status: c.status || 'Active' };
   if (c.contractStart) fields.ContractStart = c.contractStart;
   if (c.notes)         fields.Notes = c.notes;
-  return graphFetch(`/sites/${CLI.siteId}/lists/${CLI.listIds.geckoClients}/items`, {
-    method: 'POST', body: JSON.stringify({ fields })
-  });
+  return clientListCreate('gecko_clients', CLI.siteId, CLI.listIds.geckoClients, fields);
 }
 async function cliPatchClient(id, patch) {
-  return graphFetch(`/sites/${CLI.siteId}/lists/${CLI.listIds.geckoClients}/items/${id}/fields`, {
-    method: 'PATCH', body: JSON.stringify(patch)
-  });
+  return clientListPatch('gecko_clients', CLI.siteId, CLI.listIds.geckoClients, id, patch);
 }
 async function cliDeleteClientApi(id) {
-  return graphFetch(`/sites/${CLI.siteId}/lists/${CLI.listIds.geckoClients}/items/${id}`, {
-    method: 'DELETE'
-  });
+  return clientListDelete('gecko_clients', CLI.siteId, CLI.listIds.geckoClients, id);
 }
 // Cascade rename: when a GeckoClient's name changes, every linked
 // GeckoServices row's ClientName must update to keep the join intact.
@@ -14274,13 +14302,10 @@ async function cliDeleteClientApi(id) {
 async function cliCascadeServiceRename(oldName, newName) {
   // We need actual service IDs, which we have on PRF.services if loaded;
   // otherwise re-fetch fresh. Safer to always re-fetch here — small list.
-  const url = `/sites/${CLI.siteId}/lists/${CLI.listIds.services}/items?expand=fields&$top=2000`;
-  const res = await graphFetch(url);
-  const linked = (res.value || []).filter(it => (it.fields?.ClientName || '') === oldName);
+  const items = await clientListItems('gecko_services', CLI.siteId, CLI.listIds.services, 2000);
+  const linked = items.filter(it => (it.fields?.ClientName || '') === oldName);
   await Promise.all(linked.map(it =>
-    graphFetch(`/sites/${CLI.siteId}/lists/${CLI.listIds.services}/items/${it.id}/fields`, {
-      method: 'PATCH', body: JSON.stringify({ ClientName: newName })
-    })
+    clientListPatch('gecko_services', CLI.siteId, CLI.listIds.services, it.id, { ClientName: newName })
   ));
   return linked.length;
 }
@@ -14365,13 +14390,7 @@ async function cliRefreshData(silent = false) {
     console.error('Directory refresh failed:', err);
     toast('Could not load directory: ' + (err.message || 'unknown error'), 'error', 6000);
     const wrap = document.getElementById('cliWrap');
-    if (wrap) {
-      wrap.innerHTML = `
-        <div class="cli-error">
-          <h3>Could not load data</h3>
-          <p>${escapeHtml(err.message || 'Unknown error')}<br>Click Refresh to try again.</p>
-        </div>`;
-    }
+    if (wrap) wrap.innerHTML = sectionErrorHtml(err, 'cliRefreshData', 'cli-error');
   } finally {
     if (refreshBtn) { refreshBtn.classList.remove('spinning'); refreshBtn.disabled = false; }
     showLoading(false);
@@ -14841,15 +14860,14 @@ async function cliDoDeleteClient(id) {
   // caching). Same pattern as cliCascadeServiceRename.
   showLoading(true);
   try {
-    const url = `/sites/${CLI.siteId}/lists/${CLI.listIds.services}/items?expand=fields&$top=2000`;
-    const res = await graphFetch(url);
-    const linked = (res.value || []).filter(it => (it.fields?.ClientName || '') === client.name);
+    const items = await clientListItems('gecko_services', CLI.siteId, CLI.listIds.services, 2000);
+    const linked = items.filter(it => (it.fields?.ClientName || '') === client.name);
 
     // Delete services first so an interrupted delete doesn't leave orphans
     for (const it of linked) {
       try {
-        await graphFetch(`/sites/${CLI.siteId}/lists/${CLI.listIds.services}/items/${it.id}`, { method: 'DELETE' });
-      } catch (err) { console.warn('Delete service failed (continuing):', e);
+        await clientListDelete('gecko_services', CLI.siteId, CLI.listIds.services, it.id);
+      } catch (err) { console.warn('Delete service failed (continuing):', err);
       }
     }
     await cliDeleteClientApi(id);
@@ -14872,9 +14890,57 @@ async function cliDoDeleteClient(id) {
 
 
 // ─── Init ─────────────────────────────────────────────────────────────
+/**
+ * One-off, Philip only, while SharePoint is still live for clients: copy
+ * GeckoClients and GeckoServices into the database, read them back and
+ * compare every field, with monthly cost and sell totals side by side.
+ * SharePoint is only read. (The SSA `Clients` list is not part of this.)
+ */
+async function cliCopyToSupabase() {
+  if (dataBackend('clients') === 'supabase' || !levIsPhilip()) return;
+  if (!confirm('Copy all clients and service lines from SharePoint into the Gecko database?\n\n'
+    + 'This replaces what the database holds for clients and services. SharePoint is not changed.')) return;
+  const btn = document.getElementById('cliCopy');
+  const out = document.getElementById('cliCopyResult');
+  const show = (text, state) => { if (out) { out.textContent = text; out.dataset.state = state || ''; } };
+  if (btn) btn.disabled = true;
+  show('Copying…');
+  try {
+    // Connect first, while this is still the click (a later popup is blocked).
+    await geckoStore().connect({ interactive: true });
+    await cliResolveListIds();
+    const cItems = await spFetchAllItems(CLI.listIds.geckoClients, 500);
+    const sItems = await spFetchAllItems(CLI.listIds.services);
+    const c = await geckoStore().copyFromSharePoint('gecko_clients', cItems, spDateToLocalDateKey);
+    const sv = await geckoStore().copyFromSharePoint('gecko_services', sItems, spDateToLocalDateKey);
+    const money = n => '£' + Number(n).toFixed(2);
+    const summary = `Clients: SharePoint ${c.spCount}, database ${c.dbCount}. `
+      + `Service lines: SharePoint ${sv.spCount}, database ${sv.dbCount}, `
+      + `cost/month ${money(sv.totals.cost_per_month[0])} / ${money(sv.totals.cost_per_month[1])}, `
+      + `sell/month ${money(sv.totals.sell_per_month[0])} / ${money(sv.totals.sell_per_month[1])}.`;
+    const problems = [...c.mismatches.map(m => ['client', m]), ...sv.mismatches.map(m => ['service', m])];
+    if (!problems.length) {
+      show(summary + ' Every field matches.', 'ok');
+      toast('Clients and services copied and checked', 'success');
+    } else {
+      show(`${summary} Not matching (${problems.length}): `
+        + problems.slice(0, 6).map(([kind, m]) => `${kind} ${m.sharepointId} ${m.problem}`.trim()).join('; '), 'bad');
+      toast('Copy finished but does not match', 'error', 7000);
+    }
+  } catch (err) {
+    console.error('Clients copy failed:', err);
+    show('Copy failed: ' + (err.message || err), 'bad');
+    toast('Copy failed: ' + (err.message || err), 'error', 7000);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function initClients() {
   if (CLI.initialised) return;
   CLI.initialised = true;
+  const copy = document.getElementById('cliCopy');
+  if (copy) copy.hidden = !(levIsPhilip() && dataBackend('clients') === 'sharepoint');
 
   // Modal: close on ESC (only when this section's modal is open)
   document.addEventListener('keydown', e => {
