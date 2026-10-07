@@ -80,7 +80,7 @@ Phases (each is its own PR, its own design-note update, Philip approves each):
    branches on `CONFIG.DATA_BACKEND.leave` (still `'sharepoint'`); Copy to Supabase on
    Leave (Philip only) copies both lists and shows rows, hours totals and any field that
    differs. First copy 7 Oct: 17 requests, 232h, 0 entitlements (no list; 140h default),
-   every field matched. Switch = a fresh copy, then set the flag to `'supabase'`. After the
+   every field matched. **Switched 7 Oct** by Philip after a fresh copy. After the
    switch, entitlements are edited in Supabase › Table Editor › leave_entitlements (they
    were edited by hand in the SharePoint list before; the page has never edited them).
 3. **Mileage**: MileageJourneys, MileageClients (HMRC records: 6-year retention kept).

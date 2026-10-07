@@ -71,9 +71,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Plan and state: `docs/superpowers/specs/2026-10-07-supabase-migration-design.md`.
   Project `nkobrqzsogtyxriqqwnq`; schema only in `supabase/migrations/`, applied by the
   Supabase GitHub integration on merge to `main` (never change schema by hand).
-- `CONFIG.DATA_BACKEND.<section>` says where a section's data lives. Leave is copied
-  and checked (`leave_requests`, `leave_entitlements`) and switches when Philip says.
-  Everything else is SharePoint. Projects/Compliance/P&L are not moving.
+- `CONFIG.DATA_BACKEND.<section>` says where a section's data lives. **Leave is on
+  Supabase** since 7 Oct (`leave_requests`, `leave_entitlements`); its SharePoint lists
+  are no longer updated. Everything else is SharePoint. Projects/Compliance/P&L are not moving.
 - Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
   and a policy (`tests/supabase-migration.mjs` enforces it). Only the publishable key
   is in the site. Sign-in is the Microsoft ID token (`src/core/supabase.js`).
