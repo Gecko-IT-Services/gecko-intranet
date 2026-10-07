@@ -3177,6 +3177,25 @@ body {
 }
 #section-timesheets .tsh-ssa-link:hover { color: var(--green); text-decoration-color: var(--green); }
 #section-timesheets .tsh-ssa-link.muted { color: var(--muted); margin-left: auto; }
+#section-timesheets .tsh-ssa-link.strong { color: var(--green); font-weight: 700; }
+#section-timesheets .tsh-renew-plan { margin: 0 0 14px 18px; padding: 0; font-size: 13px; color: var(--muted); display: grid; gap: 8px; }
+#section-timesheets .tsh-renew-plan strong { color: var(--white); }
+#section-timesheets .tsh-renew-warn { color: var(--amber) !important; }
+#section-timesheets .tsh-renew-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+#section-timesheets .tsh-renew-step { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--muted); }
+#section-timesheets .tsh-renew-step strong { color: var(--white); font-weight: 600; }
+#section-timesheets .tsh-renew-sub { font-size: 12px; overflow-wrap: anywhere; }
+#section-timesheets .tsh-renew-ic { flex: 0 0 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; border: 1px solid var(--border-dim); }
+#section-timesheets .tsh-renew-step.done .tsh-renew-ic { color: var(--green); border-color: var(--green); }
+#section-timesheets .tsh-renew-step.doing .tsh-renew-ic { color: var(--amber); border-color: var(--amber); }
+#section-timesheets .tsh-renew-step.fail .tsh-renew-ic { color: var(--red); border-color: var(--red); }
+#section-timesheets .tsh-renew-step.fail .tsh-renew-sub { color: var(--red); }
+#section-timesheets .tsh-renew-xero { margin-top: 18px; padding: 14px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); }
+#section-timesheets .tsh-renew-xero-h { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+#section-timesheets .tsh-renew-xero-t { width: 100%; border-collapse: collapse; font-size: 13px; }
+#section-timesheets .tsh-renew-xero-t th { text-align: left; font-weight: 500; color: var(--muted); padding: 3px 12px 3px 0; white-space: nowrap; vertical-align: top; width: 1%; }
+#section-timesheets .tsh-renew-xero-t td { padding: 3px 0; overflow-wrap: anywhere; }
+#section-timesheets .tsh-renew-xero .tsh-mm-actions { margin-top: 12px; }
 #section-timesheets .tsh-ssa-archived { margin-top: 14px; border: 1px dashed var(--border-dim); border-radius: var(--radius); padding: 10px 14px; }
 #section-timesheets .tsh-ssa-archived summary { cursor: pointer; font-size: 12px; color: var(--muted); font-weight: 600; }
 #section-timesheets .tsh-ssa-archived-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
@@ -7612,6 +7631,10 @@ const CONFIG = {
   // — Annual Leave —
   LEAVE_APPROVER_EMAIL: 'philip@gecko-it.com',
   MILEAGE_CLAIM_EMAIL:  'philip@gecko-it.com',   // where "Email my claim" on Mileage goes
+  // SSA renewal timesheet email: sent as the support mailbox (needs Send As on
+  // it, and the one-off Mail.Send.Shared consent requested by that button only).
+  SSA_FROM_MAILBOX:     'support@gecko-it.com',
+  SSA_TIMESHEET_CC:     ['jack@gecko-it.com', 'philip@gecko-it.com'],
 
   // — Scopes requested at sign-in —
   // Sites.ReadWrite.All — required for SharePoint list access.
@@ -15360,6 +15383,7 @@ function tshRenderSsa() {
         <div class="tsh-ssa-bar-fill ${fillCls}" style="--fill:${usedPct / 100}"></div>
       </div>
       <div class="tsh-ssa-actions">
+        <button class="tsh-ssa-link strong" type="button" title="Add hours, email the timesheet and get the Xero invoice details" onclick="tshOpenRenew('${jsAttr(c.id)}')">Renew…</button>
         <button class="tsh-ssa-link" type="button" onclick="tshViewEntries('${jsAttr(c.name)}')">View entries</button>
         <button class="tsh-ssa-link" type="button" onclick="navTo('clients')">Jump to Directory</button>
         <button class="tsh-ssa-link muted" type="button" title="Take this client off the SSA programme. Hours and history are kept." onclick="tshSetArchived('${jsAttr(c.id)}', true)">Archive</button>
@@ -15400,6 +15424,298 @@ async function tshSetArchived(clientId, archived) {
       ? 'Could not archive: the Clients list needs a Yes/No column called "Archived". Add it in SharePoint (list settings → add column → Yes/No, name "Archived"), then try again.'
       : 'Could not update the client: ' + (err.message || 'unknown error'), 'error', 8000);
   }
+}
+
+
+// ─── SSA renewal ─────────────────────────────────────────────────────
+// One button for what used to be four manual steps: System credit entry →
+// wait for the "Update Client Balances" flow → timesheet email from support@
+// → Xero invoice. The portal never writes HoursUsed (Philip's rule, 7 Oct
+// 2026): the flow applies the credit exactly as for one typed in SharePoint.
+// Pure logic: src/core/ssa-renewal.js (window.SsaRenewal).
+// Design: docs/superpowers/specs/2026-10-07-ssa-renew-design.md.
+
+const TSH_RENEW_WAIT_MS = 180000;   // the balance flow polls once a minute
+const TSH_RENEW_POLL_MS = 10000;
+
+/** Every Timesheets entry for one client, archived included, straight from SharePoint. */
+async function tshFetchClientEntries(clientId) {
+  let url = `/sites/${TSH.siteId}/lists/${TSH.listIds.timesheets}/items?$expand=fields&$top=${CONFIG.GRAPH_PAGE_SIZE}&$filter=fields/ClientLookupId eq ${Number(clientId)}`;
+  const out = [];
+  while (url) {
+    const res = await graphFetch(url, { headers: { Prefer: 'HonorNonIndexedQueriesWarningMayFailRandomly' } });
+    for (const it of res.value || []) {
+      const f = it.fields || {};
+      out.push({
+        id: it.id,
+        created: f.Created,
+        date: f.Date,
+        engineer: f.Engineer || '',
+        hours: Number(f[TSH.fieldNames.hoursSpent] ?? f.HoursSpent) || 0,
+        workDescription: f[TSH.fieldNames.workDescription] ?? f.WorkDescription ?? '',
+        description: f.Title || ''
+      });
+    }
+    url = res['@odata.nextLink'] || null;
+    if (out.length > CONFIG.GRAPH_SAFETY_LIMIT) break;
+  }
+  return out;
+}
+
+async function tshFetchClientRow(clientId) {
+  const it = await graphFetch(`/sites/${TSH.siteId}/lists/${TSH.listIds.clients}/items/${clientId}?$expand=fields`);
+  const f = it.fields || {};
+  return {
+    id: it.id,
+    name: f.Title || '',
+    hoursUsed: Number(f.HoursUsed) || 0,
+    hoursRemaining: Number(f.Hours_x0020_Remaining2 ?? ((Number(f.HoursPurchased) || 0) - (Number(f.HoursUsed) || 0))) || 0,
+    primaryContact: f.PrimaryContact || '',
+    email: f.Email || '',
+    clientFolder: f.ClientFolder || ''
+  };
+}
+
+function tshOpenRenew(clientId) {
+  const R = window.SsaRenewal;
+  if (!R) { toast('The renewal module did not load — hard-refresh the page (Cmd+Shift+R) and try again.', 'error', 6000); return; }
+  if (TSH.renew && TSH.renew.clientId === String(clientId) && TSH.renew.started && !TSH.renew.finished) {
+    tshRenewRender();   // a run in progress: show it, never start a second
+    return;
+  }
+  const c = TSH.ssaClients.find(x => String(x.id) === String(clientId));
+  if (!c) { toast('Client not found — click Refresh', 'error'); return; }
+  TSH.renew = { clientId: String(clientId), name: c.name, blocks: 1, started: false, finished: false, steps: {} };
+  tshRenewRender();
+}
+
+function tshRenewBlocksChanged(v) {
+  if (TSH.renew && !TSH.renew.started) { TSH.renew.blocks = window.SsaRenewal.validBlocks(v) || 1; tshRenewRender(); }
+}
+
+function tshRenewRender() {
+  const R = window.SsaRenewal;
+  const r = TSH.renew;
+  if (!r) return;
+  const c = TSH.ssaClients.find(x => String(x.id) === r.clientId) || {};
+  const inv = R.xeroInvoice(r.blocks);
+  const hours = r.blocks * R.SSA_BLOCK_HOURS;
+  const to = R.recipients(c.email);
+  const money = n => '£' + n.toFixed(2);
+
+  if (!r.started) {
+    const opts = Array.from({ length: R.SSA_MAX_BLOCKS }, (_, i) => i + 1)
+      .map(n => `<option value="${n}" ${n === r.blocks ? 'selected' : ''}>${n} × ${R.SSA_BLOCK_HOURS} hours (${money(R.xeroInvoice(n).net)} + VAT)</option>`).join('');
+    const noEmail = to.length === 0
+      ? `<p class="tsh-renew-warn">No email address on the Clients list for ${escapeHtml(r.name)}. Add one in its Email column in SharePoint, click Refresh, then renew.</p>` : '';
+    tshOpenModal(`Renew SSA — ${r.name}`, `
+      <div class="tsh-form-grp">
+        <label for="tshRenewBlocks">Hours to add</label>
+        <select id="tshRenewBlocks" onchange="tshRenewBlocksChanged(this.value)">${opts}</select>
+      </div>
+      <ol class="tsh-renew-plan">
+        <li>Adds a System credit of <strong>+${hours} hours</strong> to the timesheet. SharePoint's balance flow applies it within about a minute.</li>
+        <li>Emails the latest timesheet from <strong>${escapeHtml(CONFIG.SSA_FROM_MAILBOX)}</strong> to ${to.length ? escapeHtml(to.join(', ')) : '<em>no address</em>'}, copied to ${escapeHtml(CONFIG.SSA_TIMESHEET_CC.join(', '))}, and saves a copy in Gecko Docs.</li>
+        <li>Shows the Xero invoice to raise: ${inv.quantity} × ${escapeHtml(inv.itemCode)}, ${money(inv.total)} inc VAT.</li>
+      </ol>
+      ${noEmail}
+      <div class="tsh-mm-actions">
+        <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">Cancel</button>
+        <button class="btn" type="button" id="tshRenewGoBtn" ${to.length ? '' : 'disabled'} onclick="tshRenewGo()">Renew &amp; send</button>
+      </div>`);
+    return;
+  }
+
+  const icon = s => s === 'done' ? '✓' : s === 'fail' ? '✕' : s === 'doing' ? '…' : '·';
+  const step = (key, label) => {
+    const s = r.steps[key] || { state: 'todo' };
+    return `<li class="tsh-renew-step ${s.state}"><span class="tsh-renew-ic" aria-hidden="true">${icon(s.state)}</span><span><strong>${escapeHtml(label)}</strong>${s.text ? `<br><span class="tsh-renew-sub">${escapeHtml(s.text)}</span>` : ''}</span></li>`;
+  };
+  const canRetry = r.steps.credit?.state === 'done' && !r.emailed && !r.running;
+  const xero = r.emailed ? `
+      <div class="tsh-renew-xero">
+        <div class="tsh-renew-xero-h">Raise in Xero</div>
+        <table class="tsh-renew-xero-t">
+          <tr><th>Contact</th><td>${escapeHtml(r.name)}</td></tr>
+          <tr><th>Reference</th><td>${escapeHtml(inv.reference)}</td></tr>
+          <tr><th>Item</th><td>${escapeHtml(inv.itemCode)} — ${escapeHtml(inv.description)}</td></tr>
+          <tr><th>Quantity</th><td>${inv.quantity}</td></tr>
+          <tr><th>Unit price</th><td>${money(inv.unitAmount)}</td></tr>
+          <tr><th>Account</th><td>${escapeHtml(inv.accountCode)}</td></tr>
+          <tr><th>Total</th><td>${money(inv.net)} + VAT ${money(inv.vat)} = <strong>${money(inv.total)}</strong></td></tr>
+        </table>
+        <div class="tsh-mm-actions">
+          <button class="btn btn-ghost" type="button" onclick="tshRenewCopyXero()">Copy details</button>
+          <a class="btn" href="https://go.xero.com/AccountsReceivable/Edit.aspx" target="_blank" rel="noopener">Open Xero</a>
+        </div>
+      </div>` : '';
+  tshOpenModal(`Renew SSA — ${r.name}`, `
+    <ol class="tsh-renew-steps">
+      ${step('credit', `Credit +${hours} hours added`)}
+      ${step('applied', 'Balance updated by SharePoint')}
+      ${step('email', 'Timesheet emailed')}
+      ${step('archive', 'Copy saved to Gecko Docs')}
+    </ol>
+    ${xero}
+    <div class="tsh-mm-actions">
+      ${canRetry ? '<button class="btn" type="button" onclick="tshRenewSend()">Try sending again</button>' : ''}
+      <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">${r.finished ? 'Done' : 'Hide'}</button>
+    </div>`);
+}
+
+function tshRenewSet(key, state, text = '') {
+  TSH.renew.steps[key] = { state, text };
+  tshRenewRender();
+}
+
+async function tshRenewGo() {
+  const R = window.SsaRenewal;
+  const r = TSH.renew;
+  if (!r || r.started) return;
+  const blocks = R.validBlocks(r.blocks);
+  if (!blocks) return;
+  const credit = R.creditEntry(blocks);
+  const creditHours = -credit.hours;
+
+  // Guard against a double click or a second person renewing at the same time.
+  try {
+    const recent = (await tshFetchClientEntries(r.clientId))
+      .filter(e => e.hours < 0 && e.created && Date.now() - Date.parse(e.created) < 15 * 60000);
+    if (recent.length && !confirm(`${r.name} already had a credit added ${Math.round((Date.now() - Date.parse(recent[0].created)) / 60000)} minutes ago. Add another +${creditHours} hours anyway?`)) return;
+  } catch (err) {
+    toast('Could not check recent credits: ' + (err.message || 'unknown error') + '. Nothing was added.', 'error', 6000);
+    return;
+  }
+
+  r.started = true; r.running = true;
+  try {
+    const before = await tshFetchClientRow(r.clientId);
+    r.beforeUsed = before.hoursUsed;
+    r.creditHours = creditHours;
+    tshRenewSet('credit', 'doing', 'Adding the credit…');
+    const created = await tshCreateEntry({
+      clientLookupId: Number(r.clientId), engineer: credit.engineer, date: today(),
+      hours: credit.hours, description: credit.description
+    });
+    r.creditId = created?.id;
+    tshRenewSet('credit', 'done', `${credit.description}, dated today.`);
+
+    tshRenewSet('applied', 'doing', 'Waiting for SharePoint to apply the credit (usually under a minute)…');
+    const t0 = Date.now();
+    let now = before;
+    while (!R.creditApplied(before.hoursUsed, now.hoursUsed, creditHours)) {
+      if (Date.now() - t0 > TSH_RENEW_WAIT_MS) {
+        r.running = false;
+        tshRenewSet('applied', 'fail', `SharePoint has not applied the credit after ${Math.round(TSH_RENEW_WAIT_MS / 60000)} minutes, so the email was not sent (it would show the old balance). The credit is saved. Wait a minute, then press "Try sending again".`);
+        return;
+      }
+      await new Promise(res => setTimeout(res, TSH_RENEW_POLL_MS));
+      now = await tshFetchClientRow(r.clientId);
+      tshRenewSet('applied', 'doing', `Waiting for SharePoint to apply the credit… ${Math.round((Date.now() - t0) / 1000)}s`);
+    }
+    tshRenewSet('applied', 'done', `Balance now ${tshFmtHours(now.hoursRemaining)} remaining.`);
+    await tshRenewSend(true);
+  } catch (err) {
+    console.error('SSA renewal failed:', err);
+    const s = r.steps;
+    const key = s.credit?.state !== 'done' ? 'credit' : (s.applied?.state !== 'done' ? 'applied' : 'email');
+    if (key === 'credit') { r.started = false; }   // nothing was written: back to the form
+    r.running = false;
+    if (key === 'credit') { toast('Could not add the credit: ' + (err.message || 'unknown error') + '. Nothing was changed.', 'error', 8000); tshRenewRender(); }
+    else tshRenewSet(key, 'fail', (err.message || 'unknown error') + ' The credit is saved; press "Try sending again".');
+  } finally {
+    tshRefreshData(true);
+  }
+}
+
+/** Email the timesheet (and save the copy). Also the retry after a timeout or a send failure. */
+async function tshRenewSend(fromGo = false) {
+  const R = window.SsaRenewal;
+  const r = TSH.renew;
+  if (!r || r.emailed || (r.running && !fromGo)) return;
+  r.running = true;
+  try {
+    const client = await tshFetchClientRow(r.clientId);
+    if (r.steps.applied?.state !== 'done') {
+      // Retry after a timeout: send only once the flow has applied the credit.
+      if (!R.creditApplied(r.beforeUsed, client.hoursUsed, r.creditHours)) {
+        tshRenewSet('applied', 'fail', 'SharePoint still has not applied the credit, so nothing was sent. Wait a minute and try again. If it never applies, check the "Update Client Balances" flow in Power Automate.');
+        return;
+      }
+      tshRenewSet('applied', 'done', `Balance now ${tshFmtHours(client.hoursRemaining)} remaining.`);
+    }
+    const to = R.recipients(client.email);
+    if (!to.length) throw new Error(`No email address on the Clients list for ${client.name}. Add one in its Email column in SharePoint.`);
+
+    tshRenewSet('email', 'doing', `Sending from ${CONFIG.SSA_FROM_MAILBOX}…`);
+    const rows = R.timesheetEntries(await tshFetchClientEntries(r.clientId)).map(R.emailRow);
+    const html = R.emailHtml({
+      clientName: client.name, primaryContact: client.primaryContact,
+      runDateKey: today(), hoursRemaining: client.hoursRemaining, rows
+    });
+    try {
+      await graphFetch(`/users/${encodeURIComponent(CONFIG.SSA_FROM_MAILBOX)}/sendMail`, {
+        method: 'POST', scopes: ['Mail.Send.Shared'], interactive: true,
+        body: JSON.stringify({
+          message: {
+            subject: R.EMAIL_SUBJECT,
+            body: { contentType: 'HTML', content: html },
+            toRecipients: to.map(address => ({ emailAddress: { address } })),
+            ccRecipients: CONFIG.SSA_TIMESHEET_CC.map(address => ({ emailAddress: { address } }))
+          },
+          saveToSentItems: true
+        })
+      });
+    } catch (err) {
+      const m = String(err.message || err);
+      if (/SendAs|ErrorSendAsDenied|not have permission to send/i.test(m)) {
+        throw new Error(`Your account is not allowed to send as ${CONFIG.SSA_FROM_MAILBOX}. In the Exchange admin centre: Recipients › Mailboxes › ${CONFIG.SSA_FROM_MAILBOX} › Delegation › Send as › add yourself.`);
+      }
+      if (/popup|user_cancelled|interaction/i.test(m)) {
+        throw new Error('Microsoft needed your one-off permission to send from the support mailbox, and its window was blocked or closed. Allow pop-ups for this site, then try again.');
+      }
+      throw err;
+    }
+    r.emailed = true;
+    tshRenewSet('email', 'done', `Sent to ${to.join(', ')} with ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}.`);
+
+    // The copy the flow keeps in Gecko Docs/clients/<folder>/. The email has gone; a failure here is reported, not retried.
+    try {
+      if (!client.clientFolder) throw new Error('the Clients list has no Client Folder for this client');
+      const drives = (await graphFetch(`/sites/${TSH.siteId}/drives?$select=id,name`)).value || [];
+      const docs = drives.find(d => d.name === 'Gecko Docs');
+      if (!docs) throw new Error('no "Gecko Docs" library on the portal site');
+      const name = R.archiveFileName(client.name, new Date());
+      const path = ['clients', client.clientFolder, name].map(encodeURIComponent).join('/');
+      await graphFetch(`/drives/${docs.id}/root:/${path}:/content`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html });
+      tshRenewSet('archive', 'done', `Gecko Docs › clients › ${client.clientFolder} › ${name}`);
+    } catch (err) {
+      tshRenewSet('archive', 'fail', 'Not saved: ' + (err.message || 'unknown error') + '. The email was sent.');
+    }
+    r.finished = true;
+    tshRenewRender();
+  } catch (err) {
+    console.error('SSA timesheet send failed:', err);
+    tshRenewSet('email', 'fail', (err.message || 'unknown error'));
+  } finally {
+    r.running = false;
+    tshRenewRender();
+  }
+}
+
+function tshRenewCopyXero() {
+  const r = TSH.renew;
+  if (!r) return;
+  const inv = window.SsaRenewal.xeroInvoice(r.blocks);
+  const text = [
+    `Contact: ${r.name}`, `Reference: ${inv.reference}`,
+    `Item: ${inv.itemCode} — ${inv.description}`, `Quantity: ${inv.quantity}`,
+    `Unit price: £${inv.unitAmount.toFixed(2)}`, `Account: ${inv.accountCode}`,
+    `Total: £${inv.net.toFixed(2)} + VAT £${inv.vat.toFixed(2)} = £${inv.total.toFixed(2)}`
+  ].join('\n');
+  navigator.clipboard.writeText(text)
+    .then(() => toast('Xero details copied', 'success', 2000))
+    .catch(() => toast('Could not copy — select the details and copy them by hand', 'warning', 4000));
 }
 
 /** Switch to Log tab filtered by a specific client */
