@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
-const { TABLES, fieldsToRow, rowToItem, spItemToRow, reconcile } = await import('../src/core/store.js');
+const { TABLES, fieldsToRow, rowToItem, spItemToRow, reconcile, selectAllPages, PAGE_ROWS } =
+  await import('../src/core/store.js');
 
 // A SharePoint dateOnly value comes back as UTC midnight of the local day
 // before (BST); the page turns it into the UK date. Stand-in for spDateToLocalDateKey.
@@ -71,5 +72,31 @@ const ent = spItemToRow('leave_entitlements',
   { id: '3', fields: { Person: 'Jack', TaxYear: '2026/27', EntitlementHours: 140, CarryOverHours: 7 } }, dateKey);
 assert.equal(ent.adjustment_hours, 0);
 assert.equal(reconcile('leave_entitlements', [ent], [{ id: 1, ...ent }]).ok, true);
+
+// — Mileage: miles and £ totals, unclaimed = null claimed_date both ways. —
+const journey = spItemToRow('mileage_journeys', { id: '9', fields: {
+  Title: 'CDA Ltd', Driver: 'Jack Morris', JourneyDate: '2026-10-12T23:00:00Z',
+  Miles: 22, Purpose: 'Server swap', Amount: 9.9, RateType: '45p'
+} }, dateKey);
+assert.equal(journey.journey_date, '2026-10-13');
+assert.equal(journey.claimed_date, null, 'no ClaimedDate = unclaimed');
+assert.equal(rowToItem('mileage_journeys', { id: 3, ...journey }).fields.ClaimedDate, '', 'reads back as unclaimed');
+assert.deepEqual(fieldsToRow('mileage_journeys', { ClaimedDate: null }), { claimed_date: null }, 'un-claim clears it');
+assert.deepEqual(fieldsToRow('mileage_journeys', { ClaimedDate: '2026-10-07' }), { claimed_date: '2026-10-07' });
+const jr = reconcile('mileage_journeys', [journey, { ...journey, sharepoint_id: '10', miles: 8, amount: 3.6 }],
+  [{ id: 1, ...journey }, { id: 2, ...journey, sharepoint_id: '10', miles: 8, amount: 3.6 }]);
+assert.equal(jr.ok, true);
+assert.deepEqual(jr.totals, { miles: [30, 30], amount: [13.5, 13.5] });
+assert.equal(reconcile('mileage_journeys', [journey], [{ id: 1, ...journey, amount: 9.91 }]).ok, false, 'a penny out fails');
+
+// — Paging: Supabase caps a response at 1000 rows; every row must still arrive. —
+const all = Array.from({ length: 2345 }, (_, i) => ({ id: i + 1 }));
+const calls = [];
+const got = await selectAllPages(async (from, to) => { calls.push([from, to]); return { data: all.slice(from, to + 1), error: null }; });
+assert.equal(got.length, 2345, 'all rows across pages');
+assert.deepEqual(calls, [[0, 999], [1000, 1999], [2000, 2999]]);
+const exact = await selectAllPages(async (from, to) => ({ data: all.slice(0, PAGE_ROWS).slice(from, to + 1), error: null }));
+assert.equal(exact.length, PAGE_ROWS, 'exactly one full page then an empty one');
+await assert.rejects(selectAllPages(async () => ({ data: null, error: { message: 'boom' } })), /boom/, 'errors are thrown, not empty');
 
 console.log('store: ok');

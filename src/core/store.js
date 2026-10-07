@@ -44,8 +44,45 @@ export const TABLES = {
       AdjustmentHours:  ['adjustment_hours',   'number'],
       Notes:            ['notes',              'text']
     }
+  },
+  mileage_journeys: {
+    list: 'MileageJourneys',
+    columns: {
+      Title:       ['title',        'text'],
+      Driver:      ['driver',       'text'],
+      JourneyDate: ['journey_date', 'date'],
+      Miles:       ['miles',        'number'],
+      Purpose:     ['purpose',      'text'],
+      Amount:      ['amount',       'number'],
+      RateType:    ['rate_type',    'text'],
+      ClaimedDate: ['claimed_date', 'date']
+    }
+  },
+  mileage_clients: {
+    list: 'MileageClients',
+    columns: {
+      Title:        ['title',         'text'],
+      TypicalMiles: ['typical_miles', 'number']
+    }
   }
 };
+
+/** Supabase answers at most 1000 rows per request; read in pages so nothing is cut short. */
+export const PAGE_ROWS = 1000;
+
+/** Every row of a table, in id order, following pages. `fetchPage(from, to)` → { data, error }. */
+export async function selectAllPages(fetchPage) {
+  const rows = [];
+  for (let from = 0; ; from += PAGE_ROWS) {
+    const page = must(await fetchPage(from, from + PAGE_ROWS - 1)) || [];
+    rows.push(...page);
+    if (page.length < PAGE_ROWS) return rows;
+  }
+}
+
+function selectAll(sb, table) {
+  return selectAllPages((from, to) => sb.from(table).select('*').order('id').range(from, to));
+}
 
 function spec(table) {
   const s = TABLES[table];
@@ -153,7 +190,7 @@ function must({ data, error }) {
 
 export async function listItems(table) {
   const sb = await connectSupabase();
-  return must(await sb.from(table).select('*').order('id')).map(row => rowToItem(table, row));
+  return (await selectAll(sb, table)).map(row => rowToItem(table, row));
 }
 
 export async function createItem(table, fields, dateKey) {
@@ -167,6 +204,12 @@ export async function patchItem(table, id, fields, dateKey) {
   must(await sb.from(table).update(fieldsToRow(table, fields, dateKey)).eq('id', id).select('id').single());
 }
 
+export async function deleteItem(table, id) {
+  spec(table);
+  const sb = await connectSupabase();
+  must(await sb.from(table).delete().eq('id', id).select('id').single());
+}
+
 /**
  * Replace the table with these SharePoint items, read it back and reconcile.
  * Only offered while SharePoint is still the live store for the section.
@@ -178,5 +221,5 @@ export async function copyFromSharePoint(table, items, dateKey) {
   const spRows = items.map(item => spItemToRow(table, item, dateKey));
   must(await sb.from(table).delete().not('id', 'is', null));
   if (spRows.length) must(await sb.from(table).insert(spRows));
-  return reconcile(table, spRows, must(await sb.from(table).select('*')));
+  return reconcile(table, spRows, await selectAll(sb, table));
 }

@@ -1983,8 +1983,14 @@ body {
 /* — Section toolbar (lives in the section head, holds refresh button) — */
 #section-mileage .mil-head-actions {
   display: flex; gap: 8px; align-items: center;
-  margin-top: 10px;
+  margin-top: 10px; flex-wrap: wrap;
 }
+#section-mileage .mil-refresh[hidden] { display: none; }
+/* Copy-to-Supabase result: own line, green when it reconciles, red when not. */
+#section-mileage .mil-copy-result { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+#section-mileage .mil-copy-result:empty { display: none; }
+#section-mileage .mil-copy-result[data-state="ok"]  { color: var(--green); }
+#section-mileage .mil-copy-result[data-state="bad"] { color: var(--red); }
 #section-mileage .mil-refresh {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: var(--radius-sm);
@@ -6516,11 +6522,16 @@ body::before {
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             Email my claim
           </button>
-          <button class="mil-refresh" id="milRefresh" type="button" onclick="milRefreshData()" title="Reload from SharePoint">
+          <button class="mil-refresh" id="milRefresh" type="button" onclick="milRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="mil-last-sync" id="milLastSync"></span>
+          <button class="mil-refresh" id="milConnect" type="button" hidden onclick="milConnect()"
+                  title="Sign in to the Gecko database with your Microsoft account">Connect</button>
+          <button class="mil-refresh" id="milCopy" type="button" hidden onclick="milCopyToSupabase()"
+                  title="One-off, Philip only: copy Mileage from SharePoint into the Gecko database and check every field">Copy to Supabase</button>
+          <span class="mil-copy-result" id="milCopyResult" role="status"></span>
         </div>
       </div>
 
@@ -7662,7 +7673,8 @@ const CONFIG = {
   // Where each section's data lives. A section moves to 'supabase' only after
   // its import has reconciled; flipping back is the rollback.
   DATA_BACKEND: {
-    leave: 'supabase'   // switched 7 Oct 2026 by Philip after a green copy
+    leave:   'supabase',   // switched 7 Oct 2026 by Philip after a green copy
+    mileage: 'sharepoint'  // Mileage section and Overview's mileage tiles
   },
 
   // — Scopes requested at sign-in —
@@ -7906,6 +7918,34 @@ async function signIn() {
   } finally {
     restoreButton();
   }
+}
+
+/** 'sharepoint' | 'supabase' for a section — see CONFIG.DATA_BACKEND. */
+function dataBackend(section) {
+  return CONFIG.DATA_BACKEND?.[section] === 'supabase' ? 'supabase' : 'sharepoint';
+}
+
+/** The database module (src/core/store.js), registered by src/main.js. */
+function geckoStore() {
+  if (!window.GeckoStore) throw new Error('The database module did not load. Hard-refresh the page.');
+  return window.GeckoStore;
+}
+
+/**
+ * Every item of a SharePoint list, following paging, for Copy to Supabase.
+ * Throws rather than stop short: a partial copy must never look complete.
+ */
+async function spFetchAllItems(listId, top = CONFIG.GRAPH_PAGE_SIZE) {
+  const siteId = await resolveSiteId();
+  let items = [];
+  let nextUrl = `/sites/${siteId}/lists/${listId}/items?$expand=fields&$top=${top}`;
+  while (nextUrl) {
+    const res = await graphFetch(nextUrl);
+    items = items.concat(res.value || []);
+    nextUrl = res['@odata.nextLink'] || null;
+    if (items.length > CONFIG.GRAPH_SAFETY_LIMIT) throw new Error('More items than the safety limit');
+  }
+  return items;
 }
 
 /** The signed-in Microsoft account's address (src/core/supabase.js matches its session to it). */
@@ -8829,9 +8869,10 @@ async function ovwResolveListIds() {
 // on SharePoint dates is unreliable).
 
 async function ovwLoadJourneys() {
-  const url = `/sites/${OVW.siteId}/lists/${OVW.listIds.journeys}/items?expand=fields&$top=2000`;
-  const res = await graphFetch(url);
-  OVW.journeys = (res.value || []).map(it => {
+  const items = dataBackend('mileage') === 'supabase'
+    ? await geckoStore().listItems('mileage_journeys')
+    : (await graphFetch(`/sites/${OVW.siteId}/lists/${OVW.listIds.journeys}/items?expand=fields&$top=2000`)).value || [];
+  OVW.journeys = items.map(it => {
     const f = it.fields || {};
     return {
       driver: ovwNormaliseDriver(f.Driver || ''),
@@ -9400,7 +9441,14 @@ async function ovwRefreshData(silent = false) {
     console.error('Overview refresh failed:', err);
     toast('Could not load overview data: ' + (err.message || 'unknown error'), 'error', 6000);
     const wrap = document.getElementById('ovwWrap');
-    if (wrap) {
+    if (wrap && err.code === 'DB_SIGNIN_REQUIRED') {
+      wrap.innerHTML = `
+        <div class="ovw-error">
+          <h3>Connect to the Gecko database</h3>
+          <p>Mileage now lives in the database. Connect once with your Microsoft account.<br>
+          <button type="button" class="ovw-refresh" onclick="ovwConnect()">Connect</button></p>
+        </div>`;
+    } else if (wrap) {
       wrap.innerHTML = `
         <div class="ovw-error">
           <h3>Could not load data</h3>
@@ -9414,6 +9462,16 @@ async function ovwRefreshData(silent = false) {
   }
 }
 
+
+/** The click behind Overview's Connect button (may open a Microsoft popup/redirect). */
+async function ovwConnect() {
+  try {
+    await geckoStore().connect({ interactive: true });
+    await ovwRefreshData();
+  } catch (err) {
+    toast('Could not connect: ' + (err.message || err), 'error', 7000);
+  }
+}
 
 // ─── Init ─────────────────────────────────────────────────────────────
 async function initOverview() {
@@ -12821,11 +12879,12 @@ function milNormaliseDriver(raw) {
 }
 
 async function milLoadJourneys() {
-  const url = `/sites/${MIL.siteId}/lists/${MIL.listIds.journeys}/items?expand=fields&$top=2000`;
-  const res = await graphFetch(url);
+  const items = dataBackend('mileage') === 'supabase'
+    ? await geckoStore().listItems('mileage_journeys')
+    : (await graphFetch(`/sites/${MIL.siteId}/lists/${MIL.listIds.journeys}/items?expand=fields&$top=2000`)).value || [];
   // milNormaliseDriver trims + canonicalises casing so journeys created in the
   // old standalone tracker always match the filter buttons.
-  MIL.journeys = (res.value || []).map(it => {
+  MIL.journeys = items.map(it => {
     const f = it.fields || {};
     // ClaimedDate (Phase 5.5): empty/null = unclaimed. Store as YYYY-MM-DD
     // (no time component) so it can drop straight into <input type="date">
@@ -12846,9 +12905,10 @@ async function milLoadJourneys() {
 }
 
 async function milLoadClients() {
-  const url = `/sites/${MIL.siteId}/lists/${MIL.listIds.clients}/items?expand=fields&$top=500`;
-  const res = await graphFetch(url);
-  MIL.clients = (res.value || [])
+  const items = dataBackend('mileage') === 'supabase'
+    ? await geckoStore().listItems('mileage_clients')
+    : (await graphFetch(`/sites/${MIL.siteId}/lists/${MIL.listIds.clients}/items?expand=fields&$top=500`)).value || [];
+  MIL.clients = items
     .map(it => ({
       id:    it.id,
       name:  it.fields?.Title || '',
@@ -12863,10 +12923,7 @@ async function milSeedClientsIfEmpty() {
   toast('Client list empty — seeding defaults…', 'info', 4000);
   for (const c of MIL.defaults) {
     try {
-      await graphFetch(`/sites/${MIL.siteId}/lists/${MIL.listIds.clients}/items`, {
-        method: 'POST',
-        body:   JSON.stringify({ fields: { Title: c.name, TypicalMiles: c.miles } })
-      });
+      await milCreateClient(c.name, c.miles);
     } catch (err) { console.warn('Seed failed for', c.name, e);
     }
   }
@@ -12885,6 +12942,7 @@ async function milCreateJourney(j) {
       RateType:    j.rate
     }
   };
+  if (dataBackend('mileage') === 'supabase') return geckoStore().createItem('mileage_journeys', body.fields);
   return graphFetch(
     `/sites/${MIL.siteId}/lists/${MIL.listIds.journeys}/items`,
     { method: 'POST', body: JSON.stringify(body) }
@@ -12892,6 +12950,9 @@ async function milCreateJourney(j) {
 }
 
 async function milPatchJourneyAmount(id, amount, rate) {
+  if (dataBackend('mileage') === 'supabase') {
+    return geckoStore().patchItem('mileage_journeys', id, { Amount: amount, RateType: rate });
+  }
   return graphFetch(
     `/sites/${MIL.siteId}/lists/${MIL.listIds.journeys}/items/${id}/fields`,
     { method: 'PATCH', body: JSON.stringify({ Amount: amount, RateType: rate }) }
@@ -12904,6 +12965,9 @@ async function milPatchJourneyAmount(id, amount, rate) {
  * (un-claim). SharePoint accepts ISO dates directly; null clears the field.
  */
 async function milPatchJourneyClaimed(id, claimedDate) {
+  if (dataBackend('mileage') === 'supabase') {
+    return geckoStore().patchItem('mileage_journeys', id, { ClaimedDate: claimedDate || null });
+  }
   return graphFetch(
     `/sites/${MIL.siteId}/lists/${MIL.listIds.journeys}/items/${id}/fields`,
     { method: 'PATCH', body: JSON.stringify({ ClaimedDate: claimedDate || null }) }
@@ -12911,6 +12975,7 @@ async function milPatchJourneyClaimed(id, claimedDate) {
 }
 
 async function milDeleteJourney(id) {
+  if (dataBackend('mileage') === 'supabase') return geckoStore().deleteItem('mileage_journeys', id);
   return graphFetch(
     `/sites/${MIL.siteId}/lists/${MIL.listIds.journeys}/items/${id}`,
     { method: 'DELETE' }
@@ -12918,6 +12983,9 @@ async function milDeleteJourney(id) {
 }
 
 async function milCreateClient(name, miles) {
+  if (dataBackend('mileage') === 'supabase') {
+    return geckoStore().createItem('mileage_clients', { Title: name, TypicalMiles: miles });
+  }
   return graphFetch(
     `/sites/${MIL.siteId}/lists/${MIL.listIds.clients}/items`,
     { method: 'POST', body: JSON.stringify({ fields: { Title: name, TypicalMiles: miles } }) }
@@ -12925,6 +12993,7 @@ async function milCreateClient(name, miles) {
 }
 
 async function milPatchClientMiles(id, miles) {
+  if (dataBackend('mileage') === 'supabase') return geckoStore().patchItem('mileage_clients', id, { TypicalMiles: miles });
   return graphFetch(
     `/sites/${MIL.siteId}/lists/${MIL.listIds.clients}/items/${id}/fields`,
     { method: 'PATCH', body: JSON.stringify({ TypicalMiles: miles }) }
@@ -12932,6 +13001,7 @@ async function milPatchClientMiles(id, miles) {
 }
 
 async function milDeleteClient(id) {
+  if (dataBackend('mileage') === 'supabase') return geckoStore().deleteItem('mileage_clients', id);
   return graphFetch(
     `/sites/${MIL.siteId}/lists/${MIL.listIds.clients}/items/${id}`,
     { method: 'DELETE' }
@@ -13828,8 +13898,10 @@ async function milRefreshData(silent = false) {
   refreshBtn.disabled = true;
   showLoading(true);
   try {
-    await milResolveListIds();
+    if (dataBackend('mileage') === 'sharepoint') await milResolveListIds();
     await Promise.all([milLoadClients(), milLoadJourneys()]);
+    const connectBtn = document.getElementById('milConnect');
+    if (connectBtn) connectBtn.hidden = true;
     if (MIL.clients.length === 0) await milSeedClientsIfEmpty();
 
     // ─ Self-heal imported journeys ─────────────────────────────────────
@@ -13858,7 +13930,13 @@ async function milRefreshData(silent = false) {
     if (!silent) toast(`Refreshed — ${MIL.journeys.length} journeys, ${MIL.clients.length} clients`, 'success', 2500);
   } catch (err) {
     console.error('Mileage refresh failed:', err);
-    toast('Could not load mileage data: ' + (err.message || 'unknown error'), 'error', 6000);
+    if (err.code === 'DB_SIGNIN_REQUIRED') {
+      const connectBtn = document.getElementById('milConnect');
+      if (connectBtn) connectBtn.hidden = false;
+      toast('Mileage now lives in the Gecko database — press Connect once.', 'warning', 7000);
+    } else {
+      toast('Could not load mileage data: ' + (err.message || 'unknown error'), 'error', 6000);
+    }
   } finally {
     refreshBtn.classList.remove('spinning');
     refreshBtn.disabled = false;
@@ -13867,9 +13945,65 @@ async function milRefreshData(silent = false) {
   }
 }
 
+/** The click behind Mileage's Connect button (may open a Microsoft popup/redirect). */
+async function milConnect() {
+  try {
+    await geckoStore().connect({ interactive: true });
+    await milRefreshData();
+  } catch (err) {
+    toast('Could not connect: ' + (err.message || err), 'error', 7000);
+  }
+}
+
+/**
+ * One-off, Philip only, while SharePoint is still live for Mileage: copy both
+ * lists into the database, read them back and compare every field, with miles
+ * and £ totals side by side. SharePoint is only read.
+ */
+async function milCopyToSupabase() {
+  if (dataBackend('mileage') === 'supabase' || !levIsPhilip()) return;
+  if (!confirm('Copy all mileage journeys and destinations from SharePoint into the Gecko database?\n\n'
+    + 'This replaces what the database holds for Mileage. SharePoint is not changed.')) return;
+  const btn = document.getElementById('milCopy');
+  const out = document.getElementById('milCopyResult');
+  const show = (text, state) => { if (out) { out.textContent = text; out.dataset.state = state || ''; } };
+  if (btn) btn.disabled = true;
+  show('Copying…');
+  try {
+    // Connect first, while this is still the click (a later popup is blocked).
+    await geckoStore().connect({ interactive: true });
+    await milResolveListIds();
+    const jItems = await spFetchAllItems(MIL.listIds.journeys);
+    const cItems = await spFetchAllItems(MIL.listIds.clients, 500);
+    const j = await geckoStore().copyFromSharePoint('mileage_journeys', jItems, spDateToLocalDateKey);
+    const c = await geckoStore().copyFromSharePoint('mileage_clients', cItems, spDateToLocalDateKey);
+    const money = n => '£' + Number(n).toFixed(2);
+    const summary = `Journeys: SharePoint ${j.spCount}, database ${j.dbCount}, `
+      + `miles ${j.totals.miles[0]} / ${j.totals.miles[1]}, amount ${money(j.totals.amount[0])} / ${money(j.totals.amount[1])}. `
+      + `Destinations: SharePoint ${c.spCount}, database ${c.dbCount}.`;
+    const problems = [...j.mismatches.map(m => ['journey', m]), ...c.mismatches.map(m => ['destination', m])];
+    if (!problems.length) {
+      show(summary + ' Every field matches.', 'ok');
+      toast('Mileage copied and checked', 'success');
+    } else {
+      show(`${summary} Not matching (${problems.length}): `
+        + problems.slice(0, 6).map(([kind, m]) => `${kind} ${m.sharepointId} ${m.problem}`.trim()).join('; '), 'bad');
+      toast('Copy finished but does not match', 'error', 7000);
+    }
+  } catch (err) {
+    console.error('Mileage copy failed:', err);
+    show('Copy failed: ' + (err.message || err), 'bad');
+    toast('Copy failed: ' + (err.message || err), 'error', 7000);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function initMileage() {
   if (MIL.initialised) return;
   MIL.initialised = true;
+  const copy = document.getElementById('milCopy');
+  if (copy) copy.hidden = !(levIsPhilip() && dataBackend('mileage') === 'sharepoint');
 
   // Tax year setup
   MIL.taxYear = milComputeTaxYear();
