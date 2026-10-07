@@ -38,3 +38,6 @@ A hosting client shows its cost in the month Clook bills Gecko and its revenue i
 - Exclaimer "Gecko IT Services" 15-user subscription: Philip to say which client; until then it is listed as unassigned.
 - slaterfamily.me.uk: not a client; renewal paid 19 Jul 2026 to 12 Aug 2027. Philip to disable auto-renew at Clook. Stays listed as unassigned for July.
 - History: the feed carries current + previous month. If Philip wants older months on an invoiced basis, keep 13 months of supplier lines in the feed (cheap) and extend `xeroMonths`.
+
+## One basis everywhere (amended later the same day)
+Philip: "revenue should also sit in the month it was invoiced, consistent throughout." So while Xero is supplying the month's billing: hosting lines contribute no sell (they show "from Xero"); the CLIENT TOTAL row uses the same figures as the card headline (Xero recurring, lines + supplier invoices, profit); the footer compares the monthly lines against Xero recurring and shows a gap as "Xero billed more/less" with the figure, never a red Mismatch, because an annual renewal landing is the usual reason; the CSV export uses the headline figures. Months the feed does not cover fall back to the typed lines, as before.
