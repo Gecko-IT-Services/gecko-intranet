@@ -100,6 +100,12 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - A SharePoint flow adds every new Timesheets entry's hours to `HoursUsed` ~30s after it is
   created (System credits included). Code that creates entries must never also write `HoursUsed`.
 
+- **SSA renewal** (Timesheets › SSA › Renew…): System credit entry → waits for the "Update
+  Client Balances" flow → timesheet email sent as `CONFIG.SSA_FROM_MAILBOX` (support@, needs
+  Mail.Send.Shared via scoped graphFetch + Send As) → copy in Gecko Docs → Xero lines to type in.
+  Logic in `src/core/ssa-renewal.js`. Flows involved (Power Automate, shared with Philip, owned by
+  Jack): Update Client Balances, Create Timesheets Table Email, Archive Old Timesheet Entries.
+
 ## Open items (ask Philip before acting)
 - Exclaimer subscriptions billed to "Gecko IT Services" (15-user Standard £185.40/yr
   Sep 2026; 10-user Starter £78/yr Jul 2026): whose are they? Shown as unassigned.
