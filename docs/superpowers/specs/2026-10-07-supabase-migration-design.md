@@ -100,6 +100,8 @@ Phases (each is its own PR, its own design-note update, Philip approves each):
    Clients and totals monthly cost and sell. Not copied: GeckoClients/GeckoServices
    columns the dashboard never reads. Projects and Compliance (off the menu) keep reading
    the SharePoint GeckoClients list for their dropdowns, which goes stale after the switch.
+   Copy 7 Oct: 29 clients, 55 service lines, £1683.02 cost / £6027.66 sell a month, every
+   field matched. **Switched 7 Oct** by Philip.
 5. **Timesheets + SSA** with the trigger, flow switch-off, Renewal and Archive. Done on
    a quiet day with Jack aware, because of the flow cutover.
 6. **Feed** to a table; scheduled task updated in the same change. Then the SharePoint
