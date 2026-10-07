@@ -35,4 +35,4 @@ window.SsaRenewal = ssaRenewal;
 // Supabase session is dropped on Microsoft sign-out (classic script calls this).
 window.forgetSupabaseSession = supabase.forgetSupabaseSession;
 // Database store for classic-script sections moving off SharePoint (Leave first).
-window.GeckoStore = { ...store, connect: supabase.connectSupabase };
+window.GeckoStore = { ...store, connect: supabase.connectSupabase, completeRedirect: supabase.completeRedirect };

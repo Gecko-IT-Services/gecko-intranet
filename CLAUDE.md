@@ -67,6 +67,20 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   path has held.
 - Months the feed does not cover fall back to the typed service lines.
 
+## Supabase (moving off SharePoint lists, from 7 Oct 2026)
+- Plan and state: `docs/superpowers/specs/2026-10-07-supabase-migration-design.md`.
+  Project `nkobrqzsogtyxriqqwnq`; schema only in `supabase/migrations/`, applied by the
+  Supabase GitHub integration on merge to `main` (never change schema by hand).
+- `CONFIG.DATA_BACKEND.<section>` says where a section's data lives. Leave is copied
+  and checked (`leave_requests`, `leave_entitlements`) and switches when Philip says.
+  Everything else is SharePoint. Projects/Compliance/P&L are not moving.
+- Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
+  and a policy (`tests/supabase-migration.mjs` enforces it). Only the publishable key
+  is in the site. Sign-in is the Microsoft ID token (`src/core/supabase.js`).
+- `src/core/store.js` maps SharePoint fields ↔ columns and returns Graph's
+  `{ id, fields }` shape so a section's logic doesn't change when it moves. A section
+  moves by: migration → Copy to Supabase (green) → fresh copy → flip its flag.
+
 ## The feed (where the money numbers come from)
 - `Gecko Dashboard Data/profitability-feed.json` in the portal site's Documents
   library, written daily at 06:47 Europe/London by a scheduled task in Philip's

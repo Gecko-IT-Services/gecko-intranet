@@ -8055,12 +8055,16 @@ async function getScopedToken(scopes, { interactive = false } = {}) {
  * (src/core/supabase.js). Supabase checks the token's nonce against the hash
  * of the raw one it is given, so the caller passes the hashed value here.
  *
- * Silent first (the person is already signed in to Microsoft). A popup only
- * when the caller says the request came from a click; otherwise it throws
+ * Silent first (the person is already signed in to Microsoft). Interactive
+ * only when the caller says the request came from a click; otherwise it throws
  * DB_SIGNIN_REQUIRED for the section to show a "Connect" button.
- * ponytail: no redirect leg, so an installed iOS app whose silent attempt
- * fails must connect once from Safari. Solve before a section switches.
+ * Interactive is a popup in a browser tab and a redirect in the installed app
+ * (no popups there, see isStandaloneDisplay). The redirect never resolves here:
+ * init() picks the token up on return (completeDatabaseRedirect) and reopens
+ * the section the click came from.
  */
+const DB_REDIRECT_STATE = 'gecko-db:';
+
 async function getIdTokenForNonce(nonce, { interactive = false } = {}) {
   if (!activeAccount) throw new Error('No active account');
   const request = {
@@ -8071,10 +8075,15 @@ async function getIdTokenForNonce(nonce, { interactive = false } = {}) {
   try {
     return (await msalInstance.ssoSilent(request)).idToken;
   } catch (err) {
-    if (!interactive || isStandaloneDisplay()) {
+    if (!interactive) {
       const e = new Error('Database sign-in needs a click');
       e.code = 'DB_SIGNIN_REQUIRED';
       throw e;
+    }
+    if (isStandaloneDisplay()) {
+      const section = document.querySelector('.sb-link.active')?.dataset.section || '';
+      await msalInstance.loginRedirect({ ...request, state: DB_REDIRECT_STATE + section });
+      return new Promise(() => {});
     }
     return (await msalInstance.loginPopup(request)).idToken;
   }
@@ -18310,6 +18319,22 @@ function setClearAndSignOut() {
    ║                                                                   ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
+/**
+ * Back from the installed app's database sign-in redirect: hand the ID token to
+ * Supabase, then reopen the section the Connect/Copy click came from.
+ */
+async function completeDatabaseRedirect(result) {
+  const section = String(result.state).slice(DB_REDIRECT_STATE.length);
+  try {
+    await window.GeckoStore.completeRedirect(result.idToken);
+    toast('Database connected', 'success');
+  } catch (err) {
+    console.error('Database sign-in did not complete:', err);
+    toast('Database sign-in did not complete: ' + (err.message || err), 'error', 8000);
+  }
+  if (section && document.querySelector(`.sb-link[data-section="${CSS.escape(section)}"]`)) navTo(section);
+}
+
 async function init() {
   try {
     msalInstance = new msal.PublicClientApplication(buildMsalConfig());
@@ -18341,6 +18366,9 @@ async function init() {
       activeAccount = redirectResult.account;
       msalInstance.setActiveAccount(activeAccount);
       onSignedIn();
+      if (String(redirectResult.state || '').startsWith(DB_REDIRECT_STATE)) {
+        completeDatabaseRedirect(redirectResult);
+      }
     } else if (localStorage.getItem(AUTH_REAUTH_KEY) === '1') {
       showLogin();
     } else if (accounts.length > 0) {

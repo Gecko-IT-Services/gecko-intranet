@@ -13,6 +13,10 @@
 
 const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/+esm';
 const STORAGE_KEY = 'gecko.supabase.auth';
+// The raw nonce of a sign-in in flight. Kept in storage, not memory, because
+// the installed app's sign-in is a redirect: the page that started it is gone
+// by the time the token comes back (completeRedirect).
+const NONCE_KEY = 'gecko.supabase.nonce';
 
 let clientPromise  = null;
 let connectPromise = null;
@@ -57,14 +61,36 @@ async function connect(interactive) {
     session = null;
   }
   if (!session) {
-    const nonce   = crypto.randomUUID();
+    const nonce = crypto.randomUUID();
+    try { localStorage.setItem(NONCE_KEY, nonce); } catch { /* popup path does not need it */ }
     const idToken = await window.getIdTokenForNonce(await sha256Hex(nonce), { interactive });
-    const { error } = await sb.auth.signInWithIdToken({ provider: 'azure', token: idToken, nonce });
-    if (error) throw error;
+    await signIn(sb, idToken, nonce);
   }
+  await assertStaff(sb);
+  return sb;
+}
 
-  // Row-level security answers an outsider with empty tables, which would
-  // look like "no data". Ask once, so that case is an error, never an empty state.
+async function signIn(sb, idToken, nonce) {
+  const { error } = await sb.auth.signInWithIdToken({ provider: 'azure', token: idToken, nonce });
+  try { localStorage.removeItem(NONCE_KEY); } catch { /* nothing kept */ }
+  if (error) throw error;
+}
+
+/** The installed app's redirect has come back with an ID token (index.html init). */
+export async function completeRedirect(idToken) {
+  let nonce = null;
+  try { nonce = localStorage.getItem(NONCE_KEY); } catch { /* storage blocked */ }
+  if (!idToken || !nonce) throw new Error('No database sign-in was waiting. Press Connect again.');
+  const sb = await getSupabase();
+  await signIn(sb, idToken, nonce);
+  await assertStaff(sb);
+}
+
+/**
+ * Row-level security answers an outsider with empty tables, which would look
+ * like "no data". Ask once, so that case is an error, never an empty state.
+ */
+async function assertStaff(sb) {
   const { data: isStaff, error } = await sb.rpc('is_gecko_staff');
   if (error) throw error;
   if (!isStaff) {
@@ -72,11 +98,10 @@ async function connect(interactive) {
     e.code = 'NOT_STAFF';
     throw e;
   }
-  return sb;
 }
 
 /** Called on Microsoft sign-out, so the database session never outlives it. */
 export function forgetSupabaseSession() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage blocked: nothing kept */ }
+  try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(NONCE_KEY); } catch { /* storage blocked: nothing kept */ }
   clientPromise = null;
 }
