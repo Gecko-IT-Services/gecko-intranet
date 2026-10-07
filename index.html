@@ -3966,6 +3966,12 @@ body {
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
 #section-leave .lev-head-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+#section-leave .lev-refresh[hidden] { display: none; }
+/* Copy-to-Supabase result: own line, green when it reconciles, red when not. */
+#section-leave .lev-copy-result { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+#section-leave .lev-copy-result:empty { display: none; }
+#section-leave .lev-copy-result[data-state="ok"]  { color: var(--green); }
+#section-leave .lev-copy-result[data-state="bad"] { color: var(--red); }
 #section-leave .lev-refresh,
 #section-leave .lev-month-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -6889,14 +6895,11 @@ body::before {
         <p>Where every live project is up to — quoted through to done.</p>
         <div class="prj-head-actions">
           <button class="prj-add" id="prjAdd" type="button">+ New project</button>
-          <button class="prj-refresh" id="prjRefresh" type="button" title="Reload">
+          <button class="prj-refresh" id="prjRefresh" type="button" title="Reload from SharePoint">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="prj-last-sync" id="prjLastSync"></span>
-          <button class="prj-refresh" id="prjCopy" type="button" hidden
-                  title="One-off: copy this board from SharePoint into the Gecko database and check it">Copy to Supabase</button>
-          <span class="prj-last-sync prj-copy-result" id="prjCopyResult" role="status"></span>
         </div>
       </div>
 
@@ -7148,9 +7151,11 @@ body::before {
 
     <!-- ═══════════════════════════════════════════════════════════════
          ANNUAL LEAVE SECTION (Phase 11)
-         — Leave planner for Jack and Philip, backed by SharePoint.
+         — Leave planner for Jack and Philip.
          — Reads/writes GeckoLeaveRequests and optionally reads
-           GeckoLeaveEntitlements when present.
+           GeckoLeaveEntitlements when present; or, once
+           CONFIG.DATA_BACKEND.leave is 'supabase', the tables
+           leave_requests / leave_entitlements (src/core/store.js).
          — Lazy-loaded on first nav (see initLeave).
          ═══════════════════════════════════════════════════════════════ -->
     <section class="section" id="section-leave">
@@ -7158,7 +7163,7 @@ body::before {
         <h1>Annual <span>Leave</span></h1>
         <p>Shared leave planner · Tax Year <span id="levTaxYear">—</span> · hours stored, days shown where useful</p>
         <div class="lev-head-actions">
-          <button class="lev-refresh" id="levRefresh" type="button" onclick="levRefreshData()" title="Reload from SharePoint">
+          <button class="lev-refresh" id="levRefresh" type="button" onclick="levRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
@@ -7172,6 +7177,9 @@ body::before {
             </button>
           </div>
           <span class="lev-last-sync" id="levLastSync"></span>
+          <button class="lev-refresh" id="levCopy" type="button" hidden onclick="levCopyToSupabase()"
+                  title="One-off, Philip only: copy Leave from SharePoint into the Gecko database and check every field">Copy to Supabase</button>
+          <span class="lev-copy-result" id="levCopyResult" role="status"></span>
         </div>
       </div>
 
@@ -7654,7 +7662,7 @@ const CONFIG = {
   // Where each section's data lives. A section moves to 'supabase' only after
   // its import has reconciled; flipping back is the rollback.
   DATA_BACKEND: {
-    projects: 'sharepoint'
+    leave: 'sharepoint'
   },
 
   // — Scopes requested at sign-in —
@@ -16322,6 +16330,30 @@ function levEntitlementFor(person, taxYear = LEV.selectedTaxYear) {
   return (Number(found.entitlementHours) || 0) + (Number(found.carryOverHours) || 0) + (Number(found.adjustmentHours) || 0);
 }
 
+/** 'sharepoint' | 'supabase' — see CONFIG.DATA_BACKEND and the migration design note. */
+function levBackend() {
+  return CONFIG.DATA_BACKEND?.leave === 'supabase' ? 'supabase' : 'sharepoint';
+}
+
+/** The database module (src/core/store.js), registered by src/main.js. */
+function levStore() {
+  if (!window.GeckoStore) throw new Error('The database module did not load. Hard-refresh the page.');
+  return window.GeckoStore;
+}
+
+/** Every item of a SharePoint list, following paging. Throws rather than stop short. */
+async function levFetchAllItems(listId, top = CONFIG.GRAPH_PAGE_SIZE) {
+  let allItems = [];
+  let nextUrl = `/sites/${LEV.siteId}/lists/${listId}/items?$expand=fields&$top=${top}`;
+  while (nextUrl) {
+    const res = await graphFetch(nextUrl);
+    allItems = allItems.concat(res.value || []);
+    nextUrl = res['@odata.nextLink'] || null;
+    if (allItems.length > CONFIG.GRAPH_SAFETY_LIMIT) throw new Error('More leave items than the safety limit');
+  }
+  return allItems;
+}
+
 async function levCreateRequestsList() {
   const body = {
     displayName: 'GeckoLeaveRequests',
@@ -16370,14 +16402,9 @@ async function levResolveListIds() {
 }
 
 async function levLoadRequests() {
-  let allItems = [];
-  let nextUrl = `/sites/${LEV.siteId}/lists/${LEV.listIds.requests}/items?$expand=fields&$top=${CONFIG.GRAPH_PAGE_SIZE}`;
-  while (nextUrl) {
-    const res = await graphFetch(nextUrl);
-    allItems = allItems.concat(res.value || []);
-    nextUrl = res['@odata.nextLink'] || null;
-    if (allItems.length > CONFIG.GRAPH_SAFETY_LIMIT) break;
-  }
+  const allItems = levBackend() === 'supabase'
+    ? await levStore().listItems('leave_requests')
+    : await levFetchAllItems(LEV.listIds.requests);
 
   LEV.requests = allItems.map(it => {
     const f = it.fields || {};
@@ -16405,13 +16432,12 @@ async function levLoadRequests() {
 
 async function levLoadEntitlements() {
   LEV.entitlements = [];
-  if (!LEV.listIds.entitlements) return;
-  let allItems = [];
-  let nextUrl = `/sites/${LEV.siteId}/lists/${LEV.listIds.entitlements}/items?$expand=fields&$top=500`;
-  while (nextUrl) {
-    const res = await graphFetch(nextUrl);
-    allItems = allItems.concat(res.value || []);
-    nextUrl = res['@odata.nextLink'] || null;
+  let allItems;
+  if (levBackend() === 'supabase') {
+    allItems = await levStore().listItems('leave_entitlements');
+  } else {
+    if (!LEV.listIds.entitlements) return;
+    allItems = await levFetchAllItems(LEV.listIds.entitlements, 500);
   }
   LEV.entitlements = allItems.map(it => {
     const f = it.fields || {};
@@ -16446,6 +16472,7 @@ async function levCreateRequest(data) {
     fields.ApprovedBy = data.approvedBy || data.requestedBy;
     fields.ApprovedAt = new Date().toISOString();
   }
+  if (levBackend() === 'supabase') return levStore().createItem('leave_requests', fields);
   return graphFetch(`/sites/${LEV.siteId}/lists/${LEV.listIds.requests}/items`, {
     method: 'POST',
     body: JSON.stringify({ fields })
@@ -16453,6 +16480,7 @@ async function levCreateRequest(data) {
 }
 
 async function levPatchRequest(id, patch) {
+  if (levBackend() === 'supabase') return levStore().patchItem('leave_requests', id, patch);
   return graphFetch(`/sites/${LEV.siteId}/lists/${LEV.listIds.requests}/items/${id}/fields`, {
     method: 'PATCH',
     body: JSON.stringify(patch)
@@ -16621,7 +16649,7 @@ async function levRefreshData(silent = false) {
   if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
   if (!silent) showLoading(true);
   try {
-    await levResolveListIds();
+    if (levBackend() === 'sharepoint') await levResolveListIds();
     await Promise.all([levLoadRequests(), levLoadEntitlements()]);
     LEV.lastSync = new Date();
     levRenderAll();
@@ -17004,7 +17032,66 @@ function levRenderAll() {
 
 function levRenderError(err) {
   const kpis = document.getElementById('levKpis');
-  if (kpis) kpis.innerHTML = `<div class="lev-card" style="grid-column:1/-1"><div class="lev-empty">Leave could not load: ${escapeHtml(err.message || err)}</div></div>`;
+  if (!kpis) return;
+  if (err?.code === 'DB_SIGNIN_REQUIRED') {
+    kpis.innerHTML = `<div class="lev-card" style="grid-column:1/-1"><div class="lev-empty">Leave now lives in the Gecko database. Connect once with your Microsoft account to load it. <button type="button" class="lev-refresh" onclick="levConnect()">Connect</button></div></div>`;
+    return;
+  }
+  kpis.innerHTML = `<div class="lev-card" style="grid-column:1/-1"><div class="lev-empty">Leave could not load: ${escapeHtml(err.message || err)}</div></div>`;
+}
+
+/** The click behind levRenderError's Connect button (may open a Microsoft popup). */
+async function levConnect() {
+  try {
+    await levStore().connect({ interactive: true });
+    await levRefreshData();
+  } catch (err) {
+    toast('Could not connect: ' + (err.message || err), 'error', 7000);
+  }
+}
+
+/**
+ * One-off, Philip only, while SharePoint is still live for Leave: copy both
+ * lists into the database, read them back and compare every field. SharePoint
+ * is only read. The result stays on screen (green when it matches).
+ */
+async function levCopyToSupabase() {
+  if (levBackend() === 'supabase' || !levIsPhilip()) return;
+  if (!confirm('Copy all leave requests and entitlements from SharePoint into the Gecko database?\n\n'
+    + 'This replaces what the database holds for Leave. SharePoint is not changed.')) return;
+  const btn = document.getElementById('levCopy');
+  const out = document.getElementById('levCopyResult');
+  const show = (text, state) => { if (out) { out.textContent = text; out.dataset.state = state || ''; } };
+  if (btn) btn.disabled = true;
+  show('Copying…');
+  try {
+    // Connect first, while this is still the click: a popup opened after the
+    // SharePoint reads below would be blocked.
+    await levStore().connect({ interactive: true });
+    await levResolveListIds();
+    const reqItems = await levFetchAllItems(LEV.listIds.requests);
+    const entItems = LEV.listIds.entitlements ? await levFetchAllItems(LEV.listIds.entitlements, 500) : [];
+    const req = await levStore().copyFromSharePoint('leave_requests', reqItems, spDateToLocalDateKey);
+    const ent = await levStore().copyFromSharePoint('leave_entitlements', entItems, spDateToLocalDateKey);
+    const [spHours, dbHours] = req.totals.hours;
+    const summary = `Requests: SharePoint ${req.spCount}, database ${req.dbCount}, hours ${spHours} / ${dbHours}. `
+      + `Entitlements: SharePoint ${ent.spCount}, database ${ent.dbCount}.`;
+    const problems = [...req.mismatches.map(m => ['request', m]), ...ent.mismatches.map(m => ['entitlement', m])];
+    if (!problems.length) {
+      show(summary + ' Every field matches.', 'ok');
+      toast('Leave copied and checked', 'success');
+    } else {
+      show(`${summary} Not matching (${problems.length}): `
+        + problems.slice(0, 6).map(([kind, m]) => `${kind} ${m.sharepointId} ${m.problem}`.trim()).join('; '), 'bad');
+      toast('Copy finished but does not match', 'error', 7000);
+    }
+  } catch (err) {
+    console.error('Leave copy failed:', err);
+    show('Copy failed: ' + (err.message || err), 'bad');
+    toast('Copy failed: ' + (err.message || err), 'error', 7000);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function levSetDefaultFormValues() {
@@ -17022,6 +17109,8 @@ function levSetDefaultFormValues() {
   if (mode) mode.textContent = levIsPhilip() ? 'Philip bookings save as approved' : 'Jack requests start as pending';
   const submit = document.getElementById('levSubmitBtn');
   if (submit) submit.lastChild.textContent = levIsPhilip() ? ' Book Leave' : ' Request Leave';
+  const copy = document.getElementById('levCopy');
+  if (copy) copy.hidden = !(levIsPhilip() && levBackend() === 'sharepoint');
   LEV.hoursEdited = false;
   levUpdateEstimate();
 }

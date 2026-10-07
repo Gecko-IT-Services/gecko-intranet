@@ -52,12 +52,6 @@
 #section-projects .prj-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
 #section-projects .prj-refresh:disabled { opacity: .5; cursor: not-allowed; }
 #section-projects .prj-last-sync { font-size: 11px; color: var(--muted); margin-left: auto; }
-#section-projects .prj-refresh[hidden] { display: none; }
-/* Copy-to-Supabase result: its own line, green when it reconciles, red when not. */
-#section-projects .prj-copy-result { margin-left: 0; flex-basis: 100%; text-align: right; }
-#section-projects .prj-copy-result:empty { display: none; }
-#section-projects .prj-copy-result[data-state="ok"]  { color: var(--green); }
-#section-projects .prj-copy-result[data-state="bad"] { color: var(--red); }
 
 /* — Board grid: four columns above 720px, one grouped list below.
      A container query, not a media query: what constrains the board is

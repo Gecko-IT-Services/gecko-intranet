@@ -19,6 +19,7 @@ import * as cspCosts from './core/csp-costs.js';
 import * as profitFeed from './core/profit-feed.js';
 import * as ssaRenewal from './core/ssa-renewal.js';
 import * as supabase from './core/supabase.js';
+import * as store from './core/store.js';
 
 window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
@@ -33,3 +34,5 @@ window.ProfitFeed = profitFeed;
 window.SsaRenewal = ssaRenewal;
 // Supabase session is dropped on Microsoft sign-out (classic script calls this).
 window.forgetSupabaseSession = supabase.forgetSupabaseSession;
+// Database store for classic-script sections moving off SharePoint (Leave first).
+window.GeckoStore = { ...store, connect: supabase.connectSupabase };
