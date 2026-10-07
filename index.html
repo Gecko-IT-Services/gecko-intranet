@@ -11950,7 +11950,7 @@ async function prfDoSeed() {
       try {
         await prfCreateClient(entry.client);
         okClients++;
-      } catch (err) { console.warn('Seed client failed:', entry.client.name, e);
+      } catch (err) { console.warn('Seed client failed:', entry.client.name, err);
         fails++;
         continue; // skip its services if the client itself failed
       }
@@ -11966,7 +11966,7 @@ async function prfDoSeed() {
             notes:      s.note
           }).then(() => okServices++).catch(e => { console.warn('Seed service failed:', s.name, e); fails++; })
         ));
-      } catch (err) { console.warn('Seed services batch failed for', entry.client.name, e);
+      } catch (err) { console.warn('Seed services batch failed for', entry.client.name, err);
       }
     }
     if (fails === 0) {
@@ -12960,7 +12960,7 @@ async function milSeedClientsIfEmpty() {
   for (const c of MIL.defaults) {
     try {
       await milCreateClient(c.name, c.miles);
-    } catch (err) { console.warn('Seed failed for', c.name, e);
+    } catch (err) { console.warn('Seed failed for', c.name, err);
     }
   }
   await milLoadClients();
@@ -13397,7 +13397,7 @@ async function milAddJourney(ev) {
         await Promise.all(changes
           .filter(c => c.id !== res.id) // server already has the right value for the new one
           .map(c => milPatchJourneyAmount(c.id, c.newAmount, c.newRate)));
-      } catch (err) { console.warn('Recompute patch failed (non-fatal):', e);
+      } catch (err) { console.warn('Recompute patch failed (non-fatal):', err);
         toast('Journey saved, but rate recalc could not sync — refresh to retry', 'warning', 5000);
       }
     }
@@ -13955,7 +13955,7 @@ async function milRefreshData(silent = false) {
         if (!silent) {
           toast(`Recalculated ${drift.length} journey${drift.length === 1 ? '' : 's'} to match HMRC rates`, 'info', 4000);
         }
-      } catch (err) { console.warn('Auto-recompute patch failed (non-fatal):', e);
+      } catch (err) { console.warn('Auto-recompute patch failed (non-fatal):', err);
         if (!silent) toast('Recalculated locally, but some rows could not sync — try Refresh again', 'warning', 5000);
       }
     }
