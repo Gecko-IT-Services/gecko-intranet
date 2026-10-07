@@ -1278,6 +1278,10 @@ body {
    sat outside the palette and so never picked up the light-theme
    darkening — it was rendering at 1.4:1 on its own tint. */
 #section-profitability .prf-ct-other { background: var(--amber-dim); color: var(--amber); }
+#section-profitability .prf-ct-inv { background: var(--card); color: var(--muted); border: 1px solid var(--border-dim); }
+#section-profitability .prf-irow td { color: var(--muted); font-size: 12px; }
+#section-profitability .prf-irow .prf-iname { color: var(--white); }
+#section-profitability .prf-irow .prf-isub { font-size: 10px; color: var(--muted); }
 
 /* — Client card — */
 #section-profitability .prf-cc {
@@ -9314,7 +9318,10 @@ const PRF = {
   // Xero recurring vs one-off per client, from the feed (2026-10-07):
   // { 'YYYY-MM': Map(clientId -> { total, recurring, oneOff }) }. Only the
   // months in the latest feed; other months fall back to service lines.
-  xeroSplit: {}
+  xeroSplit: {},
+  // Supplier invoices (Exclaimer, Clook) charged to clients in the month
+  // they are dated, from the feed: { 'YYYY-MM': invoicedCosts(...) }.
+  invoiced: {}
 };
 
 // Categories — single source of truth for pill colours, filter buttons, dropdowns
@@ -9346,6 +9353,7 @@ const prfInitials = name => {
   if (!name) return '?';
   return name.split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
 };
+const round2 = n => Math.round(n * 100) / 100;
 const prfMpClass = pct => pct >= 0.7 ? 'prf-mp-hi' : pct >= 0.4 ? 'prf-mp-md' : 'prf-mp-lo';
 const prfCatClass = cat => 'prf-ct-' + (PRF_CATS.find(c => c.key === cat) ? cat : 'other');
 
@@ -9513,6 +9521,17 @@ function prfMonthHasSplit(month = PRF.selectedMonth || prfCurrentMonth()) {
   return !!PRF.xeroSplit[month];
 }
 
+/** Supplier invoices for a month, or null when the feed had none to give. */
+function prfMonthInvoiced(month = PRF.selectedMonth || prfCurrentMonth()) {
+  return PRF.invoiced[month] || null;
+}
+/** This client's supplier-invoice lines for the month (all-services view only). */
+function prfClientInvoiced(client, month = PRF.selectedMonth || prfCurrentMonth()) {
+  if ((PRF.filterCat || 'all') !== 'all') return null;
+  const inv = prfMonthInvoiced(month);
+  return inv ? (inv.byClient.get(client.id) || null) : null;
+}
+
 /**
  * What a card's headline shows. With a Xero split for the month and the
  * all-services view, revenue is Xero's recurring billing (Xero is the record
@@ -9524,14 +9543,18 @@ function prfClientHeadline(client) {
   const view = prfClientViewTotals(client.name);
   const month = PRF.selectedMonth || prfCurrentMonth();
   const all = (PRF.filterCat || 'all') === 'all';
+  // Cost = monthly service lines + supplier invoices dated this month.
+  const inv = prfClientInvoiced(client, month);
+  const cost = round2(view.cost + (inv ? inv.total : 0));
   if (!all || !prfMonthHasSplit(month)) {
-    return { cost: view.cost, sell: view.sell, gp: view.gp, margin: view.margin, oneOff: 0, fromXero: false, billed: true };
+    const gp = round2(view.sell - cost);
+    return { cost, sell: view.sell, gp, margin: view.sell > 0 ? gp / view.sell : 0, oneOff: 0, fromXero: false, billed: true, invoiced: inv ? inv.total : 0 };
   }
   const x = PRF.xeroSplit[month].get(client.id);
   const sell = x ? x.recurring : 0;
-  const gp = sell - view.cost;
+  const gp = round2(sell - cost);
   return {
-    cost: view.cost, sell, gp,
+    cost, sell, gp, invoiced: inv ? inv.total : 0,
     margin: sell > 0 ? gp / sell : 0,
     oneOff: x ? x.oneOff : 0,
     fromXero: true,
@@ -9561,6 +9584,15 @@ function prfGrandTotals() {
   const sellStack = sell - sellRet;
   const gp        = sell - cost;
   const margin    = sell > 0 ? gp / sell : 0;
+  // Supplier invoices dated this month: per client, plus the shared
+  // hosting plan and anything not tied to a client. All of it is cost.
+  let invoiced = null;
+  if (cat === 'all' && prfMonthInvoiced(selMonth)) {
+    const inv = prfMonthInvoiced(selMonth);
+    const sum = arr => round2(arr.reduce((a, l) => a + l.net, 0));
+    invoiced = { total: inv.total, shared: sum(inv.shared), unassigned: sum(inv.unassigned), unassignedLines: inv.unassigned, sharedLines: inv.shared };
+    cost = round2(cost + inv.total);
+  }
   // Recurring vs one-off from Xero, when the feed split this month.
   let split = null;
   if (cat === 'all' && prfMonthHasSplit(selMonth)) {
@@ -9569,7 +9601,7 @@ function prfGrandTotals() {
     const stackGp = recurring - cost;
     split = { recurring, oneOff, stackGp, stackMargin: recurring > 0 ? stackGp / recurring : 0 };
   }
-  return { cost, sell, sellStack, sellRet, gp, margin, xero, xeroCount, activeClients, category: cat, split };
+  return { cost, sell, sellStack, sellRet, gp, margin, xero, xeroCount, activeClients, category: cat, split, invoiced };
 }
 
 
@@ -9670,6 +9702,7 @@ function prfRenderSummary() {
       </div>
       <div class="prf-sum-s">
         <div class="prf-sum-v">${prfFmt(t.cost)}</div><div class="prf-sum-l">Total Cost</div>
+        ${t.invoiced ? `<div class="prf-sum-sub neutral">incl. ${prfFmtForce(t.invoiced.total)} supplier invoices</div>` : ''}
       </div>
       <div class="prf-sum-s">
         <div class="prf-sum-v" style="color:var(--green)">${prfFmt(sp.stackGp)}</div><div class="prf-sum-l">Recurring Profit</div>
@@ -9831,9 +9864,22 @@ function prfRenderCard(client) {
   let rows = '';
   retainers.forEach(s => { rows += prfRenderServiceRow(s); });
   stack.forEach(s => { rows += prfRenderServiceRow(s); });
+  // Supplier invoices dated this month: read-only, from the feed. These
+  // land whole in their month (an annual renewal is not spread), so a
+  // client can rightly show a cost spike in the month it was invoiced.
+  const inv = prfClientInvoiced(client);
+  (inv ? inv.lines : []).forEach(l => {
+    rows += `<tr class="prf-irow">
+      <td><span class="prf-ct prf-ct-inv">Invoiced</span></td>
+      <td><div class="prf-iname">${escapeHtml(l.supplier)} — ${escapeHtml(l.desc)}</div><div class="prf-isub">Invoice ${escapeHtml(String(l.ref || ''))}, ${escapeHtml(l.date)}</div></td>
+      <td class="prf-nr" style="color:var(--red)">${prfFmtForce(l.net)}</td>
+      <td class="prf-nr">—</td><td class="prf-nr">—</td><td class="prf-nr">—</td><td></td>
+    </tr>`;
+  });
+  const invTotal = inv ? inv.total : 0;
 
   // Empty service prompt if no services yet
-  if (t.all.length === 0) {
+  if (t.all.length === 0 && !invTotal) {
     rows = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);font-size:12px;font-style:italic">No ${escapeHtml(scopeName || 'services')} lines to show.</td></tr>`;
   }
 
@@ -9901,10 +9947,10 @@ function prfRenderCard(client) {
           <tfoot>
             <tr class="prf-trow">
               <td colspan="2">CLIENT TOTAL — ${escapeHtml(client.name)}${scoped ? ` (${escapeHtml(scopeName)})` : ''}</td>
-              <td class="prf-nr">${prfFmt(t.cost)}</td>
+              <td class="prf-nr">${prfFmt(round2(t.cost + invTotal))}</td>
               <td class="prf-nr">${prfFmt(t.sell)}</td>
-              <td class="prf-nr" style="color:var(--green)">${prfFmt(t.gp)}</td>
-              <td class="prf-nr"><span class="prf-mpill ${prfMpClass(t.margin)}">${prfFmtPct(t.margin)}</span></td>
+              <td class="prf-nr" style="color:${t.sell - t.cost - invTotal < 0 ? 'var(--red)' : 'var(--green)'}">${t.sell - t.cost - invTotal < 0 ? '−' + prfFmtForce(round2(t.cost + invTotal - t.sell)) : prfFmt(round2(t.sell - t.cost - invTotal))}</td>
+              <td class="prf-nr"><span class="prf-mpill ${prfMpClass(t.sell > 0 ? (t.sell - t.cost - invTotal) / t.sell : 0)}">${prfFmtPct(t.sell > 0 ? (t.sell - t.cost - invTotal) / t.sell : 0)}</span></td>
               <td></td>
             </tr>
             ${xeroRowHtml || `<tr class="prf-xrow">
@@ -10368,9 +10414,14 @@ async function prfApplyFeedXero(feed) {
   const F = window.ProfitFeed;
   const shown = PRF.selectedMonth || prfCurrentMonth();
   PRF.xeroSplit = {};
+  PRF.invoiced = {};
+  const matcher = name => prfXeroMatchName(name, PRF.clients);
+  for (const [month] of F.xeroMonths(feed)) {
+    if (feed.exclaimer != null || feed.clook != null) PRF.invoiced[month] = F.invoicedCosts(feed, month, matcher);
+  }
   for (const [month, perContact] of F.xeroMonths(feed)) {
     if (F.hasSplit(feed, month)) {
-      PRF.xeroSplit[month] = F.splitByClient(feed, month, name => prfXeroMatchName(name, PRF.clients));
+      PRF.xeroSplit[month] = F.splitByClient(feed, month, matcher);
     }
     const { matched, unmatched } = F.totalsByClient(perContact, name => prfXeroMatchName(name, PRF.clients));
     // A CSV imported this session owns the unmatched list; don't replace it.
@@ -10410,7 +10461,15 @@ function prfRenderFeedStatus(kind) {
   const staleNote = stale ? ' The nightly update looks to have stopped, so these may be out of date.' : '';
 
   if (kind === 'xero') {
-    return box(stale ? 'warn' : 'ok', `Automatic from Xero, updated ${when}.${staleNote}`);
+    let extra = '';
+    const inv = prfMonthInvoiced();
+    if (inv && (inv.shared.length || inv.unassigned.length)) {
+      const li = l => `<li>${escapeHtml(l.supplier)}: ${escapeHtml(l.name ? l.name + ' — ' : '')}${escapeHtml(l.desc)} ${prfFmtForce(l.net)} (${escapeHtml(l.date)})</li>`;
+      const sharedHtml = inv.shared.length ? `<div>Shared, not charged to any client:</div><ul>${inv.shared.map(li).join('')}</ul>` : '';
+      const unHtml = inv.unassigned.length ? `<div>Not tied to a client — tell Felix which client these belong to:</div><ul>${inv.unassigned.map(li).join('')}</ul>` : '';
+      extra = box(inv.unassigned.length ? 'warn' : 'ok', `Supplier invoices this month that sit in the total but on no card. ${sharedHtml}${unHtml}`);
+    }
+    return box(stale ? 'warn' : 'ok', `Automatic from Xero, updated ${when}.${staleNote}`) + extra;
   }
 
   const c = data.csp;
