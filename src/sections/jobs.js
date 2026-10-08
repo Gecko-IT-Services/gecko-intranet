@@ -99,8 +99,9 @@ async function load() {
 
 const XERO_COLS = 'invoice_id,invoice_number,contact_name,invoice_date,due_date,status,reference,sub_total,total,amount_due,amount_paid,repeating_invoice_id';
 
-/** Six months of invoices, every unpaid one, and any older invoice a job names. Line items aren't needed here. */
-async function loadXero(sb, jobs) {
+/** Six months of invoices, every unpaid one, and any older invoice a job names. Line items aren't needed here.
+ *  Also used by Overview, so both pages read the same invoices. */
+export async function fetchXero(sb, jobs) {
   let from = thisMonth();
   for (let i = 0; i < 5; i++) from = previousMonth(from);
   const [recent, unpaid, rep] = await Promise.all([
@@ -112,8 +113,11 @@ async function loadXero(sb, jobs) {
   const have = new Set([...byId.values()].map(i => refKey(i.invoice_number)));
   const refs = [...new Set(jobs.flatMap(j => String(j.invoice_ref || '').split(/[,;]+/).map(r => r.trim())).filter(r => r && !have.has(refKey(r))))];
   if (refs.length) for (const i of must(await sb.from('xero_invoices').select(XERO_COLS).in('invoice_number', refs))) byId.set(i.invoice_id, i);
-  JOB.inv = [...byId.values()];
-  JOB.rep = rep;
+  return { inv: [...byId.values()], rep };
+}
+
+async function loadXero(sb, jobs) {
+  ({ inv: JOB.inv, rep: JOB.rep } = await fetchXero(sb, jobs));
 }
 
 async function saveJob(id, f) {
@@ -548,7 +552,8 @@ function tabList(s) {
 function renderTabs(tabs) {
   const strip = document.querySelector('#section-jobs .job-tabs');
   if (!strip) return;
-  if (!tabs.some(([k]) => k === JOB.tab)) JOB.tab = 'jobs';
+  // While loading, keep a tab asked for from Overview (show()) until its data is in.
+  if (!JOB.loading && !tabs.some(([k]) => k === JOB.tab)) JOB.tab = 'jobs';
   const sig = tabs.map(t => t.join(':')).join('|');
   if (strip.dataset.sig !== sig) {
     strip.dataset.sig = sig;
@@ -755,6 +760,14 @@ function onSubmit(event) {
   if (!form.dataset.jobForm) return;
   event.preventDefault();
   saveJob(form.dataset.jobForm, form.elements);
+}
+
+/** Open a tab (from Overview's tiles and list): 'jobs', 'overview', 'tocome', 'invoiced', 'owed', 'xero'. */
+export function show(tab) {
+  if (!tab || tab === JOB.tab) return;
+  JOB.tab = tab;
+  JOB.animate = false;
+  if (!JOB.loading) render();
 }
 
 export function init() {

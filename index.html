@@ -72,6 +72,7 @@
 <link rel="stylesheet" href="src/styles/opportunities.css">
 <link rel="stylesheet" href="src/styles/jobs.css">
 <link rel="stylesheet" href="src/styles/alerts.css">
+<link rel="stylesheet" href="src/styles/overview.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -6429,7 +6430,7 @@ body::before {
 
       <div class="section-head">
         <h1>Overview <span>Dashboard</span></h1>
-        <p>Live summary across mileage, profitability, timesheets and clients · <span id="ovwHeadMonth">—</span></p>
+        <p>Money, what needs you and this week · <span id="ovwHeadMonth">—</span></p>
         <div class="ovw-head-actions">
           <button class="ovw-refresh" id="ovwRefresh" type="button" onclick="ovwRefreshData()" title="Reload from SharePoint">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -8939,7 +8940,8 @@ function onSignedIn() {
    ║                                                                   ║
    ║   SharePoint lists used (read-only):                              ║
    ║     MileageJourneys — for this month's miles + reimbursement      ║
-   ║     GeckoServices   — for monthly recurring revenue + cost        ║
+   ║     (plus jobs, opportunities, leave and Xero from the database:  ║
+   ║      src/sections/overview.js; logic src/core/overview.js)        ║
    ║     GeckoClients    — for active client count                     ║
    ║                                                                   ║
    ║   Designed to be self-contained: does NOT depend on the Mileage   ║
@@ -8956,10 +8958,12 @@ const OVW = {
   siteId:      null,
   listIds:     { journeys: null, services: null, clients: null, timesheets: null, ssaClients: null },
   journeys:    [],   // [{ driver, date, miles, amount }]
-  services:    [],   // [{ category, cost, sell }]
   clients:     [],   // [{ status }]
   tshEntries:  [],   // [{ engineer, date, hours, clientLookupId }] — from Timesheets list
   ssaClients:  [],   // [{ id, name, hoursPurchased, hoursUsed, hoursRemaining }] — from Clients list
+  tshLoaded:   false, ssaLoaded: false,  // false = that read failed (said on the page, never shown as zero)
+  db:          null,  // jobs, opportunities, leave, Xero: window.GeckoOverview.loadDb()
+  dbError:     '',
   lastSync:    null
 };
 
@@ -9008,7 +9012,7 @@ function ovwNormaliseDriver(raw) {
 
 // ─── SharePoint helpers — resolve site + list IDs ─────────────────────
 async function ovwResolveListIds() {
-  if (OVW.siteId && OVW.listIds.journeys && OVW.listIds.services && OVW.listIds.clients && OVW.listIds.timesheets && OVW.listIds.ssaClients) return;
+  if (OVW.siteId && OVW.listIds.journeys && OVW.listIds.clients && OVW.listIds.timesheets && OVW.listIds.ssaClients) return;
 
   OVW.siteId = await resolveSiteId();
   const allLists = await fetchAllLists();
@@ -9020,7 +9024,6 @@ async function ovwResolveListIds() {
     if (l.displayName === 'Clients'         || l.name === 'Clients')         OVW.listIds.ssaClients  = l.id;
   }
   if (!OVW.listIds.journeys) throw new Error('MileageJourneys list not found in SharePoint site');
-  if (!OVW.listIds.services) throw new Error('GeckoServices list not found in SharePoint site');
   if (!OVW.listIds.clients)  throw new Error('GeckoClients list not found in SharePoint site');
   // Timesheets + Clients lists are non-critical for Overview — if missing, KPIs just won't show
   if (!OVW.listIds.timesheets) console.warn('Timesheets list not found — hours KPI will be unavailable');
@@ -9045,18 +9048,6 @@ async function ovwLoadJourneys() {
       miles:  Number(f.Miles)  || 0,
       amount: Number(f.Amount) || 0,
       claimedDate: spDateToLocalDateKey(f.ClaimedDate)
-    };
-  });
-}
-
-async function ovwLoadServices() {
-  const items = await clientListItems('gecko_services', OVW.siteId, OVW.listIds.services, 2000);
-  OVW.services = items.map(it => {
-    const f = it.fields || {};
-    return {
-      category: (f.Category || 'other').toLowerCase(),
-      cost:     Number(f.CostPerMonth) || 0,
-      sell:     Number(f.SellPerMonth) || 0
     };
   });
 }
@@ -9163,22 +9154,6 @@ function ovwComputeMileage() {
 }
 
 /**
- * Sum monthly revenue / cost across all services. Static figures — every
- * service row contributes its monthly sell + cost. No per-client breakdown
- * (that's the Profitability section's job).
- */
-function ovwComputeRevenue() {
-  let sell = 0, cost = 0;
-  for (const s of OVW.services) {
-    sell += s.sell;
-    cost += s.cost;
-  }
-  const profit = sell - cost;
-  const margin = sell > 0 ? profit / sell : 0;
-  return { sell, cost, profit, margin };
-}
-
-/**
  * Client counts by status. "Active" KPI = Active + New (non-Winding); Winding
  * shown as a secondary line so it's still visible without inflating the count.
  */
@@ -9196,314 +9171,194 @@ function ovwComputeClients() {
   return { headline, active, isNew, winding, total };
 }
 
-/**
- * Compute total hours logged this week (Mon–Sun), split by engineer.
- * Uses OVW.tshEntries (Phase 7).
- */
-function ovwComputeHoursThisWeek() {
-  const weekStart = new Date();
-  const day = weekStart.getDay(); // 0=Sun
-  const diff = day === 0 ? 6 : day - 1;
-  weekStart.setDate(weekStart.getDate() - diff);
-  weekStart.setHours(0, 0, 0, 0);
-
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-
-  let total = 0;
-  const byEng = {};
-  const includedEngineers = new Set(['Philip', 'Jack']);
-
-  for (const e of OVW.tshEntries) {
-    if (!e.date) continue;
-    const eng = e.engineer || 'Unknown';
-    if (!includedEngineers.has(eng)) continue;
-    const d = new Date(e.date + 'T00:00:00');
-    if (d >= weekStart && d < weekEnd) {
-      total += e.hours;
-      byEng[eng] = (byEng[eng] || 0) + e.hours;
-    }
-  }
-  return { total, byEng };
-}
-
-/**
- * Compute SSA clients at risk (HoursRemaining < 2.0).
- * Returns { count, topNames: string[] } — top 3 most urgent.
- */
-function ovwComputeSsaAtRisk() {
-  const live = OVW.ssaClients.filter(c => !c.archived);
-  const atRisk = live
-    .filter(c => c.hoursRemaining !== null && c.hoursRemaining < 2.0)
-    .sort((a, b) => (a.hoursRemaining ?? 0) - (b.hoursRemaining ?? 0));
-  return {
-    count: atRisk.length,
-    topNames: atRisk.slice(0, 3).map(c => c.name),
-    totalSsa: live.length
-  };
-}
-
-/**
- * Read-only operational snapshot for the landing page.
- * Uses data already loaded for the Overview cards; no SharePoint writes.
- */
-function ovwComputeOperationalSnapshot({ hoursWeek, ssaRisk }) {
-  const todayDate = new Date();
-  const limitedDate = new Date('2026-06-01T00:00:00');
-  const msPerDay = 24 * 60 * 60 * 1000;
-  const daysToLimited = Math.ceil((limitedDate - todayDate) / msPerDay);
-
-  const unclaimedThisMonth = OVW.journeys.reduce((acc, j) => {
-    if (!j.date || j.claimedDate) return acc;
-    const parts = j.date.split('-');
-    if (parts.length !== 3) return acc;
-    const jy = Number(parts[0]);
-    const jm = Number(parts[1]) - 1;
-    if (jy !== todayDate.getFullYear() || jm !== todayDate.getMonth()) return acc;
-    acc.count += 1;
-    acc.amount += Number(j.amount) || 0;
-    return acc;
-  }, { count: 0, amount: 0 });
-
-  return {
-    unclaimedThisMonth,
-    hoursWeekTotal: hoursWeek.total || 0,
-    ssaRiskCount: ssaRisk.count || 0,
-    daysToLimited
-  };
-}
-
 
 // ─── Rendering ────────────────────────────────────────────────────────
+// Three questions, top to bottom (Philip, 8 Oct): how is the money doing (Xero), what needs
+// me (one list, most urgent first, each with a button to the place to deal with it), and what
+// is happening this week. Logic: src/core/overview.js (window.GeckoOverview).
+const ovwWhole = v => '£' + Math.round(Number(v) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const ovwHours = v => (Number(v) || 0).toFixed(2).replace(/\.?0+$/, '') + 'h';
+const ovwMonthShort = m => new Date(m + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short' });
+const ovwMonthLong = m => new Date(m + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'long' });
+const ovwGoAttr = go => `data-ovw-go="${escapeHtml(go.section + (go.tab ? ':' + go.tab : ''))}"`;
+
+/** SSA clients and timesheet entries in the shape core/overview.js reads. */
+function ovwSsaForCore() {
+  return OVW.ssaClients.map(c => ({ name: c.name, remaining: c.hoursRemaining, archived: c.archived }));
+}
+
+function ovwMoneyHtml(core, today) {
+  const db = OVW.db;
+  const go = (section, tab) => ovwGoAttr({ section, tab });
+  const icon = path => `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+  const tile = (attrs, label, svg, body) => `<button type="button" class="ovw-kpi" ${attrs}><div class="k-label">${icon(svg)}${escapeHtml(label)}</div>${body}<span class="k-go">Open →</span></button>`;
+  const ICON = {
+    sales: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
+    rec: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>',
+    owed: '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
+    pipe: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'
+  };
+
+  // Without Xero the money can't be shown: say why, never show £0.
+  let why = '';
+  if (!db) why = OVW.dbError ? `The database didn’t load: ${OVW.dbError}` : 'Loading…';
+  else if (db.errors.xero) why = `Xero didn’t load: ${db.errors.xero}`;
+  else if (!db.xero) why = 'Xero isn’t set up yet.';
+  else if (!db.xero.connected) why = 'Xero isn’t connected. Connect it on Jobs › Xero.';
+  else if (!db.inv) why = 'Xero hasn’t synced yet.';
+  if (why) {
+    const pipe = db?.jobs ? core.money({ inv: [], rep: [], jobs: db.jobs, opps: db.opps || [] }, today).pipeline : null;
+    return `<div class="ovw-kpis ovw-money">
+      ${tile(go('jobs', 'xero'), 'Sales this month', ICON.sales, `<div class="k-value white">—</div><div class="k-note">${escapeHtml(why)}</div>`)}
+      ${tile(go('jobs', 'xero'), 'Recurring', ICON.rec, `<div class="k-value white">—</div><div class="k-note">Needs Xero.</div>`)}
+      ${tile(go('jobs', 'xero'), 'Owed to us', ICON.owed, `<div class="k-value white">—</div><div class="k-note">Needs Xero.</div>`)}
+      ${pipe ? ovwPipelineTile(tile, go, ICON.pipe, pipe) : tile(go('jobs', 'jobs'), 'Pipeline', ICON.pipe, `<div class="k-value white">—</div><div class="k-note">${escapeHtml(db?.errors.jobs ? 'Jobs didn’t load: ' + db.errors.jobs : 'Loading…')}</div>`)}
+    </div>`;
+  }
+
+  const m = core.money({ inv: db.inv, rep: db.rep, jobs: db.jobs || [], opps: db.opps || [] }, today);
+  const s = m.sales;
+  const month = today.slice(0, 7);
+  const parts = [['v-rec', s.recurring], ['v-one', s.oneOff], ['v-rec-proj', s.toCome], ['v-one-proj', s.toInvoice + s.dueThisMonth]].filter(([, v]) => v > 0);
+  const total = s.projected || 1;
+  const r = m.recurring;
+  const change = r.change == null ? `Nothing raised from repeating invoices in ${escapeHtml(ovwMonthLong(r.lastMonth))}`
+    : r.change === 0 ? `Same as ${escapeHtml(ovwMonthShort(r.lastMonth))}`
+    : `<span class="${r.change > 0 ? 'up' : 'down'}">${r.change > 0 ? '▲' : '▼'} ${escapeHtml(ovwWhole(Math.abs(r.change)))}</span> on ${escapeHtml(ovwMonthShort(r.lastMonth))} (${escapeHtml(ovwWhole(r.last))})`;
+  const o = m.owed;
+  const lateCount = db.inv.filter(i => i.status === 'AUTHORISED' && Number(i.amount_due) > 0 && i.due_date && String(i.due_date) < today).length;
+  return `<div class="ovw-kpis ovw-money">
+    ${tile(go('jobs', 'overview'), `Sales · ${ovwMonthLong(month)}`, ICON.sales, `
+      <div class="k-value">${escapeHtml(ovwWhole(s.invoiced))}</div>
+      <div class="k-sub">invoiced so far · on course for <strong>${escapeHtml(ovwWhole(s.projected))}</strong></div>
+      <div class="ovw-bar" role="img" aria-label="${escapeHtml(`Invoiced ${ovwFmt(s.invoiced)} of ${ovwFmt(s.projected)} the month is on course for`)}">
+        ${parts.map(([c, v]) => `<i class="${c}" style="width:${(v / total * 100).toFixed(2)}%"></i>`).join('')}
+      </div>`)}
+    ${tile(go('jobs', 'tocome'), `Recurring · ${ovwMonthLong(month)}`, ICON.rec, `
+      <div class="k-value">${escapeHtml(ovwWhole(r.value))}</div>
+      <div class="k-sub">${escapeHtml(ovwWhole(r.raised))} raised · ${escapeHtml(ovwWhole(r.toCome))} still to come</div>
+      <div class="k-sub">${change}</div>`)}
+    ${tile(go('jobs', 'owed'), 'Owed to us', ICON.owed, `
+      <div class="k-value white">${escapeHtml(ovwWhole(o.total))}</div>
+      <div class="k-sub">${o.count} unpaid invoice${o.count === 1 ? '' : 's'} · incl. VAT</div>
+      <div class="k-sub">${o.overdue > 0 ? `<span class="bad">${escapeHtml(ovwFmt(o.overdue))} overdue</span> (${lateCount})` : 'Nothing overdue'}</div>`)}
+    ${ovwPipelineTile(tile, go, ICON.pipe, m.pipeline)}
+  </div>`;
+}
+
+function ovwPipelineTile(tile, go, svg, p) {
+  return tile(go('jobs', 'jobs'), 'Pipeline', svg, `
+    <div class="k-value white">${escapeHtml(ovwWhole(p.value))}</div>
+    <div class="k-sub">${p.count} open job${p.count === 1 ? '' : 's'}${p.quoted ? ` · ${escapeHtml(ovwWhole(p.quoted))} still quoted` : ''}</div>
+    <div class="k-sub">${p.proposals ? `${p.proposals} proposal${p.proposals === 1 ? '' : 's'} out · <strong>+${escapeHtml(ovwWhole(p.proposalMrr))}/mo</strong>` : 'No proposals out'}</div>`);
+}
+
+function ovwAttentionHtml(core, today) {
+  const db = OVW.db || { errors: {} };
+  const items = core.attention({
+    xero: db.xero, inv: db.inv, rep: db.rep, jobs: db.jobs, opps: db.opps, leave: db.leave,
+    ssa: OVW.ssaLoaded ? ovwSsaForCore() : null, journeys: OVW.journeys
+  }, today);
+  // A source that didn't load is said, so a short list never passes for an all-clear.
+  const missing = [];
+  if (!OVW.db) missing.push(OVW.dbError ? `the database (${OVW.dbError})` : 'the database');
+  for (const [k, label] of [['jobs', 'jobs'], ['opps', 'opportunities'], ['leave', 'leave']]) if (db.errors[k]) missing.push(`${label} (${db.errors[k]})`);
+  if (!OVW.ssaLoaded) missing.push('SSA balances');
+  const red = items.filter(i => i.level === 'red').length;
+  const act = items.filter(i => i.level !== 'info').length;
+  return `<div class="ovw-card">
+    <div class="ovw-card-head"><h3>Needs attention</h3>
+      <span class="ovw-count ${red ? 'red' : act ? '' : 'good'}">${act ? act : 'All clear'}</span></div>
+    ${items.length ? `<ul class="ovw-attn">${items.map(i => `<li class="${i.level}"><span class="dot" aria-hidden="true"></span>
+        <div><strong>${escapeHtml(i.title)}</strong><p>${escapeHtml(i.detail)}</p></div>
+        <button type="button" ${ovwGoAttr(i.go)} aria-label="${escapeHtml('Open: ' + i.title)}">Open →</button></li>`).join('')}</ul>`
+      : `<div class="ovw-clear"><b>✓</b> Nothing needs you right now.</div>`}
+    ${missing.length ? `<p class="ovw-warn-line">Not checked: ${escapeHtml(missing.join(', '))}.</p>` : ''}
+  </div>`;
+}
+
+function ovwWeekHtml(core, today) {
+  const db = OVW.db || { errors: {} };
+  const w = core.thisWeek({ leave: db.leave || [], jobs: db.jobs || [], inv: db.inv, rep: db.rep, entries: OVW.tshEntries }, today);
+  const range = core.shortRange(w.start, w.end);
+  const away = !db.leave ? `<p class="none">${escapeHtml(db.errors.leave ? 'Leave didn’t load.' : 'Loading…')}</p>`
+    : w.away.length ? `<ul>${w.away.map(l => `<li class="${l.now ? 'now' : ''}"><span>${escapeHtml(l.person)}${l.status === 'Pending' ? ' (pending)' : ''}${l.type && l.type !== 'Annual Leave' ? ` · ${escapeHtml(l.type)}` : ''}</span><span>${l.now ? 'off now · back after ' + escapeHtml(core.shortRange(l.end)) : escapeHtml(core.shortRange(l.start, l.end))}</span></li>`).join('')}</ul>`
+    : '<p class="none">Everyone in for the next two weeks.</p>';
+  const jobsDue = !db.jobs ? '' : `<div><h4>Jobs due</h4>${w.jobsDue.length
+    ? `<ul>${w.jobsDue.map(j => { const late = String(j.target_date).slice(0, 10) < today; return `<li class="${late ? 'late' : ''}"><span>${escapeHtml(j.client_name)}: ${escapeHtml(j.title)}</span><span>${late ? 'late · ' : ''}${escapeHtml(core.shortRange(j.target_date))}</span></li>`; }).join('')}</ul>`
+    : '<p class="none">No job targets this week.</p>'}</div>`;
+  const out = w.goingOut ? `<div><h4>Repeating invoices, next 7 days</h4>${w.goingOut.count
+    ? `<ul>${w.goingOut.list.slice(0, 4).map(r => `<li><span>${escapeHtml(r.name)}</span><span>${escapeHtml(core.shortRange(r.date))} · ${escapeHtml(ovwWhole(r.amount))}</span></li>`).join('')}${w.goingOut.count > 4 ? `<li><span>+ ${w.goingOut.count - 4} more</span><span>${escapeHtml(ovwWhole(w.goingOut.value))} in all</span></li>` : ''}</ul>`
+    : '<p class="none">None due.</p>'}</div>` : '';
+  const max = Math.max(1, ...Object.values(w.hours.byEng));
+  const hours = `<div><h4>Hours logged · ${escapeHtml(ovwHours(w.hours.total))}</h4>${OVW.tshLoaded
+    ? `<div class="ovw-hours">${['Philip', 'Jack'].map(e => { const h = w.hours.byEng[e] || 0; return `<div><span>${e}</span><i style="width:${(h / max * 100).toFixed(1)}%"></i><em>${escapeHtml(ovwHours(h))}</em></div>`; }).join('')}</div>`
+    : '<p class="none">Timesheets didn’t load.</p>'}</div>`;
+  return `<div class="ovw-card">
+    <div class="ovw-card-head"><h3>This week</h3><span class="ovw-month-tag">${escapeHtml(range)}</span></div>
+    <div class="ovw-week"><div><h4>Away</h4>${away}</div>${jobsDue}${out}${hours}</div>
+  </div>`;
+}
+
+function ovwHistoryHtml(core, today) {
+  const db = OVW.db;
+  if (!db?.inv) return '';
+  const month = today.slice(0, 7);
+  const s = core.money({ inv: db.inv, rep: db.rep, jobs: db.jobs || [], opps: [] }, today).sales;
+  const hist = window.GeckoOverview.xeroHistory(db.inv, { month, n: 6 });
+  const jobsTo = s.toInvoice + s.dueThisMonth;
+  const max = Math.max(1, ...hist.map(h => h.total), s.projected);
+  const pct = v => (v / max * 100).toFixed(2);
+  const seg = (c, v) => (v > 0 ? `<i class="${c}" style="height:${pct(v)}%"></i>` : '');
+  return `<div class="ovw-card">
+    <div class="ovw-card-head"><h3>Sales, last six months</h3>
+      <button type="button" class="ovw-card-link" data-ovw-go="jobs:overview">Month overview →</button></div>
+    <div class="ovw-hist" role="list">${hist.map(h => {
+      const cur = h.month === month;
+      const recTo = cur ? s.toCome : 0, oneTo = cur ? jobsTo : 0;
+      const t = h.total + recTo + oneTo;
+      return `<div class="ovw-hist-col${cur ? ' cur' : ''}" role="listitem" title="${escapeHtml(`${ovwMonthLong(h.month)}: recurring ${ovwFmt(h.recurring)}, one-off ${ovwFmt(h.oneOff)}${cur ? `, still to come ${ovwFmt(recTo + oneTo)}` : ''}`)}">
+        <span class="t">${h.has || cur ? escapeHtml(ovwWhole(t)) : '—'}</span>
+        <div class="ovw-hist-bar">${seg('v-one-proj', oneTo)}${seg('v-rec-proj', recTo)}${seg('v-one', h.oneOff)}${seg('v-rec', h.recurring)}</div>
+        <span class="m">${escapeHtml(ovwMonthShort(h.month))}</span></div>`;
+    }).join('')}</div>
+    <ul class="ovw-legend"><li><b class="v-rec"></b>Recurring</li><li><b class="v-one"></b>One-off</li><li><b class="v-rec-proj"></b>Still to come</li></ul>
+  </div>`;
+}
+
+function ovwGlanceHtml() {
+  const mileage = ovwComputeMileage().combined;
+  const clients = ovwComputeClients();
+  const ssa = OVW.ssaClients.filter(c => !c.archived);
+  const ssaHours = ssa.reduce((t, c) => t + (Number(c.hoursRemaining) || 0), 0);
+  const opps = OVW.db?.opps;
+  const ideas = opps ? opps.filter(o => o.status === 'idea').length : null;
+  const won = opps ? opps.filter(o => o.status === 'won' && String(o.closed_at || o.modified_at || '').slice(0, 7) === ovwTodayKey().slice(0, 7)).length : null;
+  return `<div class="ovw-card">
+    <div class="ovw-card-head"><h3>At a glance</h3></div>
+    <ul class="ovw-glance">
+      <li><span>Active clients<small>${clients.isNew ? `${clients.isNew} new · ` : ''}${clients.winding ? `${clients.winding} winding down` : 'none winding down'}</small></span><strong>${clients.headline}</strong></li>
+      <li><span>SSA clients<small>${escapeHtml(ovwHours(ssaHours))} prepaid hours left in all</small></span><strong>${OVW.ssaLoaded ? ssa.length : '—'}</strong></li>
+      <li><span>Opportunity ideas<small>${won ? `${won} won this month` : 'Gaps found, not yet proposed'}</small></span><strong>${ideas == null ? '—' : ideas}</strong></li>
+      <li><span>Mileage this month<small>${mileage.count} journey${mileage.count === 1 ? '' : 's'} · ${escapeHtml(ovwFmt(mileage.amount))}</small></span><strong>${escapeHtml(ovwFmtMiles(mileage.miles))}</strong></li>
+    </ul>
+  </div>`;
+}
+
+function ovwTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function ovwRenderAll() {
   const wrap = document.getElementById('ovwWrap');
   if (!wrap) return;
-
-  const mileage  = ovwComputeMileage();
-  const revenue  = ovwComputeRevenue();
-  const clients  = ovwComputeClients();
-  const hoursWeek = ovwComputeHoursThisWeek();
-  const ssaRisk   = ovwComputeSsaAtRisk();
-  const ops       = ovwComputeOperationalSnapshot({ hoursWeek, ssaRisk });
-  const philip   = mileage['Philip Morris'];
-  const jack     = mileage['Jack Morris'];
-  const combined = mileage.combined;
-
-  // Update the head subtitle with the current month
+  const core = window.GeckoOverview;
+  if (!core) { wrap.innerHTML = '<div class="ovw-error"><h3>Could not load</h3><p>The page’s modules didn’t load. Hard-refresh (Cmd+Shift+R).</p></div>'; return; }
+  const today = ovwTodayKey();
   const headMonth = document.getElementById('ovwHeadMonth');
-  if (headMonth) headMonth.textContent = ovwFmtMonth(new Date());
+  if (headMonth) headMonth.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  // Format hours helper (local)
-  const fmtH = v => {
-    const n = Number(v) || 0;
-    return n.toFixed(1).replace(/\.0$/, '') + 'h';
-  };
-
-  // Build per-engineer hours sub-text
-  let hoursSubParts = [];
-  for (const eng of ['Philip', 'Jack']) {
-    if (hoursWeek.byEng[eng] !== undefined) {
-      hoursSubParts.push(`${escapeHtml(eng)}: <strong>${fmtH(hoursWeek.byEng[eng])}</strong>`);
-    }
-  }
-  const hoursSub = hoursSubParts.length > 0
-    ? hoursSubParts.join(' · ')
-    : 'No time logged yet this week';
-
-  // SSA at risk sub-text
-  let ssaSub = '';
-  if (ssaRisk.count === 0) {
-    ssaSub = `All <strong>${ssaRisk.totalSsa}</strong> SSA clients healthy`;
-  } else {
-    ssaSub = ssaRisk.topNames.map(n => escapeHtml(n)).join(', ');
-    if (ssaRisk.count > 3) ssaSub += ` + ${ssaRisk.count - 3} more`;
-  }
-
-  // ── KPI row ──
-  const kpiHTML = `
-    <div class="ovw-kpis">
-      <div class="ovw-kpi miles">
-        <div class="k-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
-          Mileage This Month
-        </div>
-        <div class="k-value">${ovwFmtMiles(combined.miles)}</div>
-        <div class="k-sub">
-          ${combined.count > 0
-            ? `${combined.count} journey${combined.count === 1 ? '' : 's'} · <strong>${ovwFmt(combined.amount)}</strong> due`
-            : 'No journeys recorded yet this month'}
-        </div>
-      </div>
-
-      <div class="ovw-kpi revenue">
-        <div class="k-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-          Monthly Stack Revenue
-        </div>
-        <div class="k-value">${ovwFmt(revenue.sell)}</div>
-        <div class="k-sub">
-          Across <strong>${OVW.services.length}</strong> service line${OVW.services.length === 1 ? '' : 's'}
-        </div>
-      </div>
-
-      <div class="ovw-kpi profit">
-        <div class="k-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Stack Gross Profit
-        </div>
-        <div class="k-value">${ovwFmt(revenue.profit)}</div>
-        <div class="k-sub">
-          <strong>${ovwFmtPct(revenue.margin)}</strong> margin · cost <strong>${ovwFmt(revenue.cost)}</strong>
-        </div>
-      </div>
-
-      <div class="ovw-kpi clients">
-        <div class="k-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-          Active Clients
-        </div>
-        <div class="k-value">${clients.headline}</div>
-        <div class="k-sub">
-          ${clients.isNew > 0 ? `<strong>${clients.isNew}</strong> new · ` : ''}<strong>${clients.total}</strong> total${clients.winding > 0 ? ` · ${clients.winding} winding down` : ''}
-        </div>
-      </div>
-
-      <div class="ovw-kpi hours">
-        <div class="k-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Hours Logged This Week
-        </div>
-        <div class="k-value">${fmtH(hoursWeek.total)}</div>
-        <div class="k-sub">${hoursSub}</div>
-      </div>
-
-      <div class="ovw-kpi ssa-risk${ssaRisk.count > 0 ? ' has-risk' : ''}">
-        <div class="k-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          SSA Clients At Risk
-        </div>
-        <div class="k-value">${ssaRisk.count === 0 ? 'All Healthy' : ssaRisk.count}</div>
-        <div class="k-sub">${ssaSub}</div>
-      </div>
-    </div>`;
-
-  const limitedValue = ops.daysToLimited > 0
-    ? `${ops.daysToLimited} day${ops.daysToLimited === 1 ? '' : 's'}`
-    : 'Active';
-  const limitedNote = ops.daysToLimited > 0
-    ? 'Limited company transition · 1 June 2026'
-    : 'Limited company mode from 1 June 2026';
-
-  const opsHTML = `
-    <div class="ovw-ops">
-      <div class="ovw-ops-head">
-        <h3>Operational Snapshot</h3>
-        <span class="ovw-month-tag">Today</span>
-        <p>Claim admin, revenue health, support time and company transition.</p>
-      </div>
-      <div class="ovw-ops-grid">
-        <div class="ovw-op ${ops.unclaimedThisMonth.count > 0 ? 'warn' : 'good'}">
-          <div class="op-label">Mileage Claims</div>
-          <div class="op-value">${ops.unclaimedThisMonth.count > 0 ? ovwFmt(ops.unclaimedThisMonth.amount) : 'Clear'}</div>
-          <div class="op-note">${ops.unclaimedThisMonth.count > 0 ? `<strong>${ops.unclaimedThisMonth.count}</strong> journey${ops.unclaimedThisMonth.count === 1 ? '' : 's'} awaiting claim` : 'No unclaimed journeys this month'}</div>
-        </div>
-        <div class="ovw-op ${ops.ssaRiskCount > 0 ? 'warn' : 'good'}">
-          <div class="op-label">SSA Health</div>
-          <div class="op-value">${ops.ssaRiskCount > 0 ? ops.ssaRiskCount : 'Healthy'}</div>
-          <div class="op-note">${ops.ssaRiskCount > 0 ? 'Client hour balances need attention' : `All <strong>${ssaRisk.totalSsa}</strong> SSA clients within limits`}</div>
-        </div>
-        <div class="ovw-op info">
-          <div class="op-label">Weekly Delivery</div>
-          <div class="op-value">${fmtH(ops.hoursWeekTotal)}</div>
-          <div class="op-note">Logged through Timesheets this week</div>
-        </div>
-        <div class="ovw-op ${ops.daysToLimited > 0 ? 'warn' : 'good'}">
-          <div class="op-label">Company Switch</div>
-          <div class="op-value">${escapeHtml(limitedValue)}</div>
-          <div class="op-note">${escapeHtml(limitedNote)}</div>
-        </div>
-      </div>
-    </div>`;
-
-  // ── Breakdown row (mileage by driver + revenue P&L) ──
-  const monthLabel = ovwFmtMonth(new Date()).split(' ')[0]; // just the month name, e.g. "May"
-
-  let mileageRows = '';
-  if (combined.count === 0) {
-    mileageRows = `<tr><td colspan="4" class="ovw-empty">No journeys recorded for ${escapeHtml(monthLabel)} yet.</td></tr>`;
-  } else {
-    const rowFor = (driverName, label, slotKey, dotClass) => {
-      const slot = mileage[driverName];
-      return `
-        <tr>
-          <td><div class="driver-pill ${dotClass}"><span class="dot"></span>${escapeHtml(label)}</div></td>
-          <td class="num ${slot.count === 0 ? 'muted' : ''}">${slot.count}</td>
-          <td class="num ${slot.count === 0 ? 'muted' : ''}">${ovwFmtMiles(slot.miles)}</td>
-          <td class="num ${slot.count === 0 ? 'muted' : 'green'}">${ovwFmt(slot.amount)}</td>
-        </tr>`;
-    };
-    mileageRows  = rowFor('Philip Morris', 'Philip Morris', 'philip', 'philip');
-    mileageRows += rowFor('Jack Morris',   'Jack Morris',   'jack',   'jack');
-    mileageRows += `
-      <tr class="ovw-trow">
-        <td>Total — ${escapeHtml(monthLabel)}</td>
-        <td class="num">${combined.count}</td>
-        <td class="num">${ovwFmtMiles(combined.miles)}</td>
-        <td class="num green">${ovwFmt(combined.amount)}</td>
-      </tr>`;
-  }
-
-  const breakdownHTML = `
-    <div class="ovw-row">
-
-      <div class="ovw-card">
-        <div class="ovw-card-head">
-          <h3>Mileage Breakdown</h3>
-          <span class="ovw-month-tag">${escapeHtml(monthLabel)}</span>
-        </div>
-        <table class="ovw-tbl">
-          <thead>
-            <tr>
-              <th>Driver</th>
-              <th class="num">Trips</th>
-              <th class="num">Miles</th>
-              <th class="num">Reimb.</th>
-            </tr>
-          </thead>
-          <tbody>${mileageRows}</tbody>
-        </table>
-      </div>
-
-      <div class="ovw-card">
-        <div class="ovw-card-head">
-          <h3>Revenue Summary</h3>
-          <span class="ovw-month-tag">Monthly</span>
-        </div>
-        <table class="ovw-tbl">
-          <tbody>
-            <tr>
-              <td>Revenue</td>
-              <td class="num green">${ovwFmt(revenue.sell)}</td>
-            </tr>
-            <tr>
-              <td>Cost</td>
-              <td class="num red">${ovwFmt(revenue.cost)}</td>
-            </tr>
-            <tr>
-              <td>Gross Profit</td>
-              <td class="num green">${ovwFmt(revenue.profit)}</td>
-            </tr>
-            <tr class="ovw-trow">
-              <td>Margin</td>
-              <td class="num ${revenue.margin >= 0.5 ? 'green' : revenue.margin >= 0.3 ? 'amber' : 'red'}">${ovwFmtPct(revenue.margin)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-    </div>`;
-
-  // ── Quick actions ──
   const actionsHTML = `
     <div class="ovw-actions">
       <div class="ovw-actions-text">
@@ -9511,27 +9366,43 @@ function ovwRenderAll() {
         <p>Jump straight to the most common tasks.</p>
       </div>
       <div class="ovw-actions-btns">
-        <button class="ovw-act-btn" type="button" onclick="ovwGoAddJourney()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Journey
-        </button>
         <button class="ovw-act-btn" type="button" onclick="ovwGoLogTime()">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Log Time
         </button>
+        <button class="ovw-act-btn" type="button" data-ovw-go="jobs:jobs">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Jobs
+        </button>
+        <button class="ovw-act-btn ghost" type="button" onclick="ovwGoAddJourney()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+          Add Journey
+        </button>
         <button class="ovw-act-btn ghost" type="button" onclick="ovwGoProfitability()">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          View Profitability
-        </button>
-        <button class="ovw-act-btn ghost" type="button" onclick="ovwGoClients()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-          Directory
+          Profitability
         </button>
       </div>
     </div>`;
 
-  wrap.innerHTML = kpiHTML + opsHTML + breakdownHTML + actionsHTML;
+  wrap.innerHTML = ovwMoneyHtml(core, today) +
+    `<div class="ovw-split">${ovwAttentionHtml(core, today)}${ovwWeekHtml(core, today)}</div>` +
+    `<div class="ovw-split">${ovwHistoryHtml(core, today) || '<div></div>'}${ovwGlanceHtml()}</div>` +
+    actionsHTML;
 }
+
+/** Every Open button and tile carries data-ovw-go="section[:tab]". */
+function ovwGo(target) {
+  const [section, tab] = String(target).split(':');
+  navTo(section);
+  if (!tab) return;
+  if (section === 'jobs') window.GeckoSections?.jobs?.show?.(tab);
+  else if (section === 'timesheets' && typeof tshTab === 'function') tshTab(tab);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest?.('#section-overview [data-ovw-go]');
+  if (b) ovwGo(b.dataset.ovwGo);
+});
 
 
 // ─── Quick action navigators ──────────────────────────────────────────
@@ -9541,17 +9412,11 @@ function ovwRenderAll() {
  */
 function ovwGoAddJourney() {
   navTo('mileage');
-  // Small delay so the section transition + lazy-load completes before we
-  // try to scroll/focus. initMileage is async (loads SharePoint data) but
-  // the form itself is in the static HTML so it exists immediately.
   setTimeout(() => {
     const form = document.getElementById('milForm');
     if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     const clientSelect = document.getElementById('milClient');
-    if (clientSelect) {
-      // Focus after scroll has begun — feels more natural than instant focus
-      setTimeout(() => clientSelect.focus(), 350);
-    }
+    if (clientSelect) setTimeout(() => clientSelect.focus(), 350);
   }, 80);
 }
 
@@ -9561,14 +9426,6 @@ function ovwGoProfitability() {
 
 function ovwGoLogTime() {
   navTo('timesheets');
-}
-
-function ovwGoClients() {
-  navTo('clients');
-}
-
-function ovwGoCompliance() {
-  navTo('compliance');
 }
 
 
@@ -9581,7 +9438,17 @@ async function ovwRefreshData(silent = false) {
   showLoading(true);
   try {
     await ovwResolveListIds();
-    await Promise.all([ovwLoadJourneys(), ovwLoadServices(), ovwLoadClients(), ovwLoadTimesheetEntries(), ovwLoadSsaClients()]);
+    // Timesheets, SSA and the database are read side by side; one failing is said on the page
+    // (Needs attention › Not checked) instead of blanking it. Mileage and clients stay required.
+    const [, , tsh, ssa, db] = await Promise.allSettled([
+      ovwLoadJourneys(), ovwLoadClients(), ovwLoadTimesheetEntries(), ovwLoadSsaClients(),
+      window.GeckoOverview ? window.GeckoOverview.loadDb() : Promise.reject(new Error('modules not loaded'))
+    ]).then(rs => { for (const r of rs.slice(0, 2)) if (r.status === 'rejected') throw r.reason; return rs; });
+    OVW.tshLoaded = tsh.status === 'fulfilled';
+    OVW.ssaLoaded = ssa.status === 'fulfilled';
+    if (db.status === 'rejected' && db.reason?.code === 'DB_SIGNIN_REQUIRED') throw db.reason;
+    OVW.db = db.status === 'fulfilled' ? db.value : null;
+    OVW.dbError = db.status === 'rejected' ? (db.reason?.message || String(db.reason)) : '';
     OVW.lastSync = new Date();
     ovwRenderAll();
 
