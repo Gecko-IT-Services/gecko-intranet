@@ -296,3 +296,58 @@ export function previousMonth(month) {
 
 /** Old Projects board statuses → job stages. Finished projects aren't brought across. */
 export const PROJECT_STATUS = { Quoted: 'quoted', Agreed: 'agreed', 'In progress': 'in_progress' };
+
+// ─── Nudge: a friendly payment reminder (Philip, 8 Oct) ──────────────────
+
+const escHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const gbp = n => '£' + round2(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const longDate = d => new Date(String(d).slice(0, 10) + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+/** A contact's unpaid, approved invoices for a nudge: overdue ones if any, else all unpaid; oldest due first. */
+export function nudgeInvoices(invoices, contactName, today) {
+  const unpaid = invoices.filter(i => i.status === 'AUTHORISED' && num(i.amount_due) > 0 && (i.contact_name || 'Unknown contact') === contactName)
+    .sort((a, b) => String(a.due_date || '').localeCompare(String(b.due_date || '')));
+  const late = unpaid.filter(i => i.due_date && String(i.due_date) < today);
+  return late.length ? late : unpaid;
+}
+
+/**
+ * The reminder itself: warm, short, and easy to act on. Never accusing ("it may already be on its
+ * way"), lists each invoice with its amount and due date, offers the pay-online link where Xero has
+ * one, and makes replying easy. Returns { subject, html, text } for an Outlook draft.
+ */
+export function nudgeEmail({ contactName, firstName = '', invoices, links = {}, today, sender = '' }) {
+  const n = invoices.length;
+  const late = invoices.filter(i => i.due_date && String(i.due_date) < today);
+  const total = round2(invoices.reduce((t, i) => t + num(i.amount_due), 0));
+  const one = n === 1;
+  const first = String(firstName || '').trim().split(/\s+/)[0];
+  const subject = one
+    ? `A friendly nudge: invoice ${invoices[0].invoice_number} (${gbp(total)})`
+    : `A friendly nudge: ${n} invoices from Gecko IT Services (${gbp(total)})`;
+  const status = i => (i.due_date && String(i.due_date) < today ? `was due ${longDate(i.due_date)}` : i.due_date ? `due ${longDate(i.due_date)}` : '');
+  const line = i => `${i.invoice_number}${i.invoice_date ? ` (${longDate(i.invoice_date)})` : ''}: ${gbp(i.amount_due)}${status(i) ? `, ${status(i)}` : ''}`;
+  const linked = invoices.filter(i => links[i.invoice_id]).length;
+  const opener = late.length
+    ? `Just a gentle nudge: our records show ${one ? 'the invoice below is' : 'the invoices below are'} still open and now past ${one ? 'its' : 'their'} due date.`
+    : `Just a quick, friendly reminder about ${one ? 'the invoice below, which is' : 'the invoices below, which are'} coming up for payment.`;
+  const paras = [
+    `Hi ${first || 'there'},`,
+    `I hope you’re keeping well and that things are going nicely at ${contactName}.`,
+    opener,
+    null, // the invoice list goes here
+    linked === n ? `You can view and pay ${one ? 'it' : 'each one'} online using the link${one ? '' : 's'} above, or by bank transfer using the details on the invoice.`
+      : linked ? `Where there’s a link above you can view and pay online; otherwise payment can be made by bank transfer using the details on the invoice.`
+      : `Payment can be made by bank transfer using the details on the invoice.`,
+    `It may well already be on its way, in which case thank you, and please ignore this. If anything’s holding it up, or you need a copy of an invoice, just reply to this email and I’ll sort it straight away.`,
+    `Thanks so much, we really do appreciate your business.`,
+    sender || 'Kind regards,\nGecko IT Services'
+  ];
+  const listText = invoices.map(i => `• ${line(i)}${links[i.invoice_id] ? `\n  Pay online: ${links[i.invoice_id]}` : ''}`).join('\n') +
+    (one ? '' : `\nTotal: ${gbp(total)} (incl. VAT)`);
+  const listHtml = `<ul>${invoices.map(i => `<li>${escHtml(line(i))}${links[i.invoice_id] ? ` · <a href="${escHtml(links[i.invoice_id])}">View and pay online</a>` : ''}</li>`).join('')}</ul>` +
+    (one ? '' : `<p><strong>Total: ${escHtml(gbp(total))}</strong> (incl. VAT)</p>`);
+  const text = paras.map(p => (p === null ? listText : p)).join('\n\n');
+  const html = paras.map(p => (p === null ? listHtml : `<p>${escHtml(p).replace(/\n/g, '<br>')}</p>`)).join('\n');
+  return { subject, html, text, total };
+}

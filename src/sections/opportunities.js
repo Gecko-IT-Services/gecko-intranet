@@ -22,11 +22,15 @@ import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
-  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS
+  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue
 } from '../core/opportunities.js';
 
 const STATUSES = [['idea', 'Idea'], ['proposed', 'Proposed'], ['won', 'Won'], ['lost', 'Lost']];
 const DEALER_SERVICES = ['voxone', 'voip_exchange', 'ethernet', 'leased_line', 'fttp', 'fttc', 'sogea', 'pstn', 'mobile', 'unknown'];
+// What a product's client price is per (opportunity_products.price_unit); the first four multiply by a quantity.
+const PRICE_UNITS = [['user', 'per user / month'], ['seat', 'per seat / month'], ['device', 'per device / month'], ['site', 'per site / month'],
+  ['month', 'a month'], ['year', 'a year'], ['one-off', 'one-off']];
+const PER_UNIT = { user: 'Users', seat: 'Seats', device: 'Devices', site: 'Sites' };
 const optLabel = k => { const l = serviceLabel(k); return l[0].toUpperCase() + l.slice(1); };
 const CONTRACTS = [['in_contract', 'In contract'], ['out_of_contract', 'Out of contract'], ['expiring', 'Expiring'], ['unknown', 'Unknown']];
 const SIGNAL_MAX_AGE_DAYS = 30;   // re-check a domain after this long
@@ -63,6 +67,20 @@ async function readFeed() {
   } catch (err) {
     OPP.feedNote = 'The profitability feed could not be read (' + (err.message || err) + '), so Xero and supplier data are left out.';
     return null;
+  }
+}
+
+/** The Refresh button: busy while it reloads, then says so (it gave no sign before). */
+async function refresh() {
+  const btn = els('oppRefresh');
+  if (!btn || btn.disabled || OPP.loading) return;
+  btn.disabled = true; btn.textContent = 'Refreshing…';
+  try {
+    await load();
+    if (OPP.error) toast('Could not reload opportunities: ' + (OPP.error.message || OPP.error), 'error', 8000);
+    else toast('Opportunities refreshed', 'success', 3000);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Refresh';
   }
 }
 
@@ -371,7 +389,7 @@ async function draftEmail(id) {
     client: o.client_name,
     firstName: String(c.contactName || '').split(/\s+/)[0],
     findings: found?.findings || [],
-    mrr: o.mrr, oneOff: o.one_off,
+    mrr: o.mrr, oneOff: o.one_off, quantity: o.quantity,
     sender: myName() ? `Kind regards,\n${myName()}\nGecko IT Services` : 'Kind regards,\nGecko IT Services'
   });
   try {
@@ -413,10 +431,11 @@ async function saveProduct(key, form) {
   const num = v => (String(v).trim() === '' ? null : Number(v));
   const patch = {
     default_mrr: num(form.mrr.value), default_one_off: num(form.oneoff.value),
+    unit_price: num(form.unit_price.value), price_unit: form.price_unit.value,
     active: form.active.checked,
     email_subject: form.subject.value, email_body: form.body.value
   };
-  if ([patch.default_mrr, patch.default_one_off].some(v => v != null && !(v >= 0))) { toast('Prices must be numbers', 'warning'); return; }
+  if ([patch.default_mrr, patch.default_one_off, patch.unit_price].some(v => v != null && !(v >= 0))) { toast('Prices must be numbers', 'warning'); return; }
   try {
     const sb = await connectSupabase({ interactive: true });
     const row = must(await sb.from('opportunity_products').update(patch).eq('key', key).select('*').single());
@@ -577,6 +596,7 @@ function pipelineHtml() {
       <div class="opp-deal-value">
         <strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong>
         ${Number(o.one_off) ? `<span>+ ${escapeHtml(money(o.one_off))} one-off</span>` : ''}
+        ${dealUnits(o)}
         <span class="opp-deal-meta"><b class="opp-dot"></b>${label[o.status] || escapeHtml(o.status)} · ${escapeHtml(ago(o.closed_at || o.modified_at))}</span>
       </div>
       <div class="opp-deal-actions">
@@ -587,6 +607,7 @@ function pipelineHtml() {
       ${editing ? `<form class="opp-item-form opp-deal-edit" data-opp-form="${o.id}">
           <label>£/month <input name="mrr" type="number" step="0.01" min="0" value="${escapeHtml(o.mrr)}"></label>
           <label>£ one-off <input name="one_off" type="number" step="0.01" min="0" value="${escapeHtml(o.one_off)}"></label>
+          ${PER_UNIT[findProduct(o.product_key)?.price_unit] ? `<label>${PER_UNIT[findProduct(o.product_key).price_unit]} <input name="quantity" type="number" step="1" min="0" value="${escapeHtml(o.quantity ?? '')}" placeholder="how many"></label>` : ''}
           <label>Stage <select name="status">${STATUSES.map(([k, l]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
           <label class="wide">Next step <input name="next_step" type="text" value="${escapeHtml(o.next_step)}" placeholder="e.g. Call Chris on Tuesday"></label>
           <div class="opp-gap-actions wide">
@@ -655,14 +676,23 @@ async function saveDealer(id, f) {
   } catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
 }
 
+function dealUnits(o) {
+  const p = findProduct(o.product_key);
+  if (!p || p.unit_price == null || !PER_UNIT[p.price_unit] || !Number(o.quantity)) return '';
+  const unit = PER_UNIT[p.price_unit].toLowerCase();
+  return `<span>${escapeHtml(String(o.quantity))} ${escapeHtml(Number(o.quantity) === 1 ? unit.slice(0, -1) : unit)} × ${escapeHtml(money(p.unit_price))}</span>`;
+}
+
 function productsHtml() {
-  return `<p class="opp-note">Set a monthly price to see pipeline value. The email text is what “Draft email” starts from: {{first_name}}, {{client}}, {{evidence}}, {{price}} and {{sender}} are filled in. Windows 11 switches on once Atera device data is in the feed.</p>
+  return `<p class="opp-note"><strong>Client price</strong> is what the email quotes (“Hornetsecurity is £7.50 per user a month, plus VAT”); give an opportunity its number of users and the email adds the total. <strong>Pipeline £/month</strong> is the value a new opportunity starts with (for dealer products, your commission; never quoted). The email text is what “Draft email” starts from: {{first_name}}, {{client}}, {{evidence}}, {{price}} and {{sender}} are filled in. Windows 11 switches on once Atera device data is in the feed.</p>
     <div class="opp-products">${OPP.products.map(p => `<form class="opp-product" data-opp-product="${escapeHtml(p.key)}">
       <div class="opp-product-head"><strong>${escapeHtml(p.name)}</strong><span class="opp-muted">${escapeHtml([p.family, p.unit_note].filter(Boolean).join(' · '))}</span>
         <label class="opp-check"><input type="checkbox" name="active" ${p.active ? 'checked' : ''}> In use</label></div>
       <p class="opp-muted">${escapeHtml(p.pitch)}</p>
       <div class="opp-product-prices">
-        <label>£/month <input name="mrr" type="number" step="0.01" min="0" value="${p.default_mrr ?? ''}" placeholder="not set"></label>
+        <label>Client price £ <input name="unit_price" type="number" step="0.01" min="0" value="${p.unit_price ?? ''}" placeholder="not set"></label>
+        <label>per <select name="price_unit">${PRICE_UNITS.map(([k, l]) => `<option value="${k}" ${k === (p.price_unit || 'user') ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label>Pipeline £/month <input name="mrr" type="number" step="0.01" min="0" value="${p.default_mrr ?? ''}" placeholder="not set"></label>
         <label>£ one-off <input name="oneoff" type="number" step="0.01" min="0" value="${p.default_one_off ?? ''}" placeholder="none"></label>
       </div>
       <details><summary>Email text</summary>
@@ -738,6 +768,13 @@ async function onSubmit(event) {
     event.preventDefault();
     const f = form.elements;
     const patch = { mrr: Number(f.mrr.value) || 0, one_off: Number(f.one_off.value) || 0, next_step: f.next_step.value.trim(), status: f.status.value };
+    if (f.quantity) {
+      const o = OPP.opps.find(x => x.id === Number(form.dataset.oppForm));
+      patch.quantity = f.quantity.value.trim() === '' ? null : Math.max(0, Number(f.quantity.value) || 0);
+      // A new quantity re-works the monthly value from the client price, unless £/month was changed by hand too.
+      const auto = unitValue(findProduct(o?.product_key), patch.quantity);
+      if (auto != null && patch.quantity !== (o?.quantity ?? null) && String(f.mrr.value) === String(o?.mrr ?? '')) patch.mrr = auto;
+    }
     try { await patchOpp(Number(form.dataset.oppForm), patch); OPP.editing.delete(Number(form.dataset.oppForm)); toast(patch.status === 'won' ? `Won: +${money(patch.mrr)}/mo` : 'Saved', 'success'); render(); }
     catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
   }
@@ -758,7 +795,7 @@ export function init() {
   section?.addEventListener('change', onChange);
   section?.addEventListener('submit', onSubmit);
   section?.addEventListener('keydown', onKeydown);
-  els('oppRefresh')?.addEventListener('click', load);
+  els('oppRefresh')?.addEventListener('click', refresh);
   load();
 }
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   classifyMx, spfStatus, dmarcPolicy, summariseDns, summarisePageSpeed, ticketHits,
-  holds, evaluate, clientGaps, withoutOpen, pipelineTotals, fillTemplate, emailDomain, THRESHOLDS,
+  holds, evaluate, clientGaps, withoutOpen, pipelineTotals, fillTemplate, priceSentence, unitValue, emailDomain, THRESHOLDS,
   renewalsDue
 } from '../src/core/opportunities.js';
 
@@ -151,7 +151,23 @@ const mail = fillTemplate(
 assert.equal(mail.subject, 'Stopping phishing at A&B <Ltd>', 'subject is plain text (Graph escapes it)');
 assert.ok(mail.html.includes('<p>Hi Chris,</p>'));
 assert.ok(mail.html.includes('We noticed:<br>• DMARC is none.<br>• No filter.'), 'findings as bullets');
-assert.ok(mail.html.includes('£30.00 a month, plus a one-off £50.00 to set up'));
+assert.ok(mail.html.includes('This would come to £30.00 a month, plus VAT, with a one-off £50.00 to set up.'), 'no client price: the opportunity value');
+
+// Client prices per unit (Philip, 8 Oct: "Hornet is £7.50 per user").
+const hornetPrice = { name: 'Hornetsecurity 365 Total Protection', unit_price: 7.5, price_unit: 'user' };
+assert.equal(priceSentence(hornetPrice, {}), 'Hornetsecurity 365 Total Protection is £7.50 per user a month, plus VAT.');
+assert.equal(priceSentence(hornetPrice, { quantity: 12, mrr: 999 }), 'Hornetsecurity 365 Total Protection is £7.50 per user a month, plus VAT. For your 12 users, that comes to £90.00 a month.', 'the client price wins over the pipeline value');
+assert.equal(priceSentence(hornetPrice, { quantity: 1, oneOff: 50 }), 'Hornetsecurity 365 Total Protection is £7.50 per user a month, plus VAT. For your 1 user, that comes to £7.50 a month. There’s a one-off £50.00 to set up.');
+assert.equal(priceSentence({ name: 'VoxOne', unit_price: 15, price_unit: 'seat' }, { quantity: 8 }), 'VoxOne is £15.00 per seat a month, plus VAT. For your 8 seats, that comes to £120.00 a month.');
+assert.equal(priceSentence({ name: 'SEO', unit_price: 150, price_unit: 'month' }, { quantity: 3 }), 'SEO is £150.00 a month, plus VAT.', 'flat monthly ignores quantity');
+assert.equal(priceSentence({ name: 'Hosting', unit_price: 199, price_unit: 'year' }), 'Hosting is £199.00 a year, plus VAT.');
+assert.equal(priceSentence({ name: 'DMARC', unit_price: 150, price_unit: 'one-off' }, { oneOff: 150 }), 'This would be a one-off £150.00, plus VAT.');
+assert.equal(priceSentence({ name: 'VE', unit_price: null, price_unit: 'seat', default_mrr: 4 }, {}), '', 'commission (default_mrr) is never quoted');
+assert.equal(priceSentence({ name: 'X', unit_price: 1234.5, price_unit: 'month' }), 'X is £1,234.50 a month, plus VAT.');
+assert.ok(fillTemplate({ ...hornetPrice, email_body: '{{#price}}{{price}}{{/price}}' }, { quantity: 4 }).text.endsWith('£30.00 a month.'));
+assert.equal(unitValue(hornetPrice, 12), 90);
+assert.equal(unitValue(hornetPrice, 0), null);
+assert.equal(unitValue({ unit_price: 150, price_unit: 'month' }, 3), null, 'only per-unit prices multiply');
 assert.ok(!/<Ltd>/.test(mail.html.replace(/<\/?(p|br)>/g, '')), 'values are escaped in the HTML');
 assert.equal(fillTemplate({ name: 'X', email_body: 'Hi {{first_name}}' }, {}).text, 'Hi there', 'no contact name → "there"');
 const bare = fillTemplate({ name: 'X', email_body: 'Hi,\n\n{{#findings}}We noticed:\n{{findings}}{{/findings}}\n\n{{#price}}Cost: {{price}}{{/price}}\n\nBye' }, {});

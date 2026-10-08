@@ -268,3 +268,9 @@
   #section-jobs .job-tab-ink, #section-jobs .job-tabs button, #section-jobs .job-tip, #section-jobs .job-hist-tip { transition: none; }
   #section-jobs .job-pane.job-enter, #section-jobs .job-pane.job-enter * { animation: none !important; }
 }
+
+/* Owed to us › Nudge (payment reminder drafted in Outlook) */
+#section-jobs .job-owed-note { margin: -4px 0 10px; }
+#section-jobs .job-nudge { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+#section-jobs .job-nudge .job-btn { padding: 5px 12px; font-size: 12px; text-decoration: none; }
+#section-jobs .job-nudge .job-muted { font-size: 12px; white-space: nowrap; }

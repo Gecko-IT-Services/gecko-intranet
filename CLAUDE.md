@@ -1,6 +1,7 @@
 # Gecko Intranet — guidance for Claude Code
 
-Internal dashboard for Gecko IT Services (Philip Morris, Jack Morris). Live at
+Internal dashboard for Gecko IT Services (Philip Morris, Jack Morris), named **Gecko HQ** (Philip, 8 Oct;
+not "Internal Portal"). Live at
 https://gecko-it-services.github.io/gecko-intranet/ from `main` via GitHub Pages.
 Built by Jack; extended by "Felix" (an AI technical-manager persona Philip uses in
 the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
@@ -104,7 +105,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Gaps come from what a client buys (service lines, feed), public email/website checks
   (Cloudflare DoH, Google PageSpeed, no keys) and six months of timesheet descriptions.
   The catalogue (rules, patterns, prices, email text) is data in `opportunity_products`,
-  edited on the Products tab. "Draft email" only ever creates an Outlook draft.
+  edited on the Products tab. "Draft email" only ever creates an Outlook draft. Emails quote the
+  **client price** (`unit_price` per `price_unit`, e.g. Hornetsecurity £7.50 per user, Philip 8 Oct) and the total
+  when the opportunity has a `quantity`; `default_mrr` is the pipeline value (commission for dealer
+  products) and is never quoted.
 - Windows 10 / device gaps wait for Atera data in the feed (phase 2, with the Atera cost check).
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
@@ -141,6 +145,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `xero-invoice`, scope `accounting.invoices`); Philip approves and sends it in Xero. Once per request
   key (`public.xero_pushes`, also the audit trail); only contacts and items already used in Xero; the
   number is added to the job, and the hourly sync moves the job to Invoiced once approved.
+- Nudge (8 Oct): Jobs › Owed to us › **Nudge** drafts a friendly payment reminder in the clicker's Outlook Drafts
+  (never sent by the portal) to the contact's Xero email, with pay-online links (`xero-invoice` action `nudge`, read
+  only); logged in `payment_nudges`. Jobs › Refresh syncs Xero first. Design `2026-10-09-nudge-and-prices-design.md`.
 - Phase 4 (8 Oct): the SSA renewal box offers **Create draft in Xero** (same function, `source: 'ssa'`,
   n × SSA at £650, account 214, reference Renewal); drafts for that client in the last 45 days are listed.
 
