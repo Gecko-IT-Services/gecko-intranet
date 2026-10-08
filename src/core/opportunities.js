@@ -428,3 +428,27 @@ function money(n) { return '£' + (Number(n) || 0).toFixed(2); }
 function round1(n) { return Math.round(n * 10) / 10; }
 function round2(n) { return Math.round(n * 100) / 100; }
 function clip(s, n = 70) { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+/**
+ * A new opportunity for one client, from the catalogue or typed by hand (client page › New opportunity,
+ * Philip 9 Oct). From a product: its name, and £/month = client price × quantity when the product is priced
+ * per user/seat/device/site and a quantity is given (as the pipeline edit does), else its default_mrr.
+ * Returns the row to insert, or { error } when something needed is missing.
+ */
+export function newOpportunity({ client, product = null, title = '', quantity = null, mrr = null, oneOff = null, status = 'idea', nextStep = '', owner = '' }) {
+  const name = String(client || '').trim();
+  const t = String(title || '').trim() || (product ? `${product.name} — ${name}` : '');
+  if (!name) return { error: 'No client chosen.' };
+  if (!t) return { error: 'Give the opportunity a name, or pick one from the list.' };
+  const q = quantity === '' || quantity == null ? null : Math.max(0, Math.round(Number(quantity) || 0));
+  const num = v => (v === '' || v == null || !isFinite(Number(v)) ? null : Math.max(0, round2(Number(v))));
+  const auto = product ? unitValue(product, q) : null;
+  return {
+    client_name: name, product_key: product?.key || null, title: t,
+    status: ['idea', 'proposed'].includes(status) ? status : 'idea',
+    quantity: q || null,
+    mrr: num(mrr) ?? auto ?? (product ? Number(product.default_mrr) || 0 : 0),
+    one_off: num(oneOff) ?? (product ? Number(product.default_one_off) || 0 : 0),
+    next_step: String(nextStep || '').trim(), evidence: '', owner: String(owner || '').trim()
+  };
+}

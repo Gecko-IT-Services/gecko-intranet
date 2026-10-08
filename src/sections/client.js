@@ -19,8 +19,10 @@ import { balances } from '../core/timesheets.js';
 import { clientProfile, sameClient } from '../core/client.js';
 import { previousMonth, stageLabel } from '../core/jobs.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
+import { newOpportunity } from '../core/opportunities.js';
 
-const CL = { name: '', tab: 'summary', data: null, loading: false, error: null, dir: '', seq: 0 };
+// adding: the New opportunity form is open (with what's been picked so far); saving: one insert at a time.
+const CL = { name: '', tab: 'summary', data: null, loading: false, error: null, dir: '', seq: 0, adding: null, saving: false };
 const TABS = ['summary', 'invoices', 'services', 'support', 'jobs', 'opportunities'];
 
 const els = id => document.getElementById(id);
@@ -48,7 +50,7 @@ export function open(name, tab = 'summary') {
   CL.name = name;
   CL.dir = '';
   CL.tab = TABS.includes(tab) ? tab : 'summary';
-  if (!same) { CL.data = null; load(); }
+  if (!same) { CL.data = null; CL.adding = null; load(); }
   render();
 }
 
@@ -65,16 +67,17 @@ async function load() {
     let from = today().slice(0, 7);
     for (let i = 0; i < 12; i++) from = previousMonth(from);
     const q = (table, cols = '*') => settle(sb.from(table).select(cols).then(must));
-    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains] = await Promise.all([
+    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products] = await Promise.all([
       q('gecko_clients', 'title,status,contract_start,notes'),
       q('gecko_services', 'title,client_name,category,cost_per_month,sell_per_month'),
       q('ssa_clients'),
       settle(sb.from('xero_invoices').select(XERO_COLS).gte('invoice_date', from + '-01').then(must)),
       settle(sb.from('xero_invoices').select(XERO_COLS).eq('status', 'AUTHORISED').gt('amount_due', 0).then(must)),
       q('jobs', 'id,client_name,title,status,value,target_date,invoice_ref,next_step,owner,modified_at'),
-      q('opportunities', 'id,client_name,title,status,mrr,one_off,next_step,modified_at'),
+      q('opportunities', 'id,client_name,product_key,title,status,mrr,one_off,quantity,next_step,modified_at'),
       q('voip_dealer_services', 'client_name,vu_name,service,quantity,contract,contract_end,extras'),
-      q('client_domains', 'client_name,domain')
+      q('client_domains', 'client_name,domain'),
+      q('opportunity_products', 'key,family,name,unit_price,price_unit,default_mrr,default_one_off,unit_note,active,sort')
     ]);
     // SSA: this client's balance (opening + changes, as Timesheets has it) and its entries
     const ssaRow = ssaClients.v?.find(c => sameClient(c.name, name)) || null;
@@ -98,6 +101,7 @@ async function load() {
         jobs: jobs.v || null, opps: opps.v || null, dealer: dealer.v || null, domains: domains.v || null
       }, today()),
       hasSsa: !!ssaRow,
+      products: (products.v || []).filter(x => x.active !== false).sort((a, b) => String(a.family).localeCompare(String(b.family)) || (a.sort ?? 0) - (b.sort ?? 0)),
       errors: {
         xero: recent.e?.message || unpaid.e?.message || '', services: services.e?.message || '', ssa: ssaError?.message || '',
         jobs: jobs.e?.message || '', opps: opps.e?.message || '', dealer: dealer.e?.message || ''
@@ -163,6 +167,7 @@ function headHtml(p) {
       </div>
       <div class="cl-id-actions">
         ${go('timesheets', 'log', 'Log time', 'cl-btn')}
+        <button type="button" class="cl-btn ghost" data-cl-act="new-opp">+ Opportunity</button>
         <button type="button" class="cl-btn ghost" data-cl-act="reload" title="Reload this client">Refresh</button>
       </div>
     </div>
@@ -282,12 +287,81 @@ function jobsHtml(p, errors) {
 
 function oppsHtml(p, errors) {
   if (!p.opps) return panel('Opportunities', failed('Opportunities', errors.opps || 'unknown error'));
-  if (!p.opps.length) return panel('Opportunities', note('Nothing in the pipeline for this client. Opportunities › Gaps shows what they don’t buy yet.'), go('opportunities', 'gaps', 'Find gaps →', 'cl-link'));
+  const add = `<button type="button" class="cl-btn" data-cl-act="new-opp">+ New opportunity</button>`;
+  const form = CL.adding ? newOppHtml(p) : '';
+  if (!p.opps.length) return form + panel('Opportunities', note('Nothing in the pipeline for this client. Add one, or see what they don’t buy yet in Opportunities › Gaps.'), (CL.adding ? '' : add) + go('opportunities', 'gaps', 'Find gaps →', 'cl-link'));
   const label = { idea: 'Idea', proposed: 'Proposed', won: 'Won', lost: 'Lost' };
-  return panel('Opportunities', `<table class="cl-table"><thead><tr><th>Opportunity</th><th>Stage</th><th>Next step</th><th class="num">£/month</th><th class="num">One-off</th></tr></thead>
+  return form + panel('Opportunities', `<table class="cl-table"><thead><tr><th>Opportunity</th><th>Stage</th><th>Next step</th><th class="num">£/month</th><th class="num">One-off</th></tr></thead>
     <tbody>${p.opps.map(o => `<tr><td>${escapeHtml(o.title)}</td><td><span class="cl-stage o-${escapeHtml(o.status)}">${escapeHtml(label[o.status] || o.status)}</span></td><td>${escapeHtml(o.next_step || '—')}</td>
       <td class="num">${Number(o.mrr) ? escapeHtml(money(o.mrr)) : '—'}</td><td class="num">${Number(o.one_off) ? escapeHtml(money(o.one_off)) : '—'}</td></tr>`).join('')}</tbody></table>`,
-    go('opportunities', 'pipeline', 'Pipeline →', 'cl-link'));
+    (CL.adding ? '' : add) + go('opportunities', 'pipeline', 'Pipeline →', 'cl-link'));
+}
+
+// ─── New opportunity (Philip, 9 Oct: "create an opportunity when I am in clients, manual or from a list") ───
+
+const PER_UNIT = { user: 'Users', seat: 'Seats', device: 'Devices', site: 'Sites' };
+const UNIT_TEXT = { user: 'per user a month', seat: 'per seat a month', device: 'per device a month', site: 'per site a month', month: 'a month', year: 'a year', 'one-off': 'one-off' };
+
+function newOppHtml(p) {
+  const a = CL.adding, products = CL.data.products || [];
+  const prod = products.find(x => x.key === a.product) || null;
+  const open = new Set((p.opps || []).filter(o => o.status === 'idea' || o.status === 'proposed').map(o => o.product_key).filter(Boolean));
+  const families = [...new Set(products.map(x => x.family || 'Other'))];
+  const options = families.map(f => `<optgroup label="${escapeHtml(f)}">${products.filter(x => (x.family || 'Other') === f).map(x =>
+    `<option value="${escapeHtml(x.key)}"${x.key === a.product ? ' selected' : ''}>${escapeHtml(x.name)}${x.unit_price != null ? ` · ${escapeHtml(money(x.unit_price))} ${escapeHtml(UNIT_TEXT[x.price_unit || 'user'] || '')}` : ''}${open.has(x.key) ? ' (already in the pipeline)' : ''}</option>`).join('')}</optgroup>`).join('');
+  const per = prod && PER_UNIT[prod.price_unit || 'user'] && prod.unit_price != null ? PER_UNIT[prod.price_unit || 'user'] : '';
+  const preview = newOpportunity({ client: CL.name, product: prod, title: a.title, quantity: a.quantity, mrr: a.mrr, oneOff: a.oneOff });
+  return panel('New opportunity', `<form class="cl-form" data-cl-form="new-opp" novalidate>
+      <label class="wide">What
+        <select name="product">
+          <option value="">Something else (type it below)</option>
+          ${options}
+        </select>
+        ${!products.length ? '<small>The catalogue didn’t load; you can still type one.</small>' : prod?.unit_note ? `<small>${escapeHtml(prod.unit_note)}</small>` : ''}
+      </label>
+      <label class="wide">Name <input name="title" type="text" maxlength="200" value="${escapeHtml(a.title || '')}" placeholder="${escapeHtml(prod ? `${prod.name} — ${CL.name}` : 'e.g. New website, Laptop refresh, Cyber Essentials')}"></label>
+      ${per ? `<label>${per} <input name="quantity" type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(a.quantity ?? '')}" placeholder="how many"></label>` : ''}
+      <label>£ a month <input name="mrr" type="number" min="0" step="0.01" inputmode="decimal" value="${escapeHtml(a.mrr ?? '')}" placeholder="${escapeHtml(preview.error ? '0' : String(preview.mrr))}"></label>
+      <label>£ one-off <input name="one_off" type="number" min="0" step="0.01" inputmode="decimal" value="${escapeHtml(a.oneOff ?? '')}" placeholder="${escapeHtml(preview.error ? '0' : String(preview.one_off))}"></label>
+      <label>Stage <select name="status"><option value="idea"${a.status !== 'proposed' ? ' selected' : ''}>Idea</option><option value="proposed"${a.status === 'proposed' ? ' selected' : ''}>Proposed</option></select></label>
+      <label class="wide">Next step <input name="next_step" type="text" maxlength="200" value="${escapeHtml(a.nextStep || '')}" placeholder="e.g. Call Chris about seats"></label>
+      ${open.has(a.product) ? '<p class="cl-form-warn wide">This client already has this one open in the pipeline.</p>' : ''}
+      <div class="cl-form-actions wide">
+        <span class="cl-muted">${preview.error ? '' : `Adds to the pipeline: ${escapeHtml(preview.title)}${preview.mrr ? ` · ${escapeHtml(money(preview.mrr))}/mo` : ''}${preview.one_off ? ` · ${escapeHtml(money(preview.one_off))} one-off` : ''}`}</span>
+        <button type="button" class="cl-btn ghost" data-cl-act="cancel-opp">Cancel</button>
+        <button type="submit" class="cl-btn"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Adding…' : 'Add opportunity'}</button>
+      </div>
+    </form>`);
+}
+
+/** Keep what's typed in CL.adding (the form is re-drawn when the product changes). */
+function readForm(form) {
+  const f = form.elements;
+  const v = n => (f[n] ? f[n].value : undefined);
+  return { product: v('product') || '', title: v('title') || '', quantity: v('quantity') ?? CL.adding?.quantity ?? '', mrr: v('mrr') || '', oneOff: v('one_off') || '', status: v('status'), nextStep: v('next_step') || '' };
+}
+
+async function saveOpp(form) {
+  if (CL.saving) return;
+  CL.adding = readForm(form);
+  const a = CL.adding;
+  const product = (CL.data.products || []).find(x => x.key === a.product) || null;
+  const row = newOpportunity({ client: CL.name, product, title: a.title, quantity: a.quantity, mrr: a.mrr, oneOff: a.oneOff, status: a.status, nextStep: a.nextStep, owner: (els('userName')?.textContent || '').trim() });
+  if (row.error) { toast(row.error, 'warning'); form.elements.title?.focus(); return; }
+  CL.saving = true; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const saved = must(await sb.from('opportunities').insert(row).select('*').single());
+    CL.adding = null;
+    CL.data.profile.opps = [saved, ...(CL.data.profile.opps || [])];
+    CL.data.profile.openOpps = [saved, ...(CL.data.profile.openOpps || [])];
+    window.GeckoSections?.opportunities?.reload?.();
+    toast(`Added to the pipeline: ${saved.title}`, 'success');
+  } catch (err) {
+    toast('Could not add: ' + (err.message || err), 'error', 7000);
+  } finally {
+    CL.saving = false; render();
+  }
 }
 
 // ─── Events ───────────────────────────────────────────────────────────
@@ -311,12 +385,39 @@ function onClick(event) {
   }
   const act = event.target.closest('[data-cl-act]')?.dataset.clAct;
   if (act === 'reload') { CL.data = null; load(); }
+  if (act === 'new-opp') {
+    CL.adding = CL.adding || { status: 'idea' };
+    if (CL.tab !== 'opportunities') pick('opportunities'); else render();
+    setTimeout(() => els('clWrap')?.querySelector('[data-cl-form="new-opp"] select[name="product"]')?.focus(), 50);
+  }
+  if (act === 'cancel-opp') { CL.adding = null; render(); }
   if (act === 'connect') connectSupabase({ interactive: true }).then(load, err => toast(err.message || 'Could not connect', 'error'));
 }
 
 export function init() {
   const section = els('section-client');
   section?.addEventListener('click', onClick);
+  section?.addEventListener('submit', e => { if (e.target.dataset.clForm === 'new-opp') { e.preventDefault(); saveOpp(e.target); } });
+  section?.addEventListener('change', e => {
+    const form = e.target.closest?.('[data-cl-form="new-opp"]');
+    if (!form || e.target.name !== 'product') return;
+    // A new pick re-fills the suggestions; anything typed by hand in the name/prices is kept.
+    const a = readForm(form);
+    CL.adding = { ...a, quantity: '', mrr: a.mrr, oneOff: a.oneOff };
+    render();
+    els('clWrap')?.querySelector('[data-cl-form="new-opp"] [name="quantity"], [data-cl-form="new-opp"] [name="mrr"]')?.focus();
+  });
+  section?.addEventListener('input', e => {
+    const form = e.target.closest?.('[data-cl-form="new-opp"]');
+    if (!form || !['quantity', 'mrr', 'one_off', 'title'].includes(e.target.name)) return;
+    // Live summary line without redrawing the form (keeps the cursor where it is).
+    CL.adding = readForm(form);
+    const a = CL.adding, prod = (CL.data.products || []).find(x => x.key === a.product) || null;
+    const pv = newOpportunity({ client: CL.name, product: prod, title: a.title, quantity: a.quantity, mrr: a.mrr, oneOff: a.oneOff });
+    const line = form.querySelector('.cl-form-actions .cl-muted');
+    if (line) line.textContent = pv.error ? '' : `Adds to the pipeline: ${pv.title}${pv.mrr ? ` · ${money(pv.mrr)}/mo` : ''}${pv.one_off ? ` · ${money(pv.one_off)} one-off` : ''}`;
+    const mrr = form.elements.mrr; if (mrr && !pv.error) mrr.placeholder = String(pv.mrr);
+  });
   section?.addEventListener('keydown', e => keyNav(e, 'data-cl-tab', pick));
   window.addEventListener('resize', () => moveInk(els('clHead')?.querySelector('.app-tabs')));
   render();

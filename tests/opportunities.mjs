@@ -225,3 +225,23 @@ assert.match(evaluate(waterside, prospect, { now: NOW }).reasons[0], /Buys VoIP 
 assert.equal(evaluate(base, prospect, { now: NOW }), null, 'existing IT clients are not prospects');
 
 console.log('opportunities: ok');
+
+// New opportunity from the client page (9 Oct)
+{
+  const { newOpportunity } = await import('../src/core/opportunities.js');
+  const hornet = { key: 'email_security', name: 'Hornetsecurity 365 Total Protection', unit_price: 7.5, price_unit: 'user', default_mrr: 45, default_one_off: null };
+  let r = newOpportunity({ client: 'Kingdom Products', product: hornet, quantity: '12', owner: 'Philip' });
+  assert.equal(r.title, 'Hornetsecurity 365 Total Protection — Kingdom Products');
+  assert.equal(r.mrr, 90, '12 users × £7.50');
+  assert.equal(r.quantity, 12);
+  assert.equal(r.product_key, 'email_security');
+  assert.equal(r.status, 'idea');
+  assert.equal(newOpportunity({ client: 'K', product: hornet }).mrr, 45, 'no quantity: the default value');
+  assert.equal(newOpportunity({ client: 'K', product: hornet, quantity: 12, mrr: '80' }).mrr, 80, 'typed £/month wins');
+  r = newOpportunity({ client: 'K', title: ' New website ', oneOff: '1200', status: 'proposed', nextStep: 'Send quote' });
+  assert.deepEqual([r.title, r.product_key, r.mrr, r.one_off, r.status, r.next_step], ['New website', null, 0, 1200, 'proposed', 'Send quote']);
+  assert.match(newOpportunity({ client: 'K' }).error, /name/);
+  assert.match(newOpportunity({ client: '', title: 'x' }).error, /client/);
+  assert.equal(newOpportunity({ client: 'K', title: 'x', status: 'won' }).status, 'idea', 'new ones start open');
+  console.log('opportunities: newOpportunity ok');
+}

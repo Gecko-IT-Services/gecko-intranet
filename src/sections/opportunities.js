@@ -797,7 +797,13 @@ export function show(tab) {
   if (!OPP.loading) render();
 }
 
+/** Something added elsewhere (a client page's New opportunity): reload if this section has been opened. */
+export function reload() {
+  if (OPP.started && !OPP.loading) load();
+}
+
 export function init() {
+  OPP.started = true;
   const section = els('section-opportunities');
   section?.addEventListener('click', onClick);
   section?.addEventListener('change', onChange);
