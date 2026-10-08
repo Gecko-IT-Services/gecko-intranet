@@ -83,11 +83,26 @@ description, amount, reference → **Create draft in Xero** (after a confirm).
 - Rejected: approving in the dashboard (who may send invoices is a Xero decision); creating new
   Xero contacts or items from the dashboard (typos would make duplicates; first invoice in Xero).
 
+## SSA renewal → Xero (phase 4, Philip 8 Oct: "post an invoice to xero from the timesheet renewal")
+- Timesheets › SSA › Renew…: once the timesheet email is done, the box offers **Create draft in
+  Xero**: contact (suggested by name), `n × SSA — Software Support Agreement - 10 hours` at £650,
+  account 214, reference "Renewal" (all from `src/core/ssa-renewal.js` `SSA_XERO`), after a confirm.
+- Same function and rules as jobs (`xero-invoice`, `create` with `source: 'ssa'`, quantity = blocks):
+  a DRAFT, once per renewal (request key made when the renewal opens), contact and item must
+  already be used in Xero. `xero_pushes` records `source`, `ssa_client_id`, `quantity`.
+- Drafts made for the same client in the last 45 days are listed in the box, so a second
+  renewal isn't invoiced twice by mistake. Undo after a draft was made says to delete it in Xero
+  (with a link); nothing deletes Xero invoices from the dashboard.
+- Not connected / no SSA item / an error: the box keeps the details to type in and Copy details.
+
 ## Verified
 - Functions type-check with Deno 2.1.
 - Against a simulated Xero and a real Postgres with every migration: connect, first sync (paged:
   101 invoices), incremental second sync (only the changed invoice, now Paid), access-token reuse
   and refresh-token rotation, supplier templates ignored, status recorded.
+- Phase 4: simulated Xero + Postgres: SSA options (contact suggested), create 2 × SSA (Quantity 2,
+  £650, account 214, due on terms), same key once, recent list, bad quantity/client/item refused;
+  browser: renewal box → confirm → draft link; recent warning.
 - Phase 3: against a simulated Xero and real Postgres with every migration: options (contact
   suggested, deleted contacts and repeating-only items left out), create, same key again (one Xero
   call), bad amount/contact/item refused, Xero's validation message recorded and retry, read-only
