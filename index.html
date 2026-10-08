@@ -3205,36 +3205,6 @@ body {
 }
 
 /* — Weekly summary blocks — */
-#section-timesheets .tsh-week-block {
-  background: var(--card); border: 1px solid var(--border-dim);
-  border-radius: var(--radius); margin-bottom: 10px; overflow: hidden;
-}
-#section-timesheets .tsh-week-head {
-  padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid var(--border-dim);
-}
-#section-timesheets .tsh-week-head h4 {
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 14px; letter-spacing: .05em; text-transform: uppercase;
-}
-#section-timesheets .tsh-week-head .total {
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 15px; color: var(--green);
-}
-#section-timesheets .tsh-week-body { padding: 14px 18px; }
-#section-timesheets .tsh-week-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 4px 0; font-size: 12px;
-}
-#section-timesheets .tsh-week-row .lbl { color: var(--muted); }
-#section-timesheets .tsh-week-row .val {
-  font-family: var(--font-body); font-weight: 600; font-size: 13px;
-}
-#section-timesheets .tsh-week-sub {
-  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-dim);
-  font-size: 11px; color: var(--muted);
-}
-#section-timesheets .tsh-week-sub-row { display: flex; justify-content: space-between; padding: 2px 0; }
 
 /* — Modal (mirrors CLI modal — independent element IDs) — */
 #section-timesheets .tsh-modal-bg {
@@ -17167,76 +17137,122 @@ function tshViewEntries(clientName) {
 
 
 // ─── Render — Weekly Summary tab ─────────────────────────────────────
+/**
+ * Weekly Summary (Philip, 9 Oct: improve it). Logic: src/core/weekly.js (window.GeckoWeekly); design
+ * docs/superpowers/specs/2026-10-09-weekly-summary-design.md. One week at a time (‹ › to move), work only
+ * (System credits/adjustments are not time spent).
+ */
+const TSH_ENG_COLOUR = { Philip: 'p', Jack: 'j' };
+const tshH = h => (!Number(h) ? '0h' : window.GeckoTimelog ? window.GeckoTimelog.fmtHours(h) : tshFmtHours(h));
+const tshDayLbl = (k, o) => new Date(k + 'T00:00:00').toLocaleDateString('en-GB', o);
+
 function tshRenderWeekly() {
   const wrap = document.getElementById('tshWeekWrap');
   if (!wrap) return;
+  const W = window.GeckoWeekly;
+  if (!W) { wrap.innerHTML = '<div class="tsh-empty"><h3>Could not show the summary</h3><p>The page did not finish loading. Hard-refresh (Cmd+Shift+R).</p></div>'; return; }
+  const t = today();
+  if (!TSH.week) TSH.week = W.monday(t);
+  const w = W.weekSummary(TSH.entries, TSH.week, t);
+  // The trend runs to this week, so any of the last eight is one click; older weeks anchor it instead.
+  const tr = W.trend(TSH.entries, w.start < W.addDays(W.monday(t), -49) ? w.start : W.monday(t), t, 8);
+  const engCls = p => TSH_ENG_COLOUR[p] || 'o';
 
-  if (TSH.entries.length === 0) {
-    wrap.innerHTML = '<div class="tsh-empty"><h3>No entries</h3><p>No timesheet entries to summarise.</p></div>';
-    return;
-  }
-
-  // Group by ISO week (Monday-based)
-  const weeks = new Map();
-  for (const e of TSH.entries) {
-    if (!e.date) continue;
-    const d = new Date(e.date + 'T00:00:00');
-    const day = d.getDay();
-    const diff = day === 0 ? 6 : day - 1;
-    const mon = new Date(d);
-    mon.setDate(mon.getDate() - diff);
-    const key = localDateKey(mon);
-    if (!weeks.has(key)) weeks.set(key, []);
-    weeks.get(key).push(e);
-  }
-
-  // Sort weeks descending (most recent first)
-  const sortedKeys = Array.from(weeks.keys()).sort((a, b) => b.localeCompare(a));
-
-  const blocks = sortedKeys.map(wk => {
-    const entries = weeks.get(wk);
-    const totalHrs = entries.reduce((a, e) => a + (e.hours || 0), 0);
-    const weekDate = new Date(wk + 'T00:00:00');
-    const label = 'Week of ' + weekDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-
-    // Per-engineer breakdown
-    const byEng = {};
-    const byCli = {};
-    for (const e of entries) {
-      const eng = e.engineer || 'Unknown';
-      byEng[eng] = (byEng[eng] || 0) + (e.hours || 0);
-      const cli = e.clientName || 'Unknown';
-      byCli[cli] = (byCli[cli] || 0) + (e.hours || 0);
-    }
-
-    const engRows = Object.entries(byEng)
-      .sort((a, b) => b[1] - a[1])
-      .map(([eng, hrs]) => `<div class="tsh-week-row"><span class="lbl">${escapeHtml(eng)}</span><span class="val">${tshFmtHours(hrs)}</span></div>`)
-      .join('');
-
-    const cliRows = Object.entries(byCli)
-      .sort((a, b) => b[1] - a[1])
-      .map(([cli, hrs]) => `<div class="tsh-week-sub-row"><span>${escapeHtml(cli)}</span><span>${tshFmtHours(hrs)}</span></div>`)
-      .join('');
-
-    return `
-    <div class="tsh-week-block">
-      <div class="tsh-week-head">
-        <h4>${label}</h4>
-        <span class="total">${tshFmtHours(totalHrs)}</span>
-      </div>
-      <div class="tsh-week-body">
-        ${engRows}
-        <div class="tsh-week-sub">
-          <div class="tsh-week-row" style="margin-bottom:4px;"><span class="lbl" style="font-weight:600;color:var(--white);font-size:11px;text-transform:uppercase;letter-spacing:.06em;">By client</span><span></span></div>
-          ${cliRows}
-        </div>
-      </div>
-    </div>`;
+  const delta = w.prevTotal || w.total
+    ? `<small class="${w.change > 0 ? 'up' : w.change < 0 ? 'down' : ''}">${w.change > 0 ? '▲' : w.change < 0 ? '▼' : '='} ${escapeHtml(tshH(Math.abs(w.change)) )} vs week before (${escapeHtml(tshH(w.prevTotal))})</small>`
+    : '<small>nothing the week before either</small>';
+  const engTiles = w.engineers.filter(p => W.ENGINEERS.includes(p) || w.byEng[p]).map(p => {
+    const share = w.total ? Math.round(w.byEng[p] / w.total * 100) : 0;
+    const daysWorked = w.days.filter(d => d.byEng[p]).length;
+    return `<div class="tsh-wk-kpi"><span><i class="tsh-wk-dot ${engCls(p)}"></i>${escapeHtml(p)}</span><strong>${escapeHtml(tshH(w.byEng[p]))}</strong><small>${daysWorked} day${daysWorked === 1 ? '' : 's'} logged · ${share}% of the week</small></div>`;
   }).join('');
 
-  wrap.innerHTML = blocks || '<div class="tsh-empty"><h3>No entries</h3><p>Nothing to summarise yet.</p></div>';
+  const max = Math.max(1, ...w.days.map(d => d.total));
+  const bars = w.days.map(d => {
+    const segs = w.engineers.filter(p => d.byEng[p]).map(p => `<i class="${engCls(p)}" style="height:${(d.byEng[p] / max * 100).toFixed(1)}%" title="${escapeHtml(`${p}: ${tshH(d.byEng[p])}`)}"></i>`).join('');
+    return `<div class="tsh-wk-day${d.date === t ? ' today' : ''}${d.future ? ' future' : ''}${d.weekend ? ' we' : ''}">
+      <b>${d.total ? escapeHtml(tshH(d.total)) : ''}</b>
+      <div class="tsh-wk-stack">${segs}</div>
+      <span>${escapeHtml(tshDayLbl(d.date, { weekday: 'short' }))} <em>${escapeHtml(tshDayLbl(d.date, { day: 'numeric' }))}</em></span>
+    </div>`;
+  }).join('');
+  const gapsBy = W.ENGINEERS.map(p => [p, w.gaps.filter(g => g.engineer === p).map(g => tshDayLbl(g.date, { weekday: 'short' }))]).filter(([, d]) => d.length);
+  const gapsHtml = gapsBy.length
+    ? `<p class="tsh-wk-gaps"><strong>Nothing logged</strong> ${gapsBy.map(([p, d]) => `${escapeHtml(p)}: ${escapeHtml(d.join(', '))}`).join(' · ')} <span>(leave, or time still to log)</span></p>` : '';
+
+  const barList = (rows, kind) => {
+    if (!rows.length) return '<p class="tsh-wk-muted">Nothing logged this week.</p>';
+    const top = Math.max(...rows.map(r => r.hours));
+    return `<ul class="tsh-wk-bars">${rows.map(r => `<li>
+      <div class="tsh-wk-bar-l"><span>${kind === 'client' && r.name !== 'Unknown client' ? clientLink(r.name) : escapeHtml(r.name)}</span><b>${escapeHtml(tshH(r.hours))}</b></div>
+      <div class="tsh-wk-bar"><div style="width:${(r.hours / top * 100).toFixed(1)}%">${w.engineers.filter(p => r.byEng[p]).map(p => `<i class="${engCls(p)}" style="flex:${r.byEng[p]}" title="${escapeHtml(`${p}: ${tshH(r.byEng[p])}`)}"></i>`).join('')}</div></div>
+    </li>`).join('')}</ul>`;
+  };
+
+  const tmax = Math.max(1, ...tr.map(x => x.total));
+  const trendHtml = tr.map(x => `<button type="button" class="tsh-wk-tr${x.start === w.start ? ' on' : ''}" data-wk-go="${x.start}" title="${escapeHtml(`Week of ${tshDayLbl(x.start, { day: 'numeric', month: 'short' })}: ${tshH(x.total)}`)}">
+      <b>${x.total ? escapeHtml(tshH(x.total)) : ''}</b><i style="height:${(x.total / tmax * 100).toFixed(1)}%"></i><span>${escapeHtml(tshDayLbl(x.start, { day: 'numeric', month: 'short' }))}</span></button>`).join('');
+
+  const byDate = new Map();
+  for (const e of w.entries) { if (!byDate.has(e.date)) byDate.set(e.date, []); byDate.get(e.date).push(e); }
+  const entriesHtml = w.entries.length ? [...byDate.entries()].map(([d, list]) => `
+    <div class="tsh-wk-ent-day"><span>${escapeHtml(tshDayLbl(d, { weekday: 'long', day: 'numeric', month: 'short' }))}</span><b>${escapeHtml(tshH(list.reduce((a, e) => a + e.hours, 0)))}</b></div>
+    ${list.map(e => `<div class="tsh-wk-ent">
+      <span class="tsh-wk-who"><i class="tsh-wk-dot ${engCls(e.engineer)}"></i>${escapeHtml(e.engineer || '')}</span>
+      <span class="tsh-wk-cli">${e.client ? clientLink(e.client) : ''}</span>
+      <span class="tsh-wk-desc">${escapeHtml(e.description)}${e.workType ? ` <small>${escapeHtml(e.workType)}</small>` : ''}</span>
+      <b>${escapeHtml(tshH(e.hours))}</b>
+    </div>`).join('')}`).join('') : '<p class="tsh-wk-muted">No time logged this week.</p>';
+
+  wrap.innerHTML = `<div class="tsh-wk">
+    <div class="tsh-wk-nav">
+      <button type="button" class="tsh-wk-arrow" data-wk-step="-1" aria-label="Previous week">‹</button>
+      <div class="tsh-wk-title"><h3>${escapeHtml(W.weekLabel(w.start))}</h3><span>${w.isCurrent ? 'This week' : w.start === W.addDays(W.monday(t), -7) ? 'Last week' : 'Week of ' + escapeHtml(tshDayLbl(w.start, { day: 'numeric', month: 'long' }))}</span></div>
+      <button type="button" class="tsh-wk-arrow" data-wk-step="1" aria-label="Next week" ${w.isCurrent || w.isFuture ? 'disabled' : ''}>›</button>
+      ${w.isCurrent ? '' : '<button type="button" class="tsh-ssa-btn" data-wk-go="now">This week</button>'}
+    </div>
+    <div class="tsh-wk-kpis">
+      <div class="tsh-wk-kpi main"><span>Total logged</span><strong>${escapeHtml(tshH(w.total))}</strong>${delta}</div>
+      ${engTiles}
+      <div class="tsh-wk-kpi"><span>Clients</span><strong>${w.clients.length}</strong><small>${w.clients[0] ? `most: ${escapeHtml(w.clients[0].name)} (${escapeHtml(tshH(w.clients[0].hours))})` : 'none this week'}</small></div>
+    </div>
+    <div class="tsh-wk-card">
+      <div class="tsh-wk-card-head"><strong>By day</strong><ul class="tsh-wk-legend">${w.engineers.filter(p => w.byEng[p] || W.ENGINEERS.includes(p)).map(p => `<li><i class="tsh-wk-dot ${engCls(p)}"></i>${escapeHtml(p)}</li>`).join('')}</ul></div>
+      <div class="tsh-wk-days">${bars}</div>
+      ${gapsHtml}
+    </div>
+    <div class="tsh-wk-two">
+      <div class="tsh-wk-card"><div class="tsh-wk-card-head"><strong>By client</strong><span>${w.clients.length}</span></div>${barList(w.clients, 'client')}</div>
+      <div class="tsh-wk-card"><div class="tsh-wk-card-head"><strong>By work type</strong><span>${w.types.length}</span></div>${barList(w.types, 'type')}</div>
+    </div>
+    <div class="tsh-wk-card">
+      <div class="tsh-wk-card-head"><strong>Last 8 weeks</strong><span>click a week to open it</span></div>
+      <div class="tsh-wk-trend">${trendHtml}</div>
+    </div>
+    <div class="tsh-wk-card">
+      <div class="tsh-wk-card-head"><strong>Entries</strong><span>${w.entries.length}</span></div>
+      <div class="tsh-wk-ents">${entriesHtml}</div>
+    </div>
+    <p class="tsh-wk-note">Work only: System credits and adjustments aren’t counted. Weeks run Monday to Sunday.</p>
+  </div>`;
 }
+document.addEventListener('click', e => {
+  const W = window.GeckoWeekly;
+  const step = e.target.closest?.('#tshWeekWrap [data-wk-step]');
+  const go = e.target.closest?.('#tshWeekWrap [data-wk-go]');
+  if (!W || (!step && !go)) return;
+  if (step) TSH.week = W.addDays(TSH.week || W.monday(today()), 7 * Number(step.dataset.wkStep));
+  else TSH.week = go.dataset.wkGo === 'now' ? W.monday(today()) : go.dataset.wkGo;
+  tshRenderWeekly();
+});
+document.addEventListener('keydown', e => {
+  if (TSH.activeTab !== 'week' || !document.getElementById('tshPanelWeek')?.classList.contains('active')) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    const btn = document.querySelector(`#tshWeekWrap [data-wk-step="${e.key === 'ArrowLeft' ? -1 : 1}"]`);
+    if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
+  }
+});
 
 
 // ─── Modal — open / close ────────────────────────────────────────────
