@@ -139,3 +139,19 @@ console.log('overview: all tests passed');
   assert.deepEqual(items[1].go, { section: 'client', tab: 'activity', client: 'Cowan Consultancy' });
   console.log('overview: follow-ups ok');
 }
+
+// Sharper pipeline on Overview (9 Oct)
+{
+  const { attention } = await import('../src/core/overview.js');
+  const opps = [
+    { id: 1, client_name: 'Cowan', title: 'VoxOne', status: 'proposed', mrr: 60, follow_up_on: '2026-10-07', next_step: 'Call Chris', modified_at: '2026-10-06' },
+    { id: 2, client_name: 'Daron', title: 'Server', status: 'won', mrr: 40, one_off: 1200, closed_at: '2026-10-05', modified_at: '2026-10-05' },
+    { id: 3, client_name: 'Old', title: 'Website', status: 'idea', mrr: 0, modified_at: '2026-09-01' }
+  ];
+  const items = attention({ opps }, '2026-10-08');
+  const pick = k => items.filter(i => i.key === k).map(i => [i.level, i.title, i.detail]);
+  assert.deepEqual(pick('deal_follow_up'), [['amber', 'Chase Cowan: VoxOne (1 day overdue)', 'Call Chris']]);
+  assert.deepEqual(pick('deal_setup'), [['amber', '1 won deal to set up', 'Daron: job + monthly billing']]);
+  assert.deepEqual(pick('deal_quiet'), [['info', '1 deal quiet for 2+ weeks', 'Old: Website']]);
+  console.log('overview: pipeline ok');
+}

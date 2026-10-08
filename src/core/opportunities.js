@@ -452,3 +452,53 @@ export function newOpportunity({ client, product = null, title = '', quantity = 
     next_step: String(nextStep || '').trim(), evidence: '', owner: String(owner || '').trim()
   };
 }
+
+// ─── Sharper pipeline (Philip, 9 Oct) ──────────────────────────────────
+
+export const STALE_DAYS = 14;   // an open deal with no change for this long is flagged
+const dayKey = d => String(d || '').slice(0, 10);
+const daysSince = (iso, today) => Math.floor((Date.parse(today + 'T00:00:00Z') - Date.parse(dayKey(iso) + 'T00:00:00Z')) / 86400000);
+
+/**
+ * What a deal needs, for the pipeline and Overview:
+ * - open deals: follow-up due (today/overdue, with days late) and stale (no change for STALE_DAYS, unless a
+ *   follow-up date is still to come);
+ * - won deals: a Job for the one-off part (not yet made) and setting up the monthly billing (not yet ticked).
+ */
+export function dealState(o, today) {
+  const open = o.status === 'idea' || o.status === 'proposed';
+  const fu = dayKey(o.follow_up_on);
+  const late = fu && open ? daysSince(fu, today) : null;   // >= 0 when due
+  const quiet = daysSince(o.modified_at || o.created_at, today);
+  return {
+    open,
+    followUpDue: open && !!fu && late >= 0,
+    followUpLate: open && !!fu && late > 0 ? late : 0,
+    followUpSoon: open && !!fu && late < 0 ? -late : null,
+    stale: open && quiet >= STALE_DAYS && !(fu && late < 0) ? quiet : 0,
+    needsJob: o.status === 'won' && Number(o.one_off) > 0 && !o.job_id,
+    needsBilling: o.status === 'won' && Number(o.mrr) > 0 && !o.billing_set_up_at
+  };
+}
+
+/** The Job for a won deal's one-off part. source_ref makes it once per deal. */
+export function jobFromDeal(o, owner = '') {
+  return {
+    client_name: o.client_name, title: o.title, status: 'agreed',
+    value: Number(o.one_off) || null, next_step: o.next_step || '', owner: owner || o.owner || '',
+    notes: `From the won opportunity “${o.title}”.`, source_ref: `opp:${o.id}`
+  };
+}
+
+/** Board columns: open stages in full, won/lost from the last `days` days. */
+export function boardColumns(opps, today, days = 90) {
+  const since = new Date(Date.parse(today + 'T00:00:00Z') - days * 86400000).toISOString().slice(0, 10);
+  const recent = o => dayKey(o.closed_at || o.modified_at) >= since;
+  const byValue = (a, b) => (Number(b.mrr) || 0) - (Number(a.mrr) || 0) || (Number(b.one_off) || 0) - (Number(a.one_off) || 0);
+  return [
+    { key: 'idea', items: opps.filter(o => o.status === 'idea').sort(byValue) },
+    { key: 'proposed', items: opps.filter(o => o.status === 'proposed').sort(byValue) },
+    { key: 'won', items: opps.filter(o => o.status === 'won' && recent(o)).sort(byValue) },
+    { key: 'lost', items: opps.filter(o => o.status === 'lost' && recent(o)).sort(byValue) }
+  ];
+}
