@@ -22,6 +22,7 @@ import * as profitFeed from './core/profit-feed.js';
 import * as ssaRenewal from './core/ssa-renewal.js';
 import * as supabase from './core/supabase.js';
 import * as store from './core/store.js';
+import * as timesheets from './core/timesheets.js';
 
 window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
@@ -40,3 +41,5 @@ window.SsaRenewal = ssaRenewal;
 window.forgetSupabaseSession = supabase.forgetSupabaseSession;
 // Database store for classic-script sections moving off SharePoint (Leave first).
 window.GeckoStore = { ...store, connect: supabase.connectSupabase, completeRedirect: supabase.completeRedirect };
+// Timesheets + SSA balances on the database, SharePoint kept as the backup (classic script).
+window.GeckoTimesheets = timesheets;

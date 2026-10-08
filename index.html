@@ -3221,6 +3221,18 @@ body {
 #section-timesheets .tsh-ssa-archived-name { font-weight: 600; }
 #section-timesheets .tsh-ssa-archived-hours { color: var(--muted); }
 #section-timesheets .tsh-ssa-archived-row .tsh-ssa-link { margin-left: auto; }
+#section-timesheets .tsh-copy-result { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+#section-timesheets .tsh-copy-result:empty { display: none; }
+#section-timesheets .tsh-copy-result[data-state="ok"]  { color: var(--green); }
+#section-timesheets .tsh-copy-result[data-state="bad"] { color: var(--red); }
+#section-timesheets .tsh-sync {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; padding: 10px 14px;
+  border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--card); font-size: 12.5px; color: var(--muted);
+}
+#section-timesheets .tsh-sync[data-state="ok"]   { border-color: var(--green-line); }
+#section-timesheets .tsh-sync[data-state="warn"] { border-color: var(--amber-border); color: var(--white); }
+#section-timesheets .tsh-sync strong { color: var(--white); }
+#section-timesheets .tsh-sync .tsh-ssa-link { margin-left: 0; }
 #section-timesheets .tsh-ssa-note {
   margin-top: 14px; padding: 10px 14px;
   background: var(--green-glow); border: 1px solid var(--border);
@@ -7102,6 +7114,11 @@ body::before {
             Refresh
           </button>
           <span class="tsh-last-sync" id="tshLastSync"></span>
+          <button class="tsh-refresh" id="tshConnect" type="button" hidden onclick="tshConnect()"
+                  title="Sign in to the Gecko database with your Microsoft account">Connect</button>
+          <button class="tsh-refresh" id="tshCopy" type="button" hidden onclick="tshCopyToSupabase()"
+                  title="One-off, Philip only: copy Timesheets and SSA balances from SharePoint into the Gecko database and check every entry and balance">Copy to Supabase</button>
+          <span class="tsh-copy-result" id="tshCopyResult" role="status"></span>
         </div>
       </div>
 
@@ -7743,6 +7760,7 @@ const CONFIG = {
     leave:   'supabase',   // switched 7 Oct 2026 by Philip after a green copy
     mileage: 'supabase',   // Mileage + Overview's mileage tiles; switched 7 Oct 2026 by Philip (74 journeys, 1671.4 mi, £834.11)
     feed:    'supabase',   // profitability feed (Profitability + Opportunities); switched 8 Oct 2026 (row = file, generatedAt 09:02:28Z, Sep £17,674.22 / Oct £12,207.22)
+    timesheets: 'sharepoint',   // Timesheets + SSA Clients: Supabase master, Lists kept as backup, once Philip switches it
     clients: 'supabase'    // GeckoClients + GeckoServices (Clients, Profitability, Overview); switched 7 Oct 2026 by Philip (29 clients, 55 lines, £1683.02 / £6027.66 a month)
   },
 
@@ -8029,6 +8047,28 @@ async function spFetchAllItems(listId, top = CONFIG.GRAPH_PAGE_SIZE) {
 async function clientListItems(table, siteId, listId, top) {
   if (dataBackend('clients') === 'supabase') return geckoStore().listItems(table);
   return (await graphFetch(`/sites/${siteId}/lists/${listId}/items?expand=fields&$top=${top}`)).value || [];
+}
+/**
+ * SSA Clients / Timesheets items from wherever CONFIG.DATA_BACKEND.timesheets
+ * points, in SharePoint's { id, fields } shape so each reader's mapping is
+ * unchanged. On the database, ids are database ids and the balances are the
+ * database's (src/core/timesheets.js asSpItems). `kind`: 'clients' | 'entries'.
+ */
+async function ssaListItems(kind, siteId, listId) {
+  if (dataBackend('timesheets') === 'supabase') {
+    const shaped = tshCore().asSpItems(await tshDbSnapshot());
+    return kind === 'clients' ? shaped.clientItems : shaped.entryItems;
+  }
+  if (!listId) return [];
+  let items = [];
+  let next = `/sites/${siteId}/lists/${listId}/items?$expand=fields&$top=${kind === 'clients' ? 500 : CONFIG.GRAPH_PAGE_SIZE}`;
+  while (next) {
+    const res = await graphFetch(next);
+    items = items.concat(res.value || []);
+    next = res['@odata.nextLink'] || null;
+    if (items.length > CONFIG.GRAPH_SAFETY_LIMIT) break;
+  }
+  return items;
 }
 async function clientListCreate(table, siteId, listId, fields) {
   if (dataBackend('clients') === 'supabase') return geckoStore().createItem(table, fields);
@@ -9031,15 +9071,8 @@ async function ovwLoadClients() {
  * Follows @odata.nextLink for pagination (Graph caps at ~100/page).
  */
 async function ovwLoadTimesheetEntries() {
-  if (!OVW.listIds.timesheets) { OVW.tshEntries = []; return; }
-  let allItems = [];
-  let nextUrl = `/sites/${OVW.siteId}/lists/${OVW.listIds.timesheets}/items?$expand=fields&$top=${CONFIG.GRAPH_PAGE_SIZE}`;
-  while (nextUrl) {
-    const res = await graphFetch(nextUrl);
-    allItems = allItems.concat(res.value || []);
-    nextUrl = res['@odata.nextLink'] || null;
-    if (allItems.length > CONFIG.GRAPH_SAFETY_LIMIT) break;
-  }
+  if (dataBackend('timesheets') !== 'supabase' && !OVW.listIds.timesheets) { OVW.tshEntries = []; return; }
+  const allItems = await ssaListItems('entries', OVW.siteId, OVW.listIds.timesheets);
   OVW.tshEntries = allItems.map(it => {
     const f = it.fields || {};
     if (tshIsTrue(f.Archived)) return null;
@@ -9060,10 +9093,9 @@ async function ovwLoadTimesheetEntries() {
  * Needed for the "SSA Clients At Risk" KPI card.
  */
 async function ovwLoadSsaClients() {
-  if (!OVW.listIds.ssaClients) { OVW.ssaClients = []; return; }
-  const url = `/sites/${OVW.siteId}/lists/${OVW.listIds.ssaClients}/items?expand=fields&$top=500`;
-  const res = await graphFetch(url);
-  OVW.ssaClients = (res.value || []).map(it => {
+  if (dataBackend('timesheets') !== 'supabase' && !OVW.listIds.ssaClients) { OVW.ssaClients = []; return; }
+  const items = await ssaListItems('clients', OVW.siteId, OVW.listIds.ssaClients);
+  OVW.ssaClients = items.map(it => {
     const f = it.fields || {};
     let hoursRemaining = f.Hours_x0020_Remaining2;
     if (hoursRemaining === undefined || hoursRemaining === null || hoursRemaining === '') {
@@ -14312,9 +14344,8 @@ async function cliLoadGeckoClients() {
 }
 
 async function cliLoadSsaClients() {
-  const url = `/sites/${CLI.siteId}/lists/${CLI.listIds.ssaClients}/items?expand=fields&$top=500`;
-  const res = await graphFetch(url);
-  CLI.ssaClients = (res.value || []).map(it => {
+  const items = await ssaListItems('clients', CLI.siteId, CLI.listIds.ssaClients);
+  CLI.ssaClients = items.map(it => {
     const f = it.fields || {};
     // ── HoursRemaining ─────────────────────────────────────────────────
     // The internal name is `Hours_x0020_Remaining2` — _x0020_ is encoded
@@ -15326,6 +15357,7 @@ async function tshLoadSsaClients() {
 // ─── CRUD — create entry ─────────────────────────────────────────────
 async function tshCreateEntry(data) {
   // data: { clientLookupId, engineer, date, hours, workType, description, internalNotes }
+  if (tshOnDb()) return tshDbCreate(data);
   const fields = {
     Title:          data.description,
     ClientLookupId: data.clientLookupId,
@@ -15371,6 +15403,354 @@ function tshFindSsaClient(clientName) {
 }
 
 
+// ─── Database mode (CONFIG.DATA_BACKEND.timesheets === 'supabase') ─────
+// The Gecko database is the master; every change is then made on the
+// SharePoint Timesheets / Clients lists exactly as before, so Microsoft Lists
+// stays a complete backup and its flows keep running. Anything typed straight
+// into Lists or the Power App is brought across on the next load.
+// Logic and the balance rule: src/core/timesheets.js (window.GeckoTimesheets).
+// Design: docs/superpowers/specs/2026-10-08-timesheets-on-supabase-design.md.
+
+const tshOnDb = () => dataBackend('timesheets') === 'supabase';
+function tshCore() {
+  if (!window.GeckoTimesheets) throw new Error('The database module did not load. Hard-refresh the page.');
+  return window.GeckoTimesheets;
+}
+
+/** One read of the database for Overview / Clients / Opportunities, shared for a few seconds. */
+let tshSnapshotCache = null;
+function tshDbSnapshot() {
+  if (!tshSnapshotCache || Date.now() - tshSnapshotCache.at > 20000) {
+    tshSnapshotCache = { at: Date.now(), promise: tshCore().loadAll() };
+    tshSnapshotCache.promise.catch(() => { tshSnapshotCache = null; });
+  }
+  return tshSnapshotCache.promise;
+}
+
+/** SharePoint fields for one entry row (create: as the Log form wrote them; patch: as the edit did). */
+function tshSpFields(row, clientSpId, forCreate) {
+  const f = {
+    Title: row.title, Engineer: row.engineer, Date: row.entry_date,
+    [TSH.fieldNames.hoursSpent]: Number(row.hours),
+    [TSH.fieldNames.workDescription]: row.work_description || row.title || ''
+  };
+  if (forCreate) {
+    f.ClientLookupId = Number(clientSpId);
+    if (row.work_type) f[TSH.fieldNames.workType] = row.work_type;
+    if (row.internal_notes) f[TSH.fieldNames.internalNotes] = row.internal_notes;
+  } else {
+    f[TSH.fieldNames.workType] = row.work_type || '';
+    f[TSH.fieldNames.internalNotes] = row.internal_notes || '';
+  }
+  return f;
+}
+
+/** Move Hours Used on the SharePoint Clients list by `delta` (the backup's balance; the flow only reacts to new entries). */
+async function tshSpUsedDelta(spClientId, delta) {
+  if (!delta || !spClientId) return;
+  const it = await graphFetch(`/sites/${TSH.siteId}/lists/${TSH.listIds.clients}/items/${spClientId}?$expand=fields($select=HoursUsed)`);
+  const used = Number(it.fields?.HoursUsed) || 0;
+  await tshUpdateHoursUsed(spClientId, Math.round((used + delta) * 100) / 100);
+}
+
+/**
+ * Copy one database row's state to SharePoint: create, update or delete the
+ * item, then any Hours Used change still owed. New items get their hours added
+ * by the SharePoint flow, as always. Returns false (and records why) on failure;
+ * the row is retried on the next load.
+ */
+async function tshPush(row, db = TSH.db) {
+  const T = tshCore();
+  const client = db?.clients.find(c => String(c.id) === String(row.client_id));
+  try {
+    if (!client) throw new Error('client not found');
+    await tshResolveListIds();
+    let spModified = null;
+    if (row.deleted_at) {
+      if (row.sharepoint_id) {
+        try { await tshDeleteEntry(row.sharepoint_id); }
+        catch (err) { if (!/Graph 404/.test(err.message || '')) throw err; }
+      }
+    } else if (!row.sharepoint_id) {
+      const created = await graphFetch(`/sites/${TSH.siteId}/lists/${TSH.listIds.timesheets}/items`, {
+        method: 'POST', body: JSON.stringify({ fields: tshSpFields(row, client.sharepoint_id, true) })
+      });
+      await T.updateEntry(row.id, {
+        sharepoint_id: String(created.id), sp_state: 'synced', sp_error: '', sp_delta: 0,
+        sp_modified: created.lastModifiedDateTime || created.fields?.Modified || new Date().toISOString()
+      });
+      return true;
+    } else {
+      const res = await tshPatchEntry(row.sharepoint_id, tshSpFields(row, client.sharepoint_id, false));
+      spModified = res?.Modified || new Date().toISOString();
+    }
+    if (Number(row.sp_delta)) await tshSpUsedDelta(client.sharepoint_id, Number(row.sp_delta));
+    await T.updateEntry(row.id, { sp_state: 'synced', sp_error: '', sp_delta: 0, ...(spModified ? { sp_modified: spModified } : {}) });
+    return true;
+  } catch (err) {
+    console.error('Copy to the Lists backup failed:', err);
+    try { await T.updateEntry(row.id, { sp_state: 'failed', sp_error: String(err.message || err).slice(0, 300) }); } catch { /* reported on screen */ }
+    return false;
+  }
+}
+
+/** Load from the database, after bringing across anything made in Lists and pushing anything still owed to it. */
+async function tshDbLoad() {
+  const T = tshCore();
+  TSH.sync = { listsOk: true, listsError: '', gone: [], broughtIn: 0, pending: 0 };
+  let db = await T.loadAll();
+  TSH.db = db;
+  try {
+    await tshResolveListIds();
+    const read = async () => {
+      const [clients, entries] = await Promise.all([
+        spFetchAllItems(TSH.listIds.clients, 500), spFetchAllItems(TSH.listIds.timesheets)
+      ]);
+      return { clients, entries };
+    };
+    const sp = await read();
+    const plan = () => T.planSync({ spClients: sp.clients, spEntries: sp.entries, dbClients: db.clients, dbEntries: db.entries, dateKey: spDateToLocalDateKey });
+    let p = plan();
+    let changed = 0;
+    if (p.newClients.length) { await T.insertClients(p.newClients); changed += p.newClients.length; db = await T.loadAll(); p = plan(); }
+    for (const u of p.clientUpdates) await T.updateClient(u.id, u.patch);
+    for (const l of p.links) await T.updateEntry(l.id, { sharepoint_id: l.sharepoint_id, sp_modified: l.sp_modified, sp_state: 'synced', sp_error: '' });
+    if (p.newEntries.length) await T.insertEntries(p.newEntries.map(r => ({ ...r, sp_state: 'synced', created_by: 'Lists' })));
+    for (const u of p.entryUpdates) {
+      await T.updateEntry(u.id, { ...u.patch, sp_modified: u.sp_modified });
+      if (u.hoursDelta) {
+        // Changed in Lists: the database balance moves; keep Lists' own Hours Used in step too.
+        const row = db.entries.find(e => e.id === u.id);
+        const client = db.clients.find(c => String(c.id) === String(row?.client_id));
+        if (client) await tshSpUsedDelta(client.sharepoint_id, u.hoursDelta);
+      }
+    }
+    changed += p.newEntries.length + p.entryUpdates.filter(u => Object.keys(u.patch).length).length;
+    TSH.sync.broughtIn = changed;
+    TSH.sync.gone = p.goneFromLists.map(e => e.id);
+    if (changed || p.links.length || p.clientUpdates.length || p.entryUpdates.length) db = await T.loadAll();
+    TSH.db = db;
+    const owed = T.pendingSync(db.entries);
+    if (owed.length) {
+      for (const row of owed) await tshPush(row, db);
+      db = await T.loadAll();
+    }
+  } catch (err) {
+    console.error('Lists backup check failed:', err);
+    TSH.sync.listsOk = false;
+    TSH.sync.listsError = err.message || String(err);
+  }
+  tshDbApply(db);
+}
+
+function tshDbApply(db) {
+  const T = tshCore();
+  TSH.db = db;
+  tshSnapshotCache = { at: Date.now(), promise: Promise.resolve(db) };   // Overview / Clients see this load, not an older one
+  TSH.ssaClients = db.clients.map(c => T.rowToClient(c, db.balances.get(String(c.id)))).filter(c => c.name);
+  const names = new Map(db.clients.map(c => [String(c.id), c.name]));
+  TSH.entries = db.entries.filter(e => !e.deleted_at && !e.archived)
+    .map(e => T.rowToEntry(e, names.get(String(e.client_id)) || `Client #${e.client_id}`));
+  if (TSH.sync) TSH.sync.pending = T.pendingSync(db.entries).length;
+}
+
+async function tshDbCreate(data) {
+  const T = tshCore();
+  if (!TSH.db) TSH.db = await T.loadAll();
+  const row = await T.insertEntry({
+    client_id: Number(data.clientLookupId), engineer: data.engineer || '', entry_date: data.date,
+    hours: data.hours, title: data.description || '', work_type: data.workType || '',
+    work_description: data.description || '', internal_notes: data.internalNotes || '',
+    created_by: msalInstance?.getActiveAccount?.()?.name || '', sp_state: 'pending'
+  });
+  if (!(await tshPush(row))) toast('Saved. Not yet copied to the Lists backup; it is retried on the next refresh.', 'warning', 6000);
+  return { id: row.id };
+}
+
+async function tshRefreshDbRow() { TSH.db = await tshCore().loadAll(); }
+
+function tshDbRow(entryId) {
+  const row = TSH.db?.entries.find(e => String(e.id) === String(entryId));
+  if (!row) throw new Error('Entry not found; click Refresh');
+  return row;
+}
+
+/** Save an edit. The balance moves by the change in hours (Lists' Hours Used too, as before). */
+async function tshDbSaveEdit(entryId, v) {
+  const T = tshCore();
+  const row = tshDbRow(entryId);
+  const delta = row.sharepoint_id ? Math.round((v.hours - Number(row.hours)) * 100) / 100 : 0;
+  const updated = await T.updateEntry(row.id, {
+    hours: v.hours, title: v.desc, work_description: v.desc, entry_date: v.date, engineer: v.eng,
+    work_type: v.workType, internal_notes: v.notes, sp_state: 'pending', sp_delta: Number(row.sp_delta || 0) + delta
+  });
+  return tshPush(updated);
+}
+
+/** Delete: kept in the database (marked deleted, so balances add up); removed from Lists with its hours. */
+async function tshDbDelete(entryId) {
+  const T = tshCore();
+  const row = tshDbRow(entryId);
+  const delta = row.sharepoint_id ? -Number(row.hours) : 0;
+  const updated = await T.updateEntry(row.id, {
+    deleted_at: new Date().toISOString(), sp_state: 'pending', sp_delta: Number(row.sp_delta || 0) + delta
+  });
+  return tshPush(updated);
+}
+
+/** The status line on the SSA tab: is the Lists backup complete? */
+function tshSyncHtml() {
+  if (!tshOnDb() || !TSH.sync) return '';
+  const s = TSH.sync;
+  const parts = [];
+  if (!s.listsOk) {
+    parts.push(`<strong>Could not reach the Lists backup</strong> (${escapeHtml(s.listsError)}). Time is saved in the Gecko database; Lists catches up on a later refresh.`);
+  } else if (s.pending) {
+    parts.push(`<strong>${s.pending} change${s.pending === 1 ? '' : 's'} not yet in the Lists backup.</strong> <button class="tsh-ssa-link strong" type="button" onclick="tshRefreshData()">Try again</button>`);
+  } else {
+    parts.push('Saved in the Gecko database. <strong>Lists backup up to date.</strong>');
+  }
+  if (s.broughtIn) parts.push(`${s.broughtIn} change${s.broughtIn === 1 ? '' : 's'} made in Lists brought in.`);
+  if (s.gone.length) {
+    parts.push(`<strong>${s.gone.length} entr${s.gone.length === 1 ? 'y is' : 'ies are'} no longer in Lists</strong> (deleted there?).
+      <button class="tsh-ssa-link strong" type="button" onclick="tshResolveGone('remove')">Remove here too</button>
+      <button class="tsh-ssa-link" type="button" onclick="tshResolveGone('restore')">Put back in Lists</button>`);
+  }
+  const state = !s.listsOk || s.pending || s.gone.length ? 'warn' : 'ok';
+  return `<div class="tsh-sync" data-state="${state}" role="status">${parts.join(' ')}</div>`;
+}
+
+/** Entries deleted in Lists: remove them here too (balance moves), or copy them back to Lists. */
+async function tshResolveGone(how) {
+  const T = tshCore();
+  const ids = TSH.sync?.gone || [];
+  if (!ids.length) return;
+  const rows = ids.map(id => TSH.db.entries.find(e => e.id === id)).filter(Boolean);
+  const hours = rows.reduce((t, r) => t + Number(r.hours), 0);
+  if (how === 'remove' && !confirm(`Remove ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'} (${tshFmtHours(hours)}) here too? The client balances move by the same hours.`)) return;
+  try {
+    for (const r of rows) {
+      if (how === 'remove') {
+        // Lists' Hours Used still counts them (its flow ignores deletes): take them off there too.
+        await tshPush(await T.updateEntry(r.id, { deleted_at: new Date().toISOString(), sp_state: 'pending', sp_delta: Number(r.sp_delta || 0) - Number(r.hours) }));
+      } else {
+        // Re-created in Lists; its flow will add the hours again, which Hours Used there already has.
+        await tshPush(await T.updateEntry(r.id, { sharepoint_id: null, sp_state: 'pending' }));
+        const back = await T.loadAll();
+        const now = back.entries.find(e => e.id === r.id);
+        const client = back.clients.find(c => String(c.id) === String(r.client_id));
+        if (now?.sharepoint_id && client) await tshSpUsedDelta(client.sharepoint_id, -Number(r.hours));
+      }
+    }
+    toast(how === 'remove' ? 'Removed' : 'Put back in Lists', 'success');
+  } catch (err) {
+    toast('Could not finish: ' + (err.message || err), 'error', 7000);
+  }
+  tshRefreshData(true);
+}
+
+/** Adjust a balance in quarter hours: a System entry, so it shows on the timesheet and in Lists like any other. */
+function tshOpenAdjust(clientId) {
+  const c = TSH.ssaClients.find(x => String(x.id) === String(clientId));
+  if (!c) return;
+  tshOpenModal(`Adjust ${c.name}`, `
+    <p style="font-size:12px;">Remaining now: <strong style="color:var(--white)">${tshFmtHours(c.hoursRemaining)}</strong>. Adjustments are logged as a System entry, so the client's timesheet and the Lists backup show them too.</p>
+    <div class="tsh-form-grp">
+      <label>Adjustment</label>
+      <select id="tshAdjDir">
+        <option value="give">Give hours back (remaining goes up)</option>
+        <option value="take">Take hours off (remaining goes down)</option>
+      </select>
+    </div>
+    <div class="tsh-form-grp">
+      <label>Hours (quarter hours)</label>
+      <input type="number" id="tshAdjHours" step="0.25" min="0.25" placeholder="e.g. 0.5">
+    </div>
+    <div class="tsh-form-grp">
+      <label>Reason</label>
+      <input type="text" id="tshAdjReason" placeholder="e.g. Duplicate entry on 3 Oct">
+    </div>
+    <div class="tsh-mm-actions">
+      <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">Cancel</button>
+      <button class="btn btn-primary" type="button" id="tshAdjSave" onclick="tshSaveAdjust('${jsAttr(c.id)}')">Save adjustment</button>
+    </div>`);
+}
+
+async function tshSaveAdjust(clientId) {
+  const c = TSH.ssaClients.find(x => String(x.id) === String(clientId));
+  const hours = parseFloat(document.getElementById('tshAdjHours').value);
+  const give = document.getElementById('tshAdjDir').value === 'give';
+  const reason = document.getElementById('tshAdjReason').value.trim();
+  if (!c) return;
+  if (!tshCore().validHours(hours)) { toast('Use quarter hours: 0.25, 0.5, 0.75, 1…', 'warning'); return; }
+  if (!reason) { toast('Add a reason, so the timesheet explains it', 'warning'); return; }
+  const btn = document.getElementById('tshAdjSave');
+  if (btn) btn.disabled = true;
+  try {
+    await tshCreateEntry({
+      clientLookupId: Number(c.id), engineer: 'System', date: today(),
+      hours: give ? -hours : hours, description: `Adjustment – ${reason}`
+    });
+    tshCloseModal();
+    toast(`${c.name}: ${give ? '+' : '−'}${tshFmtHours(hours)} ${give ? 'given back' : 'taken off'}`, 'success');
+    await tshRefreshData(true);
+  } catch (err) {
+    if (btn) btn.disabled = false;
+    toast('Could not save: ' + (err.message || err), 'error', 6000);
+  }
+}
+
+/** The click behind Timesheets' Connect button (may open a Microsoft popup/redirect). */
+async function tshConnect() {
+  try {
+    await geckoStore().connect({ interactive: true });
+    document.getElementById('tshConnect').hidden = true;
+    await tshRefreshData();
+  } catch (err) {
+    toast('Could not connect: ' + (err.message || err), 'error', 7000);
+  }
+}
+
+/**
+ * One-off, Philip only, while SharePoint is still live for Timesheets: copy
+ * every client and entry into the database with today's balances as the
+ * opening balances, read back and check each balance and entry. SharePoint is
+ * only read. Run it again right before switching, so nothing is missed.
+ */
+async function tshCopyToSupabase() {
+  if (tshOnDb() || !levIsPhilip()) return;
+  if (!confirm('Copy every timesheet entry and SSA balance from SharePoint into the Gecko database?\n\n'
+    + 'This replaces what the database holds for Timesheets. SharePoint is not changed.')) return;
+  const btn = document.getElementById('tshCopy');
+  const out = document.getElementById('tshCopyResult');
+  const show = (text, state) => { if (out) { out.textContent = text; out.dataset.state = state || ''; } };
+  if (btn) btn.disabled = true;
+  show('Copying…');
+  try {
+    await geckoStore().connect({ interactive: true });
+    await tshResolveListIds();
+    const clients = await spFetchAllItems(TSH.listIds.clients, 500);
+    const entries = await spFetchAllItems(TSH.listIds.timesheets);
+    const r = await tshCore().copyFromSharePoint(clients, entries, spDateToLocalDateKey);
+    const summary = r.entries != null
+      ? `Clients ${r.clients}; entries SharePoint ${r.spEntries}, database ${r.entries}; hours ${r.hours[0]} / ${r.hours[1]}.` : '';
+    if (r.ok && !r.problems.length) {
+      show(summary + ' Every entry and every client balance matches.', 'ok');
+      toast('Timesheets copied and checked', 'success');
+    } else {
+      show(`${summary} Not matching (${r.problems.length}): ${r.problems.slice(0, 6).join('; ')}`, 'bad');
+      toast('Copy finished but does not match', 'error', 7000);
+    }
+  } catch (err) {
+    console.error('Timesheets copy failed:', err);
+    show('Copy failed: ' + (err.message || err), 'bad');
+    toast('Copy failed: ' + (err.message || err), 'error', 7000);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+
 // ─── Refresh — main data load ─────────────────────────────────────────
 async function tshRefreshData(silent = false) {
   if (TSH.loading) return;
@@ -15379,9 +15759,13 @@ async function tshRefreshData(silent = false) {
   if (refreshBtn) { refreshBtn.classList.add('spinning'); refreshBtn.disabled = true; }
   showLoading(true);
   try {
-    await tshResolveListIds();
-    await Promise.all([tshLoadEntries(), tshLoadSsaClients()]);
-    tshResolveClientNames();  // Lookup IDs → display names (must run after both loads)
+    if (tshOnDb()) {
+      await tshDbLoad();
+    } else {
+      await tshResolveListIds();
+      await Promise.all([tshLoadEntries(), tshLoadSsaClients()]);
+      tshResolveClientNames();  // Lookup IDs → display names (must run after both loads)
+    }
     TSH.lastSync = new Date();
     tshPopulateClientDropdown();
     tshRenderAll();
@@ -15394,7 +15778,13 @@ async function tshRefreshData(silent = false) {
     }
   } catch (err) {
     console.error('Timesheets refresh failed:', err);
-    toast('Could not load timesheets: ' + (err.message || 'unknown error'), 'error', 6000);
+    if (err.code === 'DB_SIGNIN_REQUIRED') {
+      const c = document.getElementById('tshConnect');
+      if (c) c.hidden = false;
+      toast('Timesheets are in the Gecko database: click Connect to sign in to it once.', 'info', 8000);
+    } else {
+      toast('Could not load timesheets: ' + (err.message || 'unknown error'), 'error', 6000);
+    }
   } finally {
     if (refreshBtn) { refreshBtn.classList.remove('spinning'); refreshBtn.disabled = false; }
     showLoading(false);
@@ -15515,6 +15905,10 @@ async function tshAddEntry(ev) {
       toast('Please fill in all required fields', 'warning');
       return;
     }
+    if (window.GeckoTimesheets && !window.GeckoTimesheets.validHours(hours)) {
+      toast('Time is logged in quarter hours: 0.25, 0.5, 0.75, 1…', 'warning');
+      return;
+    }
 
     // Create the timesheet entry
     await tshCreateEntry({
@@ -15527,7 +15921,9 @@ async function tshAddEntry(ev) {
       internalNotes
     });
 
-    // Do NOT write HoursUsed here. A SharePoint flow on the Timesheets list
+    // Do NOT write HoursUsed here. (On the database the balance follows from the
+    // entry itself; the copy made in Lists gets its hours from the flow below.)
+    // A SharePoint flow on the Timesheets list
     // adds every new entry's hours to the client's HoursUsed about 30s after
     // it is created (it is what the Power App relies on). Writing it here as
     // well counted every portal-logged entry twice from May to Oct 2026 — see
@@ -15740,6 +16136,7 @@ function tshRenderSsa() {
       </div>
       <div class="tsh-ssa-actions">
         <button class="tsh-ssa-link strong" type="button" title="Add hours, email the timesheet and get the Xero invoice details" onclick="tshOpenRenew('${jsAttr(c.id)}')">Renew…</button>
+        <button class="tsh-ssa-link" type="button" title="Give hours back or take them off, in quarter hours" onclick="tshOpenAdjust('${jsAttr(c.id)}')">Adjust…</button>
         <button class="tsh-ssa-link" type="button" onclick="tshViewEntries('${jsAttr(c.name)}')">View entries</button>
         <button class="tsh-ssa-link" type="button" onclick="navTo('clients')">Jump to Directory</button>
         <button class="tsh-ssa-link muted" type="button" title="Take this client off the SSA programme. Hours and history are kept." onclick="tshSetArchived('${jsAttr(c.id)}', true)">Archive</button>
@@ -15748,8 +16145,11 @@ function tshRenderSsa() {
   }).join('');
 
   wrap.innerHTML = `
+    ${tshSyncHtml()}
     <div class="tsh-ssa-grid">${cards}</div>
-    <div class="tsh-ssa-note">SSA hours sync from SharePoint. If the Power App was used recently, click Refresh to get the latest totals.</div>
+    <div class="tsh-ssa-note">${tshOnDb()
+      ? 'Balances update the moment time is logged. Anything added in Lists or the Power App is brought in when you click Refresh.'
+      : 'SSA hours sync from SharePoint. If the Power App was used recently, click Refresh to get the latest totals.'}</div>
     ${archivedHtml}`;
 }
 
@@ -15766,9 +16166,20 @@ async function tshSetArchived(clientId, archived) {
   c.archived = archived;                      // optimistic; reverted on failure
   tshRenderSsa();
   try {
-    await graphFetch(`/sites/${TSH.siteId}/lists/${TSH.listIds.clients}/items/${clientId}/fields`, {
-      method: 'PATCH', body: JSON.stringify({ Archived: archived })
-    });
+    if (tshOnDb()) {
+      await tshCore().updateClient(Number(clientId), { archived });
+      try {
+        await graphFetch(`/sites/${TSH.siteId}/lists/${TSH.listIds.clients}/items/${c.spId}/fields`, {
+          method: 'PATCH', body: JSON.stringify({ Archived: archived })
+        });
+      } catch (err) {
+        toast('Saved, but the Lists backup was not updated: ' + (err.message || err), 'warning', 7000);
+      }
+    } else {
+      await graphFetch(`/sites/${TSH.siteId}/lists/${TSH.listIds.clients}/items/${clientId}/fields`, {
+        method: 'PATCH', body: JSON.stringify({ Archived: archived })
+      });
+    }
     tshPopulateClientDropdown();
     toast(archived ? `${c.name} archived` : `${c.name} restored to the SSA programme`, 'success', 2500);
   } catch (err) {
@@ -15796,6 +16207,13 @@ const TSH_RENEW_POLL_MS = 10000;
 
 /** Every Timesheets entry for one client, archived included, straight from SharePoint. */
 async function tshFetchClientEntries(clientId) {
+  if (tshOnDb()) {
+    const db = await tshCore().loadAll();
+    return db.entries.filter(e => String(e.client_id) === String(clientId) && !e.deleted_at).map(e => ({
+      id: e.id, created: e.created_at, date: e.entry_date, engineer: e.engineer, hours: Number(e.hours) || 0,
+      workDescription: e.work_description, description: e.title
+    }));
+  }
   let url = `/sites/${TSH.siteId}/lists/${TSH.listIds.timesheets}/items?$expand=fields&$top=${CONFIG.GRAPH_PAGE_SIZE}&$filter=fields/ClientLookupId eq ${Number(clientId)}`;
   const out = [];
   while (url) {
@@ -15819,6 +16237,14 @@ async function tshFetchClientEntries(clientId) {
 }
 
 async function tshFetchClientRow(clientId) {
+  if (tshOnDb()) {
+    const T = tshCore();
+    const db = await T.loadAll();
+    const c = db.clients.find(x => String(x.id) === String(clientId));
+    if (!c) throw new Error('Client not found; click Refresh');
+    const k = T.rowToClient(c, db.balances.get(String(c.id)));
+    return { id: k.id, name: k.name, hoursUsed: k.hoursUsed, hoursRemaining: k.hoursRemaining, primaryContact: k.primaryContact, email: k.email, clientFolder: k.clientFolder };
+  }
   const it = await graphFetch(`/sites/${TSH.siteId}/lists/${TSH.listIds.clients}/items/${clientId}?$expand=fields`);
   const f = it.fields || {};
   return {
@@ -15870,7 +16296,7 @@ function tshRenewRender() {
         <select id="tshRenewBlocks" onchange="tshRenewBlocksChanged(this.value)">${opts}</select>
       </div>
       <ol class="tsh-renew-plan">
-        <li>Adds a System credit of <strong>+${hours} hours</strong> to the timesheet. SharePoint's balance flow applies it within about a minute.</li>
+        <li>Adds a System credit of <strong>+${hours} hours</strong> to the timesheet. ${tshOnDb() ? 'The balance updates straight away (and in the Lists backup).' : 'SharePoint\'s balance flow applies it within about a minute.'}</li>
         <li>${CONFIG.SSA_EMAIL_MODE === 'send' ? 'Emails' : 'Puts in <strong>your Outlook Drafts</strong>'} the latest timesheet from <strong>${escapeHtml(CONFIG.SSA_FROM_MAILBOX)}</strong> to ${to.length ? escapeHtml(to.join(', ')) : '<em>no address</em>'}, copied to ${escapeHtml(CONFIG.SSA_TIMESHEET_CC.join(', '))}${CONFIG.SSA_EMAIL_MODE === 'send' ? '' : ', for you to check and send'}, and saves a copy in Gecko Docs.</li>
         <li>Shows the Xero invoice to raise: ${inv.quantity} × ${escapeHtml(inv.itemCode)}, ${money(inv.total)} inc VAT.</li>
       </ol>
@@ -15926,7 +16352,7 @@ function tshRenewRender() {
   tshOpenModal(`Renew SSA — ${r.name}`, `
     <ol class="tsh-renew-steps">
       ${step('credit', `Credit +${hours} hours added`)}
-      ${step('applied', 'Balance updated by SharePoint')}
+      ${step('applied', tshOnDb() ? 'Balance updated' : 'Balance updated by SharePoint')}
       ${step('email', CONFIG.SSA_EMAIL_MODE === 'send' ? 'Timesheet emailed' : 'Timesheet email saved to your Drafts')}
       ${step('archive', 'Copy saved to Gecko Docs')}
     </ol>
@@ -15997,7 +16423,7 @@ async function tshRenewGo() {
     r.creditId = created?.id;
     tshRenewSet('credit', 'done', `${credit.description}, dated today.`);
 
-    tshRenewSet('applied', 'doing', 'Waiting for SharePoint to apply the credit (usually under a minute)…');
+    tshRenewSet('applied', 'doing', tshOnDb() ? 'Applying the credit…' : 'Waiting for SharePoint to apply the credit (usually under a minute)…');
     const t0 = Date.now();
     let now = before;
     while (!R.creditApplied(before.hoursUsed, now.hoursUsed, creditHours)) {
@@ -16155,6 +16581,14 @@ async function tshRenewUndo() {
 
     // 2 + 3 — the credit and the balance, together.
     set('undoCredit', 'doing', 'Deleting the credit entry…');
+    if (tshOnDb()) {
+      // The deleted credit takes its hours back off the balance by itself; Lists gets the same.
+      await tshRefreshDbRow();
+      const copied = await tshDbDelete(r.creditId);
+      set('undoCredit', 'done', copied ? 'Deleted, here and in the Lists backup.' : 'Deleted. The Lists backup is updated on the next refresh.');
+      const now = await tshFetchClientRow(r.clientId);
+      set('undoBalance', 'done', `${tshFmtHours(hours)} taken back off. Remaining now ${tshFmtHours(now.hoursRemaining)}.`);
+    } else {
     await tshDeleteEntry(r.creditId);
     set('undoCredit', 'done', 'Deleted from the Timesheets list.');
     set('undoBalance', 'doing', 'Putting the balance back…');
@@ -16163,6 +16597,7 @@ async function tshRenewUndo() {
       method: 'PATCH', body: JSON.stringify({ HoursUsed: now.hoursUsed + hours })
     });
     set('undoBalance', 'done', `${tshFmtHours(hours)} taken back off. Remaining now ${tshFmtHours(now.hoursRemaining - hours)}.`);
+    }
 
     // 4 — the copy (to the SharePoint recycle bin).
     if (r.archiveFile) {
@@ -16365,6 +16800,26 @@ async function tshSaveEdit(entryId, oldHours) {
     toast('Please fill in all required fields', 'warning');
     return;
   }
+  const editedRow = tshOnDb() ? TSH.db?.entries.find(e => String(e.id) === String(entryId)) : null;
+  // Quarter hours for new work; a credit or adjustment may be negative, and copied history keeps its odd values.
+  if (window.GeckoTimesheets && newHours !== oldHours && !window.GeckoTimesheets.validHours(newHours, { allowNegative: oldHours < 0 })) {
+    toast('Time is logged in quarter hours: 0.25, 0.5, 0.75, 1…', 'warning');
+    return;
+  }
+
+  if (tshOnDb()) {
+    try {
+      if (!editedRow) throw new Error('Entry not found; click Refresh');
+      const copied = await tshDbSaveEdit(entryId, { hours: newHours, desc: newDesc, date: newDate, eng: newEng, workType: newWorkType, notes: newInternalNotes });
+      tshCloseModal();
+      toast(copied ? 'Entry updated' : 'Entry updated. The Lists backup is updated on the next refresh.', copied ? 'success' : 'warning');
+      await tshRefreshData(true);
+    } catch (err) {
+      console.error('Failed to update entry:', err);
+      toast('Failed to update: ' + (err.message || 'unknown error'), 'error', 5000);
+    }
+    return;
+  }
 
   try {
     const patch = {
@@ -16425,6 +16880,19 @@ async function tshDeleteConfirmed(entryId) {
   const e = TSH.entries.find(x => String(x.id) === String(entryId));
   if (!e) { toast('Entry not found', 'error'); return; }
 
+  if (tshOnDb()) {
+    try {
+      const copied = await tshDbDelete(entryId);
+      tshCloseModal();
+      toast(copied ? 'Entry deleted' : 'Entry deleted. The Lists backup is updated on the next refresh.', copied ? 'success' : 'warning');
+      await tshRefreshData(true);
+    } catch (err) {
+      console.error('Failed to delete entry:', err);
+      toast('Failed to delete: ' + (err.message || 'unknown error'), 'error', 5000);
+    }
+    return;
+  }
+
   try {
     await tshDeleteEntry(entryId);
 
@@ -16454,6 +16922,8 @@ async function tshDeleteConfirmed(entryId) {
 async function initTimesheets() {
   if (TSH.initialised) return;
   TSH.initialised = true;
+  const copy = document.getElementById('tshCopy');
+  if (copy) copy.hidden = !(levIsPhilip() && !tshOnDb());
 
   // Set default date to today
   const dateInput = document.getElementById('tshDate');

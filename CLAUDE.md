@@ -78,9 +78,12 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   MileageClients in SharePoint are no longer updated. **Clients + Services are on
   Supabase** since 7 Oct (`gecko_clients`, `gecko_services`; one flag moves Clients,
   Profitability and Overview together via `clientList*` helpers); GeckoClients and
-  GeckoServices in SharePoint are no longer updated. **Timesheets and the SSA `Clients`
-  list stay on SharePoint for good** (Philip, 7 Oct): the master, written via Graph, flows
-  untouched — never mirror them as a second writable copy. The feed is moving to the
+  GeckoServices in SharePoint are no longer updated. **Timesheets and the SSA `Clients` list**
+  (Philip, 8 Oct, reversing 7 Oct): the database becomes the master (`ssa_clients`,
+  `timesheet_entries`, flag `CONFIG.DATA_BACKEND.timesheets`) and **every change is still written
+  to the Lists** so they stay a complete backup and the flows keep running; entries made in Lists
+  or the Power App are brought in on Refresh. Design: `2026-10-08-timesheets-on-supabase-design.md`.
+  Until Philip copies and flips the flag, SharePoint is still the live store. The feed is moving to the
   `profit_feed` table (`CONFIG.DATA_BACKEND.feed`; see `2026-10-08-feed-on-supabase-design.md`).
   Compliance/P&L are not moving; Projects is replaced by Jobs.
 - Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
@@ -149,8 +152,12 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 ## SSA hours (Philip's rule, 7 Oct 2026 — "this is king")
 - Never adjust existing SSA balances (`HoursUsed` on Clients) or past Timesheets entries, even
   where historic double counting is visible. No corrections, credits or recalculations.
+- On the database, balances are opening balance (copied as SharePoint had it) + changes since
+  (`src/core/timesheets.js` `balances`); never recomputed from all entries. Time is in quarter
+  hours (0.25); adjustments are System entries made with Adjust… on the SSA card.
 - A SharePoint flow adds every new Timesheets entry's hours to `HoursUsed` ~30s after it is
-  created (System credits included). Code that creates entries must never also write `HoursUsed`.
+  created (System credits included). Code that creates entries must never also write `HoursUsed`
+  on the Lists (on the database the backup copy is a new item, so the flow still does it).
   Sole exception: the renewal dialog's Undo, which takes back the exact credit it just added.
 
 - **SSA renewal** (Timesheets › SSA › Renew…): System credit entry → waits for the "Update
