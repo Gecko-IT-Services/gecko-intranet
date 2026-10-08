@@ -22,7 +22,7 @@ import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { newOpportunity } from '../core/opportunities.js';
 import { ROLES, cleanContact, contactsFor, mainContact, duplicateEmail } from '../core/contacts.js';
 import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, addDays, durationText } from '../core/activity.js';
-import { cleanProfile, profileFor, addressLine, mapLinks, telHref, mailIdentity, mailSearches, clientMail, stamp } from '../core/profile.js';
+import { cleanProfile, profileFor, addressLine, mapLinks, telHref, mailIdentity, mailSearches, clientMail, stamp, mailboxesFor } from '../core/profile.js';
 import { graphFetch } from '../core/graph.js';
 
 // adding: the New opportunity form is open (with what's been picked so far); saving: one insert at a time.
@@ -485,6 +485,9 @@ async function saveProfile(form) {
 // ─── Emails: recent correspondence (read-only) from your mailbox and support@ ───
 
 const SUPPORT_MAILBOX = 'support@gecko-it.com';
+// Everyone's mail with the client: your own, the rest of the team's (needs Read and manage on their mailbox), support@.
+const TEAM_MAILBOXES = ['philip@gecko-it.com', 'jack@gecko-it.com'];
+const myAddress = () => (els('userRole')?.textContent || '').trim().toLowerCase();
 const MAIL_SELECT = 'subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,webLink,internetMessageId';
 
 async function loadMail(interactive = false) {
@@ -492,44 +495,54 @@ async function loadMail(interactive = false) {
   const terms = mailSearches(id);
   if (!terms.length) { CL.mail = { state: 'none' }; render(); return; }
   CL.mail = { state: 'loading', terms }; render();
-  const boxes = [['me', '/me/messages'], ['support', `/users/${encodeURIComponent(SUPPORT_MAILBOX)}/messages`]];
-  const messages = [], errors = [];
+  const boxes = mailboxesFor(myAddress().includes('@') ? myAddress() : '', TEAM_MAILBOXES, [SUPPORT_MAILBOX]);
+  const messages = [], errors = [], noAccess = new Set(), colleague = new Set();
   let consent = false;
-  await Promise.all(boxes.flatMap(([box, path]) => terms.map(async term => {
+  await Promise.all(boxes.flatMap(({ key: box, path, label }) => terms.map(async term => {
     try {
       const res = await graphFetch(`${path}?$search=${encodeURIComponent(`"${term}"`)}&$top=25&$select=${MAIL_SELECT}`, { scopes: ['Mail.Read.Shared'], interactive });
       for (const m of res.value || []) messages.push({
-        id: m.id, mailbox: box, subject: m.subject || '(no subject)', from: m.from?.emailAddress?.address || '',
+        id: m.id, mailbox: box, mailboxLabel: label, subject: m.subject || '(no subject)', from: m.from?.emailAddress?.address || '',
         fromName: m.from?.emailAddress?.name || '', to: [...(m.toRecipients || []), ...(m.ccRecipients || [])].map(r => r.emailAddress?.address || ''),
         received: m.receivedDateTime, preview: m.bodyPreview || '', webLink: m.webLink || '', internetMessageId: m.internetMessageId || ''
       });
     } catch (err) {
       if (err?.code === 'CONSENT_REQUIRED') consent = true;
-      else errors.push(`${box === 'me' ? 'your mailbox' : SUPPORT_MAILBOX}: ${/403|Access is denied/i.test(err.message || '') ? 'no access' : (err.message || err)}`);
+      else if (/403|404|Access is denied|ErrorAccessDenied|MailboxNotEnabled|ResourceNotFound/i.test(err.message || '')) {
+        noAccess.add(label);
+        if (box !== 'me' && TEAM_MAILBOXES.includes(box)) colleague.add(box);
+      } else errors.push(`${label}: ${err.message || err}`);
     }
   })));
-  CL.mail = consent && !messages.length ? { state: 'consent' } : { state: 'ok', list: clientMail(messages, id), errors: [...new Set(errors)], terms, at: Date.now() };
+  CL.mail = consent && !messages.length ? { state: 'consent' }
+    : { state: 'ok', list: clientMail(messages, id), errors: [...new Set(errors)], noAccess: [...noAccess], colleague: [...colleague],
+        searched: boxes.filter(b => !noAccess.has(b.label)).map(b => b.label), terms, at: Date.now() };
   render();
 }
 
 function emailsHtml() {
   const m = CL.mail;
   if (!m) { setTimeout(() => { if (!CL.mail && CL.tab === 'emails') loadMail(false); }, 0); return panel('Emails', note('Looking for emails…')); }
-  if (m.state === 'loading') return panel('Emails', note(`Searching your mailbox and ${SUPPORT_MAILBOX} for ${m.terms.join(', ')}…`));
+  if (m.state === 'loading') return panel('Emails', note(`Searching the team’s mailboxes and ${SUPPORT_MAILBOX} for ${m.terms.join(', ')}…`));
   if (m.state === 'none') return panel('Emails', note('Add a contact with an email address, or the website on Details & contacts, so emails can be found.'));
   if (m.state === 'consent') return panel('Emails', `<p class="cl-muted">Reading emails needs your OK once (the same permission Backups and Alerts use).</p><button type="button" class="cl-btn" data-cl-act="mail-consent">Allow mail access</button>`);
   const rows = m.list.length ? `<ul class="cl-mail">${m.list.map((x, i) => `<li>
       <span class="cl-mail-dir ${x.direction}" title="${x.direction === 'in' ? 'From them' : 'From us'}">${x.direction === 'in' ? '↙' : '↗'}</span>
       <div class="cl-mail-body">
         <strong>${escapeHtml(x.subject)}</strong>
-        <small>${escapeHtml(stamp(x.received))} · ${x.direction === 'in' ? 'from ' + escapeHtml(x.fromName || x.from) : 'to ' + escapeHtml(x.to.filter(Boolean).slice(0, 2).join(', '))} · ${x.mailbox === 'me' ? 'your mailbox' : 'support@'}</small>
+        <small>${escapeHtml(stamp(x.received))} · ${x.direction === 'in' ? 'from ' + escapeHtml(x.fromName || x.from) : 'to ' + escapeHtml(x.to.filter(Boolean).slice(0, 2).join(', '))} · ${escapeHtml(x.mailboxLabel || '')}</small>
         ${x.preview ? `<p>${escapeHtml(x.preview.slice(0, 220))}${x.preview.length > 220 ? '…' : ''}</p>` : ''}
       </div>
       <div class="cl-mail-acts">${x.webLink ? `<a class="cl-link" href="${escapeHtml(x.webLink)}" target="_blank" rel="noopener">Open in Outlook</a>` : ''}
         <button type="button" class="cl-link" data-cl-act="mail-log" data-i="${i}">Log it</button></div>
     </li>`).join('')}</ul>` : note('No emails with this client in your mailbox or support@ recently.');
-  return panel(`Recent emails (${m.list.length})`, rows + (m.errors.length ? `<p class="cl-warn">Not searched: ${escapeHtml(m.errors.join('; '))}</p>` : '')
-    + `<p class="cl-muted">Read-only. Matches ${escapeHtml(m.terms.join(', '))}. Nothing is sent or changed.</p>`,
+  const me = myAddress();
+  const access = m.colleague.length
+    ? `<p class="cl-warn">Can’t read ${escapeHtml(m.colleague.map(a => a.split('@')[0][0].toUpperCase() + a.split('@')[0].slice(1) + '’s').join(' or '))} mailbox yet. In the Microsoft 365 admin centre: Users › Active users › ${escapeHtml(m.colleague.map(a => a.split('@')[0][0].toUpperCase() + a.split('@')[0].slice(1)).join(' / '))} › Mail › Read and manage permissions › Add ${escapeHtml(me || 'your account')}. It can take up to an hour to work.</p>`
+    : '';
+  const other = m.noAccess.filter(l => !m.colleague.some(a => l.toLowerCase().startsWith(a.split('@')[0])));
+  return panel(`Recent emails (${m.list.length})`, rows + access + (other.length || m.errors.length ? `<p class="cl-warn">Not searched: ${escapeHtml([...other.map(l => l + ' (no access)'), ...m.errors].join('; '))}</p>` : '')
+    + `<p class="cl-muted">Read-only. Searched ${escapeHtml(m.searched.join(', '))} for ${escapeHtml(m.terms.join(', '))}. Nothing is sent or changed.</p>`,
     '<button type="button" class="cl-link" data-cl-act="mail-reload">Refresh</button>');
 }
 

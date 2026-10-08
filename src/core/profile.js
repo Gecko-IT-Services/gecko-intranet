@@ -134,3 +134,19 @@ export function stamp(iso) {
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
+
+/**
+ * Which mailboxes the Emails tab searches (Philip, 10 Oct: "pick up Jack's emails as well, not just mine"): the
+ * signed-in person's own (/me), the rest of the team's, and the shared ones. Reading a colleague's mailbox needs
+ * Read and manage (Full Access) on it in Microsoft 365, like support@ for Backups/Alerts.
+ * → [{ key, path, label }]
+ */
+export function mailboxesFor(me, team = [], shared = []) {
+  const self = String(me || '').trim().toLowerCase();
+  const first = a => { const n = a.split('@')[0]; return n.charAt(0).toUpperCase() + n.slice(1); };
+  const others = [...new Set([...team, ...shared].map(a => String(a).trim().toLowerCase()))].filter(a => a && a !== self);
+  return [
+    { key: 'me', path: '/me/messages', label: 'your mailbox' },
+    ...others.map(a => ({ key: a, path: `/users/${encodeURIComponent(a)}/messages`, label: team.map(t => t.toLowerCase()).includes(a) ? `${first(a)}’s mailbox` : a.split('@')[0] + '@' }))
+  ];
+}
