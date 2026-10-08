@@ -14,6 +14,7 @@ export const STALE_SYNC_HOURS = 3;    // the sync runs hourly; three missed runs
 export const QUIET_PROPOSAL_DAYS = 14;
 const DRAFTS = new Set(['DRAFT', 'SUBMITTED']);
 
+import { dueFollowUps, dueText } from './activity.js';
 const round2 = n => Math.round((Number(n) || 0) * 100) / 100;
 const num = v => (v == null || v === '' ? 0 : Number(v) || 0);
 const sum = (list, f) => round2(list.reduce((t, x) => t + f(x), 0));
@@ -114,6 +115,17 @@ export function attention(d, today, now = new Date()) {
     const late = d.jobs.filter(j => (j.status === 'agreed' || j.status === 'in_progress') && j.target_date && day(j.target_date) < today);
     if (late.length) add('late_jobs', 'amber', `${plural(late.length, 'job')} past its target date`,
       names(late.map(j => `${j.client_name}: ${j.title}`)), { section: 'jobs', tab: 'jobs' });
+  }
+
+  if (d.followUps) {
+    // Client follow-ups due (client page › Activity): one line each, oldest first; overdue by a week is red.
+    const due = dueFollowUps(d.followUps, today);
+    for (const f of due.slice(0, 5)) {
+      add('follow_up', f.late > 7 ? 'red' : 'amber', `Follow up ${f.client_name}${f.late ? ` (${dueText(f.follow_up_on, today)})` : ' today'}`,
+        `${f.body}${f.contact_name ? ` · with ${f.contact_name}` : ''}`, { section: 'client', tab: 'activity', client: f.client_name });
+    }
+    if (due.length > 5) add('follow_up_more', 'amber', `${plural(due.length - 5, 'more follow-up')} due`,
+      names(due.slice(5).map(f => f.client_name)), { section: 'client', tab: 'activity', client: due[5].client_name });
   }
 
   if (d.ssa) {

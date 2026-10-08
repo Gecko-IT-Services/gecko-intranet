@@ -9223,7 +9223,7 @@ const ovwWhole = v => '£' + Math.round(Number(v) || 0).toString().replace(/\B(?
 const ovwHours = v => (Number(v) || 0).toFixed(2).replace(/\.?0+$/, '') + 'h';
 const ovwMonthShort = m => new Date(m + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short' });
 const ovwMonthLong = m => new Date(m + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'long' });
-const ovwGoAttr = go => `data-ovw-go="${escapeHtml(go.section + (go.tab ? ':' + go.tab : ''))}"`;
+const ovwGoAttr = go => `data-ovw-go="${escapeHtml(go.section + (go.tab || go.client ? ':' + (go.tab || '') : '') + (go.client ? ':' + go.client : ''))}"`;
 
 /** SSA clients and timesheet entries in the shape core/overview.js reads. */
 function ovwSsaForCore() {
@@ -9300,12 +9300,12 @@ function ovwAttentionHtml(core, today) {
   const db = OVW.db || { errors: {} };
   const items = core.attention({
     xero: db.xero, inv: db.inv, rep: db.rep, jobs: db.jobs, opps: db.opps, leave: db.leave,
-    ssa: OVW.ssaLoaded ? ovwSsaForCore() : null, journeys: OVW.journeys
+    ssa: OVW.ssaLoaded ? ovwSsaForCore() : null, journeys: OVW.journeys, followUps: db.followUps
   }, today);
   // A source that didn't load is said, so a short list never passes for an all-clear.
   const missing = [];
   if (!OVW.db) missing.push(OVW.dbError ? `the database (${OVW.dbError})` : 'the database');
-  for (const [k, label] of [['jobs', 'jobs'], ['opps', 'opportunities'], ['leave', 'leave']]) if (db.errors[k]) missing.push(`${label} (${db.errors[k]})`);
+  for (const [k, label] of [['jobs', 'jobs'], ['opps', 'opportunities'], ['leave', 'leave'], ['followUps', 'follow-ups']]) if (db.errors[k]) missing.push(`${label} (${db.errors[k]})`);
   if (!OVW.ssaLoaded) missing.push('SSA balances');
   const red = items.filter(i => i.level === 'red').length;
   const act = items.filter(i => i.level !== 'info').length;
@@ -9653,10 +9653,10 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/** Every Open button and tile carries data-ovw-go="section[:tab]". */
+/** Every Open button and tile carries data-ovw-go="section[:tab[:client name]]". */
 function ovwGo(target) {
-  const [section, tab] = String(target).split(':');
-  geckoGo(section, tab);
+  const [section, tab, ...client] = String(target).split(':');
+  geckoGo(section, tab, client.join(':'));
 }
 document.addEventListener('click', e => {
   const b = e.target.closest?.('#section-overview [data-ovw-go]');

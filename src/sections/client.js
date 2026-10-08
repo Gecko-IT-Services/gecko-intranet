@@ -21,11 +21,12 @@ import { previousMonth, stageLabel } from '../core/jobs.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { newOpportunity } from '../core/opportunities.js';
 import { ROLES, cleanContact, contactsFor, mainContact, duplicateEmail } from '../core/contacts.js';
+import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, addDays } from '../core/activity.js';
 
 // adding: the New opportunity form is open (with what's been picked so far); saving: one insert at a time.
 // contactEdit: null, 'new' or the id of the contact being edited.
 const CL = { name: '', tab: 'summary', data: null, loading: false, error: null, dir: '', seq: 0, adding: null, saving: false, contactEdit: null };
-const TABS = ['summary', 'contacts', 'invoices', 'services', 'support', 'jobs', 'opportunities'];
+const TABS = ['summary', 'activity', 'contacts', 'invoices', 'services', 'support', 'jobs', 'opportunities'];
 
 const els = id => document.getElementById(id);
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
@@ -52,7 +53,7 @@ export function open(name, tab = 'summary') {
   CL.name = name;
   CL.dir = '';
   CL.tab = TABS.includes(tab) ? tab : 'summary';
-  if (!same) { CL.data = null; CL.adding = null; CL.contactEdit = null; load(); }
+  if (!same) { CL.data = null; CL.adding = null; CL.contactEdit = null; CL.actDraft = null; load(); }
   render();
 }
 
@@ -69,7 +70,7 @@ async function load() {
     let from = today().slice(0, 7);
     for (let i = 0; i < 12; i++) from = previousMonth(from);
     const q = (table, cols = '*') => settle(sb.from(table).select(cols).then(must));
-    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products, contacts] = await Promise.all([
+    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products, contacts, activity] = await Promise.all([
       q('gecko_clients', 'title,status,contract_start,notes'),
       q('gecko_services', 'title,client_name,category,cost_per_month,sell_per_month'),
       q('ssa_clients'),
@@ -80,7 +81,8 @@ async function load() {
       q('voip_dealer_services', 'client_name,vu_name,service,quantity,contract,contract_end,extras'),
       q('client_domains', 'client_name,domain'),
       q('opportunity_products', 'key,family,name,unit_price,price_unit,default_mrr,default_one_off,unit_note,active,sort'),
-      q('client_contacts')
+      q('client_contacts'),
+      q('client_activity')
     ]);
     // SSA: this client's balance (opening + changes, as Timesheets has it) and its entries
     const ssaRow = ssaClients.v?.find(c => sameClient(c.name, name)) || null;
@@ -105,11 +107,13 @@ async function load() {
       }, today()),
       hasSsa: !!ssaRow,
       contacts: contacts.v ? contactsFor(contacts.v, name) : null,
+      activity: activity.v ? timeline(activity.v, name) : null,
       products: (products.v || []).filter(x => x.active !== false).sort((a, b) => String(a.family).localeCompare(String(b.family)) || (a.sort ?? 0) - (b.sort ?? 0)),
       errors: {
         xero: recent.e?.message || unpaid.e?.message || '', services: services.e?.message || '', ssa: ssaError?.message || '',
         jobs: jobs.e?.message || '', opps: opps.e?.message || '', dealer: dealer.e?.message || '',
-        contacts: contacts.e ? (/client_contacts/.test(contacts.e.message || '') ? 'the contacts table isn’t in the database yet (it arrives with this update)' : contacts.e.message) : ''
+        contacts: contacts.e ? (/client_contacts/.test(contacts.e.message || '') ? 'the contacts table isn’t in the database yet (it arrives with this update)' : contacts.e.message) : '',
+        activity: activity.e ? (/client_activity/.test(activity.e.message || '') ? 'the activity table isn’t in the database yet (it arrives with this update)' : activity.e.message) : ''
       }
     };
   } catch (err) {
@@ -140,7 +144,7 @@ function render() {
     return;
   }
   if (!p) { mount.innerHTML = `<p class="cl-empty">Loading ${escapeHtml(CL.name)}…</p>`; return; }
-  const pane = { summary: summaryHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
+  const pane = { summary: summaryHtml, activity: activityHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
   mount.innerHTML = `<div class="app-pane ${CL.dir}">${pane(p, CL.data.errors)}</div>`;
   CL.dir = '';
   syncTableLabels(mount);
@@ -150,10 +154,13 @@ function headHtml(p) {
   const x = p?.xero, s = p?.support;
   const status = p?.gecko?.status || (p ? 'Not on Profitability' : '');
   const main = mainContact(CL.data?.contacts, { name: s?.contact || '', email: s?.email || '' });
+  const last = lastContact(CL.data?.activity?.items);
+  const due = (CL.data?.activity?.open || []).filter(a => String(a.follow_up_on) <= today());
   const contact = main ? [main.name, main.role && `(${main.role})`].filter(Boolean).join(' ') : '', email = main?.email || '', phone = main?.phone || '';
   const kpi = (label, value, sub, cls = '') => `<div class="cl-kpi ${cls}"><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${sub}</small></div>`;
   const tabs = [
     { key: 'summary', label: 'Summary', badge: p?.flags.filter(f => f.level !== 'info').length || '' , warn: p?.flags.some(f => f.level === 'red') },
+    { key: 'activity', label: 'Activity', badge: due.length || '', warn: due.some(a => String(a.follow_up_on) < today()) },
     { key: 'contacts', label: 'Contacts', badge: CL.data?.contacts?.length || '' },
     { key: 'invoices', label: 'Invoices', badge: x?.overdue > 0 ? 'overdue' : '', warn: x?.overdue > 0 },
     { key: 'services', label: 'Services & profit' },
@@ -171,7 +178,8 @@ function headHtml(p) {
               email && `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`,
               phone && `<a href="tel:${escapeHtml(phone.replace(/[^\d+]/g, ''))}">${escapeHtml(phone)}</a>`,
               p?.domains?.length ? escapeHtml(p.domains.join(', ')) : '',
-              p?.gecko?.contract_start ? `client since ${escapeHtml(fmtDate(p.gecko.contract_start))}` : ''].filter(Boolean).join(' · ')}</p>
+              p?.gecko?.contract_start ? `client since ${escapeHtml(fmtDate(p.gecko.contract_start))}` : '',
+              last ? `last in touch ${escapeHtml(fmtDate(last.at))} (${escapeHtml(last.kind)}${last.with ? ' with ' + escapeHtml(last.with) : ''})` : ''].filter(Boolean).join(' · ')}</p>
       </div>
       <div class="cl-id-actions">
         ${go('timesheets', 'log', 'Log time', 'cl-btn')}
@@ -303,6 +311,83 @@ function oppsHtml(p, errors) {
     <tbody>${p.opps.map(o => `<tr><td>${escapeHtml(o.title)}</td><td><span class="cl-stage o-${escapeHtml(o.status)}">${escapeHtml(label[o.status] || o.status)}</span></td><td>${escapeHtml(o.next_step || '—')}</td>
       <td class="num">${Number(o.mrr) ? escapeHtml(money(o.mrr)) : '—'}</td><td class="num">${Number(o.one_off) ? escapeHtml(money(o.one_off)) : '—'}</td></tr>`).join('')}</tbody></table>`,
     (CL.adding ? '' : add) + go('opportunities', 'pipeline', 'Pipeline →', 'cl-link'));
+}
+
+// ─── Activity & follow-ups (Philip, 9 Oct) ────────────────────────────
+
+const KIND_LABEL = Object.fromEntries(KINDS);
+
+function activityHtml() {
+  const a = CL.data.activity;
+  if (!a) return panel('Activity', failed('Activity', CL.data.errors.activity || 'unknown error'));
+  const t = today();
+  const contacts = CL.data.contacts || [];
+  const draft = CL.actDraft || { kind: 'call', follow: '' };
+  const add = panel('Log activity', `<form class="cl-form cl-act-form" data-cl-form="activity" novalidate>
+      <div class="cl-kinds wide" role="radiogroup" aria-label="What kind">${KINDS.map(([k, l]) => `<label class="cl-kind"><input type="radio" name="kind" value="${k}"${draft.kind === k ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
+      <label class="wide">What happened / what’s needed <textarea name="body" rows="2" maxlength="2000" placeholder="e.g. Chris wants 3 more Hornet licences from November; send a quote">${escapeHtml(draft.body || '')}</textarea></label>
+      ${contacts.length ? `<label>With <select name="contact_id"><option value="">—</option>${contacts.map(c => `<option value="${c.id}"${String(draft.contact_id) === String(c.id) ? ' selected' : ''}>${escapeHtml(c.name || c.email)}</option>`).join('')}</select></label>` : ''}
+      <div class="cl-follow wide"><span>Follow up</span>
+        <button type="button" class="cl-chip-btn${!draft.follow ? ' on' : ''}" data-cl-follow="">No</button>
+        ${followUpChoices(t).map(([l, d]) => `<button type="button" class="cl-chip-btn${draft.follow === d ? ' on' : ''}" data-cl-follow="${d}" title="${escapeHtml(fmtDate(d))}">${l}</button>`).join('')}
+        <input type="date" name="follow_up_on" min="${t}" value="${escapeHtml(draft.follow || '')}" aria-label="Follow-up date">
+      </div>
+      <div class="cl-form-actions wide"><button type="submit" class="cl-btn"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : 'Save'}</button></div>
+    </form>`);
+  const fu = a.open.length ? panel(`Follow-ups (${a.open.length})`, `<ul class="cl-fu">${a.open.map(x => {
+    const late = String(x.follow_up_on) < t, now = String(x.follow_up_on) === t;
+    return `<li class="${late ? 'late' : now ? 'now' : ''}">
+      <span class="cl-due">${escapeHtml(dueText(x.follow_up_on, t))}<small>${escapeHtml(fmtDate(x.follow_up_on))}</small></span>
+      <span class="cl-fu-body">${escapeHtml(x.body)}<small>${escapeHtml(KIND_LABEL[x.kind] || x.kind)}${x.contact_name ? ' with ' + escapeHtml(x.contact_name) : ''} · ${escapeHtml(x.created_by || '')} ${escapeHtml(fmtDate(x.created_at))}</small></span>
+      <span class="cl-fu-acts"><button type="button" class="cl-btn" data-cl-act="fu-done" data-id="${x.id}">Done</button><button type="button" class="cl-link" data-cl-act="fu-snooze" data-id="${x.id}">+1 week</button></span>
+    </li>`;
+  }).join('')}</ul>`) : '';
+  const items = a.items.length ? `<ol class="cl-tl">${a.items.map(x => `<li class="k-${escapeHtml(x.kind)}">
+      <span class="cl-tl-kind">${escapeHtml(KIND_LABEL[x.kind] || x.kind)}</span>
+      <div><p>${escapeHtml(x.body)}</p><small>${escapeHtml(fmtDate(x.created_at))}${x.created_by ? ' · ' + escapeHtml(x.created_by) : ''}${x.contact_name ? ' · with ' + escapeHtml(x.contact_name) : ''}${x.follow_up_on ? ` · follow up ${escapeHtml(fmtDate(x.follow_up_on))}${x.follow_up_done_at ? ' ✓ done' : ''}` : ''}</small></div>
+      <button type="button" class="cl-link muted" data-cl-act="act-del" data-id="${x.id}" aria-label="Remove this entry">Remove</button>
+    </li>`).join('')}</ol>` : note('Nothing logged yet. Log calls, emails, meetings and visits here so you both know where things stand.');
+  return add + fu + panel(`Timeline (${a.items.length})`, items);
+}
+
+async function saveActivity(form) {
+  if (CL.saving) return;
+  const f = form.elements;
+  const cid = f.contact_id?.value || '';
+  const c = (CL.data.contacts || []).find(x => String(x.id) === cid);
+  CL.actDraft = { kind: f.kind.value, body: f.body.value, contact_id: cid, follow: f.follow_up_on.value };
+  const { row, error } = cleanActivity({ kind: f.kind.value, body: f.body.value, contact_id: cid, contact_name: c ? (c.name || c.email) : '', follow_up_on: f.follow_up_on.value }, CL.name, today());
+  if (error) { toast(error, 'warning'); return; }
+  CL.saving = true; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    must(await sb.from('client_activity').insert({ ...row, created_by: (els('userName')?.textContent || '').trim() }));
+    await reloadActivity(sb);
+    CL.actDraft = null;
+    toast(row.follow_up_on ? `Logged · follow up ${dueText(row.follow_up_on, today())}` : 'Logged', 'success');
+  } catch (err) {
+    toast('Could not save: ' + (err.message || err), 'error', 7000);
+  } finally { CL.saving = false; render(); }
+}
+
+async function reloadActivity(sb) {
+  CL.data.activity = timeline(must(await sb.from('client_activity').select('*')), CL.name);
+}
+
+async function activityAct(act, id) {
+  const x = (CL.data.activity?.items || []).find(i => i.id === id);
+  if (!x) return;
+  if (act === 'act-del' && !confirm('Remove this entry from the timeline?')) return;
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    if (act === 'fu-done') must(await sb.from('client_activity').update({ follow_up_done_at: new Date().toISOString(), follow_up_done_by: (els('userName')?.textContent || '').trim() }).eq('id', id));
+    if (act === 'fu-snooze') must(await sb.from('client_activity').update({ follow_up_on: addDays(String(x.follow_up_on) < today() ? today() : String(x.follow_up_on), 7) }).eq('id', id));
+    if (act === 'act-del') must(await sb.from('client_activity').delete().eq('id', id));
+    await reloadActivity(sb);
+    toast(act === 'fu-done' ? 'Follow-up done' : act === 'fu-snooze' ? 'Moved on a week' : 'Removed', 'success');
+  } catch (err) {
+    toast('Could not update: ' + (err.message || err), 'error', 7000);
+  } finally { render(); }
 }
 
 // ─── Contacts (Philip, 9 Oct: contacts per client) ───────────────────
@@ -486,6 +571,13 @@ function onClick(event) {
     window.geckoGo?.(section, sub, CL.name);
     return;
   }
+  const fb = event.target.closest('[data-cl-follow]');
+  if (fb) {
+    const form = fb.closest('form');
+    form.elements.follow_up_on.value = fb.dataset.clFollow;
+    form.querySelectorAll('[data-cl-follow]').forEach(b => b.classList.toggle('on', b === fb));
+    return;
+  }
   const act = event.target.closest('[data-cl-act]')?.dataset.clAct;
   if (act === 'reload') { CL.data = null; load(); }
   if (act === 'new-opp') {
@@ -497,6 +589,7 @@ function onClick(event) {
   if (act === 'contact-add') { CL.contactEdit = 'new'; render(); els('clWrap')?.querySelector('[data-cl-form="contact"] [name="name"]')?.focus(); }
   if (act === 'contact-edit') { CL.contactEdit = Number(event.target.closest('[data-id]').dataset.id); render(); }
   if (act === 'contact-cancel') { CL.contactEdit = null; render(); }
+  if (['fu-done', 'fu-snooze', 'act-del'].includes(act)) activityAct(act, Number(event.target.closest('[data-id]').dataset.id));
   if (act === 'contact-main' || act === 'contact-del') contactAct(act, Number(event.target.closest('[data-id]').dataset.id));
   if (act === 'connect') connectSupabase({ interactive: true }).then(load, err => toast(err.message || 'Could not connect', 'error'));
 }
@@ -507,8 +600,12 @@ export function init() {
   section?.addEventListener('submit', e => {
     if (e.target.dataset.clForm === 'new-opp') { e.preventDefault(); saveOpp(e.target); }
     if (e.target.dataset.clForm === 'contact') { e.preventDefault(); saveContact(e.target); }
+    if (e.target.dataset.clForm === 'activity') { e.preventDefault(); saveActivity(e.target); }
   });
   section?.addEventListener('change', e => {
+    if (e.target.name === 'follow_up_on' && e.target.closest('[data-cl-form="activity"]')) {
+      e.target.closest('form').querySelectorAll('[data-cl-follow]').forEach(b => b.classList.toggle('on', b.dataset.clFollow === e.target.value));
+    }
     const form = e.target.closest?.('[data-cl-form="new-opp"]');
     if (!form || e.target.name !== 'product') return;
     // A new pick re-fills the suggestions; anything typed by hand in the name/prices is kept.
