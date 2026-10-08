@@ -1,6 +1,6 @@
 # Opportunities: find the gaps in each client, and turn them into proposals — design
 
-Status: proposed, 8 Oct 2026. Nothing built yet.
+Status: **phase 1 built 8 Oct 2026** (Philip: "create using all the smart tools available… increase the monthly recurring revenue and ensure we don't miss an opportunity").
 
 ## Philip's ask (8 Oct)
 "Enhance the sales side… opportunities tying in multiple factors… areas of improvement,
@@ -8,6 +8,10 @@ for example those users still on Windows 10… fill a likely gap in their busine
 process, perhaps upselling Hornetsecurity… identify gaps and then push these ideas to the
 client." Plus websites: Gecko now does SEO (Rank Math) for ALS Locksmiths and Clarke Lane
 Engineering; offer the same to clients whose sites need it.
+
+Also from Philip (8 Oct): Gecko is a **VoIP Unlimited partner**, so VoxOne and all connectivity
+(FTTP, SOGEA, Ethernet circuits) are core products; **timesheets** are a source of opportunity
+(what clients keep calling about); later, **reward clients** who take more from us.
 
 ## The idea in one line
 For every client, the dashboard looks at what they already buy, how their email and website
@@ -22,6 +26,7 @@ lets Philip turn any gap into a tracked opportunity and a ready-to-send email in
 | Website: HTTPS, performance, SEO and accessibility scores, mobile-friendliness | Google PageSpeed Insights (public API) on the domains we already know (37 from Clook, plus M365 email domains) | No (a free key raises the daily limit later) | 1 |
 | Windows 10 machines, old hardware, failing backups, missing patches | Atera device inventory | Yes, so it runs outside the site: Atera's scheduled report email, read by the daily feed task (same pattern as the supplier invoices) | 2 |
 | M365 licence mix (Basic vs Standard vs Premium) | TD SYNNEX invoice lines (SKUs per client) | No, already read by the feed | 2 |
+| What they keep calling us about | Timesheets list (SharePoint, read only): last 6 months of work descriptions per client, matched against each product's phrases (`ticket_keywords`); System credit rows ignored | No | 1 |
 
 Nothing in phase 1 needs a new password, connector or key in the site.
 
@@ -61,6 +66,28 @@ A new **Opportunities** section:
 - Drafts only; sending stays a human decision. Uses the same `Mail.ReadWrite` consent the
   SSA renewal already asks for, requested on the click, not at sign-in.
 
+## How it is built (phase 1)
+- `supabase/migrations/20261008090000_opportunities.sql`: `opportunity_products` (catalogue:
+  rule, "already has it" pattern, timesheet phrases, prices, email template; 14 products seeded,
+  incl. VoxOne and FTTP/SOGEA/Ethernet), `client_product_status` (has / not interested / n/a),
+  `client_domains`, `client_signals` (cached DNS and PageSpeed per domain, re-checked after 30
+  days), `opportunities` (idea → proposed → won / lost, £/month, £ one-off, evidence, next step).
+- `src/core/opportunities.js` (tested in `tests/opportunities.mjs`): MX/SPF/DMARC/DKIM reading,
+  PageSpeed summary, timesheet matching, `holds` (already has it: service-line pattern,
+  TD SYNNEX, Exclaimer, Clook, SSA/retainer, MX filter), `evaluate` (gap + plain-English
+  reasons + strength: 2 = rule and timesheets agree, 1 = one of them, 0 = simply not bought),
+  pipeline totals, email template filling (HTML-escaped).
+- `src/sections/opportunities.js`: Gaps (client cards, strongest first; "Check email &
+  websites" runs Cloudflare DNS-over-HTTPS and Google PageSpeed; add a domain by hand),
+  Pipeline (four columns, edit value / next step / status), Products (prices, in use, email
+  text). Headline: Xero recurring revenue, open pipeline, won this month, won to date.
+- Client identity: same name matcher as Profitability (`prfXeroMatchName`). Domains come from
+  Clook invoice lines, the SSA contact's email address and any added by hand.
+- Thresholds (`THRESHOLDS`): SEO < 80 or performance < 50 (mobile), 2+ timesheet hits in 6
+  months, 3+ ad-hoc support hours for clients with no SSA block or retainer.
+- Verified in a real browser against faked Graph, Supabase, DNS and PageSpeed: gaps, checks,
+  draft email, pipeline, no errors, no horizontal scroll at 390px.
+
 ## Phases
 1. Gap map from what clients already buy + DNS/email checks + PageSpeed; opportunity
    board; draft email. (Data in hand, no keys.)
@@ -68,6 +95,9 @@ A new **Opportunities** section:
    pairs with next week's Atera cost check, which reads the same Atera data.
 3. Optional: a monthly "top 5 opportunities" summary, and Claude-written proposals from
    the evidence (run in the scheduled task, not in the browser).
+4. **Rewarding clients** (Philip, 8 Oct): once the pipeline is working, a loyalty view built
+   on the same data, e.g. a bundle discount or a free review when a client takes N products,
+   a referral credit, a thank-you on contract anniversaries.
 
 ## Rejected
 - **Scraping client websites from the browser:** blocked by browsers (CORS) and fragile;
@@ -77,7 +107,7 @@ A new **Opportunities** section:
   dashboard already knows the clients, their spend and their margins.
 
 ## Open questions for Philip
-1. The SharePoint list **Sales Opportunities**: in use? If so, copy it into the new board.
-2. Hornetsecurity: which product and price do we sell (so the template is right)?
-3. PageSpeed threshold for "needs work" (suggest below 50 on mobile performance or below
-   80 on SEO).
+1. ~~Sales Opportunities list~~: not in use (8 Oct); start fresh.
+2. Prices: set £/month on the Products tab (Hornetsecurity, Keeper, M365 backup, SEO, …);
+   until then those gaps show "price not set" and add £0 to the pipeline.
+3. PageSpeed thresholds above are the starting point; change `THRESHOLDS` if they feel off.
