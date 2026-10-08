@@ -6,15 +6,17 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const navButtons = html.match(/<button class="sb-link\b[^>]*data-section=/g) ?? [];
 // 9 original sections + Projects + Backups + Alerts, minus Projects,
 // Compliance and P&L taken off the sidebar on 6 Oct 2026 (sections still in the code),
-// plus Opportunities (8 Oct 2026).
-assert.equal(navButtons.length, 11, 'every sidebar destination should be a semantic button');
+// plus Opportunities (8 Oct 2026). 9 Oct 2026 (Philip): 8 entries, with hubs: Clients (Directory,
+// Profitability, client page), Monitoring (Backups, Alerts), Team (Leave, Mileage).
+assert.equal(navButtons.length, 8, 'every sidebar destination should be a semantic button');
+assert.equal((html.match(/<button class="sb-link\b[^>]*data-hub=/g) ?? []).length, 3, 'three hubs');
 assert.doesNotMatch(html, /<div class="sb-link\b[^>]*onclick=/, 'sidebar destinations must not be click-only divs');
 assert.match(html, /id="sbToggle"[^>]*aria-controls="sidebar"[^>]*aria-expanded="false"/, 'the mobile menu control should expose its target and state');
 assert.match(html, /id="sbBackdrop"[^>]*type="button"[^>]*aria-label="Close navigation"/, 'the mobile backdrop should be an accessible dismissal control');
 assert.match(html, /id="sbBackdrop"[^>]*tabindex="-1"/, 'the closed mobile backdrop must stay out of the tab order');
 assert.match(html, /<aside class="sidebar" id="sidebar" inert aria-hidden="true">/, 'the initially closed mobile drawer must not expose its controls to assistive technology');
 assert.doesNotMatch(html, /<nav\b[^>]*\brole="navigation"/, 'native nav landmarks must not use a redundant role');
-assert.match(html, /class="sb-system-card"\s+role="group"\s+aria-label="Portal integrations"/, 'the integration summary needs a labelled semantic group');
+assert.doesNotMatch(html, /class="sb-system-card"/, 'the Connected Workspace card was removed (Philip, 9 Oct 2026)');
 assert.match(html, /class="prf-month-btn"[^>]*aria-label="Previous month"/, 'previous month controls need an accessible name');
 assert.match(html, /class="prf-month-btn"[^>]*aria-label="Next month"/, 'next month controls need an accessible name');
 assert.match(html, /:focus-visible\s*\{/, 'keyboard users need a visible focus indicator');

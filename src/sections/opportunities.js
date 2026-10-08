@@ -18,7 +18,7 @@
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
 import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
-import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
+import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
@@ -531,6 +531,7 @@ function gapsHtml() {
     const chips = gaps.slice(0, 6).map(g => `<span class="opp-chip s${g.strength}">${escapeHtml(g.product.name)}</span>`).join('') + (gaps.length > 6 ? `<span class="opp-chip">+${gaps.length - 6}</span>` : '');
     const body = !isOpen ? '' : `<div class="opp-card-body">
         <div class="opp-signals">${signalLine(c, dnsRow, psRow)}</div>
+        <p class="opp-client-page">${clientLink(c.name)} <span class="opp-muted">· everything about this client</span></p>
         <div class="opp-domain"><input type="text" placeholder="Add a domain, e.g. ${escapeHtml(norm(c.name).split(' ')[0] || 'client')}.co.uk" data-opp-domain="${escapeHtml(c.name)}" aria-label="Add a domain for ${escapeHtml(c.name)}">
           <button type="button" class="opp-btn ghost" data-opp-act="adddomain" data-client="${escapeHtml(c.name)}">Add &amp; check</button>
           ${c.domains.length ? `<button type="button" class="opp-btn ghost" data-opp-act="checkone" data-client="${escapeHtml(c.name)}" ${OPP.checking ? 'disabled' : ''}>Re-check now</button>` : ''}</div>
@@ -589,7 +590,7 @@ function pipelineHtml() {
     const editing = OPP.editing.has(o.id);
     return `<article class="opp-deal st-${escapeHtml(o.status)}">
       <div class="opp-deal-main">
-        <div class="opp-deal-client">${escapeHtml(o.client_name)}</div>
+        <div class="opp-deal-client">${clientLink(o.client_name)}</div>
         <div class="opp-deal-product">${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
         ${o.next_step ? `<div class="opp-deal-next"><span>Next</span> ${escapeHtml(o.next_step)}</div>` : ''}
       </div>
@@ -788,6 +789,13 @@ function onKeydown(event) {
 }
 
 // ─── Lifecycle ────────────────────────────────────────────────────────
+
+/** Open a tab from elsewhere (client page, Overview): 'gaps', 'pipeline', 'voip', 'products'. */
+export function show(tab) {
+  if (!tab || !['gaps', 'pipeline', 'voip', 'products'].includes(tab)) return;
+  OPP.tab = tab;
+  if (!OPP.loading) render();
+}
 
 export function init() {
   const section = els('section-opportunities');

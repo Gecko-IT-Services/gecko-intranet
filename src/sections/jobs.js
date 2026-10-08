@@ -15,7 +15,7 @@
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
 import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
-import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
+import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { STAGES, OPEN_STAGES, stageLabel, stageTotals, monthSales, salesHistory, PROJECT_STATUS,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
@@ -307,7 +307,7 @@ function jobCard(j) {
   const invoicing = JOB.invoicing?.id === j.id;
   return `<article class="job-card st-${escapeHtml(j.status)}">
     <div class="job-main">
-      <div class="job-client">${escapeHtml(j.client_name)}</div>
+      <div class="job-client">${clientLink(j.client_name)}</div>
       <div class="job-title">${escapeHtml(j.title)}</div>
       ${j.next_step ? `<div class="job-next"><span>Next</span> ${escapeHtml(j.next_step)}</div>` : ''}
     </div>
@@ -712,12 +712,12 @@ function toComeHtml(s) {
       <div class="job-panel-head"><strong>Repeating invoices still to come: ${escapeHtml(money(s.toCome))}</strong>
         <span class="job-muted">${direct ? 'From Xero’s repeating invoice schedule, net of VAT' : 'Billed from a repeating invoice last month; shown at last month’s amount'}</span></div>
       <table class="job-table"><thead><tr><th>Client</th>${direct ? '<th>Date</th>' : ''}<th class="num">${direct ? 'Net' : 'Last month'}</th></tr></thead>
-      <tbody>${s.recurringToCome.map(r => `<tr><td>${escapeHtml(r.name)}</td>${direct ? `<td>${escapeHtml(fmtDate(r.date))}</td>` : ''}<td class="num">${escapeHtml(money(r.amount))}</td></tr>`).join('')}</tbody></table>
+      <tbody>${s.recurringToCome.map(r => `<tr><td>${clientLink(r.name)}</td>${direct ? `<td>${escapeHtml(fmtDate(r.date))}</td>` : ''}<td class="num">${escapeHtml(money(r.amount))}</td></tr>`).join('')}</tbody></table>
     </div>
     ${s.toInvoiceJobs.length || s.dueJobs.length ? `<div class="job-panel">
       <div class="job-panel-head"><strong>Jobs still to come: ${escapeHtml(money(s.toInvoice + s.dueThisMonth))}</strong><span class="job-muted">Ready to invoice, or due to finish this month</span></div>
       <table class="job-table"><thead><tr><th>Client</th><th>Job</th><th class="num">Value</th></tr></thead>
-      <tbody>${[...s.toInvoiceJobs, ...s.dueJobs].map(j => `<tr><td>${escapeHtml(j.client_name)}</td><td>${escapeHtml(j.title)} <span class="job-muted">· ${escapeHtml(stageLabel(j.status))}</span></td><td class="num">${escapeHtml(money(j.left ?? j.value))}</td></tr>`).join('')}</tbody></table>
+      <tbody>${[...s.toInvoiceJobs, ...s.dueJobs].map(j => `<tr><td>${clientLink(j.client_name)}</td><td>${escapeHtml(j.title)} <span class="job-muted">· ${escapeHtml(stageLabel(j.status))}</span></td><td class="num">${escapeHtml(money(j.left ?? j.value))}</td></tr>`).join('')}</tbody></table>
     </div>` : ''}`;
 }
 
@@ -727,7 +727,7 @@ function monthInvoicedHtml(s, month) {
   return `<div class="job-panel">
       <div class="job-panel-head"><strong>Invoiced in ${escapeHtml(monthName(month))}: ${escapeHtml(money(s.invoiced))}</strong><span class="job-muted">${s.rows.length} ${s.rows.length === 1 ? 'client' : 'clients'} · net of VAT</span></div>
       <table class="job-table job-inv-table"><thead><tr><th>Client</th><th class="num">Recurring</th><th class="num">One-off</th><th class="num">Total</th></tr></thead>
-      <tbody>${s.rows.map(r => `<tr><td><span class="job-cell-name">${escapeHtml(r.name)}</span>
+      <tbody>${s.rows.map(r => `<tr><td><span class="job-cell-name">${clientLink(r.name)}</span>
           <span class="job-mini" aria-hidden="true"><i class="v-rec" style="width:${(r.recurring / top * 100).toFixed(2)}%"></i><i class="v-one" style="width:${(r.oneOff / top * 100).toFixed(2)}%"></i></span></td>
         <td class="num">${escapeHtml(money(r.recurring))}</td><td class="num">${escapeHtml(money(r.oneOff))}</td><td class="num"><strong>${escapeHtml(money(r.total))}</strong></td></tr>`).join('')}</tbody>
       <tfoot><tr><td colspan="1">Total</td><td class="num" data-label="Recurring">${escapeHtml(money(s.recurring))}</td><td class="num" data-label="One-off">${escapeHtml(money(s.oneOff))}</td><td class="num" data-label="Total"><strong>${escapeHtml(money(s.invoiced))}</strong></td></tr></tfoot></table>
@@ -743,7 +743,7 @@ function owedHtml(o) {
         <span class="job-muted">${o.count} unpaid ${o.count === 1 ? 'invoice' : 'invoices'}${o.overdue ? `, ${escapeHtml(money(o.overdue))} overdue` : ', none overdue'} · incl. VAT</span></div>
       <p class="job-muted job-owed-note">Nudge writes a friendly reminder into your Outlook Drafts, to the contact’s email in Xero, with each invoice and its pay-online link. Nothing is sent until you send it.</p>
       <table class="job-table job-owed"><thead><tr><th>Client</th><th class="num">Invoices</th><th>Oldest overdue</th><th class="num">Overdue</th><th class="num">Owed</th><th>Reminder</th></tr></thead>
-      <tbody>${o.rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td class="num">${r.invoices}</td><td>${r.oldest ? `<span class="job-late">due ${escapeHtml(fmtDate(r.oldest))}</span>` : '—'}</td><td class="num">${r.overdue ? escapeHtml(money(r.overdue)) : '—'}</td><td class="num"><strong>${escapeHtml(money(r.due))}</strong></td><td>${nudgeCell(r)}</td></tr>`).join('')}</tbody></table>
+      <tbody>${o.rows.map(r => `<tr><td>${clientLink(r.name)}</td><td class="num">${r.invoices}</td><td>${r.oldest ? `<span class="job-late">due ${escapeHtml(fmtDate(r.oldest))}</span>` : '—'}</td><td class="num">${r.overdue ? escapeHtml(money(r.overdue)) : '—'}</td><td class="num"><strong>${escapeHtml(money(r.due))}</strong></td><td>${nudgeCell(r)}</td></tr>`).join('')}</tbody></table>
     </div>`;
 }
 
