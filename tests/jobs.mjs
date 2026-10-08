@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { stageTotals, monthSales, salesHistory, previousMonth, STAGES, xeroMonthSales, xeroHistory, repeatDates, jobInvoices, jobRaised, invoiceIndex, owed, invoicedGroups } from '../src/core/jobs.js';
+import { stageTotals, monthSales, salesHistory, previousMonth, STAGES, xeroMonthSales, xeroHistory, repeatDates, jobInvoices, jobRaised, invoiceIndex, owed, invoicedGroups, nudgeInvoices, nudgeEmail } from '../src/core/jobs.js';
 
 assert.equal(previousMonth('2026-01'), '2025-12');
 assert.equal(previousMonth('2026-10'), '2026-09');
@@ -130,5 +130,40 @@ assert.equal(o.total, 1980);
 assert.equal(o.overdue, 780);
 assert.equal(o.count, 3);
 assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, invoices: 1, oldest: '2026-10-05' });
+
+
+// — Nudge: friendly payment reminder —
+{
+  const inv = [
+    { invoice_id: 'a', invoice_number: 'INV-0201', contact_name: 'Regal Autosport', invoice_date: '2026-08-01', due_date: '2026-08-31', status: 'AUTHORISED', amount_due: 125.30 },
+    { invoice_id: 'b', invoice_number: 'INV-0190', contact_name: 'Regal Autosport', invoice_date: '2026-07-20', due_date: '2026-08-10', status: 'AUTHORISED', amount_due: 125.30 },
+    { invoice_id: 'c', invoice_number: 'INV-0300', contact_name: 'Regal Autosport', invoice_date: '2026-10-01', due_date: '2026-10-31', status: 'AUTHORISED', amount_due: 125.30 },
+    { invoice_id: 'd', invoice_number: 'INV-0150', contact_name: 'Regal Autosport', invoice_date: '2026-06-01', due_date: '2026-06-30', status: 'PAID', amount_due: 0 },
+    { invoice_id: 'e', invoice_number: 'INV-0310', contact_name: 'Daron Motors', invoice_date: '2026-10-01', due_date: '2026-10-31', status: 'AUTHORISED', amount_due: 864 }
+  ];
+  const today = '2026-10-08';
+  assert.deepEqual(nudgeInvoices(inv, 'Regal Autosport', today).map(i => i.invoice_number), ['INV-0190', 'INV-0201'], 'overdue only, oldest first');
+  assert.deepEqual(nudgeInvoices(inv, 'Daron Motors', today).map(i => i.invoice_number), ['INV-0310'], 'nothing overdue → the unpaid ones');
+  const m = nudgeEmail({ contactName: 'Regal Autosport', firstName: 'Sam Smith', invoices: nudgeInvoices(inv, 'Regal Autosport', today), links: { b: 'https://in.xero.com/abc' }, today, sender: 'Kind regards,\nPhilip Morris\nGecko IT Services' });
+  assert.equal(m.subject, 'A friendly nudge: 2 invoices from Gecko IT Services (£250.60)');
+  assert.equal(m.total, 250.6);
+  assert.match(m.text, /^Hi Sam,/);
+  assert.match(m.text, /now past their due date/);
+  assert.match(m.text, /• INV-0190 \(20 July 2026\): £125\.30, was due 10 August 2026\n  Pay online: https:\/\/in\.xero\.com\/abc/);
+  assert.match(m.text, /Total: £250\.60 \(incl\. VAT\)/);
+  assert.match(m.text, /It may well already be on its way/);
+  assert.ok(m.html.includes('<a href="https://in.xero.com/abc">View and pay online</a>'));
+  assert.match(m.text, /Where there’s a link above you can view and pay online/, 'only one of two has a link');
+  const both = nudgeEmail({ contactName: 'R', invoices: nudgeInvoices(inv, 'Regal Autosport', today), links: { a: 'x', b: 'y' }, today });
+  assert.match(both.text, /view and pay each one online using the links above/);
+  assert.ok(m.html.includes('Philip Morris<br>Gecko IT Services'));
+  const one = nudgeEmail({ contactName: 'Daron <Motors>', invoices: nudgeInvoices(inv, 'Daron Motors', today), today });
+  assert.equal(one.subject, 'A friendly nudge: invoice INV-0310 (£864.00)');
+  assert.match(one.text, /^Hi there,/);
+  assert.match(one.text, /coming up for payment/);
+  assert.match(one.text, /by bank transfer using the details on the invoice/);
+  assert.ok(!one.text.includes('Total:'), 'no total line for a single invoice');
+  assert.ok(one.html.includes('Daron &lt;Motors&gt;') && !one.html.includes('<Motors>'), 'escaped');
+}
 
 console.log('jobs: ok');

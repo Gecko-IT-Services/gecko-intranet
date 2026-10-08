@@ -18,7 +18,8 @@ import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { STAGES, OPEN_STAGES, stageLabel, stageTotals, monthSales, salesHistory, PROJECT_STATUS,
-  xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth } from '../core/jobs.js';
+  xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
+  nudgeInvoices, nudgeEmail } from '../core/jobs.js';
 
 const JOB = {
   tab: 'jobs',
@@ -32,6 +33,8 @@ const JOB = {
   inv: [], rep: [],             // xero_invoices (recent, unpaid, jobs' own) and xero_repeating_invoices
   invoicing: null,              // "Invoice in Xero" form: { id, key, opts, busy, error }
   allPaid: false,               // Invoiced view: show every paid job, not just the last 90 days
+  nudges: new Map(),            // Owed to us: contact → last payment reminder drafted (public.payment_nudges)
+  nudging: null,                // contact whose reminder is being drafted
   dir: 'next', animate: false   // tab change: which way the new pane slides in
 };
 
@@ -84,7 +87,7 @@ async function load() {
     JOB.jobs = jobs;
     JOB.xero = xero;
     JOB.feed = feed;
-    if (xero?.connected) await loadXero(sb, jobs);
+    if (xero?.connected) await Promise.all([loadXero(sb, jobs), loadNudges(sb)]);
     else { JOB.inv = []; JOB.rep = []; }
     const names = new Set(clients.filter(c => c.status !== 'Inactive').map(c => c.title).filter(Boolean));
     for (const j of jobs) names.add(j.client_name);
@@ -97,7 +100,7 @@ async function load() {
   }
 }
 
-const XERO_COLS = 'invoice_id,invoice_number,contact_name,invoice_date,due_date,status,reference,sub_total,total,amount_due,amount_paid,repeating_invoice_id';
+const XERO_COLS = 'invoice_id,invoice_number,contact_id,contact_name,invoice_date,due_date,status,reference,sub_total,total,amount_due,amount_paid,repeating_invoice_id';
 
 /** Six months of invoices, every unpaid one, and any older invoice a job names. Line items aren't needed here.
  *  Also used by Overview, so both pages read the same invoices. */
@@ -114,6 +117,15 @@ export async function fetchXero(sb, jobs) {
   const refs = [...new Set(jobs.flatMap(j => String(j.invoice_ref || '').split(/[,;]+/).map(r => r.trim())).filter(r => r && !have.has(refKey(r))))];
   if (refs.length) for (const i of must(await sb.from('xero_invoices').select(XERO_COLS).in('invoice_number', refs))) byId.set(i.invoice_id, i);
   return { inv: [...byId.values()], rep };
+}
+
+/** Reminders drafted in the last 90 days, newest per contact. Missing table (before its migration) is not an error. */
+async function loadNudges(sb) {
+  const since = new Date(Date.now() - 90 * 86400e3).toISOString();
+  const r = await sb.from('payment_nudges').select('contact_name,created_at,created_by,recipient').gte('created_at', since).order('created_at', { ascending: false });
+  const keep = new Map([...JOB.nudges].filter(([, n]) => n.webLink));   // this session's draft links
+  JOB.nudges = new Map();
+  for (const n of r.error ? [] : r.data) if (!JOB.nudges.has(n.contact_name)) JOB.nudges.set(n.contact_name, { ...n, webLink: keep.get(n.contact_name)?.webLink });
 }
 
 async function loadXero(sb, jobs) {
@@ -521,6 +533,32 @@ async function xeroSync() {
   }
 }
 
+/**
+ * The Refresh button (Philip, 8 Oct: "refresh doesn't do anything"): asks Xero for what changed
+ * since the hourly sync (so a payment just made shows), reloads, and says so. Busy while it runs.
+ */
+async function refresh() {
+  const btn = els('jobRefresh');
+  if (!btn || btn.disabled || JOB.loading) return;
+  btn.disabled = true; btn.textContent = 'Refreshing…';
+  let synced = '';
+  try {
+    if (JOB.xero?.connected) {
+      try {
+        const sb = await connectSupabase({ interactive: true });
+        const { data, error } = await sb.functions.invoke('xero-sync', { body: {} });
+        if (error || !data?.ok) throw new Error(await fnError(error, data));
+        synced = data.changed ? ` · ${data.changed} invoice${data.changed === 1 ? '' : 's'} updated from Xero` : ' · Xero has nothing new';
+      } catch (err) { synced = ' · Xero sync failed: ' + (err.message || err); }
+    }
+    await load();
+    if (JOB.error) toast('Could not reload jobs: ' + (JOB.error.message || JOB.error), 'error', 8000);
+    else toast('Jobs refreshed' + synced, synced.includes('failed') ? 'warning' : 'success', 6000);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Refresh';
+  }
+}
+
 /** Back from Xero's consent screen (#xero=… on the address, saved by src/main.js). */
 function xeroReturn() {
   let r = null;
@@ -703,9 +741,65 @@ function owedHtml(o) {
   return `<div class="job-panel">
       <div class="job-panel-head"><strong>Owed to us: ${escapeHtml(money(o.total))}</strong>
         <span class="job-muted">${o.count} unpaid ${o.count === 1 ? 'invoice' : 'invoices'}${o.overdue ? `, ${escapeHtml(money(o.overdue))} overdue` : ', none overdue'} · incl. VAT</span></div>
-      <table class="job-table"><thead><tr><th>Client</th><th class="num">Invoices</th><th>Oldest overdue</th><th class="num">Overdue</th><th class="num">Owed</th></tr></thead>
-      <tbody>${o.rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td class="num">${r.invoices}</td><td>${r.oldest ? `<span class="job-late">due ${escapeHtml(fmtDate(r.oldest))}</span>` : '—'}</td><td class="num">${r.overdue ? escapeHtml(money(r.overdue)) : '—'}</td><td class="num"><strong>${escapeHtml(money(r.due))}</strong></td></tr>`).join('')}</tbody></table>
+      <p class="job-muted job-owed-note">Nudge writes a friendly reminder into your Outlook Drafts, to the contact’s email in Xero, with each invoice and its pay-online link. Nothing is sent until you send it.</p>
+      <table class="job-table job-owed"><thead><tr><th>Client</th><th class="num">Invoices</th><th>Oldest overdue</th><th class="num">Overdue</th><th class="num">Owed</th><th>Reminder</th></tr></thead>
+      <tbody>${o.rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td class="num">${r.invoices}</td><td>${r.oldest ? `<span class="job-late">due ${escapeHtml(fmtDate(r.oldest))}</span>` : '—'}</td><td class="num">${r.overdue ? escapeHtml(money(r.overdue)) : '—'}</td><td class="num"><strong>${escapeHtml(money(r.due))}</strong></td><td>${nudgeCell(r)}</td></tr>`).join('')}</tbody></table>
     </div>`;
+}
+
+function nudgeCell(r) {
+  const last = JOB.nudges.get(r.name);
+  const busy = JOB.nudging === r.name;
+  const when = last ? new Date(last.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  const by = last ? String(last.created_by || '').split(/\s+/)[0] : '';
+  return `<div class="job-nudge">
+      ${last ? `<span class="job-muted">Nudged ${escapeHtml(when)}${by ? ` by ${escapeHtml(by)}` : ''}</span>` : ''}
+      ${last?.webLink ? `<a class="job-btn ghost" href="${escapeHtml(last.webLink)}" target="_blank" rel="noopener">Open draft</a>` : ''}
+      <button type="button" class="job-btn${last || !r.overdue ? ' ghost' : ''}" data-job-act="nudge" data-name="${escapeHtml(r.name)}" ${busy || JOB.nudging ? 'disabled' : ''}>${busy ? 'Drafting…' : last ? 'Nudge again' : 'Nudge'}</button>
+    </div>`;
+}
+
+/**
+ * Draft a friendly payment reminder in the person's own Outlook Drafts (never sent from here):
+ * Xero gives the contact's email and each invoice's pay-online link (xero-invoice, action 'nudge');
+ * if it can't, the draft is still made, without a recipient, and the toast says so.
+ */
+async function nudge(name) {
+  const invoices = nudgeInvoices(JOB.inv, name, today());
+  if (!invoices.length) { toast(`${name} has nothing unpaid any more`, 'info'); return; }
+  JOB.nudging = name; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    let info = { email: '', cc: [], firstName: '', links: {} }, missing = '';
+    try {
+      const { data, error } = await sb.functions.invoke('xero-invoice', { body: { action: 'nudge', contact_id: invoices[0].contact_id, invoice_ids: invoices.map(i => i.invoice_id) } });
+      if (error || data?.error) throw new Error(await fnError(error, data));
+      info = data;
+      if (!info.email) missing = 'Xero has no email address for this contact';
+    } catch (err) { missing = 'Xero didn’t answer (' + (err.message || err) + ')'; }
+    const me = myName();
+    const mail = nudgeEmail({ contactName: name, firstName: info.firstName, invoices, links: info.links || {}, today: today(),
+      sender: me ? `Kind regards,\n${me}\nGecko IT Services` : 'Kind regards,\nGecko IT Services' });
+    const draft = await graphFetch('/me/messages', {
+      method: 'POST', scopes: ['Mail.ReadWrite'], interactive: true,
+      body: JSON.stringify({
+        subject: mail.subject, body: { contentType: 'HTML', content: mail.html },
+        toRecipients: info.email ? [{ emailAddress: { address: info.email } }] : [],
+        ccRecipients: (info.cc || []).map(address => ({ emailAddress: { address } }))
+      })
+    });
+    const row = { contact_id: invoices[0].contact_id || '', contact_name: name, invoice_numbers: invoices.map(i => i.invoice_number),
+      amount_due: mail.total, recipient: info.email || '', created_by: me };
+    const saved = await sb.from('payment_nudges').insert(row).select('contact_name,created_at,created_by,recipient').single();
+    JOB.nudges.set(name, { ...(saved.data || { ...row, created_at: new Date().toISOString() }), webLink: draft?.webLink });
+    toast(info.email ? `Reminder to ${info.email} is in your Outlook Drafts. Check it and send.`
+      : `Reminder is in your Outlook Drafts without a recipient: ${missing}. Add their email and send.`, info.email ? 'success' : 'warning', 9000);
+  } catch (err) {
+    toast('Could not create the reminder: ' + (err.message || err), 'error', 8000);
+  } finally {
+    JOB.nudging = null;
+    render();
+  }
 }
 
 // ─── Events ───────────────────────────────────────────────────────────
@@ -729,6 +823,7 @@ async function onClick(event) {
   if (act === 'xero-sync') { xeroSync(); return; }
   if (act === 'xero-invoice') { openInvoice(id); return; }
   if (act === 'allpaid') { JOB.allPaid = !JOB.allPaid; render(); return; }
+  if (act === 'nudge') { nudge(btn.dataset.name); return; }
   if (act === 'delete') {
     if (!window.confirm('Delete this job?')) return;
     try {
@@ -776,7 +871,7 @@ export function init() {
   section?.addEventListener('submit', onSubmit);
   section?.addEventListener('keydown', onKey);
   window.addEventListener('resize', () => moveInk(section?.querySelector('.job-tabs'), section?.querySelector('[data-job-tab][aria-selected="true"]')));
-  els('jobRefresh')?.addEventListener('click', load);
+  els('jobRefresh')?.addEventListener('click', refresh);
   xeroReturn();
   load();
 }

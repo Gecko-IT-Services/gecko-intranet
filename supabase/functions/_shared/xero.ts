@@ -401,3 +401,33 @@ export async function createDraft(r: DraftRequest, email: string) {
     throw new Error(message);
   }
 }
+
+/**
+ * "Nudge" on Jobs › Owed to us: who to write to, and each invoice's pay-online link, from Xero
+ * (read only; the email itself is drafted in the browser, in the person's own Outlook Drafts).
+ * Only unpaid, approved invoices of that contact are looked up. Calls: 1 + one per invoice (max 20).
+ */
+export async function nudgeInfo(contactId: string, invoiceIds: string[]) {
+  const ids = [...new Set((invoiceIds || []).map(String).filter(Boolean))].slice(0, 20);
+  if (!contactId || !ids.length) throw new Error('Which contact and invoices?');
+  const rows = await sql`select invoice_id from public.xero_invoices
+                         where contact_id = ${contactId} and invoice_id in ${sql(ids)} and status = 'AUTHORISED' and amount_due > 0
+                         order by due_date`;
+  if (!rows.length) throw new Error('No unpaid invoices for that contact (Xero may have synced a payment since)');
+  const auth = await accessToken();
+  const inv = (await xeroGet(`/Invoices/${rows[0].invoice_id}`, auth))?.Invoices?.[0];
+  const c = inv?.Contact || {};
+  // Xero's "include in emails" people are who its own invoice emails go to.
+  const cc = (c.ContactPersons || []).filter((p: any) => p.IncludeInEmails && p.EmailAddress).map((p: any) => String(p.EmailAddress));
+  const links: Record<string, string> = {};
+  for (const r of rows) {
+    try {
+      const url = (await xeroGet(`/Invoices/${r.invoice_id}/OnlineInvoice`, auth))?.OnlineInvoices?.[0]?.OnlineInvoiceUrl;
+      if (url) links[r.invoice_id] = String(url);
+    } catch { /* no online link for this one: the email simply doesn't offer it */ }
+  }
+  return {
+    email: String(c.EmailAddress || ''), cc: cc.filter((e: string) => e.toLowerCase() !== String(c.EmailAddress || '').toLowerCase()),
+    firstName: String(c.FirstName || ''), contactName: String(c.Name || ''), links
+  };
+}

@@ -359,8 +359,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => HTML_ESC[c]);
  * → { subject, html, text }
  */
 export function fillTemplate(product, ctx) {
-  const price = ctx.mrr ? `This would come to £${Number(ctx.mrr).toFixed(2)} a month${ctx.oneOff ? `, plus a one-off £${Number(ctx.oneOff).toFixed(2)} to set up` : ''}.`
-    : ctx.oneOff ? `This would be a one-off £${Number(ctx.oneOff).toFixed(2)}.` : '';
+  const price = priceSentence(product, ctx);
   const list = (ctx.findings || []).filter(Boolean).map(f => `• ${f}`).join('\n');
   const vars = {
     first_name: ctx.firstName || 'there',
@@ -377,6 +376,44 @@ export function fillTemplate(product, ctx) {
   const text = fill(product.email_body).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
   const html = text.split(/\n\s*\n/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n');
   return { subject: fill(product.email_subject).trim() || product.name, html, text };
+}
+
+const UNITS = { user: ['user', 'users'], seat: ['seat', 'seats'], device: ['device', 'devices'], site: ['site', 'sites'] };
+const gbp = n => '£' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/**
+ * The {{price}} sentence (Philip, 8 Oct: "include pricing, e.g. Hornet is £7.50 per user").
+ * With the product's client price: "Hornetsecurity 365 Total Protection is £7.50 per user a month,
+ * plus VAT. For your 12 users, that comes to £90.00 a month." (the total only when the opportunity
+ * has a quantity). Without one, the opportunity's own value as before. default_mrr is never quoted:
+ * for dealer products it is Gecko's commission.
+ */
+export function priceSentence(product, ctx = {}) {
+  const unit = product?.price_unit || 'user';
+  const p = product?.unit_price == null || product.unit_price === '' ? null : Number(product.unit_price);
+  const qty = Number(ctx.quantity) || 0;
+  const setUp = ctx.oneOff && unit !== 'one-off' ? ` There’s a one-off ${gbp(ctx.oneOff)} to set up.` : '';
+  if (p != null && p >= 0 && isFinite(p)) {
+    const name = product.name;
+    if (UNITS[unit]) {
+      const [one, many] = UNITS[unit];
+      const total = qty ? ` For your ${qty} ${qty === 1 ? one : many}, that comes to ${gbp(p * qty)} a month.` : '';
+      return `${name} is ${gbp(p)} per ${one} a month, plus VAT.${total}${setUp}`;
+    }
+    if (unit === 'month') return `${name} is ${gbp(p)} a month, plus VAT.${setUp}`;
+    if (unit === 'year') return `${name} is ${gbp(p)} a year, plus VAT.${setUp}`;
+    if (unit === 'one-off') return `This would be a one-off ${gbp(p)}, plus VAT.`;
+  }
+  return ctx.mrr ? `This would come to ${gbp(ctx.mrr)} a month, plus VAT${ctx.oneOff ? `, with a one-off ${gbp(ctx.oneOff)} to set up` : ''}.`
+    : ctx.oneOff ? `This would be a one-off ${gbp(ctx.oneOff)}, plus VAT.` : '';
+}
+
+/** An opportunity's monthly value from a per-unit client price and a quantity (null when it can't be worked out). */
+export function unitValue(product, quantity) {
+  const p = product?.unit_price == null ? null : Number(product.unit_price);
+  const q = Number(quantity) || 0;
+  if (p == null || !q || !UNITS[product.price_unit || 'user']) return null;
+  return Math.round(p * q * 100) / 100;
 }
 
 /** Domain from an email address, ignoring free mail providers. */
