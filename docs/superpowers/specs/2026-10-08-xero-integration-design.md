@@ -21,7 +21,9 @@ can't say which invoice a job became, whether it's paid, or when a repeating inv
   - `xero-auth`: staff only (Supabase session → email in `public.staff`); stores a one-time state
     and returns Xero's consent URL. The site sends the browser there.
   - `xero-callback`: Xero returns here. Accepts only a state issued in the last 15 minutes,
-    exchanges the code, picks the organisation (the one named Gecko, else the first), stores the
+    exchanges the code, picks the organisation (the Ltd, "Gecko IT Services": the old "Gecko IT"
+    org, to May 2026, is shared with the app too; an `XERO_ORGANISATION` secret overrides; switching
+    organisation clears the other's invoices and forces a full sync), stores the
     tokens, runs the first sync and sends the browser back to `…/gecko-intranet/#xero=connected`.
   - `xero-sync`: hourly from `pg_cron` (minute 17) with a secret from `private.cron_secret`, or on
     demand by staff ("Sync now"). Refreshes the token (Xero rotates refresh tokens: the new one is
