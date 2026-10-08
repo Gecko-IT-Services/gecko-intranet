@@ -22,7 +22,7 @@ import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
-  emailDomain, serviceLabel, renewalsDue, THRESHOLDS
+  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS
 } from '../core/opportunities.js';
 
 const STATUSES = [['idea', 'Idea'], ['proposed', 'Proposed'], ['won', 'Won'], ['lost', 'Lost']];
@@ -376,12 +376,14 @@ function myName() {
 async function draftEmail(id) {
   const o = OPP.opps.find(x => x.id === id);
   if (!o) return;
-  const p = findProduct(o.product_key) || { name: o.title, email_subject: o.title, email_body: 'Hi {{first_name}},\n\n{{evidence}}\n\n{{price}}\n\n{{sender}}' };
+  const p = findProduct(o.product_key) || { name: o.title, email_subject: o.title, email_body: 'Hi {{first_name}},\n\n{{findings}}\n\n{{price}}\n\n{{sender}}' };
   const c = findClient(o.client_name) || {};
+  // Client-facing findings, worked out afresh; o.evidence is our own notes and never goes out.
+  const found = c.name && findProduct(o.product_key) ? evaluate(analyse(c).client, findProduct(o.product_key)) : null;
   const mail = fillTemplate(p, {
     client: o.client_name,
     firstName: String(c.contactName || '').split(/\s+/)[0],
-    evidence: String(o.evidence || '').split('\n').filter(Boolean),
+    findings: found?.findings || [],
     mrr: o.mrr, oneOff: o.one_off,
     sender: myName() ? `Kind regards,\n${myName()}\nGecko IT Services` : 'Kind regards,\nGecko IT Services'
   });

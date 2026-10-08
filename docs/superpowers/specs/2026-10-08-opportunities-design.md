@@ -111,6 +111,18 @@ client as a VoxOne/connectivity prospect; that was wrong for dealer customers.
 - Edited on the **VoIP Unlimited** tab (add, edit, remove rows). Per-customer commission isn't in
   the statement email, so `commission` is optional and filled by hand when known.
 
+## Emails (rewritten 8 Oct, Philip: "not very convincing… friendly tone… detail the benefits")
+- Each template is a complete, friendly email: a warm opener, why it matters (informative, not
+  pushy), the benefits as a bulleted list, a no-obligation next step. Migration
+  `20261008170000_better_emails.sql` replaces only templates still exactly as seeded (md5 of the
+  old body), so any wording Philip has edited on the Products tab is kept.
+- **Internal reasons never go to a client.** `evaluate` returns `reasons` (ours: billing gaps,
+  commission, timesheet text) and `findings` (client-facing facts only: DNS and PageSpeed results,
+  contract status of dealer services, how many related issues or ad-hoc hours we've handled).
+  `{{findings}}` (and the old `{{evidence}}`) is a bulleted list of `findings`, worked out afresh
+  when the draft is made. `{{#findings}}…{{/findings}}` and `{{#price}}…{{/price}}` appear only when
+  there is something to say, so an email never has a dangling "we noticed:" or an empty price.
+
 ## Phases
 1. Gap map from what clients already buy + DNS/email checks + PageSpeed; opportunity
    board; draft email. (Data in hand, no keys.)

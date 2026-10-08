@@ -163,9 +163,20 @@ const fmtDate = d => {
   return day ? `${Number(day)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m) - 1]} ${y}` : '';
 };
 
+/** A dealer service in the client's words: no commission, no internal notes. */
+function dealerFinding(d) {
+  const what = `${d.quantity > 1 ? d.quantity + ' × ' : ''}${serviceLabel(d.service)}${d.extras && d.service !== 'voip_exchange' ? ` (${d.extras})` : ''}`;
+  if (d.contract === 'out_of_contract') return `${what}: out of contract`;
+  if (d.contract_end) return `${what}: contract ends ${fmtDate(d.contract_end)}`;
+  if (d.contract === 'expiring') return `${what}: coming up for renewal`;
+  return `${what}: ${CONTRACT_LABEL[d.contract] || d.contract}`;
+}
+
 /**
  * One product for one client: null when it is not a gap, otherwise
- * { product, reasons: [plain sentences], tickets: [hits], mrr, oneOff, strength }.
+ * { product, reasons: [plain sentences], findings, tickets: [hits], mrr, oneOff, strength }.
+ * `reasons` are for us (they mention billing, commission, timesheet text);
+ * `findings` are the only facts that may go into an email to the client.
  * strength: 2 = rule + timesheets agree, 1 = one of them.
  */
 export function evaluate(client, product, { status, now = new Date() } = {}) {
@@ -174,7 +185,7 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
   const owned = holds(client, product);
   if (owned.has) return null;
 
-  const reasons = [];
+  const reasons = [], findings = [];
   const dns = client.dns, ps = client.pagespeed;
   let ruleHit = false;
 
@@ -194,17 +205,22 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
       if (onM365(client) && dns && !dns.filter) {
         ruleHit = true;
         reasons.push('Email arrives straight into Microsoft 365 with no filtering service in front.');
-        if (dns.dmarc === 'missing' || dns.dmarc === 'none') reasons.push(`DMARC is ${dns.dmarc === 'missing' ? 'not set up' : 'set to “none” (monitor only)'}, so spoofed email isn’t blocked.`);
+        findings.push('Your email goes straight into Microsoft 365, without a specialist filtering service in front of it.');
+        if (dns.dmarc === 'missing' || dns.dmarc === 'none') {
+          reasons.push(`DMARC is ${dns.dmarc === 'missing' ? 'not set up' : 'set to “none” (monitor only)'}, so spoofed email isn’t blocked.`);
+          findings.push(`Your domain ${dns.dmarc === 'missing' ? 'has no DMARC policy' : 'has a DMARC policy that only monitors'}, so emails pretending to come from you aren’t blocked.`);
+        }
       }
       break;
     case 'dmarc':
       if (dns) {
-        if (dns.spf === 'missing') reasons.push('No SPF record: nothing says which servers may send as this domain.');
-        if (dns.spf === 'open') reasons.push('SPF ends in “+all”, which lets anyone send as this domain.');
-        if (dns.spf === 'multiple') reasons.push('More than one SPF record, which makes SPF fail.');
-        if (dns.dmarc === 'missing') reasons.push('No DMARC record.');
-        if (dns.dmarc === 'none') reasons.push('DMARC is set to “none”, so spoofed email is reported but still delivered.');
-        if (dns.provider === 'microsoft' && !dns.dkim) reasons.push('DKIM signing isn’t switched on for Microsoft 365.');
+        const both = (r, f) => { reasons.push(r); findings.push(f); };
+        if (dns.spf === 'missing') both('No SPF record: nothing says which servers may send as this domain.', 'There’s no SPF record, so nothing tells other mail servers which services may send email as you.');
+        if (dns.spf === 'open') both('SPF ends in “+all”, which lets anyone send as this domain.', 'Your SPF record ends in “+all”, which in effect allows anyone to send email as you.');
+        if (dns.spf === 'multiple') both('More than one SPF record, which makes SPF fail.', 'There are two SPF records, which causes the check to fail.');
+        if (dns.dmarc === 'missing') both('No DMARC record.', 'There’s no DMARC policy, so receiving servers aren’t told what to do with fake emails using your name.');
+        if (dns.dmarc === 'none') both('DMARC is set to “none”, so spoofed email is reported but still delivered.', 'Your DMARC policy is set to monitor only, so fake emails using your name are still delivered.');
+        if (dns.provider === 'microsoft' && !dns.dkim) both('DKIM signing isn’t switched on for Microsoft 365.', 'DKIM signing isn’t switched on, so your emails don’t carry the digital signature that proves they’re genuine.');
         ruleHit = reasons.length > 0;
       }
       break;
@@ -215,13 +231,22 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
       if (ps && !ps.error && ((ps.seo ?? 100) < THRESHOLDS.seoBelow || (ps.performance ?? 100) < THRESHOLDS.performanceBelow)) {
         ruleHit = true;
         reasons.push(`Google PageSpeed (mobile): SEO ${ps.seo ?? '—'}/100, performance ${ps.performance ?? '—'}/100, accessibility ${ps.accessibility ?? '—'}/100.`);
+        if (ps.seo != null) findings.push(`Search engine optimisation: ${ps.seo}/100`);
+        if (ps.performance != null) findings.push(`Speed on mobile: ${ps.performance}/100`);
+        if (ps.accessibility != null) findings.push(`Accessibility: ${ps.accessibility}/100`);
       }
       break;
     case 'website':
       if (ps && !ps.error && ((ps.performance ?? 100) < THRESHOLDS.performanceBelow || ps.https === false)) {
         ruleHit = true;
-        if ((ps.performance ?? 100) < THRESHOLDS.performanceBelow) reasons.push(`The site scores ${ps.performance}/100 for speed on mobile (Google PageSpeed).`);
-        if (ps.https === false) reasons.push('The site doesn’t load over HTTPS, so browsers mark it “Not secure”.');
+        if ((ps.performance ?? 100) < THRESHOLDS.performanceBelow) {
+          reasons.push(`The site scores ${ps.performance}/100 for speed on mobile (Google PageSpeed).`);
+          findings.push(`It scores ${ps.performance}/100 for speed on mobile.`);
+        }
+        if (ps.https === false) {
+          reasons.push('The site doesn’t load over HTTPS, so browsers mark it “Not secure”.');
+          findings.push('It doesn’t load securely (HTTPS), so browsers show visitors a “Not secure” warning.');
+        }
       }
       break;
     case 'support':
@@ -234,7 +259,7 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
       const seats = ve.reduce((t, d) => t + (Number(d.quantity) || 0), 0);
       if (seats) {
         ruleHit = true;
-        for (const d of ve) reasons.push(dealerLine(d) + '.');
+        for (const d of ve) { reasons.push(dealerLine(d) + '.'); findings.push(dealerFinding(d)); }
         reasons.push('VoIP Unlimited report that VoIP Exchange call recordings are not accessible from mid-August 2026 and the mobile app is unreliable; they recommend moving to VoxOne.');
         if (product.default_mrr != null) reasons.push(`${seats} seats × ${money(product.default_mrr)} commission = ${money(seats * Number(product.default_mrr))} a month.`);
       }
@@ -242,7 +267,7 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
     }
     case 'dealer_renewal': {
       const due = renewalsDue(client.dealer, { now }).filter(d => d.service !== 'voip_exchange');   // VE has its own migration
-      if (due.length) { ruleHit = true; for (const d of due) reasons.push(dealerLine(d) + '.'); }
+      if (due.length) { ruleHit = true; for (const d of due) { reasons.push(dealerLine(d) + '.'); findings.push(dealerFinding(d)); } }
       break;
     }
     case 'dealer_prospect':
@@ -261,12 +286,14 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
     const hours = tickets.reduce((t, e) => t + (Number(e.hours) || 0), 0);
     if (hours >= THRESHOLDS.supportHours) {
       reasons.push(`${round1(hours)} hours of ad-hoc support in the last ${THRESHOLDS.ticketMonths} months, outside any hours block or retainer.`);
+      findings.push(`We’ve provided ${round1(hours)} hours of ad-hoc support over the last ${THRESHOLDS.ticketMonths} months.`);
       ruleHit = true;
     }
     tickets = [];
   } else if (tickets.length >= THRESHOLDS.ticketHits) {
     const eg = tickets.slice(0, 2).map(t => `“${clip(t.text)}” (${fmtDate(t.date)})`).join('; ');
     reasons.push(`${tickets.length} timesheet entries in the last ${THRESHOLDS.ticketMonths} months relate to this, e.g. ${eg}.`);
+    findings.push(`We’ve helped your team with ${tickets.length} related issues over the last ${THRESHOLDS.ticketMonths} months.`);
   } else {
     tickets = [];
   }
@@ -279,6 +306,7 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
   return {
     product,
     reasons,
+    findings,
     tickets,
     mrr: product.default_mrr == null ? null : Math.round(Number(product.default_mrr) * seats * 100) / 100,
     oneOff: product.default_one_off == null ? null : Number(product.default_one_off),
@@ -325,21 +353,28 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => HTML_ESC[c]);
 /**
  * The email for an opportunity: the product's template with this client's
  * details. Every value is HTML-escaped; paragraphs come from blank lines.
+ * {{findings}} (and the older {{evidence}}) is a bulleted list of `findings`,
+ * the client-facing facts only; internal reasons never go into an email.
+ * {{#findings}}…{{/findings}} and {{#price}}…{{/price}} appear only when there is one.
  * → { subject, html, text }
  */
 export function fillTemplate(product, ctx) {
-  const price = ctx.mrr ? `It would be £${Number(ctx.mrr).toFixed(2)} a month${ctx.oneOff ? ` plus £${Number(ctx.oneOff).toFixed(2)} to set up` : ''}.`
-    : ctx.oneOff ? `It would be a one-off £${Number(ctx.oneOff).toFixed(2)}.` : '';
+  const price = ctx.mrr ? `This would come to £${Number(ctx.mrr).toFixed(2)} a month${ctx.oneOff ? `, plus a one-off £${Number(ctx.oneOff).toFixed(2)} to set up` : ''}.`
+    : ctx.oneOff ? `This would be a one-off £${Number(ctx.oneOff).toFixed(2)}.` : '';
+  const list = (ctx.findings || []).filter(Boolean).map(f => `• ${f}`).join('\n');
   const vars = {
     first_name: ctx.firstName || 'there',
     client: ctx.client || '',
-    evidence: (ctx.evidence || []).join('\n'),
+    findings: list,
+    evidence: list,
     product: product.name,
     price,
     sender: ctx.sender || ''
   };
-  const fill = s => String(s || '').replace(/\{\{(\w+)\}\}/g, (_, k) => (k in vars ? vars[k] : ''));
-  const text = fill(product.email_body).replace(/\n{3,}/g, '\n\n').trim();
+  const fill = s => String(s || '')
+    .replace(/\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (_, k, inner) => (vars[k] ? inner : ''))
+    .replace(/\{\{(\w+)\}\}/g, (_, k) => (k in vars ? vars[k] : ''));
+  const text = fill(product.email_body).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
   const html = text.split(/\n\s*\n/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n');
   return { subject: fill(product.email_subject).trim() || product.name, html, text };
 }
