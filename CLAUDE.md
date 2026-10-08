@@ -125,6 +125,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Pipeline (9 Oct): follow-up dates, quiet-deal flag (14 days), List/Board views, Won → **Create job** (one-off part, once per
   deal via `jobs.source_ref = 'opp:<id>'`) and **Mark done** for monthly billing; due follow-ups and won deals to set up show on
   Overview › Today. `dealState`/`jobFromDeal`/`boardColumns`. Design `2026-10-09-sharper-pipeline-design.md`.
+- Opportunities › **Prospects** (9 Oct): new business that isn't a client yet (`prospects`: source, interest, stage New →
+  Contacted → Meeting → Proposal / Lost, £/month estimate, follow-up); **Make client** adds them to Clients (New) with contact
+  and a first activity line. `src/core/prospects.js`. Design `2026-10-09-prospects-design.md`.
 - Windows 10 / device gaps wait for Atera data in the feed (phase 2, with the Atera cost check).
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer

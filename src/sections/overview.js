@@ -26,7 +26,7 @@ export async function loadDb() {
   const month = new Date().toISOString().slice(0, 7);
   const since = new Date(Date.now() - 60 * 86400e3).toISOString();
   const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
-  const [jobs, opps, leave, xero, nudges, ticks, followUps] = await Promise.all([
+  const [jobs, opps, leave, xero, nudges, ticks, followUps, prospects] = await Promise.all([
     settle(sb.from('jobs').select('id,client_name,title,status,value,target_date,invoice_ref,invoiced_at,created_at,modified_at').then(must)),
     settle(sb.from('opportunities').select('id,client_name,title,status,mrr,one_off,closed_at,created_at,modified_at,follow_up_on,job_id,billing_set_up_at').then(must)),
     settle(sb.from('leave_requests').select('person,start_date,end_date,status,leave_type').then(must)),
@@ -34,16 +34,18 @@ export async function loadDb() {
     settle(sb.from('payment_nudges').select('contact_name,created_at').gte('created_at', since).then(must)),
     settle(sb.from('month_end_checks').select('item,done_by,done_at').eq('month', month).then(must)),
     // Follow-ups due by today and not done (client page › Activity).
-    settle(sb.from('client_activity').select('id,client_name,kind,body,contact_name,follow_up_on,follow_up_done_at,created_by').lte('follow_up_on', todayKey).is('follow_up_done_at', null).then(must))
+    settle(sb.from('client_activity').select('id,client_name,kind,body,contact_name,follow_up_on,follow_up_done_at,created_by').lte('follow_up_on', todayKey).is('follow_up_done_at', null).then(must)),
+    // Prospects to chase (Opportunities › Prospects).
+    settle(sb.from('prospects').select('id,company,stage,next_step,follow_up_on').in('stage', ['new', 'contacted', 'meeting', 'proposal']).lte('follow_up_on', todayKey).then(must))
   ]);
   const errors = {};
-  for (const [k, r] of Object.entries({ jobs, opps, leave, xero, nudges, ticks, followUps })) if (r.e) errors[k] = r.e.message || String(r.e);
+  for (const [k, r] of Object.entries({ jobs, opps, leave, xero, nudges, ticks, followUps, prospects })) if (r.e) errors[k] = r.e.message || String(r.e);
   const out = {
     jobs: jobs.v || null,
     opps: opps.v || null,
     leave: leave.v ? leave.v.map(l => ({ person: l.person || 'Jack', start: l.start_date, end: l.end_date || l.start_date, status: status(l.status), type: l.leave_type || 'Annual Leave' })) : null,
     xero: xero.v || null,
-    nudges: nudges.v || null, ticks: ticks.v || null, followUps: followUps.v || null,
+    nudges: nudges.v || null, ticks: ticks.v || null, followUps: followUps.v || null, prospects: prospects.v || null,
     inv: null, rep: null, errors
   };
   if (out.xero?.connected) {
