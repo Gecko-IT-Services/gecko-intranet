@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { stageTotals, monthSales, salesHistory, previousMonth, STAGES, xeroMonthSales, xeroHistory, repeatDates, jobInvoice, invoiceIndex, owed } from '../src/core/jobs.js';
+import { stageTotals, monthSales, salesHistory, previousMonth, STAGES, xeroMonthSales, xeroHistory, repeatDates, jobInvoices, jobRaised, invoiceIndex, owed } from '../src/core/jobs.js';
 
 assert.equal(previousMonth('2026-01'), '2025-12');
 assert.equal(previousMonth('2026-10'), '2026-09');
@@ -95,13 +95,22 @@ assert.deepEqual(xh, [
 
 const idx = invoiceIndex(invoices);
 const today = '2026-10-08';
-assert.equal(jobInvoice({ invoice_ref: ' inv-1 ' }, idx, today).state, 'paid', 'number matched case- and space-insensitively');
-assert.equal(jobInvoice({ invoice_ref: 'INV-2' }, idx, today).state, 'due');
-assert.equal(jobInvoice({ invoice_ref: 'INV-7' }, idx, today).state, 'overdue');
-assert.equal(jobInvoice({ invoice_ref: 'INV-5' }, idx, today).state, 'draft');
-assert.equal(jobInvoice({ invoice_ref: 'INV-4' }, idx, today).state, 'void');
-assert.equal(jobInvoice({ invoice_ref: 'INV-999' }, idx, today).state, 'missing');
-assert.equal(jobInvoice({ invoice_ref: '' }, idx, today).state, 'none');
+assert.equal(jobInvoices({ invoice_ref: ' inv-1 ' }, idx, today)[0]?.state ?? 'none', 'paid', 'number matched case- and space-insensitively');
+assert.equal(jobInvoices({ invoice_ref: 'INV-2' }, idx, today)[0]?.state ?? 'none', 'due');
+assert.equal(jobInvoices({ invoice_ref: 'INV-7' }, idx, today)[0]?.state ?? 'none', 'overdue');
+assert.equal(jobInvoices({ invoice_ref: 'INV-5' }, idx, today)[0]?.state ?? 'none', 'draft');
+assert.equal(jobInvoices({ invoice_ref: 'INV-4' }, idx, today)[0]?.state ?? 'none', 'void');
+assert.equal(jobInvoices({ invoice_ref: 'INV-999' }, idx, today)[0]?.state ?? 'none', 'missing');
+assert.equal(jobInvoices({ invoice_ref: '' }, idx, today)[0]?.state ?? 'none', 'none');
+
+const two = jobInvoices({ invoice_ref: 'INV-1, INV-5' }, idx, today);
+assert.deepEqual(two.map(r => [r.ref, r.state]), [['INV-1', 'paid'], ['INV-5', 'draft']], 'a deposit and the balance');
+assert.equal(jobRaised({ invoice_ref: 'INV-1, INV-5, INV-4' }, idx), 350, 'drafts count as raised, voided do not');
+
+// Deposit approved, balance still to invoice: only the balance is still to come; a job's draft isn't listed again.
+const dep = xeroMonthSales(invoices, [], [{ status: 'to_invoice', value: 1100, invoice_ref: 'INV-1, INV-5' }], { month: '2026-10' });
+assert.equal(dep.toInvoice, 1000);
+assert.equal(dep.drafts.length, 0);
 
 const o = owed(invoices, today);
 assert.equal(o.total, 1980);

@@ -157,3 +157,8 @@
 #section-jobs .job-xi[data-tone="bad"] { color: var(--red); }
 #section-jobs .job-xi small { font-weight: 400; color: var(--muted); font-family: var(--font-mono); }
 @container jobwrap (max-width: 560px) { #section-jobs .job-xi { align-items: flex-start; } }
+#section-jobs .job-xi a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Invoice in Xero (draft) form */
+#section-jobs .job-inv { border-top: 1px solid var(--green-line); }
+#section-jobs .job-inv .job-muted strong { color: var(--white); }

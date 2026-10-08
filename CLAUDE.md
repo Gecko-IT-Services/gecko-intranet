@@ -132,6 +132,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   AUTHORISED + PAID, same rule as the feed), still to come from actual repeating-invoice dates,
   drafts listed not counted, jobs matched to their invoice by number (Paid / Awaiting / Overdue),
   and "Owed to us" (amount due incl. VAT). Profitability still reads the feed.
+- Phase 3 (8 Oct): **Invoice in Xero** on a job creates a **DRAFT** sales invoice only (function
+  `xero-invoice`, scope `accounting.invoices`); Philip approves and sends it in Xero. Once per request
+  key (`public.xero_pushes`, also the audit trail); only contacts and items already used in Xero; the
+  number is added to the job, and the hourly sync moves the job to Invoiced once approved.
 
 ## The feed (where the money numbers come from)
 - `Gecko Dashboard Data/profitability-feed.json` in the portal site's Documents

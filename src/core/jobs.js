@@ -105,6 +105,8 @@ const COUNTED = new Set(['AUTHORISED', 'PAID']);
 const DRAFTS = new Set(['DRAFT', 'SUBMITTED']);
 const isRepeat = inv => !!String(inv.repeating_invoice_id || '').trim();
 export const refKey = r => String(r || '').trim().toUpperCase().replace(/\s+/g, '');
+/** A job's invoice numbers: "INV-0301, INV-0305" (a deposit then the balance) → keys. */
+export const refKeys = r => String(r || '').split(/[,;]+/).map(refKey).filter(Boolean);
 
 function lastDay(month) {
   const [y, m] = month.split('-').map(Number);
@@ -173,12 +175,16 @@ export function xeroMonthSales(invoices, repeating, jobs, { month, exclude = /vo
   recurringToCome.sort((a, b) => a.date.localeCompare(b.date) || b.amount - a.amount);
   const toCome = round2(recurringToCome.reduce((t, r) => t + r.amount, 0));
 
-  // A job whose invoice is already raised in Xero is in "invoiced" already: don't count it twice.
-  const raised = new Set(invoices.filter(i => COUNTED.has(i.status)).map(i => refKey(i.invoice_number)));
-  const open = j => !(refKey(j.invoice_ref) && raised.has(refKey(j.invoice_ref)));
-  const toInvoiceJobs = jobs.filter(j => j.status === 'to_invoice' && open(j));
-  const dueJobs = jobs.filter(j => (j.status === 'agreed' || j.status === 'in_progress') && monthOf(j.target_date) === month && open(j));
-  const sum = list => round2(list.reduce((t, j) => t + num(j.value), 0));
+  // What a job's approved invoices already cover is in "invoiced": only the rest is still to come.
+  const raised = new Map(invoices.filter(i => COUNTED.has(i.status)).map(i => [refKey(i.invoice_number), num(i.sub_total)]));
+  const left = j => round2(Math.max(0, num(j.value) - refKeys(j.invoice_ref).reduce((t, k) => t + (raised.get(k) || 0), 0)));
+  const covered = j => refKeys(j.invoice_ref).some(k => raised.has(k)) && left(j) === 0;
+  const toInvoiceJobs = jobs.filter(j => j.status === 'to_invoice' && !covered(j));
+  const dueJobs = jobs.filter(j => (j.status === 'agreed' || j.status === 'in_progress') && monthOf(j.target_date) === month && !covered(j));
+  const sum = list => round2(list.reduce((t, j) => t + left(j), 0));
+  // Drafts made for a job are that job's money (counted with it), not listed again.
+  const jobRefs = new Set(jobs.flatMap(j => refKeys(j.invoice_ref)));
+  drafts.splice(0, drafts.length, ...drafts.filter(d => !jobRefs.has(refKey(d.invoice_number))));
   const toInvoice = sum(toInvoiceJobs), dueThisMonth = sum(dueJobs);
 
   return {
@@ -209,13 +215,21 @@ export function xeroHistory(invoices, { month, n = 6, exclude = /voip\s*unlimite
 }
 
 /**
- * A job's Xero invoice, by the number typed on the job: { state, invoice }.
- * state: 'paid' | 'due' | 'overdue' | 'draft' | 'void' | 'missing' | 'none' (no number typed).
+ * A job's Xero invoices, by the numbers on the job: [{ ref, state, invoice }].
+ * state: 'paid' | 'due' | 'overdue' | 'draft' | 'void' | 'missing'. No number → [].
  */
-export function jobInvoice(job, byNumber, today) {
-  const key = refKey(job.invoice_ref);
-  if (!key) return { state: 'none', invoice: null };
-  const inv = byNumber.get(key);
+export function jobInvoices(job, byNumber, today) {
+  return String(job.invoice_ref || '').split(/[,;]+/).map(r => r.trim()).filter(Boolean)
+    .map(ref => ({ ref, ...invoiceState(byNumber.get(refKey(ref)), today) }));
+}
+
+/** Net already raised for a job (drafts included, voided not): what "Invoice in Xero" starts from. */
+export function jobRaised(job, byNumber) {
+  return round2(refKeys(job.invoice_ref).map(k => byNumber.get(k))
+    .filter(i => i && (COUNTED.has(i.status) || DRAFTS.has(i.status))).reduce((t, i) => t + num(i.sub_total), 0));
+}
+
+function invoiceState(inv, today) {
   if (!inv) return { state: 'missing', invoice: null };
   if (inv.status === 'PAID' || (COUNTED.has(inv.status) && num(inv.amount_due) <= 0)) return { state: 'paid', invoice: inv };
   if (DRAFTS.has(inv.status)) return { state: 'draft', invoice: inv };
