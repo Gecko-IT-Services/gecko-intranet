@@ -31,19 +31,28 @@ function clientCreds() {
   return { id, secret, basic: 'Basic ' + btoa(`${id}:${secret}`) };
 }
 
-/** The site's public key (it is in the page source anyway); Supabase may also provide it. */
-const PUBLIC_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'sb_publishable_9-Krnct-4TD9Ri_ci7Bgpw_tNV0lOrB';
+/**
+ * The site's publishable key (it is in the page source anyway). The project uses the new API
+ * keys, so the legacy SUPABASE_ANON_KEY Supabase provides is refused ("Invalid API key"):
+ * the caller's own key (sent by supabase-js) comes first, then this one.
+ */
+const PUBLISHABLE_KEY = 'sb_publishable_9-Krnct-4TD9Ri_ci7Bgpw_tNV0lOrB';
 
 /** Is the caller (by their Supabase session token) Gecko staff? → their email, or null. */
 export async function staffEmail(req: Request): Promise<string | null> {
   const auth = req.headers.get('authorization') || '';
-  if (!auth.startsWith('Bearer ')) return null;
-  const user = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`, { headers: { authorization: auth, apikey: PUBLIC_KEY } });
-  if (!user.ok) return null;
-  const email = String((await user.json())?.email || '').toLowerCase();
-  if (!email) return null;
-  const [row] = await sql`select 1 from public.staff where email = ${email}`;
-  return row ? email : null;
+  if (!auth.startsWith('Bearer ')) { console.error('staff check: no session token'); return null; }
+  const keys = [...new Set([req.headers.get('apikey'), PUBLISHABLE_KEY, Deno.env.get('SUPABASE_ANON_KEY')].filter(Boolean))] as string[];
+  for (const apikey of keys) {
+    const user = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`, { headers: { authorization: auth, apikey } });
+    if (!user.ok) { console.error(`staff check: auth/v1/user ${user.status} with key ${apikey.slice(0, 14)}…`); continue; }
+    const email = String((await user.json())?.email || '').toLowerCase();
+    if (!email) return null;
+    const [row] = await sql`select 1 from public.staff where email = ${email}`;
+    if (!row) console.error(`staff check: ${email} is not in public.staff`);
+    return row ? email : null;
+  }
+  return null;
 }
 
 export function authorizeUrl(state: string) {

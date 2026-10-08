@@ -316,12 +316,19 @@ function xeroHtml() {
     </div>`;
 }
 
+/** supabase-js hides a function's own error behind "non-2xx status code": read the body it sent. */
+async function fnError(error, data) {
+  if (data?.error) return data.error;
+  try { const body = await error?.context?.json(); if (body?.error) return body.error; } catch { /* not JSON */ }
+  return error?.message || 'unknown error';
+}
+
 async function xeroConnect() {
   JOB.xeroBusy = true; render();
   try {
     const sb = await connectSupabase({ interactive: true });
     const { data, error } = await sb.functions.invoke('xero-auth', { body: {} });
-    if (error || !data?.url) throw new Error(data?.error || error?.message || 'No Xero link came back');
+    if (error || !data?.url) throw new Error(await fnError(error, data));
     window.location.href = data.url;   // Xero's consent screen; it returns to the dashboard
   } catch (err) {
     JOB.xeroBusy = false; render();
@@ -334,7 +341,7 @@ async function xeroSync() {
   try {
     const sb = await connectSupabase({ interactive: true });
     const { data, error } = await sb.functions.invoke('xero-sync', { body: {} });
-    if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Sync failed');
+    if (error || !data?.ok) throw new Error(await fnError(error, data));
     toast(`Xero synced: ${data.changed} invoice${data.changed === 1 ? '' : 's'} updated`, 'success');
   } catch (err) {
     toast('Xero sync failed: ' + (err.message || err), 'error', 8000);
