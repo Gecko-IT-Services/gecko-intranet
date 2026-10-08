@@ -25,7 +25,8 @@ const JOB = {
   adding: false,
   loading: false,
   error: null,
-  jobs: [], clients: [], feed: null, feedNote: '', importing: false
+  jobs: [], clients: [], feed: null, feedNote: '', importing: false,
+  xero: null, xeroBusy: false   // public.xero_status: the direct Xero connection
 };
 
 const money = n => '£' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -58,12 +59,15 @@ async function load() {
   render();
   try {
     const sb = await connectSupabase();
-    const [jobs, clients, feed] = await Promise.all([
+    const [jobs, clients, feed, xero] = await Promise.all([
       sb.from('jobs').select('*').order('modified_at', { ascending: false }).then(must),
       sb.from('gecko_clients').select('title,status').then(must),
-      readFeed()
+      readFeed(),
+      // Missing table (before the Xero migration) is not an error for Jobs.
+      sb.from('xero_status').select('*').eq('id', 1).maybeSingle().then(r => (r.error ? null : r.data))
     ]);
     JOB.jobs = jobs;
+    JOB.xero = xero;
     JOB.feed = feed;
     const names = new Set(clients.filter(c => c.status !== 'Inactive').map(c => c.title).filter(Boolean));
     for (const j of jobs) names.add(j.client_name);
@@ -292,8 +296,67 @@ function jobsHtml() {
     ${imported ? '' : `<p class="job-note">Had projects on the old Projects board? <button type="button" class="job-link" data-job-act="import" ${JOB.importing ? 'disabled' : ''}>${JOB.importing ? 'Bringing them across…' : 'Bring the open ones across'}</button> (once; you’ll add a value to each).</p>`}`;
 }
 
+/** The direct Xero connection: connect once, then it syncs every hour on Supabase. */
+function xeroHtml() {
+  const x = JOB.xero;
+  if (!x) return '';
+  const when = d => (d ? new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+  if (!x.connected) {
+    return `<div class="job-panel job-xero"><div class="job-panel-head"><strong>Connect Xero directly</strong>
+        <span class="job-muted">Read-only. Invoices and repeating invoices sync every hour, so jobs can be matched to their invoice.</span></div>
+      <button type="button" class="job-btn" data-job-act="xero-connect" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Opening Xero…' : 'Connect Xero'}</button></div>`;
+  }
+  const state = x.last_sync_ok === false ? 'bad' : 'ok';
+  return `<div class="job-panel job-xero" data-state="${state}">
+      <div class="job-panel-head"><strong>Xero: ${escapeHtml(x.tenant_name || 'connected')}</strong>
+        <span class="job-muted">${x.last_sync_at ? `${x.last_sync_ok === false ? 'Last sync failed' : 'Synced'} ${escapeHtml(when(x.last_sync_at))} · ` : ''}${escapeHtml(String(x.invoices))} invoices, ${escapeHtml(String(x.repeating))} repeating · syncs hourly</span></div>
+      ${x.last_sync_ok === false ? `<p class="job-note">${escapeHtml(x.last_error)}</p>` : ''}
+      <div class="job-actions"><button type="button" class="job-btn ghost" data-job-act="xero-sync" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Syncing…' : 'Sync now'}</button>
+        <button type="button" class="job-btn ghost" data-job-act="xero-connect">Reconnect</button></div>
+    </div>`;
+}
+
+async function xeroConnect() {
+  JOB.xeroBusy = true; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const { data, error } = await sb.functions.invoke('xero-auth', { body: {} });
+    if (error || !data?.url) throw new Error(data?.error || error?.message || 'No Xero link came back');
+    window.location.href = data.url;   // Xero's consent screen; it returns to the dashboard
+  } catch (err) {
+    JOB.xeroBusy = false; render();
+    toast('Could not start the Xero connection: ' + (err.message || err), 'error', 8000);
+  }
+}
+
+async function xeroSync() {
+  JOB.xeroBusy = true; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const { data, error } = await sb.functions.invoke('xero-sync', { body: {} });
+    if (error || !data?.ok) throw new Error(data?.error || error?.message || 'Sync failed');
+    toast(`Xero synced: ${data.changed} invoice${data.changed === 1 ? '' : 's'} updated`, 'success');
+  } catch (err) {
+    toast('Xero sync failed: ' + (err.message || err), 'error', 8000);
+  } finally {
+    JOB.xeroBusy = false;
+    load();
+  }
+}
+
+/** Back from Xero's consent screen (#xero=… on the address, saved by src/main.js). */
+function xeroReturn() {
+  let r = null;
+  try { r = JSON.parse(sessionStorage.getItem('gecko.xeroResult') || 'null'); sessionStorage.removeItem('gecko.xeroResult'); } catch { /* storage blocked */ }
+  if (!r) return;
+  JOB.tab = 'sales';
+  if (r.result === 'connected') toast(`Xero connected: ${r.detail || 'organisation'}. Invoices are synced.`, 'success', 7000);
+  else if (r.result === 'connected-sync-failed') toast('Xero connected, but the first sync failed: ' + r.detail, 'warning', 10000);
+  else toast('Xero was not connected: ' + (r.detail || 'cancelled'), 'error', 10000);
+}
+
 function salesHtml() {
-  if (!JOB.feed) return '<p class="job-empty">Xero sales come from the daily profitability feed, which isn’t available right now.</p>';
+  if (!JOB.feed) return xeroHtml() + '<p class="job-empty">Xero sales come from the daily profitability feed, which isn’t available right now.</p>';
   const month = thisMonth();
   const s = monthSales(JOB.feed, JOB.jobs, { month });
   const hist = salesHistory(JOB.feed, { month, n: 6 });
@@ -306,7 +369,7 @@ function salesHtml() {
   ];
   const pTotal = s.projected || 1;
   const updated = JOB.feed.generatedAt ? new Date(JOB.feed.generatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-  return `
+  return xeroHtml() + `
     <div class="job-panel">
       <div class="job-panel-head"><strong>${escapeHtml(monthName(month))}: on course for ${escapeHtml(money(s.projected))}</strong>
         <span class="job-muted">Xero figures as of ${escapeHtml(updated)} (the feed refreshes each morning)</span></div>
@@ -371,6 +434,8 @@ async function onClick(event) {
   if (act === 'edit') { JOB.editing.has(id) ? JOB.editing.delete(id) : JOB.editing.add(id); render(); return; }
   if (act === 'move') { moveJob(id, btn.dataset.status, btn); return; }
   if (act === 'import') { importProjects(); return; }
+  if (act === 'xero-connect') { xeroConnect(); return; }
+  if (act === 'xero-sync') { xeroSync(); return; }
   if (act === 'delete') {
     if (!window.confirm('Delete this job?')) return;
     try {
@@ -395,5 +460,6 @@ export function init() {
   section?.addEventListener('click', onClick);
   section?.addEventListener('submit', onSubmit);
   els('jobRefresh')?.addEventListener('click', load);
+  xeroReturn();
   load();
 }
