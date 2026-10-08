@@ -7,7 +7,7 @@ const navButtons = html.match(/<button class="sb-link\b[^>]*data-section=/g) ?? 
 // 9 original sections + Projects + Backups + Alerts, minus Projects,
 // Compliance and P&L taken off the sidebar on 6 Oct 2026 (sections still in the code),
 // plus Opportunities (8 Oct 2026).
-assert.equal(navButtons.length, 10, 'every sidebar destination should be a semantic button');
+assert.equal(navButtons.length, 11, 'every sidebar destination should be a semantic button');
 assert.doesNotMatch(html, /<div class="sb-link\b[^>]*onclick=/, 'sidebar destinations must not be click-only divs');
 assert.match(html, /id="sbToggle"[^>]*aria-controls="sidebar"[^>]*aria-expanded="false"/, 'the mobile menu control should expose its target and state');
 assert.match(html, /id="sbBackdrop"[^>]*type="button"[^>]*aria-label="Close navigation"/, 'the mobile backdrop should be an accessible dismissal control');
