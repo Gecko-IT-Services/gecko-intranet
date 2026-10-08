@@ -120,13 +120,18 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   menu since 6 Oct); its open projects can be brought across once (`source_ref`).
 - "Sales this month" reads Xero from the feed: invoiced so far + repeating invoices not yet raised
   (last month's recurring contacts missing this month) + jobs to invoice + jobs due this month.
-  VoIP Unlimited commission is excluded. Invoice-level matching would need a feed change (ask).
+  VoIP Unlimited commission is excluded. Since Xero phase 2 this reads Xero directly (below); the
+  feed is the fallback when Xero isn't connected.
 
 ## Xero, connected directly (from 8 Oct 2026)
 - Edge Functions `xero-auth` / `xero-callback` / `xero-sync` (Deno, `supabase/functions/`), read-only
   scope `accounting.invoices.read`. Hourly `pg_cron` sync into `xero_invoices` and
   `xero_repeating_invoices` (staff read-only); status in `xero_status`; Connect / Sync now on
   Jobs › Sales. Functions are deployed from the repo after merge (not by the GitHub integration).
+- Phase 2 (8 Oct): once connected, Jobs › Sales reads those tables, not the feed: invoiced (net,
+  AUTHORISED + PAID, same rule as the feed), still to come from actual repeating-invoice dates,
+  drafts listed not counted, jobs matched to their invoice by number (Paid / Awaiting / Overdue),
+  and "Owed to us" (amount due incl. VAT). Profitability still reads the feed.
 
 ## The feed (where the money numbers come from)
 - `Gecko Dashboard Data/profitability-feed.json` in the portal site's Documents
