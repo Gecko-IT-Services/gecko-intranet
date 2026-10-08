@@ -247,16 +247,17 @@ async function advanceJobs() {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Contacts and item codes Gecko has invoiced before (from synced invoices): the only ones offered. */
-export async function invoiceOptions(jobId: number) {
-  const [job] = await sql`select id, client_name, title, value, invoice_ref from public.jobs where id = ${jobId}`;
-  if (!job) throw new Error('That job no longer exists');
+/**
+ * Contacts and item codes Gecko has invoiced before (from synced invoices): the only ones offered,
+ * with the contact whose name matches `clientName` suggested.
+ */
+async function contactsAndItems(clientName: string) {
   const contacts = await sql`select distinct on (contact_id) contact_id as id, contact_name as name
                              from public.xero_invoices where contact_id <> '' and status <> 'DELETED'
                              order by contact_id, invoice_date desc nulls last`;
   contacts.sort((a: any, b: any) => a.name.localeCompare(b.name));
   const norm = (t: string) => String(t || '').toLowerCase().replace(/\b(ltd|limited|plc|llp)\b|[^a-z0-9]/g, '');
-  const want = norm(job.client_name);
+  const want = norm(clientName);
   const match = contacts.find((c: any) => norm(c.name) === want)
     || contacts.find((c: any) => want && (norm(c.name).startsWith(want) || want.startsWith(norm(c.name))));
   // One-off work's item codes, most used first, with the account each is booked to.
@@ -266,24 +267,50 @@ export async function invoiceOptions(jobId: number) {
                           where status in ('AUTHORISED','PAID') and coalesce(repeating_invoice_id, '') = ''
                             and coalesce(li->>'item_code', '') <> '' and coalesce(li->>'account_code', '') <> ''
                           group by 1 order by 3 desc, 1`;
+  return { contacts, suggested: match?.id || null, items };
+}
+
+/** For Invoice in Xero on a job. */
+export async function invoiceOptions(jobId: number) {
+  const [job] = await sql`select id, client_name, title, value, invoice_ref from public.jobs where id = ${jobId}`;
+  if (!job) throw new Error('That job no longer exists');
+  const { contacts, suggested, items } = await contactsAndItems(job.client_name);
   const pushes = await sql`select p.invoice_number, p.amount::float, p.state, i.status
                            from public.xero_pushes p left join public.xero_invoices i on i.invoice_id = p.invoice_id
                            where p.job_id = ${jobId} and p.state = 'done' order by p.created_at`;
   const raised = round2(pushes.filter((p: any) => !['VOIDED', 'DELETED'].includes(p.status)).reduce((t: number, p: any) => t + p.amount, 0));
   return {
     job: { id: job.id, client_name: job.client_name, title: job.title, value: job.value == null ? null : Number(job.value) },
-    contacts, suggested: match?.id || null, items, raised, pushes
+    contacts, suggested, items, raised, pushes
   };
 }
 
+/** For an SSA renewal: the contacts and items, and drafts already made for this client lately. */
+export async function ssaOptions(clientName: string, ssaClientId: number | null) {
+  const { contacts, suggested, items } = await contactsAndItems(clientName);
+  const recent = ssaClientId ? await sql`select p.invoice_number, p.invoice_id, p.quantity::float, p.amount::float, p.created_at, p.created_by, i.status
+                       from public.xero_pushes p left join public.xero_invoices i on i.invoice_id = p.invoice_id
+                       where p.source = 'ssa' and p.ssa_client_id = ${ssaClientId} and p.state = 'done'
+                         and p.created_at > now() - interval '45 days' order by p.created_at desc` : [];
+  return { contacts, suggested, items, recent };
+}
+
 export interface DraftRequest {
-  job_id: number; request_key: string; contact_id: string; item_code: string;
-  description: string; amount: number; reference?: string;
+  source?: 'job' | 'ssa';
+  job_id?: number; ssa_client_id?: number | null; client_name?: string;
+  request_key: string; contact_id: string; item_code: string;
+  description: string; amount: number; quantity?: number; reference?: string;
 }
 
 /** Checks a draft request; returns the problem in words, or ''. */
 export function draftProblem(r: Partial<DraftRequest>) {
-  if (!Number.isInteger(r.job_id)) return 'Which job?';
+  const source = r.source || 'job';
+  if (source !== 'job' && source !== 'ssa') return 'Unknown source';
+  if (source === 'job' && !Number.isInteger(r.job_id)) return 'Which job?';
+  if (source === 'ssa' && !String(r.client_name || '').trim()) return 'Which SSA client?';
+  if (source === 'ssa' && r.ssa_client_id != null && !Number.isInteger(r.ssa_client_id)) return 'Which SSA client?';
+  const q = r.quantity == null ? 1 : Number(r.quantity);
+  if (!Number.isInteger(q) || q < 1 || q > 100) return 'The quantity must be a whole number from 1 to 100';
   if (!/^[A-Za-z0-9-]{16,80}$/.test(String(r.request_key || ''))) return 'Missing request key';
   if (!r.contact_id) return 'Choose the Xero contact';
   if (!r.item_code) return 'Choose the item';
@@ -291,7 +318,7 @@ export function draftProblem(r: Partial<DraftRequest>) {
   if (!d) return 'Describe the work';
   if (d.length > 4000) return 'The description is too long (4,000 characters at most)';
   const a = Number(r.amount);
-  if (!(a > 0) || a > 1000000 || Math.abs(Math.round(a * 100) - a * 100) > 1e-6) return 'Enter the amount (net, in pounds and pence)';
+  if (!(a > 0) || a * q > 1000000 || Math.abs(Math.round(a * 100) - a * 100) > 1e-6) return 'Enter the amount (net, in pounds and pence)';
   if (String(r.reference || '').length > 255) return 'The reference is too long';
   return '';
 }
@@ -319,18 +346,23 @@ export async function createDraft(r: DraftRequest, email: string) {
   if (!String(tok.scopes || '').split(/\s+/).includes('accounting.invoices')) {
     throw new Error('Xero was connected read-only. Reconnect Xero (Jobs › Sales this month › Reconnect) to allow draft invoices.');
   }
-  const opts = await invoiceOptions(r.job_id);
+  const source = r.source || 'job';
+  const opts = source === 'job' ? await invoiceOptions(r.job_id!) : await contactsAndItems(String(r.client_name));
   const contact = opts.contacts.find((c: any) => c.id === r.contact_id);
   if (!contact) throw new Error('That contact has no invoices in Xero yet; create the first invoice in Xero');
   const item = opts.items.find((i: any) => i.code === r.item_code);
   if (!item) throw new Error('That item has not been used on an invoice before');
-  const amount = round2(Number(r.amount));
+  const unit = round2(Number(r.amount));
+  const quantity = r.quantity == null ? 1 : Number(r.quantity);
+  const amount = round2(unit * quantity);
+  const jobId = source === 'job' ? r.job_id! : null;
+  const ssaId = source === 'ssa' ? (r.ssa_client_id ?? null) : null;
   const description = String(r.description).trim();
   const reference = String(r.reference || '').trim();
 
   // Claim the request key first: a double click finds the claim and stops here.
-  const claimed = await sql`insert into public.xero_pushes (request_key, job_id, contact_id, contact_name, item_code, account_code, description, amount, created_by)
-                            values (${r.request_key}, ${r.job_id}, ${contact.id}, ${contact.name}, ${item.code}, ${item.account}, ${description}, ${amount}, ${email})
+  const claimed = await sql`insert into public.xero_pushes (request_key, source, job_id, ssa_client_id, contact_id, contact_name, item_code, account_code, description, quantity, amount, created_by)
+                            values (${r.request_key}, ${source}, ${jobId}, ${ssaId}, ${contact.id}, ${contact.name}, ${item.code}, ${item.account}, ${description}, ${quantity}, ${amount}, ${email})
                             on conflict (request_key) do nothing returning id`;
   if (!claimed.length) {
     const [prev] = await sql`select state, invoice_id, invoice_number, error from public.xero_pushes where request_key = ${r.request_key}`;
@@ -338,7 +370,7 @@ export async function createDraft(r: DraftRequest, email: string) {
     if (prev?.state === 'pending') throw new Error('This invoice is already being created; refresh in a moment');
     // A failed attempt may be retried with the same key (Xero's idempotency covers a half-done call).
     await sql`update public.xero_pushes set state = 'pending', error = '', contact_id = ${contact.id}, contact_name = ${contact.name},
-              item_code = ${item.code}, account_code = ${item.account}, description = ${description}, amount = ${amount}
+              item_code = ${item.code}, account_code = ${item.account}, description = ${description}, quantity = ${quantity}, amount = ${amount}
               where request_key = ${r.request_key}`;
   }
   try {
@@ -351,18 +383,18 @@ export async function createDraft(r: DraftRequest, email: string) {
     const body = await xeroPost('/Invoices', auth, { Invoices: [{
       Type: 'ACCREC', Status: 'DRAFT', Contact: { ContactID: contact.id }, Date: today, DueDate: due,
       LineAmountTypes: 'Exclusive', Reference: reference,
-      LineItems: [{ Description: description, Quantity: 1, UnitAmount: amount, ItemCode: item.code, AccountCode: item.account }]
+      LineItems: [{ Description: description, Quantity: quantity, UnitAmount: unit, ItemCode: item.code, AccountCode: item.account }]
     }] }, r.request_key);
     const inv = body?.Invoices?.[0];
     if (!inv?.InvoiceID) throw new Error('Xero did not return the invoice');
     await saveInvoice(inv);
     await sql`update public.xero_pushes set state = 'done', invoice_id = ${inv.InvoiceID}, invoice_number = ${inv.InvoiceNumber || ''},
               done_at = now() where request_key = ${r.request_key}`;
-    if (inv.InvoiceNumber) {
+    if (inv.InvoiceNumber && jobId != null) {
       await sql`update public.jobs set invoice_ref = case when invoice_ref = '' then ${inv.InvoiceNumber}
-                  else invoice_ref || ', ' || ${inv.InvoiceNumber} end where id = ${r.job_id}`;
+                  else invoice_ref || ', ' || ${inv.InvoiceNumber} end where id = ${jobId}`;
     }
-    return { invoice_id: inv.InvoiceID as string, invoice_number: (inv.InvoiceNumber || '') as string, due, repeat: false };
+    return { invoice_id: inv.InvoiceID as string, invoice_number: (inv.InvoiceNumber || '') as string, due, total: amount, repeat: false };
   } catch (err) {
     const message = String((err as Error).message || err).slice(0, 500);
     await sql`update public.xero_pushes set state = 'failed', error = ${message} where request_key = ${r.request_key}`;

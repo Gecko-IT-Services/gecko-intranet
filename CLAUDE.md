@@ -141,6 +141,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `xero-invoice`, scope `accounting.invoices`); Philip approves and sends it in Xero. Once per request
   key (`public.xero_pushes`, also the audit trail); only contacts and items already used in Xero; the
   number is added to the job, and the hourly sync moves the job to Invoiced once approved.
+- Phase 4 (8 Oct): the SSA renewal box offers **Create draft in Xero** (same function, `source: 'ssa'`,
+  n × SSA at £650, account 214, reference Renewal); drafts for that client in the last 45 days are listed.
 
 ## The feed (where the money numbers come from)
 - `Gecko Dashboard Data/profitability-feed.json` in the portal site's Documents
@@ -184,7 +186,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 
 - **SSA renewal** (Timesheets › SSA › Renew…): System credit entry → waits for the "Update
   Client Balances" flow → timesheet email from `CONFIG.SSA_FROM_MAILBOX` (support@) → copy in
-  Gecko Docs → Xero lines to type in. `CONFIG.SSA_EMAIL_MODE` is 'draft' (Outlook Drafts of the
+  Gecko Docs → draft invoice in Xero (or the lines to type in). `CONFIG.SSA_EMAIL_MODE` is 'draft' (Outlook Drafts of the
   person clicking, Mail.ReadWrite) until Philip says switch to 'send' (Mail.Send.Shared + Send As).
   Logic in `src/core/ssa-renewal.js`. Flows involved (Power Automate, shared with Philip, owned by
   Jack): Update Client Balances, Create Timesheets Table Email, Archive Old Timesheet Entries.

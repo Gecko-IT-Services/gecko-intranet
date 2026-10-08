@@ -3210,6 +3210,10 @@ body {
 #section-timesheets .tsh-renew-xero-t { width: 100%; border-collapse: collapse; font-size: 13px; }
 #section-timesheets .tsh-renew-xero-t th { text-align: left; font-weight: 500; color: var(--muted); padding: 3px 12px 3px 0; white-space: nowrap; vertical-align: top; width: 1%; }
 #section-timesheets .tsh-renew-xero-t td { padding: 3px 0; overflow-wrap: anywhere; }
+#section-timesheets .tsh-renew-xero.done { border-color: var(--green-line); }
+#section-timesheets .tsh-renew-xero.done .tsh-renew-xero-h { color: var(--green); }
+#section-timesheets .tsh-renew-xero .tsh-form-grp { margin-bottom: 10px; }
+#section-timesheets .tsh-renew-xero .tsh-renew-sub { margin: 8px 0; }
 #section-timesheets .tsh-renew-xero .tsh-mm-actions { margin-top: 12px; }
 #section-timesheets .tsh-renew-undo { color: var(--red); }
 #section-timesheets .tsh-renew-actions { flex-wrap: wrap; }
@@ -16269,7 +16273,8 @@ function tshOpenRenew(clientId, fresh = false) {
   }
   const c = TSH.ssaClients.find(x => String(x.id) === String(clientId));
   if (!c) { toast('Client not found — click Refresh', 'error'); return; }
-  TSH.renew = { clientId: String(clientId), name: c.name, blocks: 1, started: false, finished: false, steps: {} };
+  TSH.renew = { clientId: String(clientId), dbId: c.dbId ?? null, name: c.name, blocks: 1, started: false, finished: false, steps: {},
+                xero: { key: crypto.randomUUID(), state: 'idle', opts: null, contact: '', error: '', result: null } };
   tshRenewRender();
 }
 
@@ -16300,7 +16305,7 @@ function tshRenewRender() {
       <ol class="tsh-renew-plan">
         <li>Adds a System credit of <strong>+${hours} hours</strong> to the timesheet. ${tshOnDb() ? 'The balance updates straight away (and in the Lists backup).' : 'SharePoint\'s balance flow applies it within about a minute.'}</li>
         <li>${CONFIG.SSA_EMAIL_MODE === 'send' ? 'Emails' : 'Puts in <strong>your Outlook Drafts</strong>'} the latest timesheet from <strong>${escapeHtml(CONFIG.SSA_FROM_MAILBOX)}</strong> to ${to.length ? escapeHtml(to.join(', ')) : '<em>no address</em>'}, copied to ${escapeHtml(CONFIG.SSA_TIMESHEET_CC.join(', '))}${CONFIG.SSA_EMAIL_MODE === 'send' ? '' : ', for you to check and send'}, and saves a copy in Gecko Docs.</li>
-        <li>Shows the Xero invoice to raise: ${inv.quantity} × ${escapeHtml(inv.itemCode)}, ${money(inv.total)} inc VAT.</li>
+        <li>Then offers to create the invoice as a <strong>draft in Xero</strong> (${inv.quantity} × ${escapeHtml(inv.itemCode)}, ${money(inv.total)} inc VAT) for you to check, approve and send.</li>
       </ol>
       ${noEmail}
       <div class="tsh-mm-actions">
@@ -16327,16 +16332,20 @@ function tshRenewRender() {
         ${step('undoBalance', 'Balance put back')}
         ${step('undoFile', 'Gecko Docs copy removed')}
       </ol>
-      ${r.undo.done ? `<p class="tsh-renew-warn">Renewal undone. Do not raise the Xero invoice for it.</p>` : ''}
+      ${r.undo.done ? (r.xero?.result
+        ? `<p class="tsh-renew-warn">Renewal undone. Delete draft ${escapeHtml(r.xero.result.invoice_number)} in Xero: <a href="${escapeHtml(tshXeroLink(r.xero.result.invoice_id))}" target="_blank" rel="noopener">open it in Xero</a>.</p>`
+        : `<p class="tsh-renew-warn">Renewal undone. Do not raise the Xero invoice for it.</p>`) : ''}
       <div class="tsh-mm-actions">
         ${r.undo.done ? `<button class="btn btn-ghost" type="button" onclick="tshOpenRenew('${jsAttr(r.clientId)}', true)">New renewal</button>` : ''}
         <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">${r.undo.done ? 'Done' : 'Hide'}</button>
       </div>`);
     return;
   }
-  const xero = r.emailed ? `
+  if (r.emailed && r.xero?.state === 'idle') tshRenewXeroLoad();
+  const xero = r.emailed ? (tshRenewXeroHtml(r, inv, money) || `
       <div class="tsh-renew-xero">
         <div class="tsh-renew-xero-h">Raise in Xero</div>
+        ${r.xero?.state === 'unavailable' ? `<p class="tsh-renew-sub">Can’t create it in Xero from here (${escapeHtml(r.xero.error)}), so type it in:</p>` : ''}
         <table class="tsh-renew-xero-t">
           <tr><th>Contact</th><td>${escapeHtml(r.name)}</td></tr>
           <tr><th>Reference</th><td>${escapeHtml(inv.reference)}</td></tr>
@@ -16350,7 +16359,7 @@ function tshRenewRender() {
           <button class="btn btn-ghost" type="button" onclick="tshRenewCopyXero()">Copy details</button>
           <a class="btn" href="https://go.xero.com/AccountsReceivable/Edit.aspx" target="_blank" rel="noopener">Open Xero</a>
         </div>
-      </div>` : '';
+      </div>`) : '';
   tshOpenModal(`Renew SSA — ${r.name}`, `
     <ol class="tsh-renew-steps">
       ${step('credit', `Credit +${hours} hours added`)}
@@ -16624,6 +16633,108 @@ async function tshRenewUndo() {
     r.running = false;
     tshRenewRender();
     tshRefreshData(true);
+  }
+}
+
+// ─── SSA renewal → draft invoice in Xero (Edge Function xero-invoice, source 'ssa') ───
+// Same rules as Invoice in Xero on a job: a DRAFT only (approved and sent in Xero), once per
+// renewal (request key), only contacts and items already used in Xero. When Xero isn't
+// connected or the SSA item can't be offered, the box falls back to the details to type in.
+
+const tshXeroLink = id => `https://go.xero.com/AccountsReceivable/View.aspx?InvoiceID=${encodeURIComponent(id)}`;
+
+async function tshXeroFn(body) {
+  const sb = await window.GeckoStore.connect({ interactive: true });
+  const { data, error } = await sb.functions.invoke('xero-invoice', { body });
+  if (error || data?.error) {
+    let msg = data?.error;
+    if (!msg) { try { msg = (await error?.context?.json())?.error; } catch { /* not JSON */ } }
+    throw new Error(msg || error?.message || 'unknown error');
+  }
+  return data;
+}
+
+async function tshRenewXeroLoad() {
+  const r = TSH.renew;
+  if (!r?.xero || r.xero.state !== 'idle') return;
+  r.xero.state = 'loading';
+  try {
+    const opts = await tshXeroFn({ action: 'ssa-options', client_name: r.name, ssa_client_id: r.dbId });
+    if (TSH.renew !== r) return;
+    if (!opts.contacts?.length) throw new Error('No invoices have synced from Xero yet (Jobs › Xero › Sync now)');
+    if (!opts.items?.some(i => i.code === window.SsaRenewal.SSA_XERO.itemCode)) throw new Error(`Xero item ${window.SsaRenewal.SSA_XERO.itemCode} hasn't been used on an invoice yet`);
+    r.xero.opts = opts; r.xero.contact = opts.suggested || ''; r.xero.state = 'ready';
+  } catch (err) {
+    if (TSH.renew !== r) return;
+    r.xero.state = 'unavailable'; r.xero.error = err.message || String(err);
+  }
+  tshRenewRender();
+}
+
+/** The Xero box once the timesheet is emailed: create the draft, or (no Xero) '' for the manual details. */
+function tshRenewXeroHtml(r, inv, money) {
+  const x = r.xero;
+  if (!x || x.state === 'unavailable' || x.state === 'idle') {
+    return x?.state === 'unavailable' ? '' : `<div class="tsh-renew-xero"><div class="tsh-renew-xero-h">Raise in Xero</div><p class="tsh-renew-sub">Getting your Xero contacts…</p></div>`;
+  }
+  if (x.state === 'loading') return `<div class="tsh-renew-xero"><div class="tsh-renew-xero-h">Raise in Xero</div><p class="tsh-renew-sub">Getting your Xero contacts…</p></div>`;
+  if (x.result) {
+    return `<div class="tsh-renew-xero done">
+        <div class="tsh-renew-xero-h">✓ Draft ${escapeHtml(x.result.invoice_number || 'invoice')} created in Xero</div>
+        <p class="tsh-renew-sub">${money(inv.net)} + VAT for ${inv.quantity} × ${escapeHtml(inv.itemCode)}, to ${escapeHtml(x.result.contact)}. Check it, approve and send it in Xero.</p>
+        <div class="tsh-mm-actions"><a class="btn" href="${escapeHtml(tshXeroLink(x.result.invoice_id))}" target="_blank" rel="noopener">Open ${escapeHtml(x.result.invoice_number || 'the draft')} in Xero</a></div>
+      </div>`;
+  }
+  const o = x.opts;
+  const recent = (o.recent || []).filter(p => p.status !== 'VOIDED' && p.status !== 'DELETED');
+  const busy = x.busy ? 'disabled' : '';
+  return `<div class="tsh-renew-xero">
+      <div class="tsh-renew-xero-h">Invoice in Xero</div>
+      <div class="tsh-form-grp"><label for="tshRenewXeroContact">Xero contact</label>
+        <select id="tshRenewXeroContact" ${busy} onchange="TSH.renew.xero.contact = this.value">
+          ${x.contact ? '' : '<option value="">Choose the contact…</option>'}
+          ${o.contacts.map(c => `<option value="${escapeHtml(c.id)}" ${c.id === x.contact ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+        </select></div>
+      <table class="tsh-renew-xero-t">
+        <tr><th>Item</th><td>${inv.quantity} × ${escapeHtml(inv.itemCode)} — ${escapeHtml(inv.description)}</td></tr>
+        <tr><th>Unit price</th><td>${money(inv.unitAmount)} (account ${escapeHtml(inv.accountCode)})</td></tr>
+        <tr><th>Reference</th><td>${escapeHtml(inv.reference)}</td></tr>
+        <tr><th>Total</th><td>${money(inv.net)} + VAT ${money(inv.vat)} = <strong>${money(inv.total)}</strong></td></tr>
+      </table>
+      ${recent.length ? `<p class="tsh-renew-warn">Already made for ${escapeHtml(r.name)} in the last 45 days: ${recent.map(p => `${escapeHtml(p.invoice_number)} (${p.quantity} × SSA, ${escapeHtml(String(p.status || 'draft').toLowerCase())}, ${escapeHtml(new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))})`).join(', ')}. Only create another if this is a new renewal.</p>` : ''}
+      ${x.error ? `<p class="tsh-renew-warn">${escapeHtml(x.error)}</p>` : ''}
+      <p class="tsh-renew-sub">Created as a <strong>draft</strong>: you approve and send it in Xero. Due on the client’s usual terms.</p>
+      <div class="tsh-mm-actions">
+        <button class="btn btn-ghost" type="button" onclick="tshRenewCopyXero()">Copy details</button>
+        <button class="btn" type="button" ${busy} onclick="tshRenewXeroCreate()">${x.busy ? 'Creating in Xero…' : 'Create draft in Xero'}</button>
+      </div>
+    </div>`;
+}
+
+async function tshRenewXeroCreate() {
+  const r = TSH.renew;
+  const x = r?.xero;
+  if (!x || x.busy || x.result || !x.opts) return;
+  if (r.undo) { toast('This renewal was undone, so no invoice is needed', 'warning'); return; }
+  if (!x.contact) { toast('Choose the Xero contact', 'warning'); return; }
+  const R = window.SsaRenewal;
+  const inv = R.xeroInvoice(r.blocks);
+  const contact = x.opts.contacts.find(c => c.id === x.contact)?.name || '';
+  if (!window.confirm(`Create a draft invoice in Xero for ${contact}: ${inv.quantity} × ${inv.itemCode}, £${inv.net.toFixed(2)} + VAT?`)) return;
+  x.busy = true; x.error = ''; tshRenewRender();
+  try {
+    const res = await tshXeroFn({
+      action: 'create', source: 'ssa', request_key: x.key, client_name: r.name, ssa_client_id: r.dbId,
+      contact_id: x.contact, item_code: inv.itemCode, description: inv.description,
+      amount: inv.unitAmount, quantity: inv.quantity, reference: inv.reference
+    });
+    x.result = { ...res, contact };
+    toast(`Draft ${res.invoice_number || 'invoice'} created in Xero. Check it, approve and send it in Xero.`, 'success', 8000);
+  } catch (err) {
+    x.error = 'Xero did not create the invoice: ' + (err.message || err) + ' (Copy details still works.)';
+  } finally {
+    x.busy = false;
+    if (TSH.renew === r) tshRenewRender();
   }
 }
 

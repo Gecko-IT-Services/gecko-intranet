@@ -1,7 +1,8 @@
-// "Invoice in Xero" on a job: staff only. { action: 'options', job_id } returns the contacts and
-// items to choose from; { action: 'create', … } creates a DRAFT sales invoice in Xero (once per
+// "Invoice in Xero" on a job, and on an SSA renewal: staff only. { action: 'options', job_id } or
+// { action: 'ssa-options', client_name, ssa_client_id } returns the contacts and items to choose
+// from; { action: 'create', source: 'job' | 'ssa', … } creates a DRAFT sales invoice in Xero (once per
 // request key). Philip approves and sends it in Xero itself.
-import { cors, createDraft, invoiceOptions, json, staffEmail } from '../_shared/xero.ts';
+import { cors, createDraft, invoiceOptions, json, ssaOptions, staffEmail } from '../_shared/xero.ts';
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -10,8 +11,13 @@ Deno.serve(async req => {
     if (!email) return json({ error: 'Only Gecko staff can invoice from Jobs' }, 403);
     const body = await req.json().catch(() => ({}));
     const jobId = Number(body.job_id);
+    const ssaId = body.ssa_client_id == null || body.ssa_client_id === '' ? null : Number(body.ssa_client_id);
     if (body.action === 'options') return json(await invoiceOptions(jobId));
-    if (body.action === 'create') return json({ ok: true, ...(await createDraft({ ...body, job_id: jobId }, email)) });
+    if (body.action === 'ssa-options') return json(await ssaOptions(String(body.client_name || ''), ssaId));
+    if (body.action === 'create') {
+      const req = body.source === 'ssa' ? { ...body, ssa_client_id: ssaId } : { ...body, source: 'job', job_id: jobId };
+      return json({ ok: true, ...(await createDraft(req, email)) });
+    }
     return json({ error: 'Unknown action' }, 400);
   } catch (err) {
     return json({ error: String((err as Error).message || err) }, 400);
