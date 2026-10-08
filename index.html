@@ -75,6 +75,7 @@
 <link rel="stylesheet" href="src/styles/overview.css">
 <link rel="stylesheet" href="src/styles/app.css">
 <link rel="stylesheet" href="src/styles/client.css">
+<link rel="stylesheet" href="src/styles/team.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -6363,7 +6364,7 @@ body::before {
       </button>
 
       <div class="sb-nav-label">Admin</div>
-      <button class="sb-link" type="button" data-section="leave" data-hub="team" onclick="navHub('team')">
+      <button class="sb-link" type="button" data-section="team" data-hub="team" onclick="navHub('team')">
         <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span><span class="lbl">Team</span>
       </button>
       <button class="sb-link" type="button" data-section="settings" onclick="navTo('settings')">
@@ -6960,6 +6961,15 @@ body::before {
     <section class="section" id="section-client">
       <div class="cl-head" id="clHead"></div>
       <div class="cl-wrap" id="clWrap" role="tabpanel"></div>
+    </section>
+
+    <!-- ═══ TEAM OVERVIEW ═══ src/sections/team.js: the first tab of the Team hub (Leave, Mileage). -->
+    <section class="section" id="section-team">
+      <div class="tm-head">
+        <div><h1>The <span>Team</span></h1><p>Who’s in, holiday left, the next four weeks, hours and mileage.</p></div>
+        <button class="tm-btn ghost" id="teamRefresh" type="button">Refresh</button>
+      </div>
+      <div id="teamWrap"><p class="tm-empty">Open this section to load the team.</p></div>
     </section>
 
     <section class="section" id="section-opportunities">
@@ -7786,6 +7796,7 @@ const SECTION_TITLES = {
   mileage:       'TEAM · MILEAGE',
   clients:       'CLIENTS',
   client:        'CLIENT',
+  team:          'TEAM',
   projects:      'PROJECTS',
   timesheets:    'TIMESHEETS',
   leave:         'TEAM · LEAVE',
@@ -8333,7 +8344,7 @@ async function graphFetch(path, options = {}) {
 const HUBS = {
   clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['client', null]] },
   monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['alerts', 'Alerts']] },
-  team:       { label: 'Team',       tabs: [['leave', 'Leave'], ['mileage', 'Mileage']] }
+  team:       { label: 'Team',       tabs: [['team', 'Overview'], ['leave', 'Leave'], ['mileage', 'Mileage']] }
 };
 const HUB_OF = Object.fromEntries(Object.entries(HUBS).flatMap(([h, d]) => d.tabs.map(([k]) => [k, h])));
 const HUB_LAST = {};
@@ -8395,6 +8406,36 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.target.closest?.('#appHub') && window.GeckoTabs) window.GeckoTabs.keyNav(e, 'data-hub-tab', k => navTo(k));
 });
+
+/**
+ * The older sections' own tab strips (Mileage, Timesheets, Opportunities) get the shared look:
+ * the .app-tabs class and a sliding ink that follows whichever tab is marked active (by class or
+ * aria-selected), however that section switches tabs. Their click handlers are untouched.
+ */
+const INK_STRIPS = ['#section-mileage .mil-tabs', '#section-timesheets .tsh-tabs', '#section-opportunities .opp-tabs'];
+function geckoInkify() {
+  for (const sel of INK_STRIPS) {
+    const strip = document.querySelector(sel);
+    if (!strip || strip.dataset.inked) continue;
+    strip.dataset.inked = '1';
+    strip.classList.add('app-tabs');
+    const ink = document.createElement('i');
+    ink.className = 'app-tab-ink';
+    ink.setAttribute('aria-hidden', 'true');
+    strip.appendChild(ink);
+    const move = () => {
+      const on = strip.querySelector('button.active, button[aria-selected="true"]');
+      if (!on || !strip.offsetParent) return;
+      ink.style.width = on.offsetWidth + 'px';
+      ink.style.transform = `translateX(${on.offsetLeft}px)`;
+    };
+    new MutationObserver(() => requestAnimationFrame(move)).observe(strip, { subtree: true, attributes: true, attributeFilter: ['class', 'aria-selected'], childList: true });
+    window.addEventListener('resize', move);
+    strip.geckoMoveInk = move;
+    requestAnimationFrame(move);
+  }
+}
+document.addEventListener('DOMContentLoaded', geckoInkify);
 window.addEventListener('resize', () => window.GeckoTabs?.moveInk(document.querySelector('#appHub .app-tabs')));
 
 function navTo(sectionKey) {
@@ -8409,6 +8450,7 @@ function navTo(sectionKey) {
     else l.removeAttribute('aria-current');
   });
   renderHub(sectionKey);
+  window.setTimeout(() => { geckoInkify(); document.querySelector(`#section-${sectionKey} .app-tabs`)?.geckoMoveInk?.(); }, 0);
 
   // — Show only the matching section, hide the rest —
   document.querySelectorAll('.section').forEach(s => {
@@ -9547,9 +9589,9 @@ function ovwStatusHtml(core, today) {
     : late.length ? tile('jobs:jobs', 'Jobs', `${late.length} late`, `${w.jobsDue.length - late.length} more due this week`, 'warn')
     : tile('jobs:jobs', 'Jobs', w.jobsDue.length ? `${w.jobsDue.length} due this week` : 'Nothing due', 'this week (Mon–Sun)', 'good');
   const off = w.away.filter(l => l.now && l.status === 'Approved');
-  const team = !db.leave ? tile('leave', 'Team', '—', 'didn’t load')
-    : off.length ? tile('leave', 'Team', `${off.map(l => l.person).join(' & ')} off`, 'today', 'info')
-    : tile('leave', 'Team', 'Everyone in', w.away.length ? `next off: ${w.away[0].person} ${core.shortRange(w.away[0].start, w.away[0].end)}` : 'nobody off in the next two weeks', 'good');
+  const team = !db.leave ? tile('team', 'Team', '—', 'didn’t load')
+    : off.length ? tile('team', 'Team', `${off.map(l => l.person).join(' & ')} off`, 'today', 'info')
+    : tile('team', 'Team', 'Everyone in', w.away.length ? `next off: ${w.away[0].person} ${core.shortRange(w.away[0].start, w.away[0].end)}` : 'nobody off in the next two weeks', 'good');
   return `<div class="ovw-stats">${backups}${alerts}${money}${support}${jobs}${team}</div>`;
 }
 

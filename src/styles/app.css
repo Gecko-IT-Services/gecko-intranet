@@ -53,3 +53,18 @@
   .app-tab-ink, .app-tabs button { transition: none; }
   .app-pane.from-right, .app-pane.from-left { animation: none; }
 }
+
+/* Older sections' tab strips, upgraded to the same look by geckoInkify() (index.html): the strip gets
+   .app-tabs and an ink; these override each section's own (id-scoped) tab styles. */
+#section-mileage .mil-tabs.app-tabs, #section-timesheets .tsh-tabs.app-tabs, #section-opportunities .opp-tabs.app-tabs {
+  width: auto; max-width: 100%; gap: 2px; padding: 4px; border: 1px solid var(--border-dim);
+  border-radius: var(--radius-pill); background: var(--card);
+}
+#section-mileage .mil-tabs.app-tabs > button, #section-timesheets .tsh-tabs.app-tabs > button, #section-opportunities .opp-tabs.app-tabs > button {
+  position: relative; z-index: 1; flex: 0 0 auto; min-height: 34px; padding: 6px 14px; border: 0; border-radius: var(--radius-pill);
+  background: transparent; box-shadow: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 400; letter-spacing: 0;
+  transition: color .2s ease;
+}
+#section-mileage .mil-tabs.app-tabs > button:hover, #section-timesheets .tsh-tabs.app-tabs > button:hover, #section-opportunities .opp-tabs.app-tabs > button:hover { color: var(--white); }
+#section-mileage .mil-tabs.app-tabs > button.active, #section-timesheets .tsh-tabs.app-tabs > button.active,
+#section-opportunities .opp-tabs.app-tabs > button[aria-selected="true"] { background: transparent; box-shadow: none; color: var(--on-green); font-weight: 600; }
