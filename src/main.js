@@ -23,6 +23,7 @@ import * as team from './sections/team.js';
 import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
 import * as overviewCore from './core/overview.js';
+import * as review from './core/review.js';
 import * as cspCosts from './core/csp-costs.js';
 import * as profitFeed from './core/profit-feed.js';
 import * as ssaRenewal from './core/ssa-renewal.js';
@@ -56,7 +57,7 @@ window.forgetSupabaseSession = supabase.forgetSupabaseSession;
 // Database store for classic-script sections moving off SharePoint (Leave first).
 window.GeckoStore = { ...store, connect: supabase.connectSupabase, completeRedirect: supabase.completeRedirect };
 // Overview (classic script): database reads and the pure logic behind its tiles and list.
-window.GeckoOverview = { ...overviewCore, loadDb: overview.loadDb };
+window.GeckoOverview = { ...overviewCore, loadDb: overview.loadDb, tick: overview.tick, review };
 // Timesheets + SSA balances on the database, SharePoint kept as the backup (classic script).
 window.GeckoTimesheets = timesheets;
 
