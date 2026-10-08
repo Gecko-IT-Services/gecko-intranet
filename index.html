@@ -9500,17 +9500,108 @@ function ovwRenderAll() {
     </div>`;
 
   // Two tabs (9 Oct): Today is the morning check (what needs a person); Business is the money.
+  const me = core.review ? core.review.monthEnd(ovwReviewData(), today) : null;
+  const meLeft = me ? me.items.filter(i => i.state === 'todo').length : 0;
   const tabs = window.GeckoTabs ? window.GeckoTabs.tabsHtml([
     { key: 'today', label: 'Today', badge: ovwTodayRedCount(core, today) || '', warn: true },
+    { key: 'week', label: 'This week' },
+    { key: 'monthend', label: 'Month-end', badge: me?.soon && meLeft ? meLeft : '', warn: me?.daysLeft <= 2 },
     { key: 'business', label: 'Business' }
   ], OVW.tab, { attr: 'data-ovw-tab', controls: 'ovwPane', label: 'Overview views' }) : '';
   const pane = OVW.tab === 'business'
     ? ovwMoneyHtml(core, today) + `<div class="ovw-split">${ovwHistoryHtml(core, today) || '<div></div>'}${ovwGlanceHtml()}</div>` + actionsHTML
-    : ovwHelloHtml() + ovwStatusHtml(core, today) +
+    : OVW.tab === 'monthend' ? ovwMonthEndHtml(me)
+    : OVW.tab === 'week' ? ovwReviewHtml(core.review.weekReview(ovwReviewData(), today))
+    : ovwHelloHtml() + (me?.soon ? ovwMonthEndBanner(me) : '') + ovwStatusHtml(core, today) +
       `<div class="ovw-split"><div class="ovw-col">${ovwMonitorHtml()}${ovwAttentionHtml(core, today)}</div>${ovwWeekHtml(core, today)}</div>`;
   wrap.innerHTML = `<div class="ovw-tabbar">${tabs}</div><div class="app-pane ovw-pane ${OVW.dir || ''}" id="ovwPane">${pane}</div>`;
   OVW.dir = '';
   window.GeckoTabs?.moveInk(wrap.querySelector('.app-tabs'));
+}
+
+// ─── Month-end and This week (Philip, 9 Oct: month-end in the last working days) ──
+// Logic: src/core/review.js (window.GeckoOverview.review). Checks tick themselves from the data;
+// the TD SYNNEX and Atera checks are ticked by hand and saved (month_end_checks).
+
+function ovwReviewData() {
+  const db = OVW.db || {};
+  return {
+    inv: db.inv, rep: db.rep, jobs: db.jobs, opps: db.opps, leave: db.leave, nudges: db.nudges, ticks: db.ticks,
+    journeys: OVW.journeys, ssa: OVW.ssaLoaded ? ovwSsaForCore() : null, entries: OVW.tshLoaded ? OVW.tshEntries : null
+  };
+}
+
+function ovwMonthEndBanner(me) {
+  const left = me.items.filter(i => i.state === 'todo').length;
+  return `<button type="button" class="ovw-me-banner" data-ovw-tab="monthend">
+    <strong>Month-end · ${me.daysLeft} working day${me.daysLeft === 1 ? '' : 's'} left</strong>
+    <span>${me.done} of ${me.total} done${left ? ` · ${left} to do` : ' · all clear'}</span><em>Open checklist →</em></button>`;
+}
+
+function ovwMonthEndHtml(me) {
+  if (!me) return '<div class="ovw-error"><h3>Could not load</h3><p>Hard-refresh (Cmd+Shift+R).</p></div>';
+  const monthName = new Date(me.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const pct = me.total ? me.done / me.total : 0;
+  const icon = { done: '✓', todo: '', check: '?' };
+  return `<div class="ovw-me-head">
+      <div class="ovw-me-ring" style="--done:${(pct * 100).toFixed(1)}"><strong>${me.done}/${me.total}</strong><span>done</span></div>
+      <div><h2>Closing ${escapeHtml(monthName)}</h2>
+        <p>${me.daysLeft ? `${me.daysLeft} working day${me.daysLeft === 1 ? '' : 's'} left this month.` : 'The month has ended: finish what’s left.'} Ticks come from the data, so they update as the work is done; the supplier checks are ticked by hand.</p></div>
+    </div>
+    <div class="ovw-card"><ul class="ovw-me-list">${me.items.map(i => `<li class="${i.state}">
+        <span class="ovw-me-ic" aria-hidden="true">${icon[i.state]}</span>
+        <div><strong>${escapeHtml(i.label)}</strong><p>${escapeHtml(i.detail)}</p></div>
+        <span class="ovw-me-acts">
+          ${i.manual ? `<button type="button" class="ovw-me-tick" data-ovw-tick="${escapeHtml(i.key)}" data-on="${i.state === 'done' ? '1' : '0'}">${i.state === 'done' ? 'Untick' : 'Mark done'}</button>` : ''}
+          ${i.go ? `<button type="button" data-ovw-go="${escapeHtml(i.go)}">Open →</button>` : ''}
+        </span></li>`).join('')}</ul></div>`;
+}
+
+async function ovwTick(item, on, btn) {
+  const me = window.GeckoOverview.review.monthEnd(ovwReviewData(), ovwTodayKey());
+  if (btn) btn.disabled = true;
+  try {
+    const row = await window.GeckoOverview.tick(me.month, item, on, (document.getElementById('userName')?.textContent || '').trim());
+    const db = OVW.db || (OVW.db = { errors: {} });
+    db.ticks = (db.ticks || []).filter(t => t.item !== item).concat(row ? [row] : []);
+    toast(on ? 'Marked done' : 'Unticked', 'success', 2000);
+  } catch (err) {
+    toast('Could not save: ' + (err.message || err), 'error', 6000);
+  } finally {
+    ovwRenderAll();
+  }
+}
+
+function ovwReviewHtml(w) {
+  const range = window.GeckoOverview.shortRange(w.start, w.end);
+  const cmp = (now, last, fmt) => {
+    const d = now - last;
+    return `<small class="${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${d > 0 ? '▲' : d < 0 ? '▼' : '='} ${escapeHtml(fmt(Math.abs(d)))} on last week (${escapeHtml(fmt(last))})</small>`;
+  };
+  const hrs = v => (Number(v) || 0).toFixed(2).replace(/\.?0+$/, '') + 'h';
+  const max = Math.max(1, ...Object.values(w.hours).flatMap(x => [x.week, x.last]));
+  const hoursCard = `<div class="ovw-card ovw-rv"><div class="ovw-card-head"><h3>Hours logged</h3></div><div class="ovw-rv-body">
+      ${Object.entries(w.hours).map(([p, x]) => `<div class="ovw-rv-hours"><span>${escapeHtml(p)}</span>
+        <div class="bars"><i class="now" style="width:${(x.week / max * 100).toFixed(1)}%"></i><i class="prev" style="width:${(x.last / max * 100).toFixed(1)}%"></i></div>
+        <strong>${escapeHtml(hrs(x.week))}</strong>${cmp(x.week, x.last, hrs)}</div>`).join('')}
+      <p class="ovw-rv-legend"><b class="now"></b>this week <b class="prev"></b>last week</p></div></div>`;
+  const inv = w.invoiced;
+  const moneyCard = `<div class="ovw-card ovw-rv"><div class="ovw-card-head"><h3>Invoiced this week</h3></div><div class="ovw-rv-body">
+      ${inv ? `<div class="ovw-rv-big">${escapeHtml(ovwWhole(inv.week))}</div>${cmp(inv.week, inv.last, ovwWhole)}
+        ${inv.list.length ? `<ul class="ovw-rv-list">${inv.list.map(i => `<li><span>${clientLink(i.contact_name)}</span><span>${escapeHtml(i.invoice_number)} · ${escapeHtml(ovwWhole(i.sub_total))}</span></li>`).join('')}</ul>` : '<p class="ovw-rv-none">No invoices approved this week yet.</p>'}`
+        : '<p class="ovw-rv-none">Needs Xero.</p>'}</div></div>`;
+  const list = (items, f) => items.length ? `<ul class="ovw-rv-list">${items.slice(0, 5).map(f).join('')}</ul>` : '';
+  const jobsCard = `<div class="ovw-card ovw-rv"><div class="ovw-card-head"><h3>Jobs</h3><button type="button" class="ovw-card-link" data-ovw-go="jobs:jobs">Jobs →</button></div><div class="ovw-rv-body">
+      ${w.jobs ? `<div class="ovw-rv-nums"><div><strong>${w.jobs.invoiced.length}</strong><span>invoiced</span></div><div><strong>${w.jobs.moved.length}</strong><span>moved on</span></div><div><strong>${w.jobs.added.length}</strong><span>new</span></div></div>
+        ${list([...w.jobs.invoiced, ...w.jobs.moved], j => `<li><span>${clientLink(j.client_name)}: ${escapeHtml(j.title)}</span><span>${escapeHtml(j.status.replace('_', ' '))}</span></li>`)}` : '<p class="ovw-rv-none">Jobs didn’t load.</p>'}</div></div>`;
+  const p = w.pipeline;
+  const pipeCard = `<div class="ovw-card ovw-rv"><div class="ovw-card-head"><h3>Pipeline</h3><button type="button" class="ovw-card-link" data-ovw-go="opportunities:pipeline">Pipeline →</button></div><div class="ovw-rv-body">
+      ${p ? `<div class="ovw-rv-nums"><div><strong>${p.won.length}</strong><span>won${p.wonMrr ? ` · +${escapeHtml(ovwWhole(p.wonMrr))}/mo` : ''}</span></div><div><strong>${p.added.length}</strong><span>added</span></div><div><strong>${p.lost.length}</strong><span>lost</span></div></div>
+        ${list(p.won, o => `<li><span>${clientLink(o.client_name)}: ${escapeHtml(o.title)}</span><span>won</span></li>`)}` : '<p class="ovw-rv-none">Opportunities didn’t load.</p>'}</div></div>`;
+  const chase = w.nudges ? `${w.nudges.length} payment reminder${w.nudges.length === 1 ? '' : 's'} drafted` : '';
+  const off = w.nextOff ? (w.nextOff.length ? w.nextOff.map(l => `${l.person} ${window.GeckoOverview.shortRange(l.start, l.end)}${l.status === 'Pending' ? ' (pending)' : ''}`).join(', ') : 'Nobody off next week') : '';
+  return `<div class="ovw-hello"><h2>Week of ${escapeHtml(range)}</h2><p>How the week went, against the one before.${chase ? ' · ' + escapeHtml(chase) : ''}${off ? ' · Next week: ' + escapeHtml(off) : ''}</p></div>
+    <div class="ovw-rv-grid">${hoursCard}${moneyCard}${jobsCard}${pipeCard}</div>`;
 }
 
 // ─── Today: the morning check (Philip, 9 Oct) ─────────────────────────
@@ -9618,12 +9709,14 @@ function ovwMonitorHtml() {
 document.addEventListener('click', e => {
   const t = e.target.closest?.('#section-overview [data-ovw-tab]');
   if (t && t.dataset.ovwTab !== OVW.tab) {
-    OVW.dir = window.GeckoTabs.direction(['today', 'business'], OVW.tab, t.dataset.ovwTab);
+    OVW.dir = window.GeckoTabs.direction(['today', 'week', 'monthend', 'business'], OVW.tab, t.dataset.ovwTab);
     OVW.tab = t.dataset.ovwTab;
     ovwRenderAll();
     return;
   }
   if (e.target.closest?.('#section-overview [data-ovw-act="mailbox"]')) ovwLoadMonitor({ interactive: true });
+  const tk = e.target.closest?.('#section-overview [data-ovw-tick]');
+  if (tk) ovwTick(tk.dataset.ovwTick, tk.dataset.on !== '1', tk);
 });
 document.addEventListener('keydown', e => {
   if (e.target.closest?.('#section-overview .ovw-tabbar') && window.GeckoTabs) {

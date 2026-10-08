@@ -158,7 +158,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   n × SSA at £650, account 214, reference Renewal); drafts for that client in the last 45 days are listed.
 
 ## Overview (rebuilt 8 Oct 2026; Today/Business tabs 9 Oct)
-- Tabs: **Today** = the morning check (status tiles for backups 24h, alerts, money, support hours, jobs,
+- Tabs: **Today** · **This week** (weekly review vs last week) · **Month-end** (self-ticking close checklist;
+  TD SYNNEX/Atera ticked by hand in `month_end_checks`; banner on Today in the last 5 working days) ·
+  **Business**. Logic `src/core/review.js`. **Today** = the morning check (status tiles for backups 24h, alerts, money, support hours, jobs,
   team; Monitoring list from `window.GeckoMonitor` = Backups/Alerts `snapshot()`; Needs attention; This
   week) and **Business** = the money. Landing page answers: how is the money doing (Xero: Sales, Recurring, Owed to us, Pipeline tiles), what
   needs me (one list, red → amber → info, each with an Open button to the right tab), and this week (away,

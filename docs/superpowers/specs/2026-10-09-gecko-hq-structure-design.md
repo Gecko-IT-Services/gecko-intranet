@@ -70,3 +70,17 @@ entries are saved or mirrored changes (SSA balance rules untouched).
 - **Recent**: one-tap chips for the engineer's most-used clients over the last 45 days.
 - **Logged today**: the engineer's total for today beside the form, updated after each entry.
 - The tab strip has the shared look (stage 3).
+
+## Stage 5 (9 Oct): Month-end and This week
+Overview tabs are now **Today · This week · Month-end · Business** (logic `src/core/review.js`, tests
+`tests/review.mjs`, exposed as `window.GeckoOverview.review`).
+- **Month-end** (Philip does it in the last working days): a checklist that ticks itself from the data:
+  repeating invoices raised, drafts approved in Xero, overdue clients nudged in the last two weeks, finished
+  jobs invoiced, job dates still right, mileage claimed, SSA renewals sent, timesheets complete (weekdays
+  with nothing logged and no leave: a "check", not a failure), leave answered. The two hand-done supplier
+  checks (TD SYNNEX licences, Atera costs) are ticked by a person and saved in `month_end_checks`
+  (one row per month and check; untick deletes). A source that didn't load is never ticked. In the last
+  five working days a banner on Today shows how many are left, and the tab carries the count.
+- **This week**: hours per person against last week, invoiced this week (approved, net, dealer commission
+  excluded) against last week, jobs invoiced / moved / added, pipeline won (with £/month) / added / lost,
+  payment reminders drafted, and who's off next week.
