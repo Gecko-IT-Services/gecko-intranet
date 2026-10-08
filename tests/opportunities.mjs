@@ -146,14 +146,28 @@ assert.deepEqual(t, { openCount: 2, openMrr: 75.5, openOneOff: 150, wonMrr: 80, 
 
 // — Email —
 const mail = fillTemplate(
-  { name: 'Hornetsecurity', email_subject: 'Stopping phishing at {{client}}', email_body: 'Hi {{first_name}},\n\n{{evidence}}\n\n{{price}}\n\n{{sender}}\n\n\n' },
-  { client: 'A&B <Ltd>', firstName: 'Chris', evidence: ['DMARC is none.', 'No filter.'], mrr: 30, oneOff: 50, sender: 'Philip' });
+  { name: 'Hornetsecurity', email_subject: 'Stopping phishing at {{client}}', email_body: 'Hi {{first_name}},\n\n{{#findings}}We noticed:\n{{findings}}{{/findings}}\n\n{{#price}}{{price}}{{/price}}\n\n{{sender}}\n\n\n' },
+  { client: 'A&B <Ltd>', firstName: 'Chris', findings: ['DMARC is none.', 'No filter.'], mrr: 30, oneOff: 50, sender: 'Philip' });
 assert.equal(mail.subject, 'Stopping phishing at A&B <Ltd>', 'subject is plain text (Graph escapes it)');
 assert.ok(mail.html.includes('<p>Hi Chris,</p>'));
-assert.ok(mail.html.includes('DMARC is none.<br>No filter.'), 'evidence lines kept');
-assert.ok(mail.html.includes('£30.00 a month plus £50.00 to set up'));
+assert.ok(mail.html.includes('We noticed:<br>• DMARC is none.<br>• No filter.'), 'findings as bullets');
+assert.ok(mail.html.includes('£30.00 a month, plus a one-off £50.00 to set up'));
 assert.ok(!/<Ltd>/.test(mail.html.replace(/<\/?(p|br)>/g, '')), 'values are escaped in the HTML');
 assert.equal(fillTemplate({ name: 'X', email_body: 'Hi {{first_name}}' }, {}).text, 'Hi there', 'no contact name → "there"');
+const bare = fillTemplate({ name: 'X', email_body: 'Hi,\n\n{{#findings}}We noticed:\n{{findings}}{{/findings}}\n\n{{#price}}Cost: {{price}}{{/price}}\n\nBye' }, {});
+assert.equal(bare.text, 'Hi,\n\nBye', 'optional blocks vanish with nothing to say');
+assert.equal(fillTemplate({ name: 'X', email_body: '{{evidence}}' }, { findings: ['a'] }).text, '• a', 'old {{evidence}} shows findings only');
+
+// Findings never carry our internal notes.
+{
+  const m365Only = evaluate({ ...base, cspClient: true, services: [], tickets: [] },
+    { key: 'exclaimer', rule: 'missing_if_m365', keywords: 'exclaimer', active: true, sort: 1 }, { now: NOW });
+  assert.ok(m365Only.reasons.length && m365Only.findings.length === 0, 'billing gaps stay internal');
+  const ve = evaluate({ ...base, dealer: [{ service: 'voip_exchange', quantity: 13, contract: 'out_of_contract', extras: 'no maintenance', notes: 'target first' }] },
+    { key: 've_migration', rule: 'voip_exchange', default_mrr: 4, active: true, sort: 1 }, { now: NOW });
+  assert.deepEqual(ve.findings, ['13 × VoIP Exchange: out of contract']);
+  assert.ok(!ve.findings.join(' ').match(/commission|target/), 'no commission or notes to the client');
+}
 
 // — Email domains —
 assert.equal(emailDomain('andy@AccessInstrumentation.co.uk'), 'accessinstrumentation.co.uk');
