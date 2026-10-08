@@ -49,3 +49,14 @@ under 5 letters must match exactly). A source that fails is named ("Not checked"
 3. Team (who's off, leave, mileage) in the new format.
 4. Timesheets in the new format, quick logging from the client page.
 5. Month-end close checklist and This week (weekly review) on Overview.
+
+## Stage 3 (9 Oct): Team
+- The Team hub opens on **Overview** (`src/sections/team.js`, logic `src/core/team.js`, tests
+  `tests/team.mjs`), then Leave and Mileage. Per person (Philip, Jack): in today / off and back when,
+  holiday left this tax year as a ring (Leave's rule: entitlement + carry over + adjustment − approved
+  Annual Leave, default 140 h, 7 h a day, tax year from 6 April), booked, pending, next off, mileage
+  still to claim, hours this week by day vs last week; buttons to Book leave, Claim mileage, Log time.
+  Below, **Next four weeks**: who's off each day (approved solid, requested striped, today outlined).
+- The older sections' own tab strips (Mileage, Timesheets, Opportunities) get the shared look:
+  `geckoInkify()` adds `.app-tabs` and a sliding ink that follows the active tab, however the section
+  switches (class or aria-selected); their own handlers are untouched.
