@@ -82,7 +82,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   list stay on SharePoint for good** (Philip, 7 Oct): the master, written via Graph, flows
   untouched — never mirror them as a second writable copy. The feed is moving to the
   `profit_feed` table (`CONFIG.DATA_BACKEND.feed`; see `2026-10-08-feed-on-supabase-design.md`).
-  Projects/Compliance/P&L are not moving.
+  Compliance/P&L are not moving; Projects is replaced by Jobs.
 - Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
   and a policy (`tests/supabase-migration.mjs` enforces it). Only the publishable key
   is in the site. Sign-in is the Microsoft ID token (`src/core/supabase.js`).
@@ -107,6 +107,15 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   customer is never offered VoxOne or connectivity; instead out-of-contract/expiring lines raise
   a renewal, VoIP Exchange seats raise a VoxOne migration (£4/seat commission), and dealer
   customers who aren't IT clients appear as prospects for IT support.
+
+## Jobs (from 8 Oct 2026)
+- `src/sections/jobs.js` + `src/core/jobs.js` (tests `tests/jobs.mjs`); design note
+  `2026-10-08-jobs-design.md`. One-off client work with a value, Quoted → Agreed → In progress →
+  To invoice → Invoiced (or Lost), in Supabase `jobs`. Replaces the old Projects board (off the
+  menu since 6 Oct); its open projects can be brought across once (`source_ref`).
+- "Sales this month" reads Xero from the feed: invoiced so far + repeating invoices not yet raised
+  (last month's recurring contacts missing this month) + jobs to invoice + jobs due this month.
+  VoIP Unlimited commission is excluded. Invoice-level matching would need a feed change (ask).
 
 ## The feed (where the money numbers come from)
 - `Gecko Dashboard Data/profitability-feed.json` in the portal site's Documents
