@@ -131,6 +131,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Jack): Update Client Balances, Create Timesheets Table Email, Archive Old Timesheet Entries.
 
 ## Open items (ask Philip before acting)
+- Plain-text client passwords exist in SharePoint (Gecko Docs/clients/Technix/…)
+  and OneDrive copies. Cyber Essentials risk; move to a password manager.
+- The Ltd started June 2026. Xero months before that are empty and skipped.
+
 Resolved 8 Oct:
 - Kingdom Products now has service lines matching Xero's £189.82 (IS + Backup 43.50 /
   8.14 stack; M365 33.72 m365, cost from invoices; VoIP + FTTP 112.60 / 82.60 other).
@@ -143,9 +147,6 @@ Resolved 8 Oct:
   Standard), A9356-F39 → Gecko's own (10-user Starter), `shared: true`, shown as a Gecko
   cost like the Clook reseller plan (`invoicedCosts` honours `shared` on Exclaimer lines).
 - slaterfamily.me.uk is Pam Slater's, billed to LS Commercials (Xero INV-0131, Jul 2026).
-- Plain-text client passwords exist in SharePoint (Gecko Docs/clients/Technix/…)
-  and OneDrive copies. Cyber Essentials risk; move to a password manager.
-- The Ltd started June 2026. Xero months before that are empty and skipped.
 
 ## Working with Philip
 - He is the owner, not a developer. Give him exact commands and say what he will
