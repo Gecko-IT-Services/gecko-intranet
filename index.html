@@ -7142,6 +7142,7 @@ body::before {
         <!-- Quick-log form -->
         <div class="tsh-card" style="margin-bottom:16px;">
           <div class="tsh-card-head"><h3>Log Time</h3></div>
+          <div class="tsh-quick" id="tshQuick" aria-label="Recent clients"></div>
           <form class="tsh-form" onsubmit="tshAddEntry(event)">
             <div class="tsh-field">
               <label for="tshClient">Client</label>
@@ -8381,7 +8382,10 @@ function geckoGo(section, tab, clientName) {
   if (!tab) return;
   if (section === 'jobs') window.GeckoSections?.jobs?.show?.(tab);
   else if (section === 'opportunities') window.GeckoSections?.opportunities?.show?.(tab);
-  else if (section === 'timesheets' && typeof tshTab === 'function') tshTab(tab);
+  else if (section === 'timesheets' && typeof tshTab === 'function') {
+    tshTab(tab);
+    if (clientName && tab === 'log') tshPreselect(clientName);
+  }
 }
 
 /** Any client name, anywhere: open that client's page. */
@@ -15934,7 +15938,49 @@ function tshPopulateClientDropdown() {
   }
   // Restore selection if still valid
   if (current) sel.value = current;
+  // A client asked for before the list loaded (Log time on a client page)
+  if (TSH.pendingClient) { const n = TSH.pendingClient; TSH.pendingClient = ''; tshPreselect(n); }
+  tshRenderQuick();
 }
+
+/**
+ * Quick logging (Philip, 9 Oct: work is logged straight into Timesheets). Choose the client by name
+ * (from a client page's Log time), offered as one tap from the engineer's recent clients, with
+ * today's total beside the form.
+ */
+function tshPreselect(name) {
+  const sel = document.getElementById('tshClient');
+  const match = window.GeckoClientMatch;
+  if (!sel || !name) return;
+  const opt = [...sel.options].find(o => o.value && match ? match(o.dataset.name || '', name) : (o.dataset.name || '') === name);
+  if (!opt) { if (sel.options.length <= 1) TSH.pendingClient = name; return; }
+  sel.value = opt.value;
+  tshClientPicked();
+  tshRenderQuick();
+  setTimeout(() => document.getElementById('tshHours')?.focus(), 150);
+}
+
+function tshRenderQuick() {
+  const el = document.getElementById('tshQuick');
+  if (!el) return;
+  const eng = document.getElementById('tshEngineer')?.value || '';
+  const t = today();
+  const since = (() => { const d = new Date(); d.setDate(d.getDate() - 45); return d.toISOString().slice(0, 10); })();
+  const mine = TSH.entries.filter(e => e.engineer === eng && e.date >= since);
+  const counts = new Map();
+  for (const e of mine) if (e.clientName) counts.set(e.clientName, (counts.get(e.clientName) || 0) + 1);
+  const recent = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([n]) => n);
+  const todayH = mine.filter(e => e.date === t).reduce((a, e) => a + (Number(e.hours) || 0), 0);
+  const sel = document.getElementById('tshClient');
+  const chosen = sel?.options[sel.selectedIndex]?.dataset.name || '';
+  el.innerHTML = `${recent.length ? `<span class="tsh-quick-l">Recent</span>${recent.map(n => `<button type="button" class="tsh-quick-c${n === chosen ? ' on' : ''}" data-tsh-quick="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')}` : ''}
+    <span class="tsh-quick-today">${escapeHtml(eng || 'You')}: <strong>${escapeHtml(todayH.toFixed(2).replace(/\.?0+$/, ''))}h</strong> logged today</span>`;
+}
+document.addEventListener('click', e => {
+  const q = e.target.closest?.('#tshQuick [data-tsh-quick]');
+  if (q) tshPreselect(q.dataset.tshQuick);
+});
+document.addEventListener('change', e => { if (e.target?.id === 'tshEngineer' || e.target?.id === 'tshClient') tshRenderQuick(); });
 
 
 // ─── Client dropdown change handler ──────────────────────────────────
@@ -16126,6 +16172,7 @@ function tshRenderAll() {
 function tshRenderLog() {
   const wrap = document.getElementById('tshLogWrap');
   if (!wrap) return;
+  tshRenderQuick();
   const rows = tshFilteredEntries();
 
   // Update count

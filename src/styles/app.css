@@ -68,3 +68,16 @@
 #section-mileage .mil-tabs.app-tabs > button:hover, #section-timesheets .tsh-tabs.app-tabs > button:hover, #section-opportunities .opp-tabs.app-tabs > button:hover { color: var(--white); }
 #section-mileage .mil-tabs.app-tabs > button.active, #section-timesheets .tsh-tabs.app-tabs > button.active,
 #section-opportunities .opp-tabs.app-tabs > button[aria-selected="true"] { background: transparent; box-shadow: none; color: var(--on-green); font-weight: 600; }
+
+/* Timesheets › Log Time: recent clients and today's total (stage 4) */
+#section-timesheets .tsh-quick { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: -6px 0 16px; }
+#section-timesheets .tsh-quick:empty { display: none; }
+#section-timesheets .tsh-quick-l { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+#section-timesheets .tsh-quick-c {
+  font: inherit; font-size: 12px; cursor: pointer; padding: 5px 12px; border-radius: 999px;
+  border: 1px solid var(--border-dim); background: transparent; color: var(--white); transition: border-color .15s, color .15s, background .15s;
+}
+#section-timesheets .tsh-quick-c:hover, #section-timesheets .tsh-quick-c:focus-visible { border-color: var(--green); color: var(--green); }
+#section-timesheets .tsh-quick-c.on { background: var(--green); border-color: var(--green); color: var(--on-green); font-weight: 600; }
+#section-timesheets .tsh-quick-today { margin-left: auto; font-size: 12px; color: var(--muted); }
+#section-timesheets .tsh-quick-today strong { font-family: var(--font-mono); color: var(--blue); }
