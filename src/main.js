@@ -32,6 +32,7 @@ import * as store from './core/store.js';
 import * as timesheets from './core/timesheets.js';
 import * as timelog from './core/timelog.js';
 import * as ssa from './core/ssa.js';
+import * as weekly from './core/weekly.js';
 
 window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
@@ -66,6 +67,8 @@ window.GeckoTimesheets = timesheets;
 window.GeckoTimelog = timelog;
 // Timesheets › SSA Dashboard: use per month, run-out dates and what needs renewing.
 window.GeckoSsa = ssa;
+// Timesheets › Weekly Summary: one week of work, by day, client and type, with an eight-week trend.
+window.GeckoWeekly = weekly;
 
 // Back from Xero's consent screen (supabase/functions/xero-callback): keep the result for the
 // Jobs section, tidy the address bar, and open Jobs once the portal is signed in.
