@@ -95,18 +95,7 @@
 #section-opportunities .opp-gap ul { margin: 8px 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
 #section-opportunities .opp-gap-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 
-/* — Pipeline board — */
 #section-opportunities .opp-wrap { container-type: inline-size; container-name: oppwrap; }
-#section-opportunities .opp-board { display: grid; gap: 12px; grid-template-columns: 1fr; }
-@container oppwrap (min-width: 760px) {
-  #section-opportunities .opp-board { grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; }
-}
-#section-opportunities .opp-col { border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); padding: 12px; }
-#section-opportunities .opp-col-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 13px; }
-#section-opportunities .opp-col-head span { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
-#section-opportunities .opp-item { padding: 12px; border-radius: var(--radius-sm); background: var(--panel); margin-bottom: 10px; font-size: 13px; }
-#section-opportunities .opp-item-client { font-weight: 700; color: var(--white); }
-#section-opportunities .opp-item-title { color: var(--muted); margin-bottom: 8px; }
 #section-opportunities .opp-item-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 #section-opportunities .opp-item-form label,
 #section-opportunities .opp-product label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--faint); }
@@ -160,3 +149,61 @@
   border: 1px solid var(--border-dim); background: var(--inset); color: var(--white); font: inherit; font-size: 13px;
 }
 @media (max-width: 640px) { #section-opportunities .opp-dealer-row .wide { grid-column: 1 / -1; } }
+
+/* — Pipeline: stage summary + one list of deals (replaces the four-column board) — */
+#section-opportunities .opp-stages { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 18px; }
+@container oppwrap (min-width: 760px) { #section-opportunities .opp-stages { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+#section-opportunities .opp-stage {
+  --st: var(--muted);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; text-align: left;
+  padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--border-dim); background: var(--card);
+  font: inherit; color: var(--muted); cursor: pointer; opacity: .62; transition: opacity .15s, border-color .15s, box-shadow .15s;
+}
+#section-opportunities .opp-stage.on { opacity: 1; border-color: var(--st); box-shadow: inset 0 3px 0 var(--st); }
+#section-opportunities .opp-stage:hover { opacity: 1; }
+#section-opportunities .st-proposed { --st: var(--amber); }
+#section-opportunities .st-won { --st: var(--green); }
+#section-opportunities .st-lost { --st: var(--red); }
+#section-opportunities .opp-stage-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+#section-opportunities .opp-stage-value { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--white); }
+#section-opportunities .opp-stage-value small,
+#section-opportunities .opp-deal-value small { font-size: .6em; font-weight: 400; color: var(--muted); }
+#section-opportunities .opp-stage-count { font-size: 12px; }
+#section-opportunities .opp-stage-bar { width: 100%; height: 4px; border-radius: 4px; background: var(--border-dim); overflow: hidden; margin-top: 4px; }
+#section-opportunities .opp-stage-bar i { display: block; height: 100%; background: var(--st); }
+
+#section-opportunities .opp-deals-head { display: flex; align-items: baseline; gap: 12px; margin: 0 2px 10px; font-size: 14px; color: var(--white); }
+#section-opportunities .opp-linkbtn { border: 0; background: none; padding: 0; color: var(--green); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; }
+#section-opportunities .opp-deals { display: flex; flex-direction: column; gap: 10px; }
+#section-opportunities .opp-deal {
+  --st: var(--muted);
+  display: grid; gap: 10px 18px; align-items: center; padding: 14px 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  border: 1px solid var(--border-dim); border-left: 4px solid var(--st); border-radius: var(--radius); background: var(--card);
+}
+#section-opportunities .opp-deal-client { font-weight: 700; color: var(--white); font-size: 15px; }
+#section-opportunities .opp-deal-product { color: var(--muted); font-size: 13px; margin-top: 2px; }
+#section-opportunities .opp-deal-next { margin-top: 8px; font-size: 13px; color: var(--white); }
+#section-opportunities .opp-deal-next span {
+  display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: var(--radius-pill);
+  font-size: 11px; color: var(--muted); border: 1px solid var(--border-dim);
+}
+#section-opportunities .opp-deal-value { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; font-size: 12px; color: var(--muted); }
+#section-opportunities .opp-deal-value strong { font-family: var(--font-mono); font-size: 20px; color: var(--white); }
+#section-opportunities .opp-deal-meta { display: inline-flex; align-items: center; gap: 6px; }
+#section-opportunities .opp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--st); }
+#section-opportunities .opp-deal-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+#section-opportunities .opp-btn.win { color: var(--on-green); background: var(--green); border-color: var(--green); font-weight: 600; }
+#section-opportunities .opp-deal-edit {
+  grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 12px; border-radius: var(--radius-sm); background: var(--panel);
+}
+#section-opportunities .opp-deal-edit .wide { grid-column: 1 / -1; }
+#section-opportunities .opp-deal-why { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+#section-opportunities .opp-deal-why summary { cursor: pointer; }
+#section-opportunities .opp-deal-why p { margin: 8px 0 0; }
+@container oppwrap (max-width: 560px) {
+  #section-opportunities .opp-deal { grid-template-columns: minmax(0, 1fr); }
+  #section-opportunities .opp-deal-value { align-items: flex-start; text-align: left; }
+  #section-opportunities .opp-deal-edit { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}

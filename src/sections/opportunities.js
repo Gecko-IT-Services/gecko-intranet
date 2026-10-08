@@ -35,6 +35,8 @@ const OPP = {
   tab: 'gaps',
   showAll: false,          // include "not bought, no evidence yet" gaps
   open: new Set(),         // expanded client cards
+  stage: 'open',           // pipeline filter: open (idea + proposed) | idea | proposed | won | lost
+  editing: new Set(),      // pipeline deals with the edit form showing
   loading: false,
   error: null,
   checking: null,          // { done, total, label } while checks run
@@ -544,29 +546,72 @@ function gapsHtml() {
   }).join('');
 }
 
+function ago(iso) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (!Number.isFinite(days)) return '';
+  return days <= 0 ? 'today' : days === 1 ? 'yesterday' : days < 60 ? `${days} days ago` : `${Math.round(days / 30)} months ago`;
+}
+
 function pipelineHtml() {
   if (!OPP.opps.length) return '<p class="opp-empty">Nothing in the pipeline yet. Open a client on the Gaps tab and choose “Add to pipeline”.</p>';
-  return `<div class="opp-board">${STATUSES.map(([key, label]) => {
+  const sum = list => list.reduce((t, o) => t + (Number(o.mrr) || 0), 0);
+  const all = sum(OPP.opps) || 1;
+  const stages = STATUSES.map(([key, label]) => {
     const items = OPP.opps.filter(o => o.status === key);
-    const total = items.reduce((t, o) => t + (Number(o.mrr) || 0), 0);
-    return `<div class="opp-col"><div class="opp-col-head"><strong>${label}</strong><span>${items.length} · ${escapeHtml(money(total))}/mo</span></div>
-      ${items.map(o => `<article class="opp-item">
-        <div class="opp-item-client">${escapeHtml(o.client_name)}</div>
-        <div class="opp-item-title">${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
-        <form class="opp-item-form" data-opp-form="${o.id}">
+    const total = sum(items);
+    const on = OPP.stage === key || (OPP.stage === 'open' && (key === 'idea' || key === 'proposed'));
+    return `<button type="button" class="opp-stage st-${key}${on ? ' on' : ''}" data-opp-act="stage" data-stage="${key}" aria-pressed="${on}">
+        <span class="opp-stage-label">${label}</span>
+        <span class="opp-stage-value">${escapeHtml(money(total))}<small>/mo</small></span>
+        <span class="opp-stage-count">${items.length} ${items.length === 1 ? 'deal' : 'deals'}</span>
+        <span class="opp-stage-bar"><i style="width:${Math.round((total / all) * 100)}%"></i></span>
+      </button>`;
+  }).join('');
+  const shown = OPP.opps
+    .filter(o => (OPP.stage === 'open' ? o.status === 'idea' || o.status === 'proposed' : o.status === OPP.stage))
+    .sort((a, b) => (Number(b.mrr) || 0) - (Number(a.mrr) || 0) || String(b.modified_at).localeCompare(String(a.modified_at)));
+  const heading = OPP.stage === 'open' ? 'Open deals, biggest first' : `${STATUSES.find(([k]) => k === OPP.stage)[1]} deals`;
+  const label = Object.fromEntries(STATUSES);
+  const quick = o => (o.status === 'won' || o.status === 'lost'
+    ? `<button type="button" class="opp-btn ghost" data-opp-act="move" data-status="proposed" data-id="${o.id}">Reopen</button>`
+    : `${o.status === 'idea' ? `<button type="button" class="opp-btn ghost" data-opp-act="move" data-status="proposed" data-id="${o.id}">Mark proposed</button>` : ''}
+       <button type="button" class="opp-btn win" data-opp-act="move" data-status="won" data-id="${o.id}">Won</button>
+       <button type="button" class="opp-btn ghost" data-opp-act="move" data-status="lost" data-id="${o.id}">Lost</button>`);
+  const deal = o => {
+    const editing = OPP.editing.has(o.id);
+    return `<article class="opp-deal st-${escapeHtml(o.status)}">
+      <div class="opp-deal-main">
+        <div class="opp-deal-client">${escapeHtml(o.client_name)}</div>
+        <div class="opp-deal-product">${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
+        ${o.next_step ? `<div class="opp-deal-next"><span>Next</span> ${escapeHtml(o.next_step)}</div>` : ''}
+      </div>
+      <div class="opp-deal-value">
+        <strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong>
+        ${Number(o.one_off) ? `<span>+ ${escapeHtml(money(o.one_off))} one-off</span>` : ''}
+        <span class="opp-deal-meta"><b class="opp-dot"></b>${label[o.status] || escapeHtml(o.status)} · ${escapeHtml(ago(o.closed_at || o.modified_at))}</span>
+      </div>
+      <div class="opp-deal-actions">
+        ${o.status !== 'won' && o.status !== 'lost' ? `<button type="button" class="opp-btn" data-opp-act="emailopp" data-id="${o.id}">Draft email</button>` : ''}
+        ${quick(o)}
+        <button type="button" class="opp-btn ghost" data-opp-act="editopp" data-id="${o.id}" aria-expanded="${editing}">${editing ? 'Close' : 'Edit'}</button>
+      </div>
+      ${editing ? `<form class="opp-item-form opp-deal-edit" data-opp-form="${o.id}">
           <label>£/month <input name="mrr" type="number" step="0.01" min="0" value="${escapeHtml(o.mrr)}"></label>
           <label>£ one-off <input name="one_off" type="number" step="0.01" min="0" value="${escapeHtml(o.one_off)}"></label>
-          <label class="wide">Next step <input name="next_step" type="text" value="${escapeHtml(o.next_step)}"></label>
-          <label>Status <select name="status">${STATUSES.map(([k, l]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-          <button type="submit" class="opp-btn ghost">Save</button>
-        </form>
-        ${o.evidence ? `<details><summary>Why</summary><p>${escapeHtml(o.evidence).replace(/\n/g, '<br>')}</p></details>` : ''}
-        <div class="opp-gap-actions">
-          <button type="button" class="opp-btn" data-opp-act="emailopp" data-id="${o.id}">Draft email</button>
-          <button type="button" class="opp-btn ghost" data-opp-act="delopp" data-id="${o.id}">Delete</button>
-        </div></article>`).join('') || '<p class="opp-muted">None</p>'}
-    </div>`;
-  }).join('')}</div>`;
+          <label>Stage <select name="status">${STATUSES.map(([k, l]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+          <label class="wide">Next step <input name="next_step" type="text" value="${escapeHtml(o.next_step)}" placeholder="e.g. Call Chris on Tuesday"></label>
+          <div class="opp-gap-actions wide">
+            <button type="submit" class="opp-btn">Save</button>
+            <button type="button" class="opp-btn ghost" data-opp-act="delopp" data-id="${o.id}">Delete</button>
+          </div>
+        </form>` : ''}
+      ${o.evidence ? `<details class="opp-deal-why"><summary>Why this opportunity</summary><p>${escapeHtml(o.evidence).replace(/\n/g, '<br>')}</p></details>` : ''}
+    </article>`;
+  };
+  return `<div class="opp-stages">${stages}</div>
+    <div class="opp-deals-head"><strong>${heading}</strong>
+      ${OPP.stage !== 'open' ? '<button type="button" class="opp-linkbtn" data-opp-act="stage" data-stage="open">Back to open deals</button>' : ''}</div>
+    <div class="opp-deals">${shown.map(deal).join('') || '<p class="opp-muted">None at this stage.</p>'}</div>`;
 }
 
 function dealerHtml() {
@@ -657,6 +702,18 @@ async function onClick(event) {
   if (act === 'draft') { btn.disabled = true; addOpportunity(client, product, { draft: true }); return; }
   if (act === 'has') { setStatus(client, product, 'has'); return; }
   if (act === 'notint') { setStatus(client, product, 'not_interested'); return; }
+  if (act === 'stage') { OPP.stage = OPP.stage === btn.dataset.stage ? 'open' : btn.dataset.stage; render(); return; }
+  if (act === 'editopp') { const n = Number(id); OPP.editing.has(n) ? OPP.editing.delete(n) : OPP.editing.add(n); render(); return; }
+  if (act === 'move') {
+    btn.disabled = true;
+    const o = OPP.opps.find(x => x.id === Number(id));
+    try {
+      await patchOpp(Number(id), { status: btn.dataset.status });
+      toast(btn.dataset.status === 'won' ? `Won: +${money(o?.mrr)}/mo` : `Moved to ${btn.dataset.status === 'lost' ? 'Lost' : 'Proposed'}`, 'success');
+      render();
+    } catch (err) { btn.disabled = false; toast('Could not update: ' + (err.message || err), 'error', 7000); }
+    return;
+  }
   if (act === 'emailopp') { btn.disabled = true; draftEmail(Number(id)); return; }
   if (act === 'deldealer') {
     if (!window.confirm('Remove this dealer service?')) return;
@@ -674,6 +731,7 @@ async function onClick(event) {
       const sb = await connectSupabase({ interactive: true });
       must(await sb.from('opportunities').delete().eq('id', Number(id)).select('id').single());
       OPP.opps = OPP.opps.filter(o => o.id !== Number(id));
+      OPP.editing.delete(Number(id));
       render();
     } catch (err) { toast('Could not delete: ' + (err.message || err), 'error'); }
   }
@@ -691,7 +749,7 @@ async function onSubmit(event) {
     event.preventDefault();
     const f = form.elements;
     const patch = { mrr: Number(f.mrr.value) || 0, one_off: Number(f.one_off.value) || 0, next_step: f.next_step.value.trim(), status: f.status.value };
-    try { await patchOpp(Number(form.dataset.oppForm), patch); toast(patch.status === 'won' ? `Won: +${money(patch.mrr)}/mo` : 'Saved', 'success'); render(); }
+    try { await patchOpp(Number(form.dataset.oppForm), patch); OPP.editing.delete(Number(form.dataset.oppForm)); toast(patch.status === 'won' ? `Won: +${money(patch.mrr)}/mo` : 'Saved', 'success'); render(); }
     catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
   }
 }
