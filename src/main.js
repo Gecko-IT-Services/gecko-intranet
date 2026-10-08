@@ -17,6 +17,8 @@ import * as backups from './sections/backups.js';
 import * as alerts from './sections/alerts.js';
 import * as opportunities from './sections/opportunities.js';
 import * as jobs from './sections/jobs.js';
+import * as overview from './sections/overview.js';
+import * as overviewCore from './core/overview.js';
 import * as cspCosts from './core/csp-costs.js';
 import * as profitFeed from './core/profit-feed.js';
 import * as ssaRenewal from './core/ssa-renewal.js';
@@ -29,7 +31,7 @@ window.GeckoSections.projects = { init: projects.init };
 window.GeckoSections.backups  = { init: backups.init };
 window.GeckoSections.alerts   = { init: alerts.init };
 window.GeckoSections.opportunities = { init: opportunities.init };
-window.GeckoSections.jobs = { init: jobs.init };
+window.GeckoSections.jobs = { init: jobs.init, show: jobs.show };
 
 // Pure logic used by the Profitability section, which still lives in
 // index.html's classic script and therefore cannot import modules itself.
@@ -41,6 +43,8 @@ window.SsaRenewal = ssaRenewal;
 window.forgetSupabaseSession = supabase.forgetSupabaseSession;
 // Database store for classic-script sections moving off SharePoint (Leave first).
 window.GeckoStore = { ...store, connect: supabase.connectSupabase, completeRedirect: supabase.completeRedirect };
+// Overview (classic script): database reads and the pure logic behind its tiles and list.
+window.GeckoOverview = { ...overviewCore, loadDb: overview.loadDb };
 // Timesheets + SSA balances on the database, SharePoint kept as the backup (classic script).
 window.GeckoTimesheets = timesheets;
 
