@@ -25,6 +25,7 @@ import {
   emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns
 } from '../core/opportunities.js';
 import { followUpChoices, dueText } from '../core/activity.js';
+import { STAGES as P_STAGES, SOURCES as P_SOURCES, OPEN_STAGES as P_OPEN, cleanProspect, prospectSummary, sortProspects, conversion } from '../core/prospects.js';
 
 const STATUSES = [['idea', 'Idea'], ['proposed', 'Proposed'], ['won', 'Won'], ['lost', 'Lost']];
 const DEALER_SERVICES = ['voxone', 'voip_exchange', 'ethernet', 'leased_line', 'fttp', 'fttc', 'sogea', 'pstn', 'mobile', 'unknown'];
@@ -47,6 +48,7 @@ const OPP = {
   checking: null,          // { done, total, label } while checks run
   products: [], statuses: {}, manualDomains: [], signals: new Map(), opps: [], dealer: [],
   clients: [], latestMonth: '', feedNote: '', commission: null,
+  prospects: null, prospectsError: '', prospectEdit: null, prospectView: 'open', saving: false,   // Prospects tab
   view: (() => { try { return localStorage.getItem('gecko.opp.view') === 'board' ? 'board' : 'list'; } catch { return 'list'; } })()   // pipeline: list or board
 };
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -120,6 +122,9 @@ async function load() {
     OPP.opps = opps;
     OPP.dealer = dealer;
     OPP.clients = buildClients({ gClients, gServices, feed, ssaItems, tsItems, domains, dealer });
+    // Prospects load on their own: a missing table (before the migration lands) never stops the rest.
+    try { OPP.prospects = must(await sb.from('prospects').select('*')); OPP.prospectsError = ''; }
+    catch (e) { OPP.prospects = null; OPP.prospectsError = e.message || String(e); }
   } catch (err) {
     OPP.error = err;
   } finally {
@@ -467,7 +472,7 @@ function render() {
     return;
   }
   mount.innerHTML = (OPP.feedNote ? `<p class="opp-note">${escapeHtml(OPP.feedNote)}</p>` : '') + progressHtml() +
-    (OPP.tab === 'gaps' ? gapsHtml() : OPP.tab === 'pipeline' ? pipelineHtml() : OPP.tab === 'voip' ? dealerHtml() : productsHtml());
+    (OPP.tab === 'gaps' ? gapsHtml() : OPP.tab === 'pipeline' ? pipelineHtml() : OPP.tab === 'prospects' ? prospectsHtml() : OPP.tab === 'voip' ? dealerHtml() : productsHtml());
   syncTableLabels(mount);
 }
 
@@ -698,6 +703,128 @@ async function makeJob(id) {
   } finally { render(); }
 }
 
+// ─── Prospects: new business that isn't a client yet (Philip, 9 Oct) ─────
+
+const P_LABEL = Object.fromEntries(P_STAGES), SRC_LABEL = Object.fromEntries(P_SOURCES);
+
+function prospectFormHtml(p) {
+  const v = p || { stage: 'new', source: 'referral' };
+  const t = todayKey();
+  return `<form class="opp-item-form opp-prospect-form" data-opp-prospect="${p ? p.id : 'new'}" novalidate>
+      <label>Company <input name="company" type="text" maxlength="160" value="${escapeHtml(v.company || '')}" placeholder="e.g. Acme Engineering Ltd" required></label>
+      <label>Contact <input name="contact_name" type="text" maxlength="120" value="${escapeHtml(v.contact_name || '')}" placeholder="e.g. Sam Smith"></label>
+      <label>Email <input name="email" type="email" maxlength="200" value="${escapeHtml(v.email || '')}"></label>
+      <label>Phone <input name="phone" type="tel" maxlength="40" value="${escapeHtml(v.phone || '')}"></label>
+      <label>Where from <select name="source">${P_SOURCES.map(([k, l]) => `<option value="${k}"${v.source === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label>Stage <select name="stage">${P_STAGES.filter(([k]) => k !== 'won' || v.stage === 'won').map(([k, l]) => `<option value="${k}"${v.stage === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label>Interested in <input name="interest" type="text" maxlength="200" value="${escapeHtml(v.interest || '')}" placeholder="e.g. IT support, Microsoft 365, VoxOne"></label>
+      <label>Worth £/month <input name="est_mrr" type="number" min="0" step="0.01" value="${escapeHtml(v.est_mrr || '')}" placeholder="estimate"></label>
+      <label class="wide">Next step <input name="next_step" type="text" maxlength="200" value="${escapeHtml(v.next_step || '')}" placeholder="e.g. Book a site visit"></label>
+      <div class="opp-fu wide"><span>Follow up</span>
+        <button type="button" class="opp-chip-btn" data-opp-fu="">None</button>
+        ${followUpChoices(t).map(([l, d]) => `<button type="button" class="opp-chip-btn" data-opp-fu="${d}" title="${escapeHtml(shortDate(d))}">${l}</button>`).join('')}
+        <input name="follow_up_on" type="date" value="${escapeHtml(String(v.follow_up_on || '').slice(0, 10))}" aria-label="Follow-up date">
+      </div>
+      <label class="wide">Notes <textarea name="notes" rows="2" maxlength="2000">${escapeHtml(v.notes || '')}</textarea></label>
+      <div class="opp-gap-actions wide">
+        <button type="submit" class="opp-btn"${OPP.saving ? ' disabled' : ''}>${OPP.saving ? 'Saving…' : p ? 'Save' : 'Add prospect'}</button>
+        <button type="button" class="opp-btn ghost" data-opp-act="pcancel">Cancel</button>
+        ${p ? `<button type="button" class="opp-btn ghost" data-opp-act="pdelete" data-id="${p.id}">Delete</button>` : ''}
+      </div>
+    </form>`;
+}
+
+function prospectsHtml() {
+  if (!OPP.prospects) return `<div class="opp-error"><strong>Prospects didn’t load.</strong>${escapeHtml(/prospects/.test(OPP.prospectsError) ? 'The prospects table isn’t in the database yet (it arrives with this update).' : OPP.prospectsError)}<button type="button" data-opp-act="reload">Retry</button></div>`;
+  const t = todayKey();
+  const sm = prospectSummary(OPP.prospects, t);
+  const shown = sortProspects(OPP.prospects).filter(p => OPP.prospectView === 'all' || (OPP.prospectView === 'open' ? P_OPEN.includes(p.stage) : p.stage === OPP.prospectView));
+  const stageStrip = P_OPEN.map(k => `<div class="opp-pstage"><span>${P_LABEL[k]}</span><strong>${sm.by[k].count}</strong><small>${sm.by[k].mrr ? escapeHtml(money(sm.by[k].mrr)) + '/mo' : '—'}</small></div>`).join('');
+  const card = p => {
+    if (OPP.prospectEdit === p.id) return `<article class="opp-prospect editing">${prospectFormHtml(p)}</article>`;
+    const due = p.follow_up_on && P_OPEN.includes(p.stage) ? dueText(p.follow_up_on, t) : '';
+    // Same colours as the pipeline and Overview: amber when due, red once more than a week late.
+    const late = p.follow_up_on && (Date.parse(t) - Date.parse(String(p.follow_up_on).slice(0, 10))) > 7 * 86400000;
+    return `<article class="opp-prospect st-${escapeHtml(p.stage)}">
+      <div class="opp-prospect-main">
+        <div class="opp-prospect-top"><strong>${escapeHtml(p.company)}</strong><span class="opp-pill st-${escapeHtml(p.stage)}">${escapeHtml(P_LABEL[p.stage] || p.stage)}</span></div>
+        <div class="opp-prospect-who">${[p.contact_name && escapeHtml(p.contact_name), p.email && `<a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a>`, p.phone && `<a href="tel:${escapeHtml(p.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(p.phone)}</a>`].filter(Boolean).join(' · ') || '<span class="opp-muted">No contact yet</span>'}</div>
+        <div class="opp-prospect-meta">${escapeHtml(SRC_LABEL[p.source] || 'Other')}${p.interest ? ' · ' + escapeHtml(p.interest) : ''}</div>
+        ${p.next_step ? `<div class="opp-deal-next"><span>Next</span> ${escapeHtml(p.next_step)}</div>` : ''}
+        <div class="opp-flags">${due ? `<span class="opp-flag ${late ? 'red' : String(p.follow_up_on).slice(0, 10) <= t ? 'amber' : ''}">Follow up ${escapeHtml(due)}</span>` : ''}
+          ${p.converted_client ? `<span class="opp-flag green">Client since ${escapeHtml(shortDate(p.converted_at))}</span>` : ''}</div>
+      </div>
+      <div class="opp-deal-value"><strong>${Number(p.est_mrr) ? escapeHtml(money(p.est_mrr)) + '<small>/mo</small>' : '—'}</strong><span class="opp-deal-meta">${escapeHtml(ago(p.modified_at || p.created_at))}</span></div>
+      <div class="opp-deal-actions">
+        ${p.converted_client ? `<button type="button" class="opp-btn ghost" data-opp-act="pclient" data-name="${escapeHtml(p.converted_client)}">Open client</button>`
+          : P_OPEN.includes(p.stage) ? `<button type="button" class="opp-btn win" data-opp-act="pconvert" data-id="${p.id}">Make client</button>
+             <button type="button" class="opp-btn ghost" data-opp-act="plost" data-id="${p.id}">Lost</button>`
+          : `<button type="button" class="opp-btn ghost" data-opp-act="preopen" data-id="${p.id}">Reopen</button>`}
+        <button type="button" class="opp-btn ghost" data-opp-act="pedit" data-id="${p.id}">Edit</button>
+      </div>
+    </article>`;
+  };
+  const views = [['open', `Open ${sm.openCount}`], ['won', `Won ${sm.by.won.count}`], ['lost', `Lost ${sm.by.lost.count}`], ['all', 'All']];
+  return `<div class="opp-pipe-head">
+      <div class="opp-view" role="group" aria-label="Which prospects">${views.map(([k, l]) => `<button type="button" data-opp-act="pview" data-view="${k}" aria-pressed="${OPP.prospectView === k}">${escapeHtml(l)}</button>`).join('')}</div>
+      <div class="opp-flags">${sm.openMrr ? `<span class="opp-flag green">${escapeHtml(money(sm.openMrr))}/mo if they all sign</span>` : ''}${sm.due ? `<span class="opp-flag amber">${sm.due} follow-up${sm.due === 1 ? '' : 's'} due</span>` : ''}</div>
+      ${OPP.prospectEdit === 'new' ? '' : '<button type="button" class="opp-btn" data-opp-act="padd">+ Add prospect</button>'}
+    </div>
+    <div class="opp-pstages">${stageStrip}</div>
+    ${OPP.prospectEdit === 'new' ? `<article class="opp-prospect editing"><strong class="opp-form-title">New prospect</strong>${prospectFormHtml(null)}</article>` : ''}
+    <div class="opp-deals">${shown.map(card).join('') || `<p class="opp-muted">${OPP.prospectView === 'open' ? 'No open prospects. Add the next company you’re talking to.' : 'None here.'}</p>`}</div>`;
+}
+
+async function saveProspect(id, f) {
+  if (OPP.saving) return;
+  const { row, error } = cleanProspect({ company: f.company.value, contact_name: f.contact_name.value, email: f.email.value, phone: f.phone.value,
+    source: f.source.value, stage: f.stage.value, interest: f.interest.value, est_mrr: f.est_mrr.value, next_step: f.next_step.value,
+    follow_up_on: f.follow_up_on.value, notes: f.notes.value });
+  if (error) { toast(error, 'warning'); return; }
+  OPP.saving = true; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    if (id === 'new') OPP.prospects.unshift(must(await sb.from('prospects').insert({ ...row, created_by: myName() }).select('*').single()));
+    else { const saved = must(await sb.from('prospects').update(row).eq('id', Number(id)).select('*').single()); OPP.prospects = OPP.prospects.map(p => (p.id === saved.id ? saved : p)); }
+    OPP.prospectEdit = null;
+    toast(id === 'new' ? `${row.company} added to prospects` : 'Saved', 'success');
+  } catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
+  finally { OPP.saving = false; render(); }
+}
+
+async function patchProspect(id, patch) {
+  const sb = await connectSupabase({ interactive: true });
+  const saved = must(await sb.from('prospects').update(patch).eq('id', id).select('*').single());
+  OPP.prospects = OPP.prospects.map(p => (p.id === id ? saved : p));
+  return saved;
+}
+
+/** Make client: a New client in Clients, the contact as main contact, a first activity line; the prospect becomes Won. */
+async function convertProspect(id) {
+  const p = OPP.prospects.find(x => x.id === id);
+  if (!p) return;
+  const sb = await connectSupabase({ interactive: true });
+  let names;
+  try { names = must(await sb.from('gecko_clients').select('title')).map(c => c.title); }
+  catch (err) { toast('Could not check the client list: ' + (err.message || err), 'error', 7000); return; }
+  const plan = conversion(p, [...names, ...OPP.clients.map(c => c.name)], todayKey(), myName());
+  if (plan.error) { toast(plan.error, 'warning', 8000); return; }
+  if (!window.confirm(`Make ${p.company} a client? They're added to Clients as New${plan.contact ? ` with ${plan.contact.name || plan.contact.email} as main contact` : ''}.`)) return;
+  try {
+    must(await sb.from('gecko_clients').insert(plan.client));
+    const notes = [];
+    if (plan.contact) { try { must(await sb.from('client_contacts').insert(plan.contact)); } catch (e) { notes.push('contact not added: ' + (e.message || e)); } }
+    try { must(await sb.from('client_activity').insert(plan.activity)); } catch (e) { notes.push('first activity not logged'); }
+    await patchProspect(id, plan.prospect);
+    toast(`${p.company} is now a client${notes.length ? ` (${notes.join('; ')})` : ''}. Opening their page.`, notes.length ? 'warning' : 'success', 7000);
+    render();
+    window.openClient?.(p.company, 'summary');
+  } catch (err) {
+    toast('Could not make them a client: ' + (err.message || err), 'error', 8000);
+    render();
+  }
+}
+
 function dealerHtml() {
   const due = renewalsDue(OPP.dealer).length;
   const names = [...new Set(OPP.clients.map(c => c.name))].sort();
@@ -814,6 +941,24 @@ async function onClick(event) {
     return;
   }
   if (act === 'emailopp') { btn.disabled = true; draftEmail(Number(id)); return; }
+  if (act === 'pview') { OPP.prospectView = btn.dataset.view; render(); return; }
+  if (act === 'padd') { OPP.prospectEdit = 'new'; render(); els('oppWrap')?.querySelector('[data-opp-prospect="new"] [name="company"]')?.focus(); return; }
+  if (act === 'pedit') { OPP.prospectEdit = Number(id); render(); return; }
+  if (act === 'pcancel') { OPP.prospectEdit = null; render(); return; }
+  if (act === 'pconvert') { btn.disabled = true; await convertProspect(Number(id)); btn.disabled = false; return; }
+  if (act === 'pclient') { window.openClient?.(btn.dataset.name, 'summary'); return; }
+  if (act === 'plost' || act === 'preopen') {
+    btn.disabled = true;
+    try { await patchProspect(Number(id), { stage: act === 'plost' ? 'lost' : 'contacted' }); toast(act === 'plost' ? 'Marked as lost' : 'Reopened', 'success'); }
+    catch (err) { toast('Could not update: ' + (err.message || err), 'error', 7000); }
+    render(); return;
+  }
+  if (act === 'pdelete') {
+    if (!window.confirm('Delete this prospect?')) return;
+    try { const sb = await connectSupabase({ interactive: true }); must(await sb.from('prospects').delete().eq('id', Number(id))); OPP.prospects = OPP.prospects.filter(p => p.id !== Number(id)); OPP.prospectEdit = null; render(); }
+    catch (err) { toast('Could not delete: ' + (err.message || err), 'error'); }
+    return;
+  }
   if (act === 'view') { OPP.view = btn.dataset.view; try { localStorage.setItem('gecko.opp.view', OPP.view); } catch { /* per-browser only */ } render(); return; }
   if (act === 'openlist') {
     const o = OPP.opps.find(x => x.id === Number(id));
@@ -859,6 +1004,7 @@ async function onSubmit(event) {
   const form = event.target;
   if (form.dataset.oppProduct) { event.preventDefault(); saveProduct(form.dataset.oppProduct, form.elements); return; }
   if (form.dataset.oppDealer) { event.preventDefault(); saveDealer(form.dataset.oppDealer, form.elements); return; }
+  if (form.dataset.oppProspect) { event.preventDefault(); saveProspect(form.dataset.oppProspect, form.elements); return; }
   if (form.dataset.oppForm) {
     event.preventDefault();
     const f = form.elements;
@@ -885,9 +1031,9 @@ function onKeydown(event) {
 
 // ─── Lifecycle ────────────────────────────────────────────────────────
 
-/** Open a tab from elsewhere (client page, Overview): 'gaps', 'pipeline', 'voip', 'products'. */
+/** Open a tab from elsewhere (client page, Overview): 'gaps', 'pipeline', 'prospects', 'voip', 'products'. */
 export function show(tab) {
-  if (!tab || !['gaps', 'pipeline', 'voip', 'products'].includes(tab)) return;
+  if (!tab || !['gaps', 'pipeline', 'prospects', 'voip', 'products'].includes(tab)) return;
   OPP.tab = tab;
   if (!OPP.loading) render();
 }

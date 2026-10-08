@@ -144,6 +144,19 @@ export function attention(d, today, now = new Date()) {
     if (quiet.length) add('deal_quiet', 'info', `${plural(quiet.length, 'deal')} quiet for 2+ weeks`, names(quiet.map(x => `${x.o.client_name}: ${x.o.title}`)), { section: 'opportunities', tab: 'pipeline' });
   }
 
+  if (d.prospects) {
+    // Prospects to chase (Opportunities › Prospects): open ones whose follow-up date has come.
+    const open = ['new', 'contacted', 'meeting', 'proposal'];
+    const due = d.prospects.filter(p => open.includes(p.stage) && p.follow_up_on && day(p.follow_up_on) <= today)
+      .sort((a, b) => day(a.follow_up_on).localeCompare(day(b.follow_up_on)));
+    for (const p of due.slice(0, 3)) {
+      const late = day(p.follow_up_on) < today;
+      add('prospect_follow_up', Date.parse(today) - Date.parse(day(p.follow_up_on)) > 7 * 86400000 ? 'red' : 'amber',
+        `Chase prospect ${p.company}${late ? ` (${dueText(p.follow_up_on, today)})` : ' today'}`, p.next_step || 'Follow-up date reached.', { section: 'opportunities', tab: 'prospects' });
+    }
+    if (due.length > 3) add('prospect_follow_up_more', 'amber', `${plural(due.length - 3, 'more prospect')} to chase`, names(due.slice(3).map(p => p.company)), { section: 'opportunities', tab: 'prospects' });
+  }
+
   if (d.ssa) {
     const low = d.ssa.filter(c => !c.archived && c.remaining != null && c.remaining < LOW_SSA_HOURS).sort((a, b) => a.remaining - b.remaining);
     if (low.length) add('ssa', low.some(c => c.remaining <= 0) ? 'red' : 'amber', `${plural(low.length, 'SSA client')} low on hours`,

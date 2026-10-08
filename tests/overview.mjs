@@ -155,3 +155,20 @@ console.log('overview: all tests passed');
   assert.deepEqual(pick('deal_quiet'), [['info', '1 deal quiet for 2+ weeks', 'Old: Website']]);
   console.log('overview: pipeline ok');
 }
+
+// Prospects to chase on Overview (9 Oct)
+{
+  const { attention } = await import('../src/core/overview.js');
+  const items = attention({ prospects: [
+    { company: 'Acme', stage: 'meeting', next_step: 'Book site visit', follow_up_on: '2026-10-08' },
+    { company: 'Old Co', stage: 'proposal', next_step: '', follow_up_on: '2026-09-20' },
+    { company: 'Won Co', stage: 'won', follow_up_on: '2026-10-01' },
+    { company: 'Later', stage: 'new', follow_up_on: '2026-10-20' }
+  ] }, '2026-10-08').filter(i => i.key === 'prospect_follow_up');
+  assert.deepEqual(items.map(i => [i.level, i.title, i.detail]), [
+    ['red', 'Chase prospect Old Co (18 days overdue)', 'Follow-up date reached.'],
+    ['amber', 'Chase prospect Acme today', 'Book site visit']
+  ]);
+  assert.deepEqual(items[0].go, { section: 'opportunities', tab: 'prospects' });
+  console.log('overview: prospects ok');
+}

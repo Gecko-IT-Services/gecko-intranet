@@ -251,3 +251,29 @@
 #section-opportunities .opp-card-acts .opp-linkbtn.win { color: var(--green); font-weight: 600; }
 @media (max-width: 1100px) { #section-opportunities .opp-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { #section-opportunities .opp-board { grid-template-columns: minmax(0, 1fr); } }
+
+/* Prospects (9 Oct) */
+#section-opportunities .opp-pipe-head > .opp-btn { margin-left: auto; }
+#section-opportunities .opp-pstages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+#section-opportunities .opp-pstage { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); }
+#section-opportunities .opp-pstage span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--muted); }
+#section-opportunities .opp-pstage strong { font-family: var(--font-mono); font-weight: 500; font-size: 20px; color: var(--white); }
+#section-opportunities .opp-pstage small { font-size: 12px; color: var(--muted); }
+#section-opportunities .opp-prospect { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; padding: 14px 16px; background: var(--card); border: 1px solid var(--border-dim); border-left: 3px solid var(--border-dim); border-radius: var(--radius); }
+#section-opportunities .opp-prospect.st-meeting, #section-opportunities .opp-prospect.st-proposal { border-left-color: var(--amber); }
+#section-opportunities .opp-prospect.st-won { border-left-color: var(--green); }
+#section-opportunities .opp-prospect.st-lost { opacity: .7; }
+#section-opportunities .opp-prospect.editing { display: block; }
+#section-opportunities .opp-prospect .opp-deal-actions { grid-column: 1 / -1; }
+#section-opportunities .opp-prospect-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#section-opportunities .opp-prospect-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#section-opportunities .opp-prospect-top strong { font-size: 15px; color: var(--white); }
+#section-opportunities .opp-prospect-who { font-size: 13px; color: var(--white); overflow-wrap: anywhere; }
+#section-opportunities .opp-prospect-who a { color: var(--green); text-decoration: none; }
+#section-opportunities .opp-prospect-meta { font-size: 12px; color: var(--muted); }
+#section-opportunities .opp-pill { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); }
+#section-opportunities .opp-pill.st-meeting, #section-opportunities .opp-pill.st-proposal { color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent); }
+#section-opportunities .opp-pill.st-won { color: var(--green); background: var(--green-glow); }
+#section-opportunities .opp-form-title { display: block; margin-bottom: 10px; color: var(--white); }
+#section-opportunities .opp-prospect-form textarea { width: 100%; }
+@media (max-width: 760px) { #section-opportunities .opp-pstages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

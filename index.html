@@ -6906,6 +6906,7 @@ body::before {
           <div class="opp-tabs" role="tablist" aria-label="Opportunities views">
             <button type="button" role="tab" data-opp-tab="gaps" aria-selected="true">Gaps</button>
             <button type="button" role="tab" data-opp-tab="pipeline" aria-selected="false">Pipeline</button>
+            <button type="button" role="tab" data-opp-tab="prospects" aria-selected="false">Prospects</button>
             <button type="button" role="tab" data-opp-tab="voip" aria-selected="false">VoIP Unlimited</button>
             <button type="button" role="tab" data-opp-tab="products" aria-selected="false">Products</button>
           </div>
@@ -9300,12 +9301,12 @@ function ovwAttentionHtml(core, today) {
   const db = OVW.db || { errors: {} };
   const items = core.attention({
     xero: db.xero, inv: db.inv, rep: db.rep, jobs: db.jobs, opps: db.opps, leave: db.leave,
-    ssa: OVW.ssaLoaded ? ovwSsaForCore() : null, journeys: OVW.journeys, followUps: db.followUps
+    ssa: OVW.ssaLoaded ? ovwSsaForCore() : null, journeys: OVW.journeys, followUps: db.followUps, prospects: db.prospects
   }, today);
   // A source that didn't load is said, so a short list never passes for an all-clear.
   const missing = [];
   if (!OVW.db) missing.push(OVW.dbError ? `the database (${OVW.dbError})` : 'the database');
-  for (const [k, label] of [['jobs', 'jobs'], ['opps', 'opportunities'], ['leave', 'leave'], ['followUps', 'follow-ups']]) if (db.errors[k]) missing.push(`${label} (${db.errors[k]})`);
+  for (const [k, label] of [['jobs', 'jobs'], ['opps', 'opportunities'], ['leave', 'leave'], ['followUps', 'follow-ups'], ['prospects', 'prospects']]) if (db.errors[k]) missing.push(`${label} (${db.errors[k]})`);
   if (!OVW.ssaLoaded) missing.push('SSA balances');
   const red = items.filter(i => i.level === 'red').length;
   const act = items.filter(i => i.level !== 'info').length;
