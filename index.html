@@ -2931,6 +2931,7 @@ body {
 }
 #section-timesheets .tsh-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
 #section-timesheets .tsh-refresh:disabled { opacity: .5; cursor: not-allowed; }
+#section-timesheets .tsh-refresh[hidden] { display: none; }
 #section-timesheets .tsh-refresh svg { transition: transform .4s ease; }
 #section-timesheets .tsh-refresh.spinning svg { animation: spin 1s linear infinite; }
 #section-timesheets .tsh-last-sync { font-size: 11px; color: var(--muted); margin-left: auto; }
@@ -7760,7 +7761,7 @@ const CONFIG = {
     leave:   'supabase',   // switched 7 Oct 2026 by Philip after a green copy
     mileage: 'supabase',   // Mileage + Overview's mileage tiles; switched 7 Oct 2026 by Philip (74 journeys, 1671.4 mi, £834.11)
     feed:    'supabase',   // profitability feed (Profitability + Opportunities); switched 8 Oct 2026 (row = file, generatedAt 09:02:28Z, Sep £17,674.22 / Oct £12,207.22)
-    timesheets: 'sharepoint',   // Timesheets + SSA Clients: Supabase master, Lists kept as backup, once Philip switches it
+    timesheets: 'supabase',     // Timesheets + SSA Clients, Lists kept as backup; switched 8 Oct 2026 by Philip (22 clients, 1143 entries, 162.75 h, every balance matched)
     clients: 'supabase'    // GeckoClients + GeckoServices (Clients, Profitability, Overview); switched 7 Oct 2026 by Philip (29 clients, 55 lines, £1683.02 / £6027.66 a month)
   },
 
