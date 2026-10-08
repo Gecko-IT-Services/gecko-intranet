@@ -123,3 +123,19 @@ const late = thisWeek({ inv, rep: [{ contact_name: 'N Ltd', status: 'AUTHORISED'
 assert.equal(late.goingOut.value, 75);
 
 console.log('overview: all tests passed');
+
+// Follow-ups due (client page › Activity, 9 Oct)
+{
+  const { attention } = await import('../src/core/overview.js');
+  const fu = [
+    { client_name: 'Cowan Consultancy', body: 'Quote for 3 Hornet licences', contact_name: 'Chris', follow_up_on: '2026-10-08', follow_up_done_at: null },
+    { client_name: 'Technix', body: 'Chase server decision', contact_name: '', follow_up_on: '2026-09-28', follow_up_done_at: null },
+    { client_name: 'Later Ltd', body: 'Not yet', follow_up_on: '2026-10-20', follow_up_done_at: null },
+    { client_name: 'Done Ltd', body: 'Done', follow_up_on: '2026-10-01', follow_up_done_at: '2026-10-02T09:00:00Z' }
+  ];
+  const items = attention({ followUps: fu }, '2026-10-08').filter(i => i.key === 'follow_up');
+  assert.deepEqual(items.map(i => [i.level, i.title]), [['red', 'Follow up Technix (10 days overdue)'], ['amber', 'Follow up Cowan Consultancy today']]);
+  assert.equal(items[1].detail, 'Quote for 3 Hornet licences · with Chris');
+  assert.deepEqual(items[1].go, { section: 'client', tab: 'activity', client: 'Cowan Consultancy' });
+  console.log('overview: follow-ups ok');
+}
