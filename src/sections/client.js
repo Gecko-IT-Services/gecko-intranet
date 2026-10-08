@@ -19,9 +19,13 @@ import { balances } from '../core/timesheets.js';
 import { clientProfile, sameClient } from '../core/client.js';
 import { previousMonth, stageLabel } from '../core/jobs.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
+import { newOpportunity } from '../core/opportunities.js';
+import { ROLES, cleanContact, contactsFor, mainContact, duplicateEmail } from '../core/contacts.js';
 
-const CL = { name: '', tab: 'summary', data: null, loading: false, error: null, dir: '', seq: 0 };
-const TABS = ['summary', 'invoices', 'services', 'support', 'jobs', 'opportunities'];
+// adding: the New opportunity form is open (with what's been picked so far); saving: one insert at a time.
+// contactEdit: null, 'new' or the id of the contact being edited.
+const CL = { name: '', tab: 'summary', data: null, loading: false, error: null, dir: '', seq: 0, adding: null, saving: false, contactEdit: null };
+const TABS = ['summary', 'contacts', 'invoices', 'services', 'support', 'jobs', 'opportunities'];
 
 const els = id => document.getElementById(id);
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
@@ -48,7 +52,7 @@ export function open(name, tab = 'summary') {
   CL.name = name;
   CL.dir = '';
   CL.tab = TABS.includes(tab) ? tab : 'summary';
-  if (!same) { CL.data = null; load(); }
+  if (!same) { CL.data = null; CL.adding = null; CL.contactEdit = null; load(); }
   render();
 }
 
@@ -65,16 +69,18 @@ async function load() {
     let from = today().slice(0, 7);
     for (let i = 0; i < 12; i++) from = previousMonth(from);
     const q = (table, cols = '*') => settle(sb.from(table).select(cols).then(must));
-    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains] = await Promise.all([
+    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products, contacts] = await Promise.all([
       q('gecko_clients', 'title,status,contract_start,notes'),
       q('gecko_services', 'title,client_name,category,cost_per_month,sell_per_month'),
       q('ssa_clients'),
       settle(sb.from('xero_invoices').select(XERO_COLS).gte('invoice_date', from + '-01').then(must)),
       settle(sb.from('xero_invoices').select(XERO_COLS).eq('status', 'AUTHORISED').gt('amount_due', 0).then(must)),
       q('jobs', 'id,client_name,title,status,value,target_date,invoice_ref,next_step,owner,modified_at'),
-      q('opportunities', 'id,client_name,title,status,mrr,one_off,next_step,modified_at'),
+      q('opportunities', 'id,client_name,product_key,title,status,mrr,one_off,quantity,next_step,modified_at'),
       q('voip_dealer_services', 'client_name,vu_name,service,quantity,contract,contract_end,extras'),
-      q('client_domains', 'client_name,domain')
+      q('client_domains', 'client_name,domain'),
+      q('opportunity_products', 'key,family,name,unit_price,price_unit,default_mrr,default_one_off,unit_note,active,sort'),
+      q('client_contacts')
     ]);
     // SSA: this client's balance (opening + changes, as Timesheets has it) and its entries
     const ssaRow = ssaClients.v?.find(c => sameClient(c.name, name)) || null;
@@ -98,9 +104,12 @@ async function load() {
         jobs: jobs.v || null, opps: opps.v || null, dealer: dealer.v || null, domains: domains.v || null
       }, today()),
       hasSsa: !!ssaRow,
+      contacts: contacts.v ? contactsFor(contacts.v, name) : null,
+      products: (products.v || []).filter(x => x.active !== false).sort((a, b) => String(a.family).localeCompare(String(b.family)) || (a.sort ?? 0) - (b.sort ?? 0)),
       errors: {
         xero: recent.e?.message || unpaid.e?.message || '', services: services.e?.message || '', ssa: ssaError?.message || '',
-        jobs: jobs.e?.message || '', opps: opps.e?.message || '', dealer: dealer.e?.message || ''
+        jobs: jobs.e?.message || '', opps: opps.e?.message || '', dealer: dealer.e?.message || '',
+        contacts: contacts.e ? (/client_contacts/.test(contacts.e.message || '') ? 'the contacts table isn’t in the database yet (it arrives with this update)' : contacts.e.message) : ''
       }
     };
   } catch (err) {
@@ -131,7 +140,7 @@ function render() {
     return;
   }
   if (!p) { mount.innerHTML = `<p class="cl-empty">Loading ${escapeHtml(CL.name)}…</p>`; return; }
-  const pane = { summary: summaryHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
+  const pane = { summary: summaryHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
   mount.innerHTML = `<div class="app-pane ${CL.dir}">${pane(p, CL.data.errors)}</div>`;
   CL.dir = '';
   syncTableLabels(mount);
@@ -140,10 +149,12 @@ function render() {
 function headHtml(p) {
   const x = p?.xero, s = p?.support;
   const status = p?.gecko?.status || (p ? 'Not on Profitability' : '');
-  const contact = s?.contact || '', email = s?.email || '';
+  const main = mainContact(CL.data?.contacts, { name: s?.contact || '', email: s?.email || '' });
+  const contact = main ? [main.name, main.role && `(${main.role})`].filter(Boolean).join(' ') : '', email = main?.email || '', phone = main?.phone || '';
   const kpi = (label, value, sub, cls = '') => `<div class="cl-kpi ${cls}"><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${sub}</small></div>`;
   const tabs = [
     { key: 'summary', label: 'Summary', badge: p?.flags.filter(f => f.level !== 'info').length || '' , warn: p?.flags.some(f => f.level === 'red') },
+    { key: 'contacts', label: 'Contacts', badge: CL.data?.contacts?.length || '' },
     { key: 'invoices', label: 'Invoices', badge: x?.overdue > 0 ? 'overdue' : '', warn: x?.overdue > 0 },
     { key: 'services', label: 'Services & profit' },
     { key: 'support', label: 'Support hours', badge: s && s.remaining < 2 ? hours(s.remaining) : '', warn: s && s.remaining <= 0 },
@@ -158,11 +169,13 @@ function headHtml(p) {
         <p>${[status && `<span class="cl-chip">${escapeHtml(status)}</span>`,
               contact && escapeHtml(contact),
               email && `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`,
+              phone && `<a href="tel:${escapeHtml(phone.replace(/[^\d+]/g, ''))}">${escapeHtml(phone)}</a>`,
               p?.domains?.length ? escapeHtml(p.domains.join(', ')) : '',
               p?.gecko?.contract_start ? `client since ${escapeHtml(fmtDate(p.gecko.contract_start))}` : ''].filter(Boolean).join(' · ')}</p>
       </div>
       <div class="cl-id-actions">
         ${go('timesheets', 'log', 'Log time', 'cl-btn')}
+        <button type="button" class="cl-btn ghost" data-cl-act="new-opp">+ Opportunity</button>
         <button type="button" class="cl-btn ghost" data-cl-act="reload" title="Reload this client">Refresh</button>
       </div>
     </div>
@@ -282,12 +295,176 @@ function jobsHtml(p, errors) {
 
 function oppsHtml(p, errors) {
   if (!p.opps) return panel('Opportunities', failed('Opportunities', errors.opps || 'unknown error'));
-  if (!p.opps.length) return panel('Opportunities', note('Nothing in the pipeline for this client. Opportunities › Gaps shows what they don’t buy yet.'), go('opportunities', 'gaps', 'Find gaps →', 'cl-link'));
+  const add = `<button type="button" class="cl-btn" data-cl-act="new-opp">+ New opportunity</button>`;
+  const form = CL.adding ? newOppHtml(p) : '';
+  if (!p.opps.length) return form + panel('Opportunities', note('Nothing in the pipeline for this client. Add one, or see what they don’t buy yet in Opportunities › Gaps.'), (CL.adding ? '' : add) + go('opportunities', 'gaps', 'Find gaps →', 'cl-link'));
   const label = { idea: 'Idea', proposed: 'Proposed', won: 'Won', lost: 'Lost' };
-  return panel('Opportunities', `<table class="cl-table"><thead><tr><th>Opportunity</th><th>Stage</th><th>Next step</th><th class="num">£/month</th><th class="num">One-off</th></tr></thead>
+  return form + panel('Opportunities', `<table class="cl-table"><thead><tr><th>Opportunity</th><th>Stage</th><th>Next step</th><th class="num">£/month</th><th class="num">One-off</th></tr></thead>
     <tbody>${p.opps.map(o => `<tr><td>${escapeHtml(o.title)}</td><td><span class="cl-stage o-${escapeHtml(o.status)}">${escapeHtml(label[o.status] || o.status)}</span></td><td>${escapeHtml(o.next_step || '—')}</td>
       <td class="num">${Number(o.mrr) ? escapeHtml(money(o.mrr)) : '—'}</td><td class="num">${Number(o.one_off) ? escapeHtml(money(o.one_off)) : '—'}</td></tr>`).join('')}</tbody></table>`,
-    go('opportunities', 'pipeline', 'Pipeline →', 'cl-link'));
+    (CL.adding ? '' : add) + go('opportunities', 'pipeline', 'Pipeline →', 'cl-link'));
+}
+
+// ─── Contacts (Philip, 9 Oct: contacts per client) ───────────────────
+
+function contactsHtml() {
+  const list = CL.data.contacts;
+  if (!list) return panel('Contacts', failed('Contacts', CL.data.errors.contacts || 'unknown error'));
+  const add = '<button type="button" class="cl-btn" data-cl-act="contact-add">+ Add contact</button>';
+  const form = CL.contactEdit === 'new' ? contactFormHtml(null) : '';
+  const cards = list.map(c => CL.contactEdit === c.id ? contactFormHtml(c) : `
+    <div class="cl-contact${c.is_main ? ' main' : ''}">
+      <div class="cl-contact-av" aria-hidden="true">${escapeHtml(initials(c.name || c.email))}</div>
+      <div class="cl-contact-body">
+        <strong>${escapeHtml(c.name || c.email)}</strong>${c.is_main ? '<span class="cl-chip">Main contact</span>' : ''}
+        ${c.role ? `<span class="cl-contact-role">${escapeHtml(c.role)}</span>` : ''}
+        <span class="cl-contact-lines">
+          ${c.email ? `<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>` : ''}
+          ${c.phone ? `<a href="tel:${escapeHtml(c.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(c.phone)}</a>` : ''}
+        </span>
+        ${c.notes ? `<span class="cl-muted">${escapeHtml(c.notes)}</span>` : ''}
+      </div>
+      <div class="cl-contact-acts">
+        ${c.is_main ? '' : `<button type="button" class="cl-link" data-cl-act="contact-main" data-id="${c.id}">Make main</button>`}
+        <button type="button" class="cl-link" data-cl-act="contact-edit" data-id="${c.id}">Edit</button>
+        <button type="button" class="cl-link muted" data-cl-act="contact-del" data-id="${c.id}">Remove</button>
+      </div>
+    </div>`).join('');
+  return form + panel(`Contacts (${list.length})`,
+    list.length ? `<div class="cl-contacts">${cards}</div>` : note('No contacts yet. Add the people you deal with: owner, accounts, office manager.'),
+    CL.contactEdit === 'new' ? '' : add);
+}
+
+function contactFormHtml(c) {
+  const v = c || { is_main: !CL.data.contacts?.length };
+  return panel(c ? `Edit ${escapeHtml(c.name || c.email)}` : 'New contact', `<form class="cl-form" data-cl-form="contact" data-id="${c ? c.id : 'new'}" novalidate>
+      <label>Name <input name="name" type="text" maxlength="120" autocomplete="off" value="${escapeHtml(v.name || '')}" placeholder="e.g. Chris Wyeth"></label>
+      <label>Role <input name="role" type="text" maxlength="60" list="clRoles" value="${escapeHtml(v.role || '')}" placeholder="e.g. Accounts"></label>
+      <label>Email <input name="email" type="email" maxlength="200" autocomplete="off" value="${escapeHtml(v.email || '')}" placeholder="name@company.co.uk"></label>
+      <label>Phone <input name="phone" type="tel" maxlength="40" value="${escapeHtml(v.phone || '')}" placeholder="e.g. 01234 567890"></label>
+      <label class="wide">Notes <input name="notes" type="text" maxlength="500" value="${escapeHtml(v.notes || '')}" placeholder="e.g. Works Tue–Thu; prefers email"></label>
+      <label class="cl-check wide"><input name="is_main" type="checkbox"${v.is_main ? ' checked' : ''}> Main contact (shown at the top of the page)</label>
+      <datalist id="clRoles">${ROLES.map(r => `<option value="${escapeHtml(r)}"></option>`).join('')}</datalist>
+      <div class="cl-form-actions wide">
+        <button type="button" class="cl-btn ghost" data-cl-act="contact-cancel">Cancel</button>
+        <button type="submit" class="cl-btn"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : c ? 'Save' : 'Add contact'}</button>
+      </div>
+    </form>`);
+}
+
+/** Only one main contact per client: the others are unset first. */
+async function clearOtherMains(sb, keepId) {
+  const others = (CL.data.contacts || []).filter(x => x.is_main && x.id !== keepId).map(x => x.id);
+  if (others.length) must(await sb.from('client_contacts').update({ is_main: false }).in('id', others));
+}
+
+async function saveContact(form) {
+  if (CL.saving) return;
+  const id = form.dataset.id === 'new' ? null : Number(form.dataset.id);
+  const f = form.elements;
+  const { row, error } = cleanContact({ name: f.name.value, role: f.role.value, email: f.email.value, phone: f.phone.value, notes: f.notes.value, is_main: f.is_main.checked }, CL.name);
+  if (error) { toast(error, 'warning'); return; }
+  if (duplicateEmail(CL.data.contacts, row.email, id)) { toast(`${row.email} is already a contact for ${CL.name}.`, 'warning'); return; }
+  CL.saving = true; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    if (row.is_main) await clearOtherMains(sb, id);
+    if (id) must(await sb.from('client_contacts').update(row).eq('id', id));
+    else must(await sb.from('client_contacts').insert({ ...row, created_by: (els('userName')?.textContent || '').trim() }));
+    await reloadContacts(sb);
+    CL.contactEdit = null;
+    toast(id ? 'Contact saved' : `${row.name || row.email} added`, 'success');
+  } catch (err) {
+    toast('Could not save the contact: ' + (err.message || err), 'error', 7000);
+  } finally {
+    CL.saving = false; render();
+  }
+}
+
+async function reloadContacts(sb) {
+  CL.data.contacts = contactsFor(must(await sb.from('client_contacts').select('*')), CL.name);
+}
+
+async function contactAct(act, id) {
+  const c = (CL.data.contacts || []).find(x => x.id === id);
+  if (!c) return;
+  if (act === 'contact-del' && !confirm(`Remove ${c.name || c.email} from ${CL.name}'s contacts?`)) return;
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    if (act === 'contact-main') { await clearOtherMains(sb, id); must(await sb.from('client_contacts').update({ is_main: true }).eq('id', id)); }
+    if (act === 'contact-del') must(await sb.from('client_contacts').delete().eq('id', id));
+    await reloadContacts(sb);
+    toast(act === 'contact-main' ? `${c.name || c.email} is now the main contact` : 'Contact removed', 'success');
+  } catch (err) {
+    toast('Could not update: ' + (err.message || err), 'error', 7000);
+  } finally { render(); }
+}
+
+// ─── New opportunity (Philip, 9 Oct: "create an opportunity when I am in clients, manual or from a list") ───
+
+const PER_UNIT = { user: 'Users', seat: 'Seats', device: 'Devices', site: 'Sites' };
+const UNIT_TEXT = { user: 'per user a month', seat: 'per seat a month', device: 'per device a month', site: 'per site a month', month: 'a month', year: 'a year', 'one-off': 'one-off' };
+
+function newOppHtml(p) {
+  const a = CL.adding, products = CL.data.products || [];
+  const prod = products.find(x => x.key === a.product) || null;
+  const open = new Set((p.opps || []).filter(o => o.status === 'idea' || o.status === 'proposed').map(o => o.product_key).filter(Boolean));
+  const families = [...new Set(products.map(x => x.family || 'Other'))];
+  const options = families.map(f => `<optgroup label="${escapeHtml(f)}">${products.filter(x => (x.family || 'Other') === f).map(x =>
+    `<option value="${escapeHtml(x.key)}"${x.key === a.product ? ' selected' : ''}>${escapeHtml(x.name)}${x.unit_price != null ? ` · ${escapeHtml(money(x.unit_price))} ${escapeHtml(UNIT_TEXT[x.price_unit || 'user'] || '')}` : ''}${open.has(x.key) ? ' (already in the pipeline)' : ''}</option>`).join('')}</optgroup>`).join('');
+  const per = prod && PER_UNIT[prod.price_unit || 'user'] && prod.unit_price != null ? PER_UNIT[prod.price_unit || 'user'] : '';
+  const preview = newOpportunity({ client: CL.name, product: prod, title: a.title, quantity: a.quantity, mrr: a.mrr, oneOff: a.oneOff });
+  return panel('New opportunity', `<form class="cl-form" data-cl-form="new-opp" novalidate>
+      <label class="wide">What
+        <select name="product">
+          <option value="">Something else (type it below)</option>
+          ${options}
+        </select>
+        ${!products.length ? '<small>The catalogue didn’t load; you can still type one.</small>' : prod?.unit_note ? `<small>${escapeHtml(prod.unit_note)}</small>` : ''}
+      </label>
+      <label class="wide">Name <input name="title" type="text" maxlength="200" value="${escapeHtml(a.title || '')}" placeholder="${escapeHtml(prod ? `${prod.name} — ${CL.name}` : 'e.g. New website, Laptop refresh, Cyber Essentials')}"></label>
+      ${per ? `<label>${per} <input name="quantity" type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(a.quantity ?? '')}" placeholder="how many"></label>` : ''}
+      <label>£ a month <input name="mrr" type="number" min="0" step="0.01" inputmode="decimal" value="${escapeHtml(a.mrr ?? '')}" placeholder="${escapeHtml(preview.error ? '0' : String(preview.mrr))}"></label>
+      <label>£ one-off <input name="one_off" type="number" min="0" step="0.01" inputmode="decimal" value="${escapeHtml(a.oneOff ?? '')}" placeholder="${escapeHtml(preview.error ? '0' : String(preview.one_off))}"></label>
+      <label>Stage <select name="status"><option value="idea"${a.status !== 'proposed' ? ' selected' : ''}>Idea</option><option value="proposed"${a.status === 'proposed' ? ' selected' : ''}>Proposed</option></select></label>
+      <label class="wide">Next step <input name="next_step" type="text" maxlength="200" value="${escapeHtml(a.nextStep || '')}" placeholder="e.g. Call Chris about seats"></label>
+      ${open.has(a.product) ? '<p class="cl-form-warn wide">This client already has this one open in the pipeline.</p>' : ''}
+      <div class="cl-form-actions wide">
+        <span class="cl-muted">${preview.error ? '' : `Adds to the pipeline: ${escapeHtml(preview.title)}${preview.mrr ? ` · ${escapeHtml(money(preview.mrr))}/mo` : ''}${preview.one_off ? ` · ${escapeHtml(money(preview.one_off))} one-off` : ''}`}</span>
+        <button type="button" class="cl-btn ghost" data-cl-act="cancel-opp">Cancel</button>
+        <button type="submit" class="cl-btn"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Adding…' : 'Add opportunity'}</button>
+      </div>
+    </form>`);
+}
+
+/** Keep what's typed in CL.adding (the form is re-drawn when the product changes). */
+function readForm(form) {
+  const f = form.elements;
+  const v = n => (f[n] ? f[n].value : undefined);
+  return { product: v('product') || '', title: v('title') || '', quantity: v('quantity') ?? CL.adding?.quantity ?? '', mrr: v('mrr') || '', oneOff: v('one_off') || '', status: v('status'), nextStep: v('next_step') || '' };
+}
+
+async function saveOpp(form) {
+  if (CL.saving) return;
+  CL.adding = readForm(form);
+  const a = CL.adding;
+  const product = (CL.data.products || []).find(x => x.key === a.product) || null;
+  const row = newOpportunity({ client: CL.name, product, title: a.title, quantity: a.quantity, mrr: a.mrr, oneOff: a.oneOff, status: a.status, nextStep: a.nextStep, owner: (els('userName')?.textContent || '').trim() });
+  if (row.error) { toast(row.error, 'warning'); form.elements.title?.focus(); return; }
+  CL.saving = true; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const saved = must(await sb.from('opportunities').insert(row).select('*').single());
+    CL.adding = null;
+    CL.data.profile.opps = [saved, ...(CL.data.profile.opps || [])];
+    CL.data.profile.openOpps = [saved, ...(CL.data.profile.openOpps || [])];
+    window.GeckoSections?.opportunities?.reload?.();
+    toast(`Added to the pipeline: ${saved.title}`, 'success');
+  } catch (err) {
+    toast('Could not add: ' + (err.message || err), 'error', 7000);
+  } finally {
+    CL.saving = false; render();
+  }
 }
 
 // ─── Events ───────────────────────────────────────────────────────────
@@ -311,12 +488,46 @@ function onClick(event) {
   }
   const act = event.target.closest('[data-cl-act]')?.dataset.clAct;
   if (act === 'reload') { CL.data = null; load(); }
+  if (act === 'new-opp') {
+    CL.adding = CL.adding || { status: 'idea' };
+    if (CL.tab !== 'opportunities') pick('opportunities'); else render();
+    setTimeout(() => els('clWrap')?.querySelector('[data-cl-form="new-opp"] select[name="product"]')?.focus(), 50);
+  }
+  if (act === 'cancel-opp') { CL.adding = null; render(); }
+  if (act === 'contact-add') { CL.contactEdit = 'new'; render(); els('clWrap')?.querySelector('[data-cl-form="contact"] [name="name"]')?.focus(); }
+  if (act === 'contact-edit') { CL.contactEdit = Number(event.target.closest('[data-id]').dataset.id); render(); }
+  if (act === 'contact-cancel') { CL.contactEdit = null; render(); }
+  if (act === 'contact-main' || act === 'contact-del') contactAct(act, Number(event.target.closest('[data-id]').dataset.id));
   if (act === 'connect') connectSupabase({ interactive: true }).then(load, err => toast(err.message || 'Could not connect', 'error'));
 }
 
 export function init() {
   const section = els('section-client');
   section?.addEventListener('click', onClick);
+  section?.addEventListener('submit', e => {
+    if (e.target.dataset.clForm === 'new-opp') { e.preventDefault(); saveOpp(e.target); }
+    if (e.target.dataset.clForm === 'contact') { e.preventDefault(); saveContact(e.target); }
+  });
+  section?.addEventListener('change', e => {
+    const form = e.target.closest?.('[data-cl-form="new-opp"]');
+    if (!form || e.target.name !== 'product') return;
+    // A new pick re-fills the suggestions; anything typed by hand in the name/prices is kept.
+    const a = readForm(form);
+    CL.adding = { ...a, quantity: '', mrr: a.mrr, oneOff: a.oneOff };
+    render();
+    els('clWrap')?.querySelector('[data-cl-form="new-opp"] [name="quantity"], [data-cl-form="new-opp"] [name="mrr"]')?.focus();
+  });
+  section?.addEventListener('input', e => {
+    const form = e.target.closest?.('[data-cl-form="new-opp"]');
+    if (!form || !['quantity', 'mrr', 'one_off', 'title'].includes(e.target.name)) return;
+    // Live summary line without redrawing the form (keeps the cursor where it is).
+    CL.adding = readForm(form);
+    const a = CL.adding, prod = (CL.data.products || []).find(x => x.key === a.product) || null;
+    const pv = newOpportunity({ client: CL.name, product: prod, title: a.title, quantity: a.quantity, mrr: a.mrr, oneOff: a.oneOff });
+    const line = form.querySelector('.cl-form-actions .cl-muted');
+    if (line) line.textContent = pv.error ? '' : `Adds to the pipeline: ${pv.title}${pv.mrr ? ` · ${money(pv.mrr)}/mo` : ''}${pv.one_off ? ` · ${money(pv.one_off)} one-off` : ''}`;
+    const mrr = form.elements.mrr; if (mrr && !pv.error) mrr.placeholder = String(pv.mrr);
+  });
   section?.addEventListener('keydown', e => keyNav(e, 'data-cl-tab', pick));
   window.addEventListener('resize', () => moveInk(els('clHead')?.querySelector('.app-tabs')));
   render();

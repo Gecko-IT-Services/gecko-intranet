@@ -115,6 +115,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   **client price** (`unit_price` per `price_unit`, e.g. Hornetsecurity £7.50 per user, Philip 8 Oct) and the total
   when the opportunity has a `quantity`; `default_mrr` is the pipeline value (commission for dealer
   products) and is never quoted.
+- Client page › **Contacts** (9 Oct): several people per client in `client_contacts` (role, email, phone, one main contact,
+  seeded from the SSA list); header shows the main one. `src/core/contacts.js`. Design `2026-10-09-client-contacts-design.md`.
+- Client page › **+ Opportunity** (9 Oct): add one from the catalogue (quantity × client price) or typed by hand;
+  `newOpportunity()` in `src/core/opportunities.js`. Design `2026-10-09-client-new-opportunity-design.md`.
 - Windows 10 / device gaps wait for Atera data in the feed (phase 2, with the Atera cost check).
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
@@ -233,6 +237,15 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   AppCenter usage: Acronis, Webroot, Keeper, EndUser Remote; per-client breakdown xlsx)
   against what each client is billed in Xero, to find seats/workloads billed to us but
   not to a client, and trim the bill.
+- Client portal (Philip, 9 Oct: "put a pin in it, pick it up next week"): clients see their timesheets and past
+  invoices. Proposed, not decided: a separate read-only page (not inside Gecko HQ), emailed sign-in link for
+  contacts Philip adds, one client per login enforced by RLS with tests that try to read another client's rows,
+  safe columns only (date, engineer, hours, work description; invoice number/date/total/due/status + Xero online
+  link), never internal notes, costs, margins or opportunities; pilot with one client. Alternative: a monthly
+  statement email per client. Open questions: who signs in, all work or SSA only, pilot client.
+- Monthly statement email per client (Philip, 9 Oct: liked it, then "leave that one too for now… payments are managed
+  by direct debit and it works well; think about it next week"). Nothing built. Idea: Outlook draft per client for a
+  month (work done + hours, SSA left, invoices raised/owed), from the client page or a Clients › Statements tab.
 
 Resolved 8 Oct:
 - Kingdom Products now has service lines matching Xero's £189.82 (IS + Backup 43.50 /

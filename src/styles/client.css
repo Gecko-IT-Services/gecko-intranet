@@ -117,3 +117,37 @@
   #section-client .cl-id-text h1 { font-size: 21px; }
   #section-client .cl-hist { gap: 3px; }
 }
+
+/* New opportunity (9 Oct) */
+#section-client .cl-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 14px; }
+#section-client .cl-form label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--muted); min-width: 0; }
+#section-client .cl-form .wide { grid-column: 1 / -1; }
+#section-client .cl-form input, #section-client .cl-form select {
+  font: inherit; font-size: 13px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--white);
+  background: var(--dark); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); padding: 8px 10px; min-height: 38px; width: 100%; min-width: 0;
+}
+#section-client .cl-form input:focus, #section-client .cl-form select:focus { outline: none; border-color: var(--green); }
+#section-client .cl-form small { font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--muted); }
+#section-client .cl-form-warn { margin: 0; font-size: 12.5px; color: var(--amber); }
+#section-client .cl-form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+#section-client .cl-form-actions .cl-muted { margin: 0 auto 0 0; }
+#section-client .cl-panel + .cl-panel { margin-top: 14px; }
+@media (max-width: 760px) { #section-client .cl-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+
+/* Contacts (9 Oct) */
+#section-client .cl-contacts { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+#section-client .cl-contact { display: flex; gap: 12px; padding: 14px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); min-width: 0; flex-wrap: wrap; }
+#section-client .cl-contact.main { border-color: var(--green); }
+#section-client .cl-contact-av { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-content: center; background: var(--green-glow); color: var(--green); font-weight: 700; font-size: 13px; }
+#section-client .cl-contact-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+#section-client .cl-contact-body strong { color: var(--white); font-size: 14px; margin-right: 6px; }
+#section-client .cl-contact-body .cl-chip { align-self: flex-start; }
+#section-client .cl-contact-role { font-size: 12px; color: var(--muted); }
+#section-client .cl-contact-lines { display: flex; flex-direction: column; gap: 2px; font-size: 13px; min-width: 0; }
+#section-client .cl-contact-lines a { color: var(--green); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-client .cl-contact-lines a:hover { text-decoration: underline; }
+#section-client .cl-contact-acts { display: flex; gap: 14px; width: 100%; padding-top: 8px; border-top: 1px solid var(--border-dim); }
+#section-client .cl-contact-acts .cl-link { margin-left: 0; }
+#section-client .cl-contact-acts .cl-link.muted { margin-left: auto; }
+#section-client .cl-form .cl-check { flex-direction: row; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 400; color: var(--white); }
+#section-client .cl-form .cl-check input { width: auto; min-height: 0; }
