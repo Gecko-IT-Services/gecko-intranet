@@ -55,12 +55,12 @@
 #section-overview .ovw-attn .amber .dot { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-dim); }
 #section-overview .ovw-attn strong { display: block; font-size: 14px; color: var(--white); font-weight: 600; }
 #section-overview .ovw-attn p { margin: 2px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; overflow-wrap: anywhere; }
-#section-overview .ovw-attn button {
+#section-overview .ovw-attn button:not(.client-link) {
   font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer;
   padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-dim);
   background: transparent; color: var(--muted); transition: color .2s ease, border-color .2s ease;
 }
-#section-overview .ovw-attn button:hover, #section-overview .ovw-attn button:focus-visible { color: var(--green); border-color: var(--green); }
+#section-overview .ovw-attn button:not(.client-link):hover, #section-overview .ovw-attn button:not(.client-link):focus-visible { color: var(--green); border-color: var(--green); }
 #section-overview .ovw-clear { padding: 22px 18px; display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 13px; }
 #section-overview .ovw-clear b { color: var(--green); font-size: 16px; }
 #section-overview .ovw-warn-line { margin: 0; padding: 10px 18px; font-size: 12px; color: var(--amber); border-top: 1px solid var(--border-dim); }
@@ -121,7 +121,43 @@
 }
 @media (max-width: 520px) {
   #section-overview .ovw-attn li { grid-template-columns: 10px minmax(0, 1fr); }
-  #section-overview .ovw-attn button { grid-column: 2; justify-self: start; }
+  #section-overview .ovw-attn button:not(.client-link) { grid-column: 2; justify-self: start; }
   #section-overview .ovw-hist { gap: 6px; padding: 10px 12px 0; }
   #section-overview .ovw-hist-col .t { font-size: 10px; }
 }
+
+/* ═══ Tabs: Today (morning check) | Business (9 Oct) ═══ */
+#section-overview .ovw-tabbar { display: flex; margin-bottom: 2px; }
+#section-overview .ovw-pane { display: flex; flex-direction: column; gap: 14px; }
+#section-overview .ovw-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+#section-overview .ovw-hello h2 { margin: 0; font-size: 22px; letter-spacing: -.02em; color: var(--white); }
+#section-overview .ovw-hello p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+#section-overview .ovw-stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+#section-overview .ovw-stat {
+  font: inherit; text-align: left; cursor: pointer; display: grid; gap: 3px; align-content: start; min-width: 0;
+  padding: 14px 14px 13px; border-radius: var(--radius); background: var(--card); color: var(--white);
+  border: 1px solid var(--border-dim); border-top: 3px solid var(--border-dim);
+  transition: transform .2s ease, border-color .2s ease; animation: ovw-rise .45s cubic-bezier(.2, .8, .2, 1) both;
+}
+#section-overview .ovw-stat:hover, #section-overview .ovw-stat:focus-visible { transform: translateY(-2px); border-color: var(--border); }
+#section-overview .ovw-stat:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+#section-overview .ovw-stat .l { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+#section-overview .ovw-stat strong { font-size: 17px; font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; }
+#section-overview .ovw-stat small { font-size: 11.5px; color: var(--muted); line-height: 1.35; overflow-wrap: anywhere; }
+#section-overview .ovw-stat.good { border-top-color: var(--green); }
+#section-overview .ovw-stat.good strong { color: var(--green); }
+#section-overview .ovw-stat.warn { border-top-color: var(--amber); }
+#section-overview .ovw-stat.warn strong { color: var(--amber); }
+#section-overview .ovw-stat.bad { border-top-color: var(--red); }
+#section-overview .ovw-stat.bad strong { color: var(--red); }
+#section-overview .ovw-stat.info { border-top-color: var(--blue); }
+#section-overview .ovw-stat.info strong { color: var(--blue); }
+#section-overview .ovw-stat:nth-child(2) { animation-delay: .03s; }
+#section-overview .ovw-stat:nth-child(3) { animation-delay: .06s; }
+#section-overview .ovw-stat:nth-child(4) { animation-delay: .09s; }
+#section-overview .ovw-stat:nth-child(5) { animation-delay: .12s; }
+#section-overview .ovw-stat:nth-child(6) { animation-delay: .15s; }
+@media (prefers-reduced-motion: reduce) { #section-overview .ovw-stat { animation: none; transition: none; } }
+@media (max-width: 1200px) { #section-overview .ovw-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { #section-overview .ovw-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

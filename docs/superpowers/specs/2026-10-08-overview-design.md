@@ -42,3 +42,15 @@ Mileage, which was most of the old page, is now one line in At a glance and one 
   wanted: have those sections store their latest summary in the database and show it here.
 - Profit/margin stays on Profitability (it needs the feed's supplier costs and is monthly).
 - The old Operational Snapshot (company switch countdown, passed on 1 June) is gone.
+
+## Update 9 Oct: Today and Business tabs (Gecko HQ stage 2)
+Philip asked for a **morning check** (stage plan in `2026-10-09-gecko-hq-structure-design.md`). Overview
+now has two tabs:
+- **Today** (default): greeting, six status tiles (Backups 24h, Alerts 2 days, Money, Support hours,
+  Jobs, Team), then **Monitoring** (failed backups, alerts that need a person, backups with warnings),
+  **Needs attention** and **This week**. Each tile and row opens the place to deal with it.
+- **Business**: the money tiles, six months of sales and At a glance (as before).
+- Backups and alerts come from the Backups and Alerts sections' new `snapshot()` (same parsing and
+  triage, resolutions included; their own state untouched), exposed as `window.GeckoMonitor`. They are
+  read after the rest so the page never waits on the mailbox. Without mailbox consent the tile says
+  **Connect** (one click, the consent popup); no access says so. Never shown as all-clear when unread.

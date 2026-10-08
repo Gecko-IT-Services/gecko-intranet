@@ -6414,7 +6414,7 @@ body::before {
 
       <div class="section-head">
         <h1>Overview <span>Dashboard</span></h1>
-        <p>Money, what needs you and this week · <span id="ovwHeadMonth">—</span></p>
+        <p>Morning check and the business at a glance · <span id="ovwHeadMonth">—</span></p>
         <div class="ovw-head-actions">
           <button class="ovw-refresh" id="ovwRefresh" type="button" onclick="ovwRefreshData()" title="Reload from SharePoint">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -9029,6 +9029,8 @@ const OVW = {
   ssaClients:  [],   // [{ id, name, hoursPurchased, hoursUsed, hoursRemaining }] — from Clients list
   tshLoaded:   false, ssaLoaded: false,  // false = that read failed (said on the page, never shown as zero)
   db:          null,  // jobs, opportunities, leave, Xero: window.GeckoOverview.loadDb()
+  tab:         'today', dir: '',          // Today (morning check) | Business
+  mon:         null, monLoading: false,   // last day of backups + alerts (window.GeckoMonitor)
   dbError:     '',
   lastSync:    null
 };
@@ -9451,11 +9453,137 @@ function ovwRenderAll() {
       </div>
     </div>`;
 
-  wrap.innerHTML = ovwMoneyHtml(core, today) +
-    `<div class="ovw-split">${ovwAttentionHtml(core, today)}${ovwWeekHtml(core, today)}</div>` +
-    `<div class="ovw-split">${ovwHistoryHtml(core, today) || '<div></div>'}${ovwGlanceHtml()}</div>` +
-    actionsHTML;
+  // Two tabs (9 Oct): Today is the morning check (what needs a person); Business is the money.
+  const tabs = window.GeckoTabs ? window.GeckoTabs.tabsHtml([
+    { key: 'today', label: 'Today', badge: ovwTodayRedCount(core, today) || '', warn: true },
+    { key: 'business', label: 'Business' }
+  ], OVW.tab, { attr: 'data-ovw-tab', controls: 'ovwPane', label: 'Overview views' }) : '';
+  const pane = OVW.tab === 'business'
+    ? ovwMoneyHtml(core, today) + `<div class="ovw-split">${ovwHistoryHtml(core, today) || '<div></div>'}${ovwGlanceHtml()}</div>` + actionsHTML
+    : ovwHelloHtml() + ovwStatusHtml(core, today) +
+      `<div class="ovw-split"><div class="ovw-col">${ovwMonitorHtml()}${ovwAttentionHtml(core, today)}</div>${ovwWeekHtml(core, today)}</div>`;
+  wrap.innerHTML = `<div class="ovw-tabbar">${tabs}</div><div class="app-pane ovw-pane ${OVW.dir || ''}" id="ovwPane">${pane}</div>`;
+  OVW.dir = '';
+  window.GeckoTabs?.moveInk(wrap.querySelector('.app-tabs'));
 }
+
+// ─── Today: the morning check (Philip, 9 Oct) ─────────────────────────
+// Backups and alerts from the last day (support@ mailbox, through the Backups and Alerts
+// sections' snapshot()), money overdue, SSA running low, jobs due, who's off: one look, then go.
+
+/** Backups and alerts for Today; read after the rest, so the page never waits on the mailbox. */
+async function ovwLoadMonitor({ interactive = false } = {}) {
+  const mon = window.GeckoMonitor;
+  if (!mon || OVW.monLoading) return;
+  OVW.monLoading = true;
+  if (OVW.tab === 'today') ovwRenderAll();
+  try {
+    const [backups, alerts] = await Promise.all([mon.backups({ hours: 24, interactive }), mon.alerts({ days: 2, interactive })]);
+    OVW.mon = { backups, alerts, at: new Date() };
+  } finally {
+    OVW.monLoading = false;
+    ovwRenderAll();
+  }
+}
+
+function ovwHelloHtml() {
+  const h = new Date().getHours();
+  const first = (document.getElementById('userName')?.textContent || '').trim().split(/\s+/)[0];
+  const hello = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const at = OVW.mon?.at ? ` · backups and alerts checked ${OVW.mon.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : '';
+  return `<div class="ovw-hello"><h2>${escapeHtml(hello)}${first && first !== 'Not' ? ', ' + escapeHtml(first) : ''}</h2>
+    <p>${escapeHtml(new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }))}${escapeHtml(at)}</p></div>`;
+}
+
+/** Red items on Today: failed backups, critical alerts, money overdue, SSA clients out of hours. */
+function ovwTodayRedCount(core, today) {
+  const b = OVW.mon?.backups, a = OVW.mon?.alerts;
+  let n = (b?.ok ? b.failing.length : 0) + (a?.ok ? a.needing.filter(i => i.level === 'critical').length : 0);
+  const db = OVW.db;
+  if (db?.inv && core.money({ inv: db.inv, rep: db.rep || [], jobs: db.jobs || [], opps: [] }, today).owed.overdue > 0) n += 1;
+  n += OVW.ssaClients.filter(c => !c.archived && c.hoursRemaining != null && c.hoursRemaining <= 0).length;
+  return n;
+}
+
+function ovwMailState(snap, loadingLabel) {
+  if (!snap) return OVW.monLoading ? { cls: '', value: 'Checking…', sub: loadingLabel } : { cls: '', value: '—', sub: 'Not checked yet' };
+  if (snap.ok) return null;
+  if (snap.error === 'CONSENT') return { cls: 'warn', value: 'Connect', sub: 'Allow reading support@ (one click)', act: 'mailbox' };
+  if (snap.error === 'NO_ACCESS') return { cls: 'warn', value: 'No access', sub: 'Your account can’t open support@' };
+  return { cls: 'warn', value: 'Didn’t load', sub: snap.error };
+}
+
+function ovwStatusHtml(core, today) {
+  const db = OVW.db || { errors: {} };
+  const tile = (go, label, value, sub, cls = '', act = '') => `<button type="button" class="ovw-stat ${cls}" ${act ? `data-ovw-act="${act}"` : `data-ovw-go="${escapeHtml(go)}"`}>
+      <span class="l">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(sub)}</small></button>`;
+  const b = OVW.mon?.backups, a = OVW.mon?.alerts;
+  const bs = ovwMailState(b, 'reading last night’s Acronis emails');
+  const as = ovwMailState(a, 'reading Atera alerts');
+  const backups = bs ? tile('backups', 'Backups · 24h', bs.value, bs.sub, bs.cls, bs.act)
+    : b.totals.fail ? tile('backups', 'Backups · 24h', `${b.totals.fail} failed`, `${b.totals.warn} with warnings · ${b.jobCount} jobs`, 'bad')
+    : b.totals.warn ? tile('backups', 'Backups · 24h', `${b.totals.warn} warnings`, `none failed · ${b.jobCount} jobs`, 'warn')
+    : tile('backups', 'Backups · 24h', b.jobCount ? 'All good' : 'No reports', b.jobCount ? `${b.jobCount} jobs succeeded` : 'no Acronis emails in 24 hours', b.jobCount ? 'good' : 'warn');
+  const crit = a?.ok ? a.needing.filter(i => i.level === 'critical').length : 0;
+  const imp = a?.ok ? a.needing.length - crit : 0;
+  const alerts = as ? tile('alerts', 'Alerts · 2 days', as.value, as.sub, as.cls, as.act)
+    : crit ? tile('alerts', 'Alerts · 2 days', `${crit} critical`, `${imp} more need a look · ${a.stats.noise} filtered out`, 'bad')
+    : imp ? tile('alerts', 'Alerts · 2 days', `${imp} to look at`, `${a.stats.noise} filtered out as noise`, 'warn')
+    : tile('alerts', 'Alerts · 2 days', 'Quiet', `${a.stats.alerts} alerts, all noise`, 'good');
+  let money = tile('jobs:owed', 'Money', '—', db.inv ? '' : 'needs Xero');
+  if (db.inv) {
+    const o = window.GeckoOverview.money({ inv: db.inv, rep: db.rep || [], jobs: db.jobs || [], opps: [] }, today).owed;
+    money = o.overdue > 0 ? tile('jobs:owed', 'Money', ovwWhole(o.overdue) + ' overdue', `${ovwWhole(o.total)} owed in all`, 'bad')
+      : tile('jobs:owed', 'Money', 'Nothing overdue', `${ovwWhole(o.total)} owed, not yet due`, 'good');
+  }
+  const ssa = OVW.ssaClients.filter(c => !c.archived && c.hoursRemaining != null);
+  const low = ssa.filter(c => c.hoursRemaining < 2);
+  const support = !OVW.ssaLoaded ? tile('timesheets:ssa', 'Support hours', '—', 'didn’t load')
+    : low.length ? tile('timesheets:ssa', 'Support hours', `${low.length} running low`, low.slice(0, 2).map(c => c.name).join(', ') + (low.length > 2 ? '…' : ''), low.some(c => c.hoursRemaining <= 0) ? 'bad' : 'warn')
+    : tile('timesheets:ssa', 'Support hours', 'All topped up', `${ssa.length} SSA clients over 2h`, 'good');
+  const w = core.thisWeek({ leave: db.leave || [], jobs: db.jobs || [], entries: OVW.tshEntries }, today);
+  const late = w.jobsDue.filter(j => String(j.target_date).slice(0, 10) < today);
+  const jobs = !db.jobs ? tile('jobs:jobs', 'Jobs', '—', 'didn’t load')
+    : late.length ? tile('jobs:jobs', 'Jobs', `${late.length} late`, `${w.jobsDue.length - late.length} more due this week`, 'warn')
+    : tile('jobs:jobs', 'Jobs', w.jobsDue.length ? `${w.jobsDue.length} due this week` : 'Nothing due', 'this week (Mon–Sun)', 'good');
+  const off = w.away.filter(l => l.now && l.status === 'Approved');
+  const team = !db.leave ? tile('leave', 'Team', '—', 'didn’t load')
+    : off.length ? tile('leave', 'Team', `${off.map(l => l.person).join(' & ')} off`, 'today', 'info')
+    : tile('leave', 'Team', 'Everyone in', w.away.length ? `next off: ${w.away[0].person} ${core.shortRange(w.away[0].start, w.away[0].end)}` : 'nobody off in the next two weeks', 'good');
+  return `<div class="ovw-stats">${backups}${alerts}${money}${support}${jobs}${team}</div>`;
+}
+
+function ovwMonitorHtml() {
+  const b = OVW.mon?.backups, a = OVW.mon?.alerts;
+  const rows = [];
+  if (b?.ok) for (const j of b.failing) rows.push({ level: 'red', who: j.client, what: `Backup failed: ${j.what}${j.plan ? ` (${j.plan})` : ''}`, why: j.reason, go: 'backups', link: j.link });
+  if (a?.ok) for (const i of a.needing) rows.push({ level: i.level === 'critical' ? 'red' : 'amber', who: i.client, what: `${i.device}: ${i.label}`, why: i.why, go: 'alerts', link: i.link });
+  if (b?.ok && b.warnings.length) rows.push({ level: 'amber', who: '', what: `${b.warnings.length} backup${b.warnings.length === 1 ? '' : 's'} finished with warnings`, why: [...new Set(b.warnings.map(w => w.client))].slice(0, 4).join(', '), go: 'backups' });
+  if (!rows.length) return '';
+  return `<div class="ovw-card">
+    <div class="ovw-card-head"><h3>Monitoring</h3><span class="ovw-count ${rows.some(r => r.level === 'red') ? 'red' : ''}">${rows.length}</span></div>
+    <ul class="ovw-attn">${rows.slice(0, 8).map(r => `<li class="${r.level}"><span class="dot" aria-hidden="true"></span>
+      <div><strong>${escapeHtml(r.what)}</strong><p>${[r.who ? clientLink(r.who) : '', escapeHtml(r.why || '')].filter(Boolean).join(' · ')}</p></div>
+      <button type="button" data-ovw-go="${r.go}">Open →</button></li>`).join('')}</ul>
+    ${rows.length > 8 ? `<p class="ovw-warn-line">+ ${rows.length - 8} more in Monitoring.</p>` : ''}
+  </div>`;
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest?.('#section-overview [data-ovw-tab]');
+  if (t && t.dataset.ovwTab !== OVW.tab) {
+    OVW.dir = window.GeckoTabs.direction(['today', 'business'], OVW.tab, t.dataset.ovwTab);
+    OVW.tab = t.dataset.ovwTab;
+    ovwRenderAll();
+    return;
+  }
+  if (e.target.closest?.('#section-overview [data-ovw-act="mailbox"]')) ovwLoadMonitor({ interactive: true });
+});
+document.addEventListener('keydown', e => {
+  if (e.target.closest?.('#section-overview .ovw-tabbar') && window.GeckoTabs) {
+    window.GeckoTabs.keyNav(e, 'data-ovw-tab', k => { if (k !== OVW.tab) { OVW.tab = k; ovwRenderAll(); } });
+  }
+});
 
 /** Every Open button and tile carries data-ovw-go="section[:tab]". */
 function ovwGo(target) {
@@ -9514,6 +9642,7 @@ async function ovwRefreshData(silent = false) {
     OVW.dbError = db.status === 'rejected' ? (db.reason?.message || String(db.reason)) : '';
     OVW.lastSync = new Date();
     ovwRenderAll();
+    ovwLoadMonitor();
 
     const last = document.getElementById('ovwLastSync');
     if (last) {
