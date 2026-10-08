@@ -245,3 +245,28 @@ console.log('opportunities: ok');
   assert.equal(newOpportunity({ client: 'K', title: 'x', status: 'won' }).status, 'idea', 'new ones start open');
   console.log('opportunities: newOpportunity ok');
 }
+
+// Sharper pipeline (9 Oct)
+{
+  const { dealState, jobFromDeal, boardColumns } = await import('../src/core/opportunities.js');
+  const today = '2026-10-08';
+  const s = o => dealState({ status: 'proposed', mrr: 0, one_off: 0, modified_at: '2026-10-07T10:00:00Z', ...o }, today);
+  assert.equal(s({}).stale, 0);
+  assert.equal(s({ modified_at: '2026-09-20T10:00:00Z' }).stale, 18, 'no change for 18 days');
+  assert.equal(s({ modified_at: '2026-09-20T10:00:00Z', follow_up_on: '2026-10-15' }).stale, 0, 'a follow-up still to come is not stale');
+  assert.equal(s({ modified_at: '2026-09-20T10:00:00Z', follow_up_on: '2026-10-01' }).stale, 18, 'a missed follow-up does not hide it');
+  assert.deepEqual([s({ follow_up_on: today }).followUpDue, s({ follow_up_on: today }).followUpLate], [true, 0]);
+  assert.equal(s({ follow_up_on: '2026-10-05' }).followUpLate, 3);
+  assert.equal(s({ follow_up_on: '2026-10-11' }).followUpSoon, 3);
+  assert.equal(s({ status: 'won', follow_up_on: '2026-10-01' }).followUpDue, false, 'closed deals have no follow-up');
+  const won = { id: 7, status: 'won', client_name: 'Cowan', title: 'Server', mrr: 40, one_off: 1200, next_step: 'Order', modified_at: '2026-10-08' };
+  assert.deepEqual([s(won).needsJob, s(won).needsBilling], [true, true]);
+  assert.deepEqual([s({ ...won, job_id: 3, billing_set_up_at: '2026-10-08' }).needsJob, s({ ...won, job_id: 3, billing_set_up_at: '2026-10-08' }).needsBilling], [false, false]);
+  assert.deepEqual(jobFromDeal(won, 'Philip'), { client_name: 'Cowan', title: 'Server', status: 'agreed', value: 1200, next_step: 'Order', owner: 'Philip', notes: 'From the won opportunity “Server”.', source_ref: 'opp:7' });
+  const cols = boardColumns([
+    { id: 1, status: 'idea', mrr: 10 }, { id: 2, status: 'idea', mrr: 50 }, { id: 3, status: 'proposed', mrr: 5 },
+    { id: 4, status: 'won', mrr: 5, closed_at: '2026-09-30' }, { id: 5, status: 'won', mrr: 5, closed_at: '2026-05-01' }, { id: 6, status: 'lost', closed_at: '2026-10-01' }
+  ], today);
+  assert.deepEqual(cols.map(c => [c.key, c.items.map(o => o.id)]), [['idea', [2, 1]], ['proposed', [3]], ['won', [4]], ['lost', [6]]]);
+  console.log('opportunities: pipeline ok');
+}

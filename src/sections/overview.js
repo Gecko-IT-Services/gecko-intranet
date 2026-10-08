@@ -28,7 +28,7 @@ export async function loadDb() {
   const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
   const [jobs, opps, leave, xero, nudges, ticks, followUps] = await Promise.all([
     settle(sb.from('jobs').select('id,client_name,title,status,value,target_date,invoice_ref,invoiced_at,created_at,modified_at').then(must)),
-    settle(sb.from('opportunities').select('client_name,title,status,mrr,one_off,closed_at,created_at,modified_at').then(must)),
+    settle(sb.from('opportunities').select('id,client_name,title,status,mrr,one_off,closed_at,created_at,modified_at,follow_up_on,job_id,billing_set_up_at').then(must)),
     settle(sb.from('leave_requests').select('person,start_date,end_date,status,leave_type').then(must)),
     settle(sb.from('xero_status').select('*').eq('id', 1).maybeSingle().then(must)),
     settle(sb.from('payment_nudges').select('contact_name,created_at').gte('created_at', since).then(must)),

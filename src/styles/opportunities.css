@@ -207,3 +207,47 @@
   #section-opportunities .opp-deal-value { align-items: flex-start; text-align: left; }
   #section-opportunities .opp-deal-edit { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
+
+/* Sharper pipeline (9 Oct): view toggle, flags, follow-ups, won next steps, board */
+#section-opportunities .opp-pipe-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+#section-opportunities .opp-view { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border-dim); border-radius: 999px; background: var(--card); }
+#section-opportunities .opp-view button { font: inherit; font-size: 12px; cursor: pointer; border: 0; border-radius: 999px; padding: 6px 14px; background: transparent; color: var(--muted); }
+#section-opportunities .opp-view button[aria-pressed="true"] { background: var(--green); color: var(--on-green); font-weight: 600; }
+#section-opportunities .opp-flags { display: flex; gap: 6px; flex-wrap: wrap; }
+#section-opportunities .opp-flags:empty { display: none; }
+#section-opportunities .opp-deal-main .opp-flags { margin-top: 6px; }
+#section-opportunities .opp-flag { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); white-space: nowrap; }
+#section-opportunities .opp-flag.amber { color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent); }
+#section-opportunities .opp-flag.red { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+#section-opportunities .opp-flag.green { color: var(--green); background: var(--green-glow); }
+#section-opportunities .opp-fu { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+#section-opportunities .opp-fu > span { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; margin-right: 4px; }
+#section-opportunities .opp-fu input[type="date"] { width: auto; }
+#section-opportunities .opp-chip-btn { font: inherit; font-size: 12px; cursor: pointer; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-dim); background: transparent; color: var(--muted); }
+#section-opportunities .opp-chip-btn:hover { border-color: var(--green); color: var(--green); }
+#section-opportunities .opp-won-steps { grid-column: 1 / -1; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--green-glow); border: 1px solid color-mix(in srgb, var(--green) 40%, transparent); }
+#section-opportunities .opp-won-steps strong { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--green); margin-bottom: 6px; }
+#section-opportunities .opp-won-steps ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+#section-opportunities .opp-won-steps li { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--white); flex-wrap: wrap; }
+#section-opportunities .opp-won-steps li.done { color: var(--muted); }
+#section-opportunities .opp-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; margin-bottom: 8px; }
+#section-opportunities .opp-col { background: color-mix(in srgb, var(--border-dim) 25%, transparent); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; border-top: 3px solid var(--border-dim); }
+#section-opportunities .opp-col.st-proposed { border-top-color: var(--amber); }
+#section-opportunities .opp-col.st-won { border-top-color: var(--green); }
+#section-opportunities .opp-col.st-lost { border-top-color: var(--muted); }
+#section-opportunities .opp-col header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 4px 4px; }
+#section-opportunities .opp-col header strong { font-size: 13px; color: var(--white); }
+#section-opportunities .opp-col header span { font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); }
+#section-opportunities .opp-card { background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+#section-opportunities .opp-card-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 13px; min-width: 0; }
+#section-opportunities .opp-card-top .client-link { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+#section-opportunities .opp-card-top strong { font-family: var(--font-mono); font-weight: 500; font-size: 13px; color: var(--white); white-space: nowrap; }
+#section-opportunities .opp-card-top small { color: var(--muted); }
+#section-opportunities .opp-card-title { font-size: 12.5px; color: var(--muted); }
+#section-opportunities .opp-card-title span { font-family: var(--font-mono); font-size: 11.5px; }
+#section-opportunities .opp-card-next { font-size: 12px; color: var(--white); }
+#section-opportunities .opp-card-acts { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid var(--border-dim); margin-top: 2px; }
+#section-opportunities .opp-card-acts .opp-linkbtn { font-size: 12px; }
+#section-opportunities .opp-card-acts .opp-linkbtn.win { color: var(--green); font-weight: 600; }
+@media (max-width: 1100px) { #section-opportunities .opp-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { #section-opportunities .opp-board { grid-template-columns: minmax(0, 1fr); } }

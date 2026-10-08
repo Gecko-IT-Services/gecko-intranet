@@ -15,6 +15,7 @@ export const QUIET_PROPOSAL_DAYS = 14;
 const DRAFTS = new Set(['DRAFT', 'SUBMITTED']);
 
 import { dueFollowUps, dueText } from './activity.js';
+import { dealState } from './opportunities.js';
 const round2 = n => Math.round((Number(n) || 0) * 100) / 100;
 const num = v => (v == null || v === '' ? 0 : Number(v) || 0);
 const sum = (list, f) => round2(list.reduce((t, x) => t + f(x), 0));
@@ -126,6 +127,21 @@ export function attention(d, today, now = new Date()) {
     }
     if (due.length > 5) add('follow_up_more', 'amber', `${plural(due.length - 5, 'more follow-up')} due`,
       names(due.slice(5).map(f => f.client_name)), { section: 'client', tab: 'activity', client: due[5].client_name });
+  }
+
+  if (d.opps) {
+    // Sharper pipeline: deal follow-ups due, won deals still to set up (job / monthly billing), quiet deals.
+    const st = d.opps.map(o => ({ o, s: dealState(o, today) }));
+    const due = st.filter(x => x.s.followUpDue).sort((a, b) => b.s.followUpLate - a.s.followUpLate);
+    for (const { o, s } of due.slice(0, 5)) add('deal_follow_up', s.followUpLate > 7 ? 'red' : 'amber',
+      `Chase ${o.client_name}: ${o.title}${s.followUpLate ? ` (${dueText(o.follow_up_on, today)})` : ' today'}`, o.next_step || 'Follow-up date reached on the pipeline.', { section: 'opportunities', tab: 'pipeline' });
+    if (due.length > 5) add('deal_follow_up_more', 'amber', `${plural(due.length - 5, 'more deal follow-up')} due`, names(due.slice(5).map(x => x.o.client_name)), { section: 'opportunities', tab: 'pipeline' });
+    const since = new Date(Date.parse(today + 'T00:00:00Z') - 60 * 86400000).toISOString().slice(0, 10);
+    const setup = st.filter(x => (x.s.needsJob || x.s.needsBilling) && day(x.o.closed_at || x.o.modified_at) >= since);
+    if (setup.length) add('deal_setup', 'amber', `${plural(setup.length, 'won deal')} to set up`,
+      names(setup.map(x => `${x.o.client_name}: ${[x.s.needsJob && 'job', x.s.needsBilling && 'monthly billing'].filter(Boolean).join(' + ')}`)), { section: 'opportunities', tab: 'pipeline' });
+    const quiet = st.filter(x => x.s.stale);
+    if (quiet.length) add('deal_quiet', 'info', `${plural(quiet.length, 'deal')} quiet for 2+ weeks`, names(quiet.map(x => `${x.o.client_name}: ${x.o.title}`)), { section: 'opportunities', tab: 'pipeline' });
   }
 
   if (d.ssa) {

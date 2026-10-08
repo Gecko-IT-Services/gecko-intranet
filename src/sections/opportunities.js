@@ -22,8 +22,9 @@ import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
-  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue
+  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns
 } from '../core/opportunities.js';
+import { followUpChoices, dueText } from '../core/activity.js';
 
 const STATUSES = [['idea', 'Idea'], ['proposed', 'Proposed'], ['won', 'Won'], ['lost', 'Lost']];
 const DEALER_SERVICES = ['voxone', 'voip_exchange', 'ethernet', 'leased_line', 'fttp', 'fttc', 'sogea', 'pstn', 'mobile', 'unknown'];
@@ -45,8 +46,11 @@ const OPP = {
   error: null,
   checking: null,          // { done, total, label } while checks run
   products: [], statuses: {}, manualDomains: [], signals: new Map(), opps: [], dealer: [],
-  clients: [], latestMonth: '', feedNote: '', commission: null
+  clients: [], latestMonth: '', feedNote: '', commission: null,
+  view: (() => { try { return localStorage.getItem('gecko.opp.view') === 'board' ? 'board' : 'list'; } catch { return 'list'; } })()   // pipeline: list or board
 };
+const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const shortDate = k => new Date(String(k).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
 const money = n => '£' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
@@ -586,6 +590,25 @@ function pipelineHtml() {
     : `${o.status === 'idea' ? `<button type="button" class="opp-btn ghost" data-opp-act="move" data-status="proposed" data-id="${o.id}">Mark proposed</button>` : ''}
        <button type="button" class="opp-btn win" data-opp-act="move" data-status="won" data-id="${o.id}">Won</button>
        <button type="button" class="opp-btn ghost" data-opp-act="move" data-status="lost" data-id="${o.id}">Lost</button>`);
+  const t = todayKey();
+  const flags = o => {
+    const st = dealState(o, t);
+    return [
+      st.followUpDue ? `<span class="opp-flag ${st.followUpLate > 7 ? 'red' : 'amber'}">Follow up ${escapeHtml(dueText(o.follow_up_on, t))}</span>` : '',
+      st.followUpSoon != null ? `<span class="opp-flag">Follow up ${escapeHtml(shortDate(o.follow_up_on))}</span>` : '',
+      st.stale ? `<span class="opp-flag muted" title="Nothing changed on this deal for ${st.stale} days">Quiet ${st.stale} days</span>` : ''
+    ].join('');
+  };
+  const nextSteps = o => {
+    const st = dealState(o, t);
+    if (!st.needsJob && !st.needsBilling && !(o.status === 'won' && (o.job_id || o.billing_set_up_at))) return '';
+    return `<div class="opp-won-steps"><strong>Won: next steps</strong><ul>
+      ${Number(o.one_off) > 0 ? `<li class="${o.job_id ? 'done' : ''}">${o.job_id ? '✓ Job created for the one-off part' : `Create the job for the one-off part (${escapeHtml(money(o.one_off))})`}
+        ${o.job_id ? '<button type="button" class="opp-linkbtn" data-opp-act="openjobs">Open Jobs →</button>' : `<button type="button" class="opp-btn" data-opp-act="mkjob" data-id="${o.id}">Create job</button>`}</li>` : ''}
+      ${Number(o.mrr) > 0 ? `<li class="${o.billing_set_up_at ? 'done' : ''}">${o.billing_set_up_at ? `✓ Monthly billing set up${o.billing_set_up_by ? ' by ' + escapeHtml(o.billing_set_up_by) : ''}` : `Set up the monthly billing: a repeating invoice in Xero for ${escapeHtml(money(o.mrr))}/mo + VAT, and the service line in Profitability`}
+        ${o.billing_set_up_at ? '' : `<button type="button" class="opp-btn ghost" data-opp-act="billingdone" data-id="${o.id}">Mark done</button>`}</li>` : ''}
+    </ul></div>`;
+  };
   const deal = o => {
     const editing = OPP.editing.has(o.id);
     return `<article class="opp-deal st-${escapeHtml(o.status)}">
@@ -593,6 +616,7 @@ function pipelineHtml() {
         <div class="opp-deal-client">${clientLink(o.client_name)}</div>
         <div class="opp-deal-product">${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
         ${o.next_step ? `<div class="opp-deal-next"><span>Next</span> ${escapeHtml(o.next_step)}</div>` : ''}
+        <div class="opp-flags">${flags(o)}</div>
       </div>
       <div class="opp-deal-value">
         <strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong>
@@ -611,18 +635,67 @@ function pipelineHtml() {
           ${PER_UNIT[findProduct(o.product_key)?.price_unit] ? `<label>${PER_UNIT[findProduct(o.product_key).price_unit]} <input name="quantity" type="number" step="1" min="0" value="${escapeHtml(o.quantity ?? '')}" placeholder="how many"></label>` : ''}
           <label>Stage <select name="status">${STATUSES.map(([k, l]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
           <label class="wide">Next step <input name="next_step" type="text" value="${escapeHtml(o.next_step)}" placeholder="e.g. Call Chris on Tuesday"></label>
+          <div class="opp-fu wide"><span>Follow up</span>
+            <button type="button" class="opp-chip-btn" data-opp-fu="">None</button>
+            ${followUpChoices(t).map(([l, d]) => `<button type="button" class="opp-chip-btn" data-opp-fu="${d}" title="${escapeHtml(shortDate(d))}">${l}</button>`).join('')}
+            <input name="follow_up_on" type="date" value="${escapeHtml(String(o.follow_up_on || '').slice(0, 10))}" aria-label="Follow-up date">
+          </div>
           <div class="opp-gap-actions wide">
             <button type="submit" class="opp-btn">Save</button>
             <button type="button" class="opp-btn ghost" data-opp-act="delopp" data-id="${o.id}">Delete</button>
           </div>
         </form>` : ''}
+      ${nextSteps(o)}
       ${o.evidence ? `<details class="opp-deal-why"><summary>Why this opportunity</summary><p>${escapeHtml(o.evidence).replace(/\n/g, '<br>')}</p></details>` : ''}
     </article>`;
   };
-  return `<div class="opp-stages">${stages}</div>
+  const states = OPP.opps.map(o => dealState(o, t));
+  const dueN = states.filter(x => x.followUpDue).length, quietN = states.filter(x => x.stale).length;
+  const setupN = states.filter(x => x.needsJob || x.needsBilling).length;
+  const summary = [dueN && `<span class="opp-flag amber">${dueN} follow-up${dueN === 1 ? '' : 's'} due</span>`,
+    quietN && `<span class="opp-flag muted">${quietN} quiet for ${14}+ days</span>`,
+    setupN && `<span class="opp-flag green">${setupN} won deal${setupN === 1 ? '' : 's'} to set up</span>`].filter(Boolean).join('');
+  const toggle = `<div class="opp-view" role="group" aria-label="Pipeline view">
+      <button type="button" data-opp-act="view" data-view="list" aria-pressed="${OPP.view === 'list'}">List</button>
+      <button type="button" data-opp-act="view" data-view="board" aria-pressed="${OPP.view === 'board'}">Board</button></div>`;
+  if (OPP.view === 'board') {
+    const card = o => `<div class="opp-card st-${escapeHtml(o.status)}">
+        <div class="opp-card-top">${clientLink(o.client_name)}<strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong></div>
+        <div class="opp-card-title">${escapeHtml(findProduct(o.product_key)?.name || o.title)}${Number(o.one_off) ? ` <span>+ ${escapeHtml(money(o.one_off))}</span>` : ''}</div>
+        ${o.next_step ? `<div class="opp-card-next">${escapeHtml(o.next_step)}</div>` : ''}
+        <div class="opp-flags">${flags(o)}${o.status === 'won' && (dealState(o, t).needsJob || dealState(o, t).needsBilling) ? '<span class="opp-flag green">To set up</span>' : ''}</div>
+        <div class="opp-card-acts">${o.status === 'idea' ? `<button type="button" class="opp-linkbtn" data-opp-act="move" data-status="proposed" data-id="${o.id}">Proposed →</button>` : ''}
+          ${o.status === 'idea' || o.status === 'proposed' ? `<button type="button" class="opp-linkbtn win" data-opp-act="move" data-status="won" data-id="${o.id}">Won</button><button type="button" class="opp-linkbtn" data-opp-act="move" data-status="lost" data-id="${o.id}">Lost</button>` : ''}
+          <button type="button" class="opp-linkbtn" data-opp-act="openlist" data-id="${o.id}">Details</button></div>
+      </div>`;
+    const cols = boardColumns(OPP.opps, t).map(c => {
+      const total = c.items.reduce((a, o) => a + (Number(o.mrr) || 0), 0);
+      return `<section class="opp-col st-${c.key}"><header><strong>${label[c.key]}</strong><span>${c.items.length} · ${escapeHtml(money(total))}/mo</span></header>
+        ${c.items.map(card).join('') || '<p class="opp-muted">None</p>'}</section>`;
+    }).join('');
+    return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
+      <div class="opp-board">${cols}</div><p class="opp-muted">Won and lost show the last 90 days.</p>`;
+  }
+  return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
+    <div class="opp-stages">${stages}</div>
     <div class="opp-deals-head"><strong>${heading}</strong>
       ${OPP.stage !== 'open' ? '<button type="button" class="opp-linkbtn" data-opp-act="stage" data-stage="open">Back to open deals</button>' : ''}</div>
     <div class="opp-deals">${shown.map(deal).join('') || '<p class="opp-muted">None at this stage.</p>'}</div>`;
+}
+
+/** A won deal's one-off part becomes a Job (once: jobs.source_ref = 'opp:<id>'), linked back to the deal. */
+async function makeJob(id) {
+  const o = OPP.opps.find(x => x.id === id);
+  if (!o || o.job_id) return;
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    let job = must(await sb.from('jobs').select('id').eq('source_ref', `opp:${id}`).maybeSingle());
+    if (!job) job = must(await sb.from('jobs').insert(jobFromDeal(o, myName())).select('id').single());
+    await patchOpp(id, { job_id: job.id });
+    toast(`Job created: ${o.title} (${money(o.one_off)}), Agreed. It's on the Jobs board.`, 'success', 6000);
+  } catch (err) {
+    toast('Could not create the job: ' + (err.message || err), 'error', 8000);
+  } finally { render(); }
 }
 
 function dealerHtml() {
@@ -709,6 +782,8 @@ function productsHtml() {
 async function onClick(event) {
   const tab = event.target.closest('[data-opp-tab]');
   if (tab) { OPP.tab = tab.dataset.oppTab; render(); return; }
+  const fu = event.target.closest('[data-opp-fu]');
+  if (fu) { const input = fu.closest('form')?.elements.follow_up_on; if (input) input.value = fu.dataset.oppFu; return; }
   const btn = event.target.closest('[data-opp-act]');
   if (!btn || btn.disabled) return;
   const { oppAct: act, client, product, id } = btn.dataset;
@@ -729,12 +804,31 @@ async function onClick(event) {
     const o = OPP.opps.find(x => x.id === Number(id));
     try {
       await patchOpp(Number(id), { status: btn.dataset.status });
-      toast(btn.dataset.status === 'won' ? `Won: +${money(o?.mrr)}/mo` : `Moved to ${btn.dataset.status === 'lost' ? 'Lost' : 'Proposed'}`, 'success');
+      const st = btn.dataset.status === 'won' ? dealState({ ...o, status: 'won' }, todayKey()) : null;
+      toast(btn.dataset.status === 'won'
+        ? `Won: +${money(o?.mrr)}/mo${st?.needsJob || st?.needsBilling ? `. Next: ${[st.needsJob && 'create the job', st.needsBilling && 'set up the monthly billing'].filter(Boolean).join(' and ')}.` : ''}`
+        : `Moved to ${btn.dataset.status === 'lost' ? 'Lost' : 'Proposed'}`, 'success', 6000);
+      if (btn.dataset.status === 'won') { OPP.stage = 'won'; OPP.view = 'list'; }
       render();
     } catch (err) { btn.disabled = false; toast('Could not update: ' + (err.message || err), 'error', 7000); }
     return;
   }
   if (act === 'emailopp') { btn.disabled = true; draftEmail(Number(id)); return; }
+  if (act === 'view') { OPP.view = btn.dataset.view; try { localStorage.setItem('gecko.opp.view', OPP.view); } catch { /* per-browser only */ } render(); return; }
+  if (act === 'openlist') {
+    const o = OPP.opps.find(x => x.id === Number(id));
+    OPP.view = 'list'; OPP.stage = o && (o.status === 'won' || o.status === 'lost') ? o.status : 'open'; OPP.editing.add(Number(id)); render();
+    document.querySelector(`#section-opportunities [data-opp-form="${Number(id)}"]`)?.scrollIntoView({ block: 'center' });
+    return;
+  }
+  if (act === 'mkjob') { btn.disabled = true; makeJob(Number(id)); return; }
+  if (act === 'openjobs') { window.geckoGo?.('jobs', 'jobs'); return; }
+  if (act === 'billingdone') {
+    btn.disabled = true;
+    try { await patchOpp(Number(id), { billing_set_up_at: new Date().toISOString(), billing_set_up_by: myName() }); toast('Monthly billing marked as set up', 'success'); }
+    catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
+    render(); return;
+  }
   if (act === 'deldealer') {
     if (!window.confirm('Remove this dealer service?')) return;
     try {
@@ -768,7 +862,8 @@ async function onSubmit(event) {
   if (form.dataset.oppForm) {
     event.preventDefault();
     const f = form.elements;
-    const patch = { mrr: Number(f.mrr.value) || 0, one_off: Number(f.one_off.value) || 0, next_step: f.next_step.value.trim(), status: f.status.value };
+    const patch = { mrr: Number(f.mrr.value) || 0, one_off: Number(f.one_off.value) || 0, next_step: f.next_step.value.trim(), status: f.status.value,
+      follow_up_on: f.follow_up_on?.value || null };
     if (f.quantity) {
       const o = OPP.opps.find(x => x.id === Number(form.dataset.oppForm));
       patch.quantity = f.quantity.value.trim() === '' ? null : Math.max(0, Number(f.quantity.value) || 0);
