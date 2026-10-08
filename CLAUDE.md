@@ -1,6 +1,7 @@
 # Gecko Intranet — guidance for Claude Code
 
-Internal dashboard for Gecko IT Services (Philip Morris, Jack Morris). Live at
+Internal dashboard for Gecko IT Services (Philip Morris, Jack Morris), named **Gecko HQ** (Philip, 8 Oct;
+not "Internal Portal"). Live at
 https://gecko-it-services.github.io/gecko-intranet/ from `main` via GitHub Pages.
 Built by Jack; extended by "Felix" (an AI technical-manager persona Philip uses in
 the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.

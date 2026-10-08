@@ -1,6 +1,6 @@
 {
-  "name": "Gecko IT Services — Internal Portal",
-  "short_name": "Gecko Portal",
+  "name": "Gecko HQ — Gecko IT Services",
+  "short_name": "Gecko HQ",
   "description": "Internal operations portal for Gecko IT Services.",
   "start_url": "https://gecko-it-services.github.io/gecko-intranet/",
   "scope": "https://gecko-it-services.github.io/gecko-intranet/",
