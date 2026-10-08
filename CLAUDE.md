@@ -131,12 +131,22 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Jack): Update Client Balances, Create Timesheets Table Email, Archive Old Timesheet Entries.
 
 ## Open items (ask Philip before acting)
-- Exclaimer subscriptions billed to "Gecko IT Services" (15-user Standard £185.40/yr
-  Sep 2026; 10-user Starter £78/yr Jul 2026): whose are they? Shown as unassigned.
-- slaterfamily.me.uk at Clook: not a client; Philip to disable auto-renew and
-  remove the cPanel account. Its July renewal shows as unassigned for July.
-- Technix retainer: Xero bills £215.90, the service line says £210.90.
-- Kingdom Products "Monthly Renewal" £189.82/mo in Xero has no service line.
+- Kingdom Products "Monthly Renewal" £189.82/mo in Xero has no service line. Proposed
+  (8 Oct): IS + Backup £43.50 (stack), M365 £33.72 (m365), VoIP + FTTP £112.60 (other).
+  Costs from the Atera breakdown (USD): Acronis WS $3.90 + 82 GB × $0.04 + 3 × Webroot
+  $1.20 = $10.78/mo (≈ £8.14). VoIP Unlimited bill p1538966 (1 Oct 2026, reconciles to
+  £406.15): Voxone seat £10.00/mo, FTTP 1000/115 £42.60/mo, so VoIP + FTTP cost £82.60.
+  The bill does not name end clients; the unit prices are the same for every line.
+  Philip to add the three lines in Profitability.
+- Technix retainer: Xero (£215.90 = 194.10 support + 16.80 Exclaimer + 5.00 WFH Beckie)
+  is right; Philip to set the service line sell from £210.90 to £215.90 in the dashboard.
+
+Resolved 8 Oct (feed task maps updated the same day):
+- Exclaimer prints "Gecko IT Services" as end user on some client subscriptions; the
+  feed now maps by account code: 7CF1C-80B → Onsite Commercial Services (15-user
+  Standard), A9356-F39 → Gecko's own (10-user Starter), `shared: true`, shown as a Gecko
+  cost like the Clook reseller plan (`invoicedCosts` honours `shared` on Exclaimer lines).
+- slaterfamily.me.uk is Pam Slater's, billed to LS Commercials (Xero INV-0131, Jul 2026).
 - Plain-text client passwords exist in SharePoint (Gecko Docs/clients/Technix/…)
   and OneDrive copies. Cyber Essentials risk; move to a password manager.
 - The Ltd started June 2026. Xero months before that are empty and skipped.

@@ -93,6 +93,7 @@ export function validateFeed(feed) {
       if (!r || !DAY.test(r.date || '')) errors.push(`exclaimer line ${i + 1}: date is not YYYY-MM-DD`);
       else if (!String(r.endUser || '').trim()) errors.push(`exclaimer ${r.invoice || i + 1}: no end user`);
       else if (!isMoney(r.net)) errors.push(`exclaimer ${r.invoice || i + 1}: "${r.net}" is not a number`);
+      else if (r.shared != null && typeof r.shared !== 'boolean') errors.push(`exclaimer ${r.invoice || i + 1}: shared is not true/false`);
     });
   }
   if (feed.clook != null) {
@@ -118,8 +119,8 @@ const DAY = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
  * for. TD SYNNEX lines match by the client name the job assigned (its
  * customer map) or the end-user name as printed; Exclaimer lines match by end-user name; Clook lines carry the
  * client name the job assigned from its domain map (null when it could
- * not). A Clook line marked shared (the reseller hosting plan) belongs to
- * no client. Nothing here is spread across months: an annual renewal
+ * not). A line marked shared belongs to no client: the Clook reseller
+ * hosting plan, and Gecko's own Exclaimer subscription. Nothing here is spread across months: an annual renewal
  * lands whole in the month it was invoiced, which is the point.
  *
  * Returns { byClient: Map(clientId -> { client, total, lines }),
@@ -147,6 +148,7 @@ export function invoicedCosts(feed, month, match) {
   for (const s of feed?.exclaimer?.subscriptions || []) {
     if (!String(s.date || '').startsWith(month + '-')) continue;
     const line = { supplier: 'Exclaimer', desc: `${s.product} — ${s.users} users, ${s.months} mo`, date: s.date, net: round2(s.net), ref: s.invoice };
+    if (s.shared) { shared.push(line); total = round2(total + line.net); continue; }
     const client = match(s.endUser);
     if (client) add(client, line);
     else { unassigned.push({ ...line, name: s.endUser }); total = round2(total + line.net); }
