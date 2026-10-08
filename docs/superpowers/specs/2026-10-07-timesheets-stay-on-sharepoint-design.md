@@ -12,8 +12,11 @@ writes to it via Graph and would like to keep that."
 - The dashboard writes each entry to the `Timesheets` list through Graph (create, edit,
   delete, Archive, SSA renewal credits and Undo).
 - **Update Client Balances** (Power Automate) adds each new entry's hours to `HoursUsed` on
-  the SSA `Clients` list about 30 s later. The dashboard never writes `HoursUsed` itself
-  (Philip's rule, 7 Oct), except Renewal's Undo.
+  the SSA `Clients` list about 30 s later. Its trigger is "When an item is created" only
+  (checked 8 Oct), so the dashboard never adds hours for a new entry (Philip's rule, 7 Oct).
+  It does adjust `HoursUsed` itself when an entry is edited (by the change in hours) or
+  deleted (by its hours), and on Renewal's Undo, because the flow never sees those.
+  If the trigger is ever changed to "created or modified", edits would count twice.
 - **Create Timesheets Table Email** and **Archive Old Timesheet Entries** also read these lists.
 - Philip and Jack read and use the list directly in Microsoft Lists.
 
