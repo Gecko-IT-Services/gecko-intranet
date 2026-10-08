@@ -457,6 +457,25 @@ async function load({ interactive = false } = {}) {
   }
 }
 
+/**
+ * The morning check (Overview › Today): issues from the last `days` that need a person (critical
+ * first), triaged exactly as this section does, resolutions included. Never throws:
+ * { ok, stats, needing: [{ client, device, level, label, why, last, link }] } or { ok: false, error }.
+ */
+export async function snapshot({ days = 2, interactive = false } = {}) {
+  try {
+    const [{ entries }] = await Promise.all([fetchEntries(days, { interactive }), loadResolutions()]);
+    const issues = buildIssues(entries, new Date(), ALR.resolutions || new Map());
+    const alerts = entries.filter(e => !/^resolved$/i.test(e.status)).length;
+    return { ok: true, stats: summarise(issues, alerts),
+      needing: issues.filter(i => i.level === 'critical' || i.level === 'important')
+        .map(i => ({ client: i.client, device: i.device, level: i.level, label: i.label, why: i.why, last: i.last, link: i.link })) };
+  } catch (err) {
+    const msg = err?.message || 'Load failed';
+    return { ok: false, error: err?.code === 'CONSENT_REQUIRED' ? 'CONSENT' : /Graph 403|ErrorAccessDenied|Access is denied/i.test(msg) ? 'NO_ACCESS' : msg };
+  }
+}
+
 function retriage() {
   const alerts = ALR.entries.filter(e => !/^resolved$/i.test(e.status)).length;
   ALR.issues = buildIssues(ALR.entries, new Date(), ALR.resolutions);

@@ -156,8 +156,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Phase 4 (8 Oct): the SSA renewal box offers **Create draft in Xero** (same function, `source: 'ssa'`,
   n × SSA at £650, account 214, reference Renewal); drafts for that client in the last 45 days are listed.
 
-## Overview (rebuilt 8 Oct 2026)
-- Landing page answers: how is the money doing (Xero: Sales, Recurring, Owed to us, Pipeline tiles), what
+## Overview (rebuilt 8 Oct 2026; Today/Business tabs 9 Oct)
+- Tabs: **Today** = the morning check (status tiles for backups 24h, alerts, money, support hours, jobs,
+  team; Monitoring list from `window.GeckoMonitor` = Backups/Alerts `snapshot()`; Needs attention; This
+  week) and **Business** = the money. Landing page answers: how is the money doing (Xero: Sales, Recurring, Owed to us, Pipeline tiles), what
   needs me (one list, red → amber → info, each with an Open button to the right tab), and this week (away,
   jobs due, repeating invoices next 7 days, hours). Design `2026-10-08-overview-design.md`; logic
   `src/core/overview.js` (tests `tests/overview.mjs`); database reads `src/sections/overview.js`; page

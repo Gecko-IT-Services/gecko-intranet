@@ -35,6 +35,8 @@ window.GeckoSections.alerts   = { init: alerts.init };
 window.GeckoSections.opportunities = { init: opportunities.init, show: opportunities.show };
 window.GeckoSections.jobs = { init: jobs.init, show: jobs.show };
 window.GeckoSections.client = { init: client.init, open: client.open, current: client.current };
+// Overview › Today reads the last day of backups and alerts through these (support@ mailbox).
+window.GeckoMonitor = { backups: backups.snapshot, alerts: alerts.snapshot };
 // The shared tab strip (the shell's hub strip uses it too).
 window.GeckoTabs = tabs;
 

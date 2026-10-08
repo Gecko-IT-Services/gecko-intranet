@@ -419,6 +419,30 @@ export function init() {
   load();
 }
 
+const mailError = err => {
+  const msg = err?.message || 'Load failed';
+  return err?.code === 'CONSENT_REQUIRED' ? 'CONSENT' : /Graph 403|ErrorAccessDenied|Access is denied/i.test(msg) ? 'NO_ACCESS' : msg;
+};
+
+/**
+ * The morning check (Overview › Today): every backup job's latest result in the last `hours`,
+ * read the same way as this section, without touching its state. Never throws:
+ * { ok, totals, jobCount, failing, warnings, capped } or { ok: false, error: 'CONSENT' | 'NO_ACCESS' | message }.
+ */
+export async function snapshot({ hours = 24, interactive = false } = {}) {
+  try {
+    const { messages, capped } = await fetchMessages(hours, { interactive });
+    const board = buildBoard(messages);
+    const jobs = board.clients.flatMap(c => c.jobs.map(j => ({
+      client: c.name, what: j.what, plan: j.plan, status: j.latest.status, reason: j.latest.reason, when: j.latest.when, link: j.latest.link
+    })));
+    return { ok: true, totals: board.totals, jobCount: board.jobCount, capped,
+      failing: jobs.filter(j => j.status === 'fail'), warnings: jobs.filter(j => j.status === 'warn') };
+  } catch (err) {
+    return { ok: false, error: mailError(err) };
+  }
+}
+
 /** Called by the section's Refresh button. */
 export function refresh() {
   load();
