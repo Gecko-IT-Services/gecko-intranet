@@ -235,6 +235,12 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   AppCenter usage: Acronis, Webroot, Keeper, EndUser Remote; per-client breakdown xlsx)
   against what each client is billed in Xero, to find seats/workloads billed to us but
   not to a client, and trim the bill.
+- Client portal (Philip, 9 Oct: "put a pin in it, pick it up next week"): clients see their timesheets and past
+  invoices. Proposed, not decided: a separate read-only page (not inside Gecko HQ), emailed sign-in link for
+  contacts Philip adds, one client per login enforced by RLS with tests that try to read another client's rows,
+  safe columns only (date, engineer, hours, work description; invoice number/date/total/due/status + Xero online
+  link), never internal notes, costs, margins or opportunities; pilot with one client. Alternative: a monthly
+  statement email per client. Open questions: who signs in, all work or SSA only, pilot client.
 
 Resolved 8 Oct:
 - Kingdom Products now has service lines matching Xero's £189.82 (IS + Backup 43.50 /
