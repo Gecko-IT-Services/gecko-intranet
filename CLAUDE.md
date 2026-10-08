@@ -120,6 +120,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Client page › **Activity** (9 Oct): log notes/calls/emails/meetings/visits with an optional follow-up date (`client_activity`);
   due follow-ups appear in Overview › Today › Needs attention and open the client's Activity tab. `src/core/activity.js`.
   Design `2026-10-09-client-activity-design.md`.
+- Client page › **Details & contacts / Emails** (10 Oct): address + postcode map (postcodes.io → OpenStreetMap embed), office
+  number as `tel:+44…` (VoxOne dials; a click readies a call log with duration), website, visiting notes (no passwords/codes);
+  Emails tab = read-only Graph search of your mailbox + support@ (`Mail.Read.Shared`) for the client's domains, Log it → Activity.
+  Activity has When / How long / Which way. `src/core/profile.js`. Design `2026-10-10-client-details-design.md`.
 - Client page › **+ Opportunity** (9 Oct): add one from the catalogue (quantity × client price) or typed by hand;
   `newOpportunity()` in `src/core/opportunities.js`. Design `2026-10-09-client-new-opportunity-design.md`.
 - Pipeline (9 Oct): follow-up dates, quiet-deal flag (14 days), List/Board views, Won → **Create job** (one-off part, once per

@@ -197,3 +197,32 @@
   #section-client .cl-tl li { grid-template-columns: 64px minmax(0, 1fr); }
   #section-client .cl-tl li .cl-link { grid-column: 2; justify-self: start; }
 }
+
+/* Details: address, map, office number; emails; call log (9 Oct) */
+#section-client .cl-details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; align-items: start; }
+#section-client .cl-details address { font-style: normal; font-size: 14px; line-height: 1.5; color: var(--white); margin-bottom: 12px; }
+#section-client .cl-details-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+#section-client .cl-details-acts a.cl-btn { text-decoration: none; display: inline-flex; align-items: center; }
+#section-client .cl-visit { margin: 0; font-size: 13px; color: var(--white); }
+#section-client .cl-visit strong { color: var(--muted); font-weight: 600; }
+#section-client .cl-map { border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-dim); aspect-ratio: 16 / 10; min-height: 200px; background: var(--dark); }
+#section-client .cl-map iframe { width: 100%; height: 100%; border: 0; display: block; }
+#section-client .cl-id-text p a { color: inherit; text-decoration: underline; text-decoration-color: var(--border-dim); }
+#section-client .cl-id-text p a:hover { color: var(--green); }
+#section-client .cl-calling { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--green-glow); color: var(--green); font-size: 13px; font-weight: 600; }
+#section-client .cl-mail { list-style: none; margin: 0; padding: 0; }
+#section-client .cl-mail li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-dim); align-items: start; }
+#section-client .cl-mail li:last-child { border-bottom: 0; }
+#section-client .cl-mail-dir { width: 24px; height: 24px; border-radius: 50%; display: grid; place-content: center; font-size: 13px; background: color-mix(in srgb, var(--blue) 15%, transparent); color: var(--blue); }
+#section-client .cl-mail-dir.out { background: var(--green-glow); color: var(--green); }
+#section-client .cl-mail-body { min-width: 0; }
+#section-client .cl-mail-body strong { display: block; font-size: 13.5px; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-client .cl-mail-body small { font-size: 11.5px; color: var(--muted); }
+#section-client .cl-mail-body p { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+#section-client .cl-mail-acts { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+#section-client .cl-mail-acts .cl-link { margin-left: 0; text-decoration: none; }
+@media (max-width: 760px) {
+  #section-client .cl-details { grid-template-columns: minmax(0, 1fr); }
+  #section-client .cl-mail li { grid-template-columns: 26px minmax(0, 1fr); }
+  #section-client .cl-mail-acts { grid-column: 2; flex-direction: row; align-items: center; }
+}
