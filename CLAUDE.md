@@ -98,6 +98,14 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   The catalogue (rules, patterns, prices, email text) is data in `opportunity_products`,
   edited on the Products tab. "Draft email" only ever creates an Outlook draft.
 - Windows 10 / device gaps wait for Atera data in the feed (phase 2, with the Atera cost check).
+- **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
+  the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
+  account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
+  contact "Voip Unlimited" (shown as the Dealer commission KPI, never as a client's revenue).
+  Dealer services live in `voip_dealer_services` (Opportunities › VoIP Unlimited tab). A dealer
+  customer is never offered VoxOne or connectivity; instead out-of-contract/expiring lines raise
+  a renewal, VoIP Exchange seats raise a VoxOne migration (£4/seat commission), and dealer
+  customers who aren't IT clients appear as prospects for IT support.
 
 ## The feed (where the money numbers come from)
 - `Gecko Dashboard Data/profitability-feed.json` in the portal site's Documents

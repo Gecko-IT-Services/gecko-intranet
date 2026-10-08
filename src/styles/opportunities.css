@@ -142,3 +142,21 @@
 #section-opportunities .opp-product input[type="checkbox"],
 #section-opportunities .opp-toolbar input[type="checkbox"] { width: auto; min-height: 0; padding: 0; accent-color: var(--green); }
 #section-opportunities .opp-product label.opp-check { flex-direction: row; font-size: 12px; color: var(--muted); }
+
+/* — VoIP Unlimited dealer tab: one compact form per service — */
+#section-opportunities .opp-dealer-row {
+  display: grid; gap: 8px 10px; align-items: end; padding: 12px 14px; margin-bottom: 8px;
+  border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--card);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr));
+}
+#section-opportunities .opp-dealer-add { border-color: var(--green-line); }
+#section-opportunities .opp-dealer-client { grid-column: 1 / -1; color: var(--white); }
+#section-opportunities .opp-dealer-row label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--faint); min-width: 0; }
+#section-opportunities .opp-dealer-row .wide { grid-column: span 2; }
+#section-opportunities .opp-dealer-row .opp-gap-actions { grid-column: 1 / -1; margin-top: 0; }
+#section-opportunities .opp-dealer-row input,
+#section-opportunities .opp-dealer-row select {
+  width: 100%; box-sizing: border-box; min-height: 34px; padding: 6px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-dim); background: var(--inset); color: var(--white); font: inherit; font-size: 13px;
+}
+@media (max-width: 640px) { #section-opportunities .opp-dealer-row .wide { grid-column: 1 / -1; } }

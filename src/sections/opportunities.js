@@ -22,10 +22,13 @@ import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
-  emailDomain, THRESHOLDS
+  emailDomain, serviceLabel, renewalsDue, THRESHOLDS
 } from '../core/opportunities.js';
 
 const STATUSES = [['idea', 'Idea'], ['proposed', 'Proposed'], ['won', 'Won'], ['lost', 'Lost']];
+const DEALER_SERVICES = ['voxone', 'voip_exchange', 'ethernet', 'leased_line', 'fttp', 'fttc', 'sogea', 'pstn', 'mobile', 'unknown'];
+const optLabel = k => { const l = serviceLabel(k); return l[0].toUpperCase() + l.slice(1); };
+const CONTRACTS = [['in_contract', 'In contract'], ['out_of_contract', 'Out of contract'], ['expiring', 'Expiring'], ['unknown', 'Unknown']];
 const SIGNAL_MAX_AGE_DAYS = 30;   // re-check a domain after this long
 
 const OPP = {
@@ -35,8 +38,8 @@ const OPP = {
   loading: false,
   error: null,
   checking: null,          // { done, total, label } while checks run
-  products: [], statuses: {}, manualDomains: [], signals: new Map(), opps: [],
-  clients: [], latestMonth: '', feedNote: ''
+  products: [], statuses: {}, manualDomains: [], signals: new Map(), opps: [], dealer: [],
+  clients: [], latestMonth: '', feedNote: '', commission: null
 };
 
 const money = n => '£' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -86,12 +89,13 @@ async function load() {
     const lists = await fetchAllLists();
     const listId = n => lists.find(l => l.displayName === n || l.name === n)?.id;
 
-    const [products, statuses, domains, signals, opps, gClients, gServices, feed, ssaItems, tsItems] = await Promise.all([
+    const [products, statuses, domains, signals, opps, dealer, gClients, gServices, feed, ssaItems, tsItems] = await Promise.all([
       sb.from('opportunity_products').select('*').order('sort').then(must),
       sb.from('client_product_status').select('*').then(must),
       sb.from('client_domains').select('*').then(must),
       sb.from('client_signals').select('*').then(must),
       sb.from('opportunities').select('*').order('modified_at', { ascending: false }).then(must),
+      sb.from('voip_dealer_services').select('*').order('client_name').then(must),
       window.clientListItems('gecko_clients', siteId, listId('GeckoClients'), 500),
       window.clientListItems('gecko_services', siteId, listId('GeckoServices'), 2000),
       readFeed(),
@@ -105,7 +109,8 @@ async function load() {
     OPP.manualDomains = domains;
     OPP.signals = new Map(signals.map(s => [`${s.kind}:${s.domain}`, s]));
     OPP.opps = opps;
-    OPP.clients = buildClients({ gClients, gServices, feed, ssaItems, tsItems, domains });
+    OPP.dealer = dealer;
+    OPP.clients = buildClients({ gClients, gServices, feed, ssaItems, tsItems, domains, dealer });
   } catch (err) {
     OPP.error = err;
   } finally {
@@ -120,7 +125,7 @@ async function load() {
  * matcher Profitability uses (prfXeroMatchName), so a client is the same
  * client everywhere.
  */
-function buildClients({ gClients, gServices, feed, ssaItems, tsItems, domains }) {
+function buildClients({ gClients, gServices, feed, ssaItems, tsItems, domains, dealer = [] }) {
   const byKey = new Map();
   const add = (name, extra) => {
     const k = norm(name);
@@ -158,7 +163,15 @@ function buildClients({ gClients, gServices, feed, ssaItems, tsItems, domains })
     const months = Object.keys(feed.xero?.recurring || {}).filter(m => Object.keys(feed.xero.recurring[m]).length).sort();
     OPP.latestMonth = months.at(-1) || '';
     for (const [xName, net] of Object.entries(feed.xero?.recurring?.[OPP.latestMonth] || {})) {
+      if (/voip\s*unlimited/i.test(xName)) continue;   // dealer commission, not a client
       const c = match(xName); if (c) c.mrr += Number(net) || 0;
+    }
+    // Dealer commission: VoIP Unlimited is invoiced each month in Xero for the
+    // previous month's statement. Latest month that has it.
+    OPP.commission = null;
+    for (const m of Object.keys(feed.xero?.months || {}).sort().reverse()) {
+      const hit = Object.entries(feed.xero.months[m]).find(([n]) => /voip\s*unlimited/i.test(n));
+      if (hit) { OPP.commission = { month: m, net: Number(hit[1]) || 0 }; break; }
     }
     for (const inv of (feed.cspInvoices || []).slice(0, 2)) {
       for (const r of inv.customers || []) { const c = match(r.client || r.customer); if (c) c.cspClient = true; }
@@ -174,6 +187,17 @@ function buildClients({ gClients, gServices, feed, ssaItems, tsItems, domains })
         if (c && !c.hostedDomains.includes(l.domain)) c.hostedDomains.push(l.domain);
       }
     }
+  }
+
+  // VoIP Unlimited dealer services; customers who aren't IT clients become prospects.
+  for (const d of dealer) {
+    let c = byKey.get(norm(d.client_name)) || match(d.client_name) || match(d.vu_name);
+    if (!c) {
+      c = add(d.client_name, { status: 'Prospect', dealerOnly: true });
+      list.push(c);
+      asPortal.push({ name: c.name, ref: c });
+    }
+    (c.dealer ||= []).push(d);
   }
 
   for (const it of tsItems) {
@@ -431,7 +455,7 @@ function render() {
     return;
   }
   mount.innerHTML = (OPP.feedNote ? `<p class="opp-note">${escapeHtml(OPP.feedNote)}</p>` : '') + progressHtml() +
-    (OPP.tab === 'gaps' ? gapsHtml() : OPP.tab === 'pipeline' ? pipelineHtml() : productsHtml());
+    (OPP.tab === 'gaps' ? gapsHtml() : OPP.tab === 'pipeline' ? pipelineHtml() : OPP.tab === 'voip' ? dealerHtml() : productsHtml());
   syncTableLabels(mount);
 }
 
@@ -445,7 +469,9 @@ function renderKpis() {
     ['Recurring revenue', money(current), month ? `Xero, ${month}` : 'Xero'],
     ['Open pipeline', money(t.openMrr) + '/mo', `${t.openCount} open · ${money(t.openOneOff)} one-off`],
     ['Won this month', money(t.wonMrrThisMonth) + '/mo', `${t.wonCountThisMonth} won`],
-    ['Won to date', money(t.wonMrr) + '/mo', 'added recurring revenue']
+    ['Won to date', money(t.wonMrr) + '/mo', 'added recurring revenue'],
+    ['Dealer commission', OPP.commission ? money(OPP.commission.net) : '—',
+      OPP.commission ? `VoIP Unlimited, invoiced ${new Date(OPP.commission.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}` : 'not in Xero yet']
   ].map(([l, v, s]) => `<div class="opp-kpi"><span>${escapeHtml(l)}</span><strong>${escapeHtml(v)}</strong><small>${escapeHtml(s)}</small></div>`).join('');
 }
 
@@ -463,6 +489,9 @@ const STRENGTH = ['Not bought from us', 'Evidence', 'Strong evidence'];
 
 function signalLine(c, dnsRow, psRow) {
   const parts = [];
+  if (c.dealer?.length) {
+    parts.push('VoIP Unlimited (dealer): ' + c.dealer.map(d => `${d.quantity > 1 ? d.quantity + ' × ' : ''}${serviceLabel(d.service)}`).join(', '));
+  }
   if (!c.domains.length) parts.push('No domain known yet: add one to check their email and website.');
   if (dnsRow) {
     const d = dnsRow.data;
@@ -510,7 +539,7 @@ function gapsHtml() {
       </div>`;
     return `<section class="opp-card${isOpen ? ' open' : ''}">
       <button type="button" class="opp-card-head" data-opp-act="toggle" data-client="${escapeHtml(c.name)}" aria-expanded="${isOpen}">
-        <span class="opp-name">${escapeHtml(c.name)}</span>
+        <span class="opp-name">${escapeHtml(c.name)}${c.dealerOnly ? ' <span class="opp-chip">VoIP Unlimited only</span>' : ''}</span>
         <span class="opp-chips">${chips || '<span class="opp-muted">no gaps</span>'}</span>
         <span class="opp-mrr">${c.mrr ? escapeHtml(money(c.mrr)) + '/mo' : '—'}</span>
       </button>${body}</section>`;
@@ -540,6 +569,58 @@ function pipelineHtml() {
         </div></article>`).join('') || '<p class="opp-muted">None</p>'}
     </div>`;
   }).join('')}</div>`;
+}
+
+function dealerHtml() {
+  const due = renewalsDue(OPP.dealer).length;
+  const names = [...new Set(OPP.clients.map(c => c.name))].sort();
+  const row = d => `<form class="opp-dealer-row" data-opp-dealer="${d.id}">
+      <strong class="opp-dealer-client">${escapeHtml(d.client_name)}${d.vu_name && d.vu_name !== d.client_name ? `<small class="opp-muted"> · ${escapeHtml(d.vu_name)}</small>` : ''}</strong>
+      <label>Service <select name="service">${DEALER_SERVICES.map(k => `<option value="${k}" ${k === d.service ? 'selected' : ''}>${escapeHtml(optLabel(k))}</option>`).join('')}</select></label>
+      <label>Qty <input name="quantity" type="number" min="0" step="1" value="${escapeHtml(d.quantity)}"></label>
+      <label>Contract <select name="contract">${CONTRACTS.map(([k, l]) => `<option value="${k}" ${k === d.contract ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label>Ends <input name="contract_end" type="date" value="${escapeHtml(d.contract_end || '')}"></label>
+      <label>£ commission/mo <input name="commission" type="number" min="0" step="0.01" value="${d.commission ?? ''}" placeholder="?"></label>
+      <label class="wide">Details <input name="extras" type="text" value="${escapeHtml(d.extras || '')}" placeholder="e.g. 100MB/100MB, 12 x maintenance"></label>
+      <label class="wide">Notes <input name="notes" type="text" value="${escapeHtml(d.notes || '')}"></label>
+      <div class="opp-gap-actions"><button type="submit" class="opp-btn ghost">Save</button><button type="button" class="opp-btn ghost" data-opp-act="deldealer" data-id="${d.id}">Remove</button></div>
+    </form>`;
+  return `<p class="opp-note">Customers on your VoIP Unlimited <strong>dealer</strong> account (they buy direct; you earn commission). They are not offered VoxOne or connectivity; out-of-contract lines and VoIP Exchange seats become opportunities instead.${due ? ` <strong>${due}</strong> out of contract or ending within 90 days.` : ''} Services you resell yourself stay as service lines on Profitability.</p>
+    <form class="opp-dealer-row opp-dealer-add" data-opp-dealer="new">
+      <strong class="opp-dealer-client">Add a dealer service</strong>
+      <label class="wide">Client <input name="client_name" type="text" list="oppClientNames" required placeholder="Client name"></label>
+      <datalist id="oppClientNames">${names.map(n => `<option value="${escapeHtml(n)}">`).join('')}</datalist>
+      <label>Service <select name="service">${DEALER_SERVICES.map(k => `<option value="${k}">${escapeHtml(optLabel(k))}</option>`).join('')}</select></label>
+      <label>Qty <input name="quantity" type="number" min="0" step="1" value="1"></label>
+      <label>Contract <select name="contract">${CONTRACTS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <div class="opp-gap-actions"><button type="submit" class="opp-btn">Add</button></div>
+    </form>
+    ${[...OPP.dealer].sort((a, b) => a.client_name.localeCompare(b.client_name)).map(row).join('') || '<p class="opp-muted">No dealer services recorded.</p>'}`;
+}
+
+async function saveDealer(id, f) {
+  const patch = {
+    service: f.service.value, quantity: Math.max(0, parseInt(f.quantity.value, 10) || 0), contract: f.contract.value
+  };
+  if (id === 'new') {
+    patch.client_name = f.client_name.value.trim();
+    if (!patch.client_name) { toast('Enter the client name', 'warning'); return; }
+  } else {
+    patch.contract_end = f.contract_end.value || null;
+    patch.commission = f.commission.value === '' ? null : Number(f.commission.value);
+    patch.extras = f.extras.value.trim();
+    patch.notes = f.notes.value.trim();
+  }
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    if (id === 'new') OPP.dealer.push(must(await sb.from('voip_dealer_services').insert(patch).select('*').single()));
+    else {
+      const row = must(await sb.from('voip_dealer_services').update(patch).eq('id', Number(id)).select('*').single());
+      OPP.dealer = OPP.dealer.map(d => (d.id === row.id ? row : d));
+    }
+    toast('Saved', 'success');
+    load();   // gaps depend on the dealer list
+  } catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
 }
 
 function productsHtml() {
@@ -579,6 +660,16 @@ async function onClick(event) {
   if (act === 'has') { setStatus(client, product, 'has'); return; }
   if (act === 'notint') { setStatus(client, product, 'not_interested'); return; }
   if (act === 'emailopp') { btn.disabled = true; draftEmail(Number(id)); return; }
+  if (act === 'deldealer') {
+    if (!window.confirm('Remove this dealer service?')) return;
+    try {
+      const sb = await connectSupabase({ interactive: true });
+      must(await sb.from('voip_dealer_services').delete().eq('id', Number(id)).select('id').single());
+      OPP.dealer = OPP.dealer.filter(d => d.id !== Number(id));
+      load();
+    } catch (err) { toast('Could not remove: ' + (err.message || err), 'error'); }
+    return;
+  }
   if (act === 'delopp') {
     if (!window.confirm('Delete this opportunity?')) return;
     try {
@@ -597,6 +688,7 @@ function onChange(event) {
 async function onSubmit(event) {
   const form = event.target;
   if (form.dataset.oppProduct) { event.preventDefault(); saveProduct(form.dataset.oppProduct, form.elements); return; }
+  if (form.dataset.oppDealer) { event.preventDefault(); saveDealer(form.dataset.oppDealer, form.elements); return; }
   if (form.dataset.oppForm) {
     event.preventDefault();
     const f = form.elements;
