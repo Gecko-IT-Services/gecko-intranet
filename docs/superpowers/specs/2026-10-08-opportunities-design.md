@@ -79,7 +79,10 @@ A new **Opportunities** section:
   pipeline totals, email template filling (HTML-escaped).
 - `src/sections/opportunities.js`: Gaps (client cards, strongest first; "Check email &
   websites" runs Cloudflare DNS-over-HTTPS and Google PageSpeed; add a domain by hand),
-  Pipeline (four columns, edit value / next step / status), Products (prices, in use, email
+  Pipeline (stage tiles Idea / Proposed / Won / Lost with £/month and a share bar, which filter one
+  list of deals, biggest first; each deal shows client, product, next step, value and age, with
+  Draft email / Mark proposed / Won / Lost one click away and the edit form only on "Edit"; the
+  first four-column board, a form per card, was cramped and hard to scan, Philip 8 Oct), Products (prices, in use, email
   text). Headline: Xero recurring revenue, open pipeline, won this month, won to date.
 - Client identity: same name matcher as Profitability (`prfXeroMatchName`). Domains come from
   Clook invoice lines, the SSA contact's email address and any added by hand.
@@ -99,7 +102,7 @@ client as a VoxOne/connectivity prospect; that was wrong for dealer customers.
 - `supabase/migrations/20261008120000_voip_dealer.sql`: `voip_dealer_services` (client, VoIP
   Unlimited's name, service, quantity, contract, end date, extras, commission, notes; RLS),
   seeded from Samuel Dacombe's Client Action List (11 Sep 2026) and Philip's dealer-list
-  screenshot. Customers whose services weren't visible are seeded as `unknown`, which still
+  screenshot (the complete list, Philip confirmed). Customers whose services weren't visible are seeded as `unknown`, which still
   stops VoxOne/connectivity pitches until Philip fills them in.
 - New rules: `voip_exchange` (VoIP Exchange → VoxOne; recordings inaccessible since mid-August,
   app unreliable; value = seats × £4 commission), `dealer_renewal` (out of contract or ending
