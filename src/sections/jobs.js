@@ -18,7 +18,7 @@ import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { STAGES, OPEN_STAGES, stageLabel, stageTotals, monthSales, salesHistory, PROJECT_STATUS,
-  xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, owed, refKey, previousMonth } from '../core/jobs.js';
+  xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth } from '../core/jobs.js';
 
 const JOB = {
   tab: 'jobs',
@@ -30,7 +30,8 @@ const JOB = {
   jobs: [], clients: [], feed: null, feedNote: '', importing: false,
   xero: null, xeroBusy: false,  // public.xero_status: the direct Xero connection
   inv: [], rep: [],             // xero_invoices (recent, unpaid, jobs' own) and xero_repeating_invoices
-  invoicing: null               // "Invoice in Xero" form: { id, key, opts, busy, error }
+  invoicing: null,              // "Invoice in Xero" form: { id, key, opts, busy, error }
+  allPaid: false                // Invoiced view: show every paid job, not just the last 90 days
 };
 
 const money = n => '£' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -408,12 +409,14 @@ function jobsHtml() {
   JOB.byNumber = invoiceIndex(JOB.inv);
   const t = stageTotals(JOB.jobs);
   const total = Object.values(t).reduce((s, x) => s + x.value, 0) || 1;
+  const groups = onXero() ? invoicedGroups(JOB.jobs, JOB.byNumber, today()) : null;
+  const awaitingCount = groups ? groups.awaiting.length : 0;
   const tiles = STAGES.map(([key, label]) => {
     const on = JOB.stage === key || (JOB.stage === 'open' && OPEN_STAGES.has(key));
     return `<button type="button" class="job-stage st-${key}${on ? ' on' : ''}" data-job-act="stage" data-stage="${key}" aria-pressed="${on}">
         <span class="job-stage-label">${label}</span>
         <span class="job-stage-value">${escapeHtml(whole(t[key].value))}</span>
-        <span class="job-stage-count">${t[key].count} ${t[key].count === 1 ? 'job' : 'jobs'}</span>
+        <span class="job-stage-count">${key === 'invoiced' && awaitingCount ? `${awaitingCount} awaiting payment` : `${t[key].count} ${t[key].count === 1 ? 'job' : 'jobs'}`}</span>
         <span class="job-stage-bar"><i style="width:${Math.round(t[key].value / total * 100)}%"></i></span>
       </button>`;
   }).join('');
@@ -433,9 +436,26 @@ function jobsHtml() {
       ${JOB.adding ? '' : '<button type="button" class="job-btn" data-job-act="add">Add a job</button>'}
     </div>
     ${JOB.adding ? jobForm(null) : ''}
-    <div class="job-list">${shown.map(jobCard).join('') ||
-      `<p class="job-empty">${JOB.jobs.length ? 'No jobs at this stage.' : 'No jobs yet. Add MSA Safety, Onsite Commercial Services and Clarke Lane Engineering’s work with “Add a job”.'}</p>`}</div>
+    ${JOB.stage === 'invoiced' && groups ? invoicedHtml(groups) : `<div class="job-list">${shown.map(jobCard).join('') ||
+      `<p class="job-empty">${JOB.jobs.length ? 'No jobs at this stage.' : 'No jobs yet. Add MSA Safety, Onsite Commercial Services and Clarke Lane Engineering’s work with “Add a job”.'}</p>`}</div>`}
     ${imported ? '' : `<p class="job-note">Had projects on the old Projects board? <button type="button" class="job-link" data-job-act="import" ${JOB.importing ? 'disabled' : ''}>${JOB.importing ? 'Bringing them across…' : 'Bring the open ones across'}</button> (once; you’ll add a value to each).</p>`}`;
+}
+
+/**
+ * Invoiced jobs are kept as the record (Delete is only for mistakes). Once Xero says every
+ * invoice is paid the job is done; the last 90 days of those are shown, the rest on request.
+ */
+function invoicedHtml(g) {
+  const block = (title, note, list) => list.length
+    ? `<div class="job-list-sub"><strong>${escapeHtml(title)}</strong><span class="job-muted">${escapeHtml(note)}</span></div><div class="job-list">${list.map(jobCard).join('')}</div>`
+    : '';
+  const paid = JOB.allPaid ? g.paid : g.recent;
+  const older = g.paid.length - g.recent.length;
+  const html = block('Awaiting payment', 'Invoiced, not yet paid in Xero; overdue first', g.awaiting) +
+    block('Not matched to a Xero invoice', 'Add the invoice number under Edit so payment can be followed', g.unmatched) +
+    block('Paid: done', JOB.allPaid ? 'Every paid job, newest first' : 'Paid in full, invoiced in the last 90 days', paid) +
+    (older > 0 ? `<p class="job-note"><button type="button" class="job-link" data-job-act="allpaid">${JOB.allPaid ? 'Show only the last 90 days' : `Show ${older} older paid ${older === 1 ? 'job' : 'jobs'}`}</button></p>` : '');
+  return html || '<p class="job-empty">No invoiced jobs yet.</p>';
 }
 
 /** The direct Xero connection: connect once, then it syncs every hour on Supabase. */
@@ -444,7 +464,7 @@ function xeroHtml() {
   if (!x) return '';
   if (!x.connected) {
     return `<div class="job-panel job-xero"><div class="job-panel-head"><strong>Connect Xero directly</strong>
-        <span class="job-muted">Read-only. Invoices and repeating invoices sync every hour, so jobs can be matched to their invoice.</span></div>
+        <span class="job-muted">Invoices and repeating invoices sync every hour, so jobs can be matched to their invoice and invoiced as drafts in Xero.</span></div>
       <button type="button" class="job-btn" data-job-act="xero-connect" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Opening Xero…' : 'Connect Xero'}</button></div>`;
   }
   const state = x.last_sync_ok === false ? 'bad' : 'ok';
@@ -606,6 +626,7 @@ async function onClick(event) {
   if (act === 'xero-connect') { xeroConnect(); return; }
   if (act === 'xero-sync') { xeroSync(); return; }
   if (act === 'xero-invoice') { openInvoice(id); return; }
+  if (act === 'allpaid') { JOB.allPaid = !JOB.allPaid; render(); return; }
   if (act === 'delete') {
     if (!window.confirm('Delete this job?')) return;
     try {

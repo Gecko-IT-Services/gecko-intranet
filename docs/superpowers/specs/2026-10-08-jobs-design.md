@@ -50,12 +50,20 @@ Menu › **Jobs**, two tabs.
   notes. Done projects are not brought across. Values are added by hand afterwards. The list
   itself is left untouched.
 
+## Finished jobs (Philip, 8 Oct: "when a job is invoiced what happens to it?")
+- Nothing is deleted: an invoiced job is the record of the work and what it was worth (Delete is
+  for mistakes). It leaves "Current jobs" when it moves to Invoiced (by hand, or by itself once its
+  invoices from Invoice in Xero are approved).
+- The **Invoiced** tile opens it in three groups (`invoicedGroups` in `core/jobs.js`): **Awaiting
+  payment** (overdue first), **Not matched to a Xero invoice** (add the number under Edit), and
+  **Paid: done** (last 90 days, older on request). The tile shows how many await payment.
+- Matching to Xero invoices and Invoice in Xero: see `2026-10-08-xero-integration-design.md`
+  (phases 2 and 3), which replaced the feed-based idea once Xero was connected directly.
+
 ## Not now (ask Philip)
-- Invoice-level Xero data in the feed (number, contact, date, amount, status, repeating schedule)
-  would let a job match its Xero invoice automatically and make the projection exact. That is a
-  feed change: `validateFeed` and the scheduled task's prompt change together.
 - Costs per job (materials, hours) for job margin.
 
 ## Rejected
 - **Reviving Projects**: it had no values or invoicing and lived in SharePoint; Philip chose new.
-- **Writing to Xero from the site**: needs a key in the browser. Invoices stay raised in Xero.
+- **Writing to Xero from the browser**: needs a key in the page. Draft invoices are created by a
+  Supabase Edge Function instead (Xero phase 3).
