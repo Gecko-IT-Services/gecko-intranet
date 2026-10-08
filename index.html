@@ -3141,27 +3141,6 @@ body {
      out past the panel on phones. */
   min-width: 0;
 }
-#section-timesheets .tsh-ssa-stats {
-  display: flex; justify-content: space-between; font-size: 11px; color: var(--muted);
-  margin-bottom: 8px;
-  flex-wrap: wrap; gap: 4px 12px;
-}
-#section-timesheets .tsh-ssa-stats span { font-family: var(--font-body); font-weight: 600; font-size: 13px; }
-#section-timesheets .tsh-ssa-bar {
-  width: 100%; height: 6px; border-radius: 3px; background: var(--border-dim); overflow: hidden;
-  margin-bottom: 10px;
-}
-/* Fill is driven by --fill (0–1) and scaled, not width-animated, so the
-   bar never triggers layout on the surrounding SSA panel. */
-#section-timesheets .tsh-ssa-bar-fill {
-  height: 100%; width: 100%; border-radius: 3px;
-  transform-origin: left center;
-  transform: scaleX(var(--fill, 0));
-  transition: transform var(--dur-3) var(--ease);
-}
-#section-timesheets .tsh-ssa-bar-fill.ok    { background: var(--green); }
-#section-timesheets .tsh-ssa-bar-fill.warn  { background: var(--amber); }
-#section-timesheets .tsh-ssa-bar-fill.crit  { background: var(--red); }
 #section-timesheets .tsh-ssa-actions {
   display: flex; gap: 8px; font-size: 11px;
 }
@@ -16448,16 +16427,87 @@ function tshRenderLog() {
 
 
 // ─── Render — SSA Dashboard tab ──────────────────────────────────────
+/**
+ * SSA Dashboard (Philip, 9 Oct: improve it). Logic: src/core/ssa.js (window.GeckoSsa); design
+ * docs/superpowers/specs/2026-10-09-ssa-dashboard-design.md. Balances are shown exactly as held (never
+ * recalculated); use and run-out dates come from the last 90 days of work (System credits excluded).
+ */
+const TSH_SSA_STATUS = {
+  over:  { label: 'Over hours', cls: 'red' },
+  renew: { label: 'Renew now', cls: 'red' },
+  low:   { label: 'Running low', cls: 'amber' },
+  ok:    { label: 'On track', cls: 'green' },
+  quiet: { label: 'Not used lately', cls: 'muted' }
+};
+const tshShortDate = k => new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+function tshSsaBoard() {
+  if (!window.GeckoSsa) throw new Error('The page did not finish loading. Hard-refresh (Cmd+Shift+R).');
+  return window.GeckoSsa.ssaBoard(TSH.ssaClients, TSH.entries, today());
+}
+
+function tshSsaCardHtml(r) {
+  const S = window.GeckoSsa;
+  const st = TSH_SSA_STATUS[r.status];
+  const ringCls = r.status === 'over' || r.status === 'renew' ? 'red' : r.status === 'low' ? 'amber' : 'green';
+  const max = Math.max(1, ...r.byMonth.map(m => m.hours));
+  const name = jsAttr(r.name);
+  const urgent = r.status === 'over' || r.status === 'renew';
+  const runs = r.status === 'over' ? `<b class="red">${tshFmtHours(-r.remaining)} over</b>`
+    : r.runsOut ? `${escapeHtml(tshShortDate(r.runsOut))} <small>${escapeHtml(S.runwayText(r.runway))}</small>` : '<small>no recent use</small>';
+  return `
+    <div class="tsh-ssa-card s-${r.status}">
+      <div class="tsh-ssa-card-head">
+        <div class="tsh-ssa-av">${escapeHtml(initialsFor(r.name))}</div>
+        <div class="tsh-ssa-name">${clientLink(r.name)}</div>
+        <span class="tsh-ssa-pill ${st.cls}">${st.label}</span>
+      </div>
+      <div class="tsh-ssa-body">
+        <div class="tsh-ssa-ring ${ringCls}" style="--left:${(r.pctLeft * 100).toFixed(1)}" role="img" aria-label="${escapeHtml(`${tshFmtHours(r.remaining)} left of ${tshFmtHours(r.purchased)}`)}">
+          <div><strong>${tshFmtHours(r.remaining)}</strong><span>left of ${tshFmtHours(r.purchased)}</span></div>
+        </div>
+        <ul class="tsh-ssa-facts">
+          <li><span>Use per month</span><span>${r.perMonth ? escapeHtml(window.GeckoTimelog?.fmtHours(r.perMonth) || tshFmtHours(r.perMonth)) : '—'}</span></li>
+          <li><span>Runs out</span><span>${runs}</span></li>
+          <li><span>Last work</span><span>${r.lastDate ? `${escapeHtml(tshShortDate(r.lastDate))} <small>${escapeHtml(r.lastBy)}</small>` : '—'}</span></li>
+        </ul>
+      </div>
+      <div class="tsh-ssa-spark" aria-label="Hours used, last six months">
+        ${r.byMonth.map(m => `<div title="${escapeHtml(new Date(m.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'long' }) + ': ' + tshFmtHours(m.hours))}"><i class="${m.hours ? '' : 'zero'}" style="height:${(m.hours / max * 100).toFixed(1)}%"></i><span>${escapeHtml(new Date(m.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'narrow' }))}</span></div>`).join('')}
+      </div>
+      <div class="tsh-ssa-actions">
+        <button class="tsh-ssa-btn${urgent ? ' primary' : ''}" type="button" title="Add hours, email the timesheet and create the Xero draft" onclick="tshOpenRenew('${jsAttr(r.id)}')">Renew…</button>
+        <button class="tsh-ssa-btn" type="button" onclick="geckoGo('timesheets', 'log', '${name}')">Log time</button>
+        <button class="tsh-ssa-link" type="button" onclick="tshViewEntries('${name}')">Entries</button>
+        <button class="tsh-ssa-link" type="button" title="Give hours back or take them off, in quarter hours" onclick="tshOpenAdjust('${jsAttr(r.id)}')">Adjust…</button>
+        <button class="tsh-ssa-link muted" type="button" title="Take this client off the SSA programme. Hours and history are kept." onclick="tshSetArchived('${jsAttr(r.id)}', true)">Archive</button>
+      </div>
+    </div>`;
+}
+
+/** Just the cards and the view counts (typing in the search box keeps its focus). */
+function tshRenderSsaGrid() {
+  const grid = document.getElementById('tshSsaGrid');
+  if (!grid || !TSH.ssaBoard) return;
+  const rows = window.GeckoSsa.filterRows(TSH.ssaBoard.rows, { view: TSH.ssaView, q: TSH.ssaQ || '' });
+  document.querySelectorAll('#tshSsaWrap [data-ssa-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ssaView === TSH.ssaView)));
+  grid.innerHTML = rows.length ? rows.map(tshSsaCardHtml).join('')
+    : `<div class="tsh-ssa-none">${TSH.ssaQ ? `No SSA client matches “${escapeHtml(TSH.ssaQ)}”.`
+      : 'Nobody needs renewing. <button class="tsh-ssa-link strong" type="button" data-ssa-view="all">Show all clients</button>'}</div>`;
+}
+
 function tshRenderSsa() {
   const wrap = document.getElementById('tshSsaWrap');
   if (!wrap) return;
+  let board;
+  try { board = tshSsaBoard(); }
+  catch (err) { wrap.innerHTML = `<div class="tsh-empty"><h3>Could not show the SSA dashboard</h3><p>${escapeHtml(err.message)}</p></div>`; return; }
+  TSH.ssaBoard = board;
+  const t = board.totals;
+  if (!TSH.ssaView) TSH.ssaView = t.attention + t.low ? 'attention' : 'all';
 
-  // Only SSA clients (hoursPurchased > 0) that are still on the programme
-  const ssaList = TSH.ssaClients.filter(c => c.hoursPurchased > 0 && !c.archived)
-    .sort((a, b) => (a.hoursRemaining ?? 999) - (b.hoursRemaining ?? 999));
   const archived = TSH.ssaClients.filter(c => c.archived)
     .sort((a, b) => a.name.localeCompare(b.name));
-
   const archivedHtml = archived.length ? `
     <details class="tsh-ssa-archived" ${TSH.showArchived ? 'open' : ''} ontoggle="TSH.showArchived = this.open">
       <summary>Archived — off the SSA programme (${archived.length})</summary>
@@ -16473,59 +16523,41 @@ function tshRenderSsa() {
       <div class="tsh-ssa-note">Archived clients keep their logged hours and history but are left out of the SSA cards, the client picker and the Overview count.</div>
     </details>` : '';
 
-  if (ssaList.length === 0) {
-    wrap.innerHTML = '<div class="tsh-empty"><h3>No SSA Clients</h3><p>No clients have an active SSA agreement (Hours Purchased &gt; 0).</p></div>' + archivedHtml;
+  if (!board.rows.length) {
+    wrap.innerHTML = tshSyncHtml() + '<div class="tsh-empty"><h3>No SSA Clients</h3><p>No clients have an active SSA agreement (Hours Purchased &gt; 0).</p></div>' + archivedHtml;
     return;
   }
-
-  const cards = ssaList.map(c => {
-    // Bar shows USAGE percentage (filled = used, empty = remaining)
-    const usedPct = c.hoursPurchased > 0 ? Math.min(100, Math.max(0, (c.hoursUsed / c.hoursPurchased) * 100)) : 0;
-    const remainPct = c.hoursPurchased > 0 ? Math.max(0, (c.hoursRemaining / c.hoursPurchased) * 100) : 0;
-    let barCls = 'ok';
-    if (remainPct < 5) barCls = 'crit';
-    else if (remainPct < 20) barCls = 'warn';
-    // Bar colour: green when plenty left, amber/red when running low
-    // The bar FILL represents usage, so invert the colour logic:
-    // lots used + little remaining = red/amber fill, little used = green fill
-    let fillCls = 'ok';
-    if (remainPct < 5) fillCls = 'crit';
-    else if (remainPct < 20) fillCls = 'warn';
-
-    const remColor = barCls === 'crit' ? 'var(--red)' : barCls === 'warn' ? 'var(--amber)' : 'var(--green)';
-
-    return `
-    <div class="tsh-ssa-card">
-      <div class="tsh-ssa-card-head">
-        <div class="tsh-ssa-av">${escapeHtml(initialsFor(c.name))}</div>
-        <div class="tsh-ssa-name">${clientLink(c.name)}</div>
-      </div>
-      <div class="tsh-ssa-stats">
-        <span>Used: <span>${tshFmtHours(c.hoursUsed)}</span></span>
-        <span style="font-size:10px;color:var(--muted);">of ${tshFmtHours(c.hoursPurchased)}</span>
-        <span>Remaining: <span style="color:${remColor}">${tshFmtHours(c.hoursRemaining)}</span></span>
-      </div>
-      <div class="tsh-ssa-bar">
-        <div class="tsh-ssa-bar-fill ${fillCls}" style="--fill:${usedPct / 100}"></div>
-      </div>
-      <div class="tsh-ssa-actions">
-        <button class="tsh-ssa-link strong" type="button" title="Add hours, email the timesheet and get the Xero invoice details" onclick="tshOpenRenew('${jsAttr(c.id)}')">Renew…</button>
-        <button class="tsh-ssa-link" type="button" title="Give hours back or take them off, in quarter hours" onclick="tshOpenAdjust('${jsAttr(c.id)}')">Adjust…</button>
-        <button class="tsh-ssa-link" type="button" onclick="tshViewEntries('${jsAttr(c.name)}')">View entries</button>
-        <button class="tsh-ssa-link" type="button" onclick="navTo('clients')">Jump to Directory</button>
-        <button class="tsh-ssa-link muted" type="button" title="Take this client off the SSA programme. Hours and history are kept." onclick="tshSetArchived('${jsAttr(c.id)}', true)">Archive</button>
-      </div>
-    </div>`;
-  }).join('');
-
+  const attention = board.rows.filter(r => ['over', 'renew', 'low'].includes(r.status)).length;
   wrap.innerHTML = `
     ${tshSyncHtml()}
-    <div class="tsh-ssa-grid">${cards}</div>
+    <div class="tsh-ssa-kpis">
+      <div class="tsh-ssa-kpi"><span>SSA clients</span><strong>${t.clients}</strong><small>on the programme</small></div>
+      <div class="tsh-ssa-kpi"><span>Hours left</span><strong>${tshFmtHours(t.remaining)}</strong><small>${t.overBy ? `<b class="red">${tshFmtHours(t.overBy)} over</b> across clients` : 'across all clients'}</small></div>
+      <div class="tsh-ssa-kpi ${t.attention ? 'red' : t.low ? 'amber' : 'green'}"><span>To renew</span><strong>${t.attention}</strong><small>${t.low ? `${t.low} more running low` : t.attention ? 'over or nearly out' : 'everyone has hours'}</small></div>
+      <div class="tsh-ssa-kpi"><span>Use per month</span><strong>${escapeHtml(window.GeckoTimelog?.fmtHours(t.perMonth) || tshFmtHours(t.perMonth))}</strong><small>average, last 90 days</small></div>
+    </div>
+    <div class="tsh-ssa-bar-tools">
+      <div class="tsh-ssa-views" role="group" aria-label="Which clients">
+        <button type="button" data-ssa-view="attention" aria-pressed="false">Needs attention <b>${attention}</b></button>
+        <button type="button" data-ssa-view="all" aria-pressed="false">All <b>${board.rows.length}</b></button>
+      </div>
+      <input class="tsh-input tsh-ssa-search" id="tshSsaSearch" type="search" placeholder="Find a client…" aria-label="Find an SSA client" value="${escapeHtml(TSH.ssaQ || '')}">
+    </div>
+    <div class="tsh-ssa-grid" id="tshSsaGrid"></div>
     <div class="tsh-ssa-note">${tshOnDb()
       ? 'Balances update the moment time is logged. Anything added in Lists or the Power App is brought in when you click Refresh.'
-      : 'SSA hours sync from SharePoint. If the Power App was used recently, click Refresh to get the latest totals.'}</div>
+      : 'SSA hours sync from SharePoint. If the Power App was used recently, click Refresh to get the latest totals.'}
+      Use per month and run-out dates are from the last 90 days of logged work.</div>
     ${archivedHtml}`;
+  tshRenderSsaGrid();
 }
+document.addEventListener('click', e => {
+  const v = e.target.closest?.('#tshSsaWrap [data-ssa-view]');
+  if (v) { TSH.ssaView = v.dataset.ssaView; tshRenderSsaGrid(); }
+});
+document.addEventListener('input', e => {
+  if (e.target?.id === 'tshSsaSearch') { TSH.ssaQ = e.target.value; tshRenderSsaGrid(); }
+});
 
 /**
  * Archive (or restore) an SSA client: sets the Yes/No "Archived" column on
