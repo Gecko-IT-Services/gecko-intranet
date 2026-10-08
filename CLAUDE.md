@@ -134,7 +134,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Kingdom Products "Monthly Renewal" £189.82/mo in Xero has no service line. Proposed
   (8 Oct): IS + Backup £43.50 (stack), M365 £33.72 (m365), VoIP + FTTP £112.60 (other).
   Costs from the Atera breakdown (USD): Acronis WS $3.90 + 82 GB × $0.04 + 3 × Webroot
-  $1.20 = $10.78/mo. VoxOne ×4 and the FTTP line costs: Philip to send (Voip Unlimited bill).
+  $1.20 = $10.78/mo (≈ £8.14). VoIP Unlimited bill p1538966 (1 Oct 2026, reconciles to
+  £406.15): Voxone seat £10.00/mo, FTTP 1000/115 £42.60/mo, so VoIP + FTTP cost £82.60.
+  The bill does not name end clients; the unit prices are the same for every line.
+  Philip to add the three lines in Profitability.
 - Technix retainer: Xero (£215.90 = 194.10 support + 16.80 Exclaimer + 5.00 WFH Beckie)
   is right; Philip to set the service line sell from £210.90 to £215.90 in the dashboard.
 
