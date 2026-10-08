@@ -20,6 +20,7 @@ import * as jobs from './sections/jobs.js';
 import * as overview from './sections/overview.js';
 import * as client from './sections/client.js';
 import * as team from './sections/team.js';
+import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
 import * as overviewCore from './core/overview.js';
 import * as cspCosts from './core/csp-costs.js';
@@ -39,6 +40,8 @@ window.GeckoSections.team = { init: team.init };
 window.GeckoSections.client = { init: client.init, open: client.open, current: client.current };
 // Overview › Today reads the last day of backups and alerts through these (support@ mailbox).
 window.GeckoMonitor = { backups: backups.snapshot, alerts: alerts.snapshot };
+// Same client under different names (Xero, Clients, SSA): Timesheets' Log time from a client page.
+window.GeckoClientMatch = sameClient;
 // The shared tab strip (the shell's hub strip uses it too).
 window.GeckoTabs = tabs;
 

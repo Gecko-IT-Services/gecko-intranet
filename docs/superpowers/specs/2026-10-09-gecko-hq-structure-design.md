@@ -60,3 +60,13 @@ under 5 letters must match exactly). A source that fails is named ("Not checked"
 - The older sections' own tab strips (Mileage, Timesheets, Opportunities) get the shared look:
   `geckoInkify()` adds `.app-tabs` and a sliding ink that follows the active tab, however the section
   switches (class or aria-selected); their own handlers are untouched.
+
+## Stage 4 (9 Oct): Timesheets, quicker logging
+Work is logged straight into Timesheets (Philip), so logging is made quicker; nothing about how
+entries are saved or mirrored changes (SSA balance rules untouched).
+- **Log time** on a client page opens Timesheets › Log Time with that client chosen (names matched with
+  `sameClient`, `window.GeckoClientMatch`) and the cursor in Hours. If the client list hasn't loaded
+  yet, the choice is applied when it does (`TSH.pendingClient`).
+- **Recent**: one-tap chips for the engineer's most-used clients over the last 45 days.
+- **Logged today**: the engineer's total for today beside the form, updated after each entry.
+- The tab strip has the shared look (stage 3).
