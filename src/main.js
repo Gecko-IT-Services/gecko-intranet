@@ -30,6 +30,7 @@ import * as ssaRenewal from './core/ssa-renewal.js';
 import * as supabase from './core/supabase.js';
 import * as store from './core/store.js';
 import * as timesheets from './core/timesheets.js';
+import * as timelog from './core/timelog.js';
 
 window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
@@ -60,6 +61,8 @@ window.GeckoStore = { ...store, connect: supabase.connectSupabase, completeRedir
 window.GeckoOverview = { ...overviewCore, loadDb: overview.loadDb, tick: overview.tick, review };
 // Timesheets + SSA balances on the database, SharePoint kept as the backup (classic script).
 window.GeckoTimesheets = timesheets;
+// Timesheets › Log Time: reading typed time, the SSA preview and the checks before saving.
+window.GeckoTimelog = timelog;
 
 // Back from Xero's consent screen (supabase/functions/xero-callback): keep the result for the
 // Jobs section, tidy the address bar, and open Jobs once the portal is signed in.
