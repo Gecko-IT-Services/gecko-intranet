@@ -106,8 +106,39 @@ export function ticketHits(tickets = [], src, { now = new Date(), months = THRES
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 }
 
+/** VoIP Unlimited dealer services (client buys direct; Gecko earns commission). */
+export const DEALER_VOICE = new Set(['voxone', 'voip_exchange', 'pstn', 'mobile']);
+export const DEALER_LINES = new Set(['ethernet', 'leased_line', 'fttp', 'fttc', 'sogea']);
+const SERVICE_LABEL = {
+  voxone: 'VoxOne', voip_exchange: 'VoIP Exchange', ethernet: 'Ethernet', leased_line: 'leased line',
+  fttp: 'FTTP', fttc: 'FTTC', sogea: 'SOGEA', pstn: 'PSTN line', mobile: 'mobile', unknown: 'services not yet recorded'
+};
+export const serviceLabel = s => SERVICE_LABEL[s] || s;
+const CONTRACT_LABEL = { in_contract: 'in contract', out_of_contract: 'out of contract', expiring: 'expiring', unknown: 'contract unknown' };
+
+/** Dealer rows that are out of contract, or end within `days`. */
+export function renewalsDue(dealer = [], { now = new Date(), days = 90 } = {}) {
+  const limit = new Date(now.getTime() + days * 86400000).toISOString().slice(0, 10);
+  return dealer.filter(d => d.contract === 'out_of_contract' || d.contract === 'expiring' ||
+    (d.contract_end && d.contract_end <= limit));
+}
+
+function dealerLine(d) {
+  const qty = d.quantity > 1 || d.service === 'voxone' || d.service === 'voip_exchange' ? `${d.quantity} × ` : '';
+  const end = d.contract_end ? ` (ends ${fmtDate(d.contract_end)})` : '';
+  return `${qty}${serviceLabel(d.service)}${d.extras ? ` ${d.extras}` : ''}: ${CONTRACT_LABEL[d.contract] || d.contract}${end}${d.notes ? `. ${d.notes}` : ''}`;
+}
+
 /** Does the client already have this product? → { has, via } */
 export function holds(client, product) {
+  const dealer = client.dealer || [];
+  if (dealer.length && (product.key === 'voxone' || product.key === 'connectivity')) {
+    const unknown = dealer.some(d => d.service === 'unknown');
+    const want = product.key === 'voxone' ? DEALER_VOICE : DEALER_LINES;
+    const row = dealer.find(d => want.has(d.service));
+    if (row) return { has: true, via: `VoIP Unlimited dealer: ${serviceLabel(row.service)}` };
+    if (unknown) return { has: true, via: 'VoIP Unlimited dealer customer (services not yet recorded)' };
+  }
   const lines = client.services || [];
   const re = pattern(product.keywords);
   const line = re && lines.find(s => re.test(`${s.title || ''} ${s.notes || ''}`));
@@ -198,7 +229,31 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
       break;
     case 'devices':
       break;             // phase 2: needs Atera device data
+    case 'voip_exchange': {
+      const ve = (client.dealer || []).filter(d => d.service === 'voip_exchange');
+      const seats = ve.reduce((t, d) => t + (Number(d.quantity) || 0), 0);
+      if (seats) {
+        ruleHit = true;
+        for (const d of ve) reasons.push(dealerLine(d) + '.');
+        reasons.push('VoIP Unlimited report that VoIP Exchange call recordings are not accessible from mid-August 2026 and the mobile app is unreliable; they recommend moving to VoxOne.');
+        if (product.default_mrr != null) reasons.push(`${seats} seats × ${money(product.default_mrr)} commission = ${money(seats * Number(product.default_mrr))} a month.`);
+      }
+      break;
+    }
+    case 'dealer_renewal': {
+      const due = renewalsDue(client.dealer, { now }).filter(d => d.service !== 'voip_exchange');   // VE has its own migration
+      if (due.length) { ruleHit = true; for (const d of due) reasons.push(dealerLine(d) + '.'); }
+      break;
+    }
+    case 'dealer_prospect':
+      if (client.dealerOnly) {
+        ruleHit = true;
+        const what = [...new Set((client.dealer || []).map(d => serviceLabel(d.service)))].join(', ');
+        reasons.push(`Buys ${what} from VoIP Unlimited through us, but isn’t a Gecko IT client yet.`);
+      }
+      break;
   }
+  if (!client.dealerOnly && product.rule === 'dealer_prospect') return null;
 
   // What they keep calling us about.
   let tickets = ticketHits(client.tickets, product.ticket_keywords, { now });
@@ -219,11 +274,13 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
   if (!ruleHit && !tickets.length) return null;
   // "Not something they buy" alone is weak; say so in strength, but keep it.
   const strength = (ruleHit && tickets.length) ? 2 : (product.rule === 'missing' && !tickets.length ? 0 : 1);
+  const seats = product.rule === 'voip_exchange'
+    ? (client.dealer || []).filter(d => d.service === 'voip_exchange').reduce((t, d) => t + (Number(d.quantity) || 0), 0) : 1;
   return {
     product,
     reasons,
     tickets,
-    mrr: product.default_mrr == null ? null : Number(product.default_mrr),
+    mrr: product.default_mrr == null ? null : Math.round(Number(product.default_mrr) * seats * 100) / 100,
     oneOff: product.default_one_off == null ? null : Number(product.default_one_off),
     strength
   };
@@ -295,6 +352,7 @@ export function emailDomain(address) {
   return d;
 }
 
+function money(n) { return '£' + (Number(n) || 0).toFixed(2); }
 function round1(n) { return Math.round(n * 10) / 10; }
 function round2(n) { return Math.round(n * 100) / 100; }
 function clip(s, n = 70) { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; }

@@ -10,7 +10,7 @@ client." Plus websites: Gecko now does SEO (Rank Math) for ALS Locksmiths and Cl
 Engineering; offer the same to clients whose sites need it.
 
 Also from Philip (8 Oct): Gecko is a **VoIP Unlimited partner**, so VoxOne and all connectivity
-(FTTP, SOGEA, Ethernet circuits) are core products; **timesheets** are a source of opportunity
+(FTTP, SOGEA, Ethernet circuits) are core products (as reseller *and* dealer, see below); **timesheets** are a source of opportunity
 (what clients keep calling about); later, **reward clients** who take more from us.
 
 ## The idea in one line
@@ -87,6 +87,26 @@ A new **Opportunities** section:
   months, 3+ ad-hoc support hours for clients with no SSA block or retainer.
 - Verified in a real browser against faked Graph, Supabase, DNS and PageSpeed: gaps, checks,
   draft email, pipeline, no errors, no horizontal scroll at 390px.
+
+## VoIP Unlimited: reseller and dealer (correction, 8 Oct)
+Philip: "I am a dealer for VoIP Unlimited and also a reseller." The first build treated every
+client as a VoxOne/connectivity prospect; that was wrong for dealer customers.
+- **Reseller:** Gecko bills the client; these are service lines (Profitability), unchanged.
+- **Dealer:** the client buys FTTC/FTTP/SOGEA/leased lines/VoIP Exchange/VoxOne direct from
+  VoIP Unlimited under Gecko's dealer account (support@gecko-it.com); Gecko earns monthly
+  commission, invoiced in Xero to the contact "Voip Unlimited". It is a headline KPI (latest
+  month present in the feed) and is excluded from client recurring revenue.
+- `supabase/migrations/20261008120000_voip_dealer.sql`: `voip_dealer_services` (client, VoIP
+  Unlimited's name, service, quantity, contract, end date, extras, commission, notes; RLS),
+  seeded from Samuel Dacombe's Client Action List (11 Sep 2026) and Philip's dealer-list
+  screenshot. Customers whose services weren't visible are seeded as `unknown`, which still
+  stops VoxOne/connectivity pitches until Philip fills them in.
+- New rules: `voip_exchange` (VoIP Exchange → VoxOne; recordings inaccessible since mid-August,
+  app unreliable; value = seats × £4 commission), `dealer_renewal` (out of contract or ending
+  within 90 days; commission kept for 36 months on renewal), `dealer_prospect` (on the dealer list
+  but not an IT client → IT support).
+- Edited on the **VoIP Unlimited** tab (add, edit, remove rows). Per-customer commission isn't in
+  the statement email, so `commission` is optional and filled by hand when known.
 
 ## Phases
 1. Gap map from what clients already buy + DNS/email checks + PageSpeed; opportunity

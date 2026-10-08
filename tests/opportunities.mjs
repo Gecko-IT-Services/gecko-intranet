@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {
   classifyMx, spfStatus, dmarcPolicy, summariseDns, summarisePageSpeed, ticketHits,
-  holds, evaluate, clientGaps, withoutOpen, pipelineTotals, fillTemplate, emailDomain, THRESHOLDS
+  holds, evaluate, clientGaps, withoutOpen, pipelineTotals, fillTemplate, emailDomain, THRESHOLDS,
+  renewalsDue
 } from '../src/core/opportunities.js';
 
 const NOW = new Date('2026-10-08T09:00:00Z');
@@ -158,5 +159,39 @@ assert.equal(fillTemplate({ name: 'X', email_body: 'Hi {{first_name}}' }, {}).te
 assert.equal(emailDomain('andy@AccessInstrumentation.co.uk'), 'accessinstrumentation.co.uk');
 assert.equal(emailDomain('someone@gmail.com'), '', 'free mail is not a company domain');
 assert.equal(emailDomain('nonsense'), '');
+
+// — VoIP Unlimited dealer side —
+const conn = P('connectivity', 'missing', { keywords: 'fttp|sogea' });
+const ve = P('ve_migration', 'voip_exchange', { default_mrr: 4 });
+const renew = P('vu_renewal', 'dealer_renewal');
+const prospect = P('it_services', 'dealer_prospect');
+const daron = { ...base, tickets: [], dealer: [
+  { service: 'ethernet', quantity: 1, contract: 'out_of_contract', extras: '100MB/100MB', notes: '' },
+  { service: 'voxone', quantity: 2, contract: 'in_contract', contract_end: '2026-12-01', extras: '', notes: '' }] };
+assert.deepEqual(holds(daron, voxone), { has: true, via: 'VoIP Unlimited dealer: VoxOne' }, 'dealer VoxOne counts as has');
+assert.equal(holds(daron, conn).via, 'VoIP Unlimited dealer: Ethernet');
+assert.equal(evaluate(daron, voxone, { now: NOW }), null, 'never pitch VoxOne to a dealer VoxOne customer');
+const unknownDealer = { ...base, tickets: [], dealer: [{ service: 'unknown', quantity: 1, contract: 'unknown' }] };
+assert.equal(evaluate(unknownDealer, voxone, { now: NOW }), null, 'on the dealer list with services not recorded → not pitched');
+assert.equal(evaluate(unknownDealer, conn, { now: NOW }), null);
+
+const r = evaluate(daron, renew, { now: NOW });
+assert.equal(r.reasons.length, 2, 'out-of-contract Ethernet + VoxOne ending within 90 days');
+assert.match(r.reasons[0], /Ethernet 100MB\/100MB: out of contract/);
+assert.match(r.reasons[1], /2 × VoxOne: in contract \(ends 1 Dec 2026\)/);
+assert.equal(renewalsDue(daron.dealer, { now: new Date('2026-06-01T00:00:00Z') }).length, 1, 'Dec end date not yet within 90 days in June');
+
+const cowan = { ...base, tickets: [], dealer: [{ service: 'voip_exchange', quantity: 13, contract: 'out_of_contract', extras: 'no maintenance, 1 x mobile app', notes: '' }] };
+const m = evaluate(cowan, ve, { now: NOW });
+assert.equal(m.mrr, 52, '13 seats × £4 commission');
+assert.ok(m.reasons.some(x => /call recordings are not accessible/.test(x)));
+assert.ok(m.reasons.some(x => /13 seats × £4\.00 commission = £52\.00 a month/.test(x)));
+assert.equal(evaluate(cowan, renew, { now: NOW }), null, 'VoIP Exchange is the migration, not a renewal');
+assert.equal(evaluate(base, ve, { now: NOW }), null, 'no VoIP Exchange, no migration');
+
+const waterside = { name: 'Waterside Homes', services: [], tickets: [], dealerOnly: true,
+  dealer: [{ service: 'voip_exchange', quantity: 4, contract: 'out_of_contract', extras: '', notes: '' }] };
+assert.match(evaluate(waterside, prospect, { now: NOW }).reasons[0], /Buys VoIP Exchange from VoIP Unlimited through us, but isn’t a Gecko IT client yet/);
+assert.equal(evaluate(base, prospect, { now: NOW }), null, 'existing IT clients are not prospects');
 
 console.log('opportunities: ok');
