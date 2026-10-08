@@ -14,8 +14,9 @@
    ║   NOTE: no top-level `window` access in this file.                ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
-import { graphFetch, resolveSiteId, fetchAllLists, clearListsCache } from '../core/graph.js';
+import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
+import { connectSupabase } from '../core/supabase.js';
 
 export const MAILBOX     = 'support@gecko-it.com';
 export const SENDER      = 'noreply@atera.com';
@@ -40,7 +41,6 @@ const ALR = {
   clients: null,     // Clients list rows, loaded on first "Email client"
   entries: [],       // parsed alert emails, kept so a resolve can re-triage without re-reading mail
   resolutions: new Map(),
-  resolutionsListId: null,
   resolutionsMissing: false,
   showResolved: false,
 };
@@ -463,32 +463,54 @@ function retriage() {
   ALR.stats = summarise(ALR.issues, alerts);
 }
 
-async function resolutionsListId() {
-  if (ALR.resolutionsListId) return ALR.resolutionsListId;
-  const find = lists => lists.find(l => l.displayName === RESOLUTIONS_LIST || l.name === RESOLUTIONS_LIST);
-  let list = find(await fetchAllLists());
-  if (!list) { clearListsCache(); list = find(await fetchAllLists()); }
-  if (!list) { const e = new Error(`${RESOLUTIONS_LIST} list not found`); e.code = 'LIST_MISSING'; throw e; }
-  return (ALR.resolutionsListId = list.id);
-}
+const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
 
-/** Never fails the page: without the list, issues just can't be marked resolved. */
+/** Database rows → the item shape resolutionsFromItems reads. */
+const rowsAsItems = rows => rows.map(r => ({
+  id: r.id, createdDateTime: r.created_at, fields: { Title: r.issue_key, Note: r.note, ResolvedBy: r.resolved_by }
+}));
+
+/**
+ * Resolutions live in the Gecko database (alert_resolutions) since 8 Oct 2026.
+ * Any left in the old GeckoAlertResolutions SharePoint list are brought across
+ * once (sharepoint_id keeps that idempotent). Never fails the page: without the
+ * database, issues just can't be marked resolved.
+ */
 async function loadResolutions() {
   try {
-    const siteId = await resolveSiteId();
-    const listId = await resolutionsListId();
-    const items = [];
-    let next = `/sites/${siteId}/lists/${listId}/items?expand=fields($select=Title,Note)&$select=id,createdDateTime,createdBy&$top=999`;
-    while (next) {
-      const res = await graphFetch(next);
-      items.push(...(res?.value || []));
-      next = res?.['@odata.nextLink'] || null;
-    }
-    ALR.resolutions = resolutionsFromItems(items);
+    const sb = await connectSupabase();
+    await importOldResolutions(sb);
+    const rows = must(await sb.from('alert_resolutions').select('*').order('created_at'));
+    ALR.resolutions = resolutionsFromItems(rowsAsItems(rows));
     ALR.resolutionsMissing = false;
   } catch (err) {
-    ALR.resolutionsMissing = err?.code === 'LIST_MISSING';
+    ALR.resolutionsMissing = err?.code === 'DB_SIGNIN_REQUIRED';
     if (!ALR.resolutionsMissing) toast('Could not read resolved alerts: ' + (err?.message || 'error'), 'error');
+  }
+}
+
+async function importOldResolutions(sb) {
+  if (ALR.oldImported) return;
+  try {
+    const list = (await fetchAllLists()).find(l => l.displayName === RESOLUTIONS_LIST || l.name === RESOLUTIONS_LIST);
+    if (list) {
+      const siteId = await resolveSiteId();
+      const items = [];
+      let next = `/sites/${siteId}/lists/${list.id}/items?expand=fields($select=Title,Note)&$select=id,createdDateTime,createdBy&$top=999`;
+      while (next) {
+        const res = await graphFetch(next);
+        items.push(...(res?.value || []));
+        next = res?.['@odata.nextLink'] || null;
+      }
+      const rows = items.filter(it => it.fields?.Title).map(it => ({
+        issue_key: String(it.fields.Title).toLowerCase(), note: it.fields?.Note || '',
+        resolved_by: it.createdBy?.user?.displayName || '', sharepoint_id: String(it.id), created_at: it.createdDateTime
+      }));
+      if (rows.length) must(await sb.from('alert_resolutions').upsert(rows, { onConflict: 'sharepoint_id', ignoreDuplicates: true }));
+    }
+    ALR.oldImported = true;
+  } catch (err) {
+    console.warn('Old GeckoAlertResolutions list not brought across:', err);
   }
 }
 
@@ -605,7 +627,7 @@ function render() {
     : '';
 
   mount.innerHTML = `
-    ${ALR.resolutionsMissing ? `<p class="bkp-note">The Resolved button needs a SharePoint list called ${RESOLUTIONS_LIST}. Press Resolved on any alert to see how to set it up.</p>` : ''}
+    ${ALR.resolutionsMissing ? '<p class="bkp-note">Resolved alerts are kept in the Gecko database. Press Resolved on any alert to connect to it.</p>' : ''}
     ${ALR.capped ? `<p class="bkp-note">Showing the newest ${SAFETY_LIMIT.toLocaleString('en-GB')} emails. Pick a shorter window for the full picture.</p>` : ''}
     ${main}
     ${noisePart}
@@ -621,9 +643,9 @@ async function loadContacts() {
   try {
     const siteId = await resolveSiteId();
     const list = (await fetchAllLists()).find(l => l.displayName === CLIENTS_LIST || l.name === CLIENTS_LIST);
-    if (!list) return (ALR.clients = []);
-    const res = await graphFetch(`/sites/${siteId}/lists/${list.id}/items?expand=fields($select=Title,PrimaryContact,Email)&$top=999`);
-    ALR.clients = (res.value || []).map(i => ({
+    // The SSA client list, from wherever it lives (database or SharePoint).
+    const items = await window.ssaListItems('clients', siteId, list?.id);
+    ALR.clients = items.map(i => ({
       name: i.fields?.Title || '', primaryContact: i.fields?.PrimaryContact || '', email: i.fields?.Email || '',
     })).filter(c => c.name);
   } catch {
@@ -693,13 +715,10 @@ async function openEmail(key) {
 
 const setupMessage = () => `
   <div class="prj-form">
-    <p><strong>One-off setup.</strong> Resolved alerts are kept in a SharePoint list so you and Jack see the same thing.</p>
-    <p class="bkp-sub">On the portal SharePoint site (GeckoITClientPortal), create a list called
-      <code>${RESOLUTIONS_LIST}</code> and add one column: <code>Note</code> (Multiple lines of text, plain text).
-      Nothing else is needed: the issue goes in Title, and SharePoint records who resolved it and when.</p>
+    <p><strong>Connect to the Gecko database.</strong> Resolved alerts are kept there so you and Jack see the same thing. Connect once with your Microsoft account.</p>
     <div class="prj-form-actions">
       <button type="button" id="alrResolveCancel">Close</button>
-      <button type="button" class="prj-primary" id="alrRetryList">I've created it</button>
+      <button type="button" class="prj-primary" id="alrRetryList">Connect</button>
     </div>
   </div>`;
 
@@ -720,9 +739,9 @@ function openResolve(key) {
     openModal('Mark as resolved', setupMessage());
     document.getElementById('alrResolveCancel')?.addEventListener('click', closeModal);
     document.getElementById('alrRetryList')?.addEventListener('click', async () => {
-      ALR.resolutionsListId = null;
+      try { await connectSupabase({ interactive: true }); } catch (err) { toast(err?.message || 'Could not connect', 'error'); return; }
       await loadResolutions();
-      if (ALR.resolutionsMissing) { toast(`Still can't find ${RESOLUTIONS_LIST}. Check the name`, 'error'); return; }
+      if (ALR.resolutionsMissing) { toast('Still not connected to the database', 'error'); return; }
       retriage(); render(); openResolve(key);
     });
     return;
@@ -744,12 +763,10 @@ function openResolve(key) {
     const submit = event.currentTarget.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
-      const siteId = await resolveSiteId();
-      const listId = await resolutionsListId();
-      await graphFetch(`/sites/${siteId}/lists/${listId}/items`, {
-        method: 'POST',
-        body: JSON.stringify({ fields: { Title: issue.key, Note: document.getElementById('alrResolveNote').value.trim() } }),
-      });
+      const sb = await connectSupabase({ interactive: true });
+      must(await sb.from('alert_resolutions').insert({
+        issue_key: issue.key, note: document.getElementById('alrResolveNote').value.trim(), resolved_by: senderName()
+      }).select('id').single());
       await loadResolutions();
       retriage(); render(); closeModal();
       toast(`${issue.device} marked resolved`, 'success');
@@ -764,9 +781,8 @@ async function undoResolve(key) {
   const r = ALR.resolutions.get(key);
   if (!r) return;
   try {
-    const siteId = await resolveSiteId();
-    const listId = await resolutionsListId();
-    await graphFetch(`/sites/${siteId}/lists/${listId}/items/${r.id}`, { method: 'DELETE' });
+    const sb = await connectSupabase({ interactive: true });
+    must(await sb.from('alert_resolutions').delete().eq('id', r.id).select('id').single());
     await loadResolutions();
     retriage(); render();
     toast('Back on the list', 'success');

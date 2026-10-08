@@ -66,20 +66,6 @@ async function readFeed() {
   }
 }
 
-/** Every item of a SharePoint list by name, following paging. Missing list → []. */
-async function spList(name, lists, siteId) {
-  const list = lists.find(l => l.displayName === name || l.name === name);
-  if (!list) return [];
-  let items = [], next = `/sites/${siteId}/lists/${list.id}/items?$expand=fields&$top=999`;
-  while (next) {
-    const res = await graphFetch(next);
-    items = items.concat(res.value || []);
-    next = res['@odata.nextLink'] || null;
-    if (items.length > 5000) break;   // ponytail: 5000 timesheet rows is years of work; widen if ever hit
-  }
-  return items;
-}
-
 async function load() {
   OPP.loading = true; OPP.error = null; OPP.feedNote = '';
   render();
@@ -99,8 +85,9 @@ async function load() {
       window.clientListItems('gecko_clients', siteId, listId('GeckoClients'), 500),
       window.clientListItems('gecko_services', siteId, listId('GeckoServices'), 2000),
       readFeed(),
-      spList('Clients', lists, siteId),
-      spList('Timesheets', lists, siteId)
+      // SSA list and Timesheets from wherever they live (database or SharePoint).
+      window.ssaListItems('clients', siteId, listId('Clients')),
+      window.ssaListItems('entries', siteId, listId('Timesheets'))
     ]);
 
     OPP.products = products;
