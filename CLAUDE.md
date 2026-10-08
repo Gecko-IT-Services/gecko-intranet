@@ -124,8 +124,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   feed is the fallback when Xero isn't connected.
 
 ## Xero, connected directly (from 8 Oct 2026)
-- Edge Functions `xero-auth` / `xero-callback` / `xero-sync` (Deno, `supabase/functions/`), read-only
-  scope `accounting.invoices.read`. Hourly `pg_cron` sync into `xero_invoices` and
+- Edge Functions `xero-auth` / `xero-callback` / `xero-sync` / `xero-invoice` (Deno, `supabase/functions/`),
+  scope `accounting.invoices` (reads; writes drafts only, phase 3). Hourly `pg_cron` sync into `xero_invoices` and
   `xero_repeating_invoices` (staff read-only); status in `xero_status`; Connect / Sync now on
   Jobs › Sales. Functions are deployed from the repo after merge (not by the GitHub integration).
 - Phase 2 (8 Oct): once connected, Jobs › Sales reads those tables, not the feed: invoiced (net,
