@@ -21,12 +21,12 @@ const entries = [
   { clientName: 'Idle', engineer: 'Jack', date: '2026-03-01', hours: 1 }
 ];
 const b = ssaBoard(clients, entries, today);
-assert.deepEqual(b.rows.map(r => [r.name, r.status]), [['Over', 'over'], ['Busy', 'renew'], ['Steady', 'ok'], ['Idle', 'quiet']],
+assert.deepEqual(b.rows.map(r => [r.name, r.status]), [['Over', 'over'], ['Busy', 'low'], ['Steady', 'ok'], ['Idle', 'quiet']],
   'archived and no-SSA clients are left out; most urgent first');
 const busy = b.rows.find(r => r.name === 'Busy');
 assert.equal(busy.last90, 9);
 assert.equal(busy.perMonth, 3);
-assert.equal(busy.runway, 0.8, '2.5h left at 3h a month: under a month, renew');
+assert.equal(busy.runway, 0.8, '2.5h left at 3h a month: low, not renew (renew is 1h or less)');
 assert.equal(busy.runsOut, '2026-11-02');
 assert.equal(busy.lastDate, '2026-10-01');
 assert.equal(busy.lastBy, 'Jack');
@@ -38,7 +38,7 @@ assert.equal(steady.runway, 12);
 assert.equal(steady.pctLeft, 0.6);
 assert.equal(b.rows.find(r => r.name === 'Over').runsOut, null, 'already over: no date');
 assert.equal(b.rows.find(r => r.name === 'Idle').runway, null);
-assert.deepEqual(b.totals, { clients: 4, remaining: 23.5, overBy: 0.5, attention: 2, low: 0, last90: 12.5, perMonth: 4.17 });
+assert.deepEqual(b.totals, { clients: 4, remaining: 23.5, overBy: 0.5, attention: 1, low: 1, last90: 12.5, perMonth: 4.17 });
 
 // low: under 20% left or under two months at this pace
 assert.equal(ssaBoard([{ id: 'x', name: 'L', hoursPurchased: 20, hoursRemaining: 3.5 }], [], today).rows[0].status, 'low');
@@ -51,6 +51,12 @@ assert.equal(runwayText(0.5), 'about 2 weeks');
 assert.equal(runwayText(0.1), 'under a week');
 
 assert.deepEqual(filterRows(b.rows, { view: 'attention' }).map(r => r.name), ['Over', 'Busy']);
+// Renew now only at 1h or below (Philip, 9 Oct)
+const one = h => ssaBoard([{ id: 'x', name: 'R', hoursPurchased: 10, hoursRemaining: h }], [{ clientName: 'R', engineer: 'Jack', date: '2026-10-01', hours: 20 }], today).rows[0].status;
+assert.equal(one(1), 'renew');
+assert.equal(one(0), 'renew');
+assert.equal(one(1.25), 'low', 'fast use alone never makes it red');
+assert.equal(one(-0.25), 'over');
 assert.deepEqual(filterRows(b.rows, { q: 'st' }).map(r => r.name), ['Steady']);
 
 console.log('ssa: all tests passed');
