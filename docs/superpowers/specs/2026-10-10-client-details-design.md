@@ -24,6 +24,13 @@ conversations with date and time stamps."
   and direction). Nothing is sent or changed.
 - Header: address (links to directions), office number (call).
 
+## Team mailboxes (Philip, 10 Oct: "pick up Jack's emails as well, not just mine")
+The Emails tab searches the signed-in person's own mailbox, the rest of the team's (`TEAM_MAILBOXES`: philip@, jack@) and
+support@. Reading a colleague's mailbox needs **Read and manage (Full Access)** on it in the Microsoft 365 admin centre
+(Users › Active users › Jack Morris › Mail › Read and manage permissions › add Philip), the same kind of access
+support@ already has; until then the tab says exactly that and searches the rest. Jack should know his client mail is
+searchable this way (read-only, only mail from or to that client's domains is shown, nothing is stored).
+
 ## Data
 `client_profiles` (RLS, staff; one per client by name). `client_activity` gains `happened_at` (backfilled from
 `created_at`), `duration_min`, `direction`. Logic `src/core/profile.js` (tests `tests/profile.mjs`), activity changes in

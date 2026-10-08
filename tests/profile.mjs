@@ -50,3 +50,15 @@ assert.equal(stamp('2026-10-08T09:32:00Z'), 'Thu 8 Oct, 10:32', 'UK time (BST)')
 assert.equal(stamp(''), '');
 
 console.log('profile: all tests passed');
+
+// Team mailboxes (10 Oct: Jack's emails too)
+{
+  const { mailboxesFor } = await import('../src/core/profile.js');
+  const team = ['philip@gecko-it.com', 'jack@gecko-it.com'], shared = ['support@gecko-it.com'];
+  assert.deepEqual(mailboxesFor('Philip@Gecko-IT.com', team, shared).map(b => [b.key, b.label]),
+    [['me', 'your mailbox'], ['jack@gecko-it.com', 'Jack’s mailbox'], ['support@gecko-it.com', 'support@']]);
+  assert.deepEqual(mailboxesFor('jack@gecko-it.com', team, shared).map(b => b.label), ['your mailbox', 'Philip’s mailbox', 'support@']);
+  assert.equal(mailboxesFor('', team, shared).length, 4, 'not known who is signed in: search every one');
+  assert.equal(mailboxesFor('philip@gecko-it.com', team, shared)[1].path, '/users/jack%40gecko-it.com/messages');
+  console.log('profile: mailboxes ok');
+}

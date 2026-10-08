@@ -122,7 +122,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Design `2026-10-09-client-activity-design.md`.
 - Client page › **Details & contacts / Emails** (10 Oct): address + postcode map (postcodes.io → OpenStreetMap embed), office
   number as `tel:+44…` (VoxOne dials; a click readies a call log with duration), website, visiting notes (no passwords/codes);
-  Emails tab = read-only Graph search of your mailbox + support@ (`Mail.Read.Shared`) for the client's domains, Log it → Activity.
+  Emails tab = read-only Graph search of your mailbox, the rest of the team's (`TEAM_MAILBOXES`; needs Read and manage on
+  their mailbox) and support@ (`Mail.Read.Shared`) for the client's domains, Log it → Activity.
   Activity has When / How long / Which way. `src/core/profile.js`. Design `2026-10-10-client-details-design.md`.
 - Client page › **+ Opportunity** (9 Oct): add one from the catalogue (quantity × client price) or typed by hand;
   `newOpportunity()` in `src/core/opportunities.js`. Design `2026-10-09-client-new-opportunity-design.md`.
