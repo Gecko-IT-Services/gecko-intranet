@@ -241,6 +241,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   safe columns only (date, engineer, hours, work description; invoice number/date/total/due/status + Xero online
   link), never internal notes, costs, margins or opportunities; pilot with one client. Alternative: a monthly
   statement email per client. Open questions: who signs in, all work or SSA only, pilot client.
+- Monthly statement email per client (Philip, 9 Oct: liked it, then "leave that one too for now… payments are managed
+  by direct debit and it works well; think about it next week"). Nothing built. Idea: Outlook draft per client for a
+  month (work done + hours, SSA left, invoices raised/owed), from the client page or a Clients › Statements tab.
 
 Resolved 8 Oct:
 - Kingdom Products now has service lines matching Xero's £189.82 (IS + Backup 43.50 /
