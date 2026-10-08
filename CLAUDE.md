@@ -89,6 +89,16 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `{ id, fields }` shape so a section's logic doesn't change when it moves. A section
   moves by: migration → Copy to Supabase (green) → fresh copy → flip its flag.
 
+## Opportunities (from 8 Oct 2026)
+- `src/sections/opportunities.js` + `src/core/opportunities.js`; design note
+  `2026-10-08-opportunities-design.md`. Goal (Philip): grow monthly recurring revenue and never
+  miss an opportunity. Gecko is a VoIP Unlimited partner (VoxOne, FTTP, SOGEA, Ethernet).
+- Gaps come from what a client buys (service lines, feed), public email/website checks
+  (Cloudflare DoH, Google PageSpeed, no keys) and six months of timesheet descriptions.
+  The catalogue (rules, patterns, prices, email text) is data in `opportunity_products`,
+  edited on the Products tab. "Draft email" only ever creates an Outlook draft.
+- Windows 10 / device gaps wait for Atera data in the feed (phase 2, with the Atera cost check).
+
 ## The feed (where the money numbers come from)
 - `Gecko Dashboard Data/profitability-feed.json` in the portal site's Documents
   library, written daily at 06:47 Europe/London by a scheduled task in Philip's
