@@ -80,8 +80,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Profitability and Overview together via `clientList*` helpers); GeckoClients and
   GeckoServices in SharePoint are no longer updated. **Timesheets and the SSA `Clients`
   list stay on SharePoint for good** (Philip, 7 Oct): the master, written via Graph, flows
-  untouched — never mirror them as a second writable copy. The feed file is still in
-  SharePoint Documents. Projects/Compliance/P&L are not moving.
+  untouched — never mirror them as a second writable copy. The feed is moving to the
+  `profit_feed` table (`CONFIG.DATA_BACKEND.feed`; see `2026-10-08-feed-on-supabase-design.md`).
+  Projects/Compliance/P&L are not moving.
 - Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
   and a policy (`tests/supabase-migration.mjs` enforces it). Only the publishable key
   is in the site. Sign-in is the Microsoft ID token (`src/core/supabase.js`).
@@ -113,7 +114,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Claude account ("Gecko Dashboard profitability feed"). It is **not** in this
   repo. It reads Xero (12 months, current+previous refetched, older carried over),
   the TD SYNNEX CSP invoice emails (13 months), Exclaimer invoices, Atera receipts
-  and Clook invoices from philip@gecko-it.com, and uploads via Graph.
+  and Clook invoices from philip@gecko-it.com, and uploads via Graph. It is also written
+  to `public.profit_feed` (one row, same JSON) through the Supabase connector; the site reads
+  whichever `CONFIG.DATA_BACKEND.feed` names, via `fetchProfitFeed()`.
 - The task's prompt holds two name maps (Clook domain → Xero client; TD SYNNEX end
   user → Xero client). Unknown names surface on the page as "unassigned" rather
   than being guessed. Felix maintains the maps; ask Philip, then update the task.
