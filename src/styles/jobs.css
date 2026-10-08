@@ -150,3 +150,15 @@
 #section-jobs .job-xero[data-state="ok"]  { border-color: var(--green-line); }
 #section-jobs .job-xero[data-state="bad"] { border-color: var(--red-border); }
 #section-jobs .job-xero .job-actions { margin-top: 4px; }
+
+/* What Xero says about a job's invoice (phase 2) */
+#section-jobs .job-xi { display: inline-flex; flex-direction: column; align-items: flex-end; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--green); }
+#section-jobs .job-xi[data-tone="wait"] { color: var(--amber); }
+#section-jobs .job-xi[data-tone="bad"] { color: var(--red); }
+#section-jobs .job-xi small { font-weight: 400; color: var(--muted); font-family: var(--font-mono); }
+@container jobwrap (max-width: 560px) { #section-jobs .job-xi { align-items: flex-start; } }
+#section-jobs .job-xi a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Invoice in Xero (draft) form */
+#section-jobs .job-inv { border-top: 1px solid var(--green-line); }
+#section-jobs .job-inv .job-muted strong { color: var(--white); }

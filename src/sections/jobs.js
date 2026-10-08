@@ -6,8 +6,9 @@
    ║   course for. Design: docs/superpowers/specs/                     ║
    ║   2026-10-08-jobs-design.md. Logic: core/jobs.js.                 ║
    ║                                                                   ║
-   ║   Reads: Supabase jobs + gecko_clients, the profitability feed    ║
-   ║   (window.fetchProfitFeed), and once, on request, the old         ║
+   ║   Reads: Supabase jobs + gecko_clients, Xero (xero_invoices,      ║
+   ║   xero_repeating_invoices, synced hourly; the profitability feed  ║
+   ║   until Xero is connected), and once, on request, the old         ║
    ║   GeckoProjects SharePoint list. Writes: Supabase jobs only.      ║
    ║                                                                   ║
    ║   NOTE: no top-level `window` access (importable under Node).     ║
@@ -16,7 +17,8 @@
 import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
-import { STAGES, OPEN_STAGES, stageLabel, stageTotals, monthSales, salesHistory, PROJECT_STATUS } from '../core/jobs.js';
+import { STAGES, OPEN_STAGES, stageLabel, stageTotals, monthSales, salesHistory, PROJECT_STATUS,
+  xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, owed, refKey, previousMonth } from '../core/jobs.js';
 
 const JOB = {
   tab: 'jobs',
@@ -26,7 +28,9 @@ const JOB = {
   loading: false,
   error: null,
   jobs: [], clients: [], feed: null, feedNote: '', importing: false,
-  xero: null, xeroBusy: false   // public.xero_status: the direct Xero connection
+  xero: null, xeroBusy: false,  // public.xero_status: the direct Xero connection
+  inv: [], rep: [],             // xero_invoices (recent, unpaid, jobs' own) and xero_repeating_invoices
+  invoicing: null               // "Invoice in Xero" form: { id, key, opts, busy, error }
 };
 
 const money = n => '£' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -39,6 +43,15 @@ const monthName = m => new Date(m + '-01T00:00:00').toLocaleDateString('en-GB', 
 const shortMonth = m => new Date(m + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short' });
 const fmtDate = d => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 const myName = () => (els('userName')?.textContent || '').trim();
+const when = d => (d ? new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+
+/** Sales read Xero directly once it is connected and synced; until then, the daily feed. */
+const onXero = () => !!(JOB.xero?.connected && JOB.inv.length);
+function sales() {
+  const month = thisMonth();
+  if (onXero()) return xeroMonthSales(JOB.inv, JOB.rep, JOB.jobs, { month });
+  return JOB.feed ? monthSales(JOB.feed, JOB.jobs, { month }) : null;
+}
 
 // ─── Data ─────────────────────────────────────────────────────────────
 
@@ -69,6 +82,8 @@ async function load() {
     JOB.jobs = jobs;
     JOB.xero = xero;
     JOB.feed = feed;
+    if (xero?.connected) await loadXero(sb, jobs);
+    else { JOB.inv = []; JOB.rep = []; }
     const names = new Set(clients.filter(c => c.status !== 'Inactive').map(c => c.title).filter(Boolean));
     for (const j of jobs) names.add(j.client_name);
     JOB.clients = [...names].sort((a, b) => a.localeCompare(b));
@@ -78,6 +93,25 @@ async function load() {
     JOB.loading = false;
     render();
   }
+}
+
+const XERO_COLS = 'invoice_id,invoice_number,contact_name,invoice_date,due_date,status,reference,sub_total,total,amount_due,amount_paid,repeating_invoice_id';
+
+/** Six months of invoices, every unpaid one, and any older invoice a job names. Line items aren't needed here. */
+async function loadXero(sb, jobs) {
+  let from = thisMonth();
+  for (let i = 0; i < 5; i++) from = previousMonth(from);
+  const [recent, unpaid, rep] = await Promise.all([
+    sb.from('xero_invoices').select(XERO_COLS).gte('invoice_date', from + '-01').then(must),
+    sb.from('xero_invoices').select(XERO_COLS).eq('status', 'AUTHORISED').gt('amount_due', 0).then(must),
+    sb.from('xero_repeating_invoices').select('contact_name,status,reference,period,unit,next_date,end_date,sub_total').neq('status', 'DELETED').then(must)
+  ]);
+  const byId = new Map([...recent, ...unpaid].map(i => [i.invoice_id, i]));
+  const have = new Set([...byId.values()].map(i => refKey(i.invoice_number)));
+  const refs = [...new Set(jobs.flatMap(j => String(j.invoice_ref || '').split(/[,;]+/).map(r => r.trim())).filter(r => r && !have.has(refKey(r))))];
+  if (refs.length) for (const i of must(await sb.from('xero_invoices').select(XERO_COLS).in('invoice_number', refs))) byId.set(i.invoice_id, i);
+  JOB.inv = [...byId.values()];
+  JOB.rep = rep;
 }
 
 async function saveJob(id, f) {
@@ -180,7 +214,7 @@ function render() {
       : `<div class="job-error"><strong>Could not load jobs.</strong>${escapeHtml(e.message || e)}<button type="button" class="job-btn" data-job-act="reload">Retry</button></div>`;
     return;
   }
-  mount.innerHTML = (JOB.feedNote ? `<p class="job-note">${escapeHtml(JOB.feedNote)}</p>` : '') +
+  mount.innerHTML = (JOB.feedNote && !onXero() ? `<p class="job-note">${escapeHtml(JOB.feedNote)}</p>` : '') +
     (JOB.tab === 'sales' ? salesHtml() : jobsHtml());
   syncTableLabels(mount);
 }
@@ -190,11 +224,13 @@ function renderKpis() {
   if (!k) return;
   if (JOB.error) { k.innerHTML = ''; return; }
   const t = stageTotals(JOB.jobs);
-  const s = monthSales(JOB.feed, JOB.jobs, { month: thisMonth() });
+  const s = sales();
   const m = monthName(thisMonth());
+  const o = onXero() ? owed(JOB.inv, today()) : null;
   k.innerHTML = [
-    ['Invoiced this month', JOB.feed ? money(s.invoiced) : '—', JOB.feed ? `Xero, ${m}` : 'feed not available'],
-    ['Projected for the month', JOB.feed ? money(s.projected) : '—', 'invoiced + still to come'],
+    ['Invoiced this month', s ? money(s.invoiced) : '—', s ? `Xero, ${m}` : 'Xero not available'],
+    ['Projected for the month', s ? money(s.projected) : '—', 'invoiced + still to come'],
+    ...(o ? [['Owed to us', money(o.total), o.overdue ? `${money(o.overdue)} overdue · incl. VAT` : 'nothing overdue · incl. VAT']] : []),
     ['Ready to invoice', money(t.to_invoice.value), `${t.to_invoice.count} ${t.to_invoice.count === 1 ? 'job' : 'jobs'}`],
     ['Work in hand', money(t.agreed.value + t.in_progress.value), `${t.agreed.count + t.in_progress.count} agreed or in progress`],
     ['Quoted', money(t.quoted.value), `${t.quoted.count} awaiting a yes`]
@@ -243,6 +279,10 @@ function jobCard(j) {
     j.status === 'invoiced' ? [j.invoice_ref, j.invoiced_at ? `invoiced ${fmtDate(j.invoiced_at)}` : ''].filter(Boolean).join(' · ') : '',
     j.owner
   ].filter(Boolean).join(' · ');
+  const byNumber = JOB.byNumber || invoiceIndex(JOB.inv);
+  const xi = onXero() ? jobInvoices(j, byNumber, today()) : [];
+  const canInvoice = JOB.xero?.connected && ['agreed', 'in_progress', 'to_invoice'].includes(j.status);
+  const invoicing = JOB.invoicing?.id === j.id;
   return `<article class="job-card st-${escapeHtml(j.status)}">
     <div class="job-main">
       <div class="job-client">${escapeHtml(j.client_name)}</div>
@@ -253,17 +293,119 @@ function jobCard(j) {
       <strong>${j.value == null ? '<em>No value yet</em>' : escapeHtml(money(j.value))}</strong>
       <span class="job-meta"><b class="job-dot"></b>${escapeHtml(stageLabel(j.status))}${overdue ? ' <em class="job-late">overdue</em>' : ''}</span>
       ${meta ? `<span>${escapeHtml(meta)}</span>` : ''}
+      ${xi.map(x => xeroBadge(j, x)).join('')}
     </div>
     <div class="job-actions">
       ${NEXT[j.status].map(([to, label]) => `<button type="button" class="job-btn${to === 'invoiced' || to === 'to_invoice' ? ' win' : to === 'lost' ? ' ghost' : ' ghost'}" data-job-act="move" data-status="${to}" data-id="${j.id}">${label}</button>`).join('')}
+      ${canInvoice ? `<button type="button" class="job-btn ${j.status === 'to_invoice' ? 'win' : 'ghost'}" data-job-act="xero-invoice" data-id="${j.id}" aria-expanded="${invoicing}">${invoicing ? 'Close' : 'Invoice in Xero'}</button>` : ''}
       <button type="button" class="job-btn ghost" data-job-act="edit" data-id="${j.id}" aria-expanded="${editing}">${editing ? 'Close' : 'Edit'}</button>
     </div>
+    ${invoicing ? invoiceForm(j, byNumber) : ''}
     ${editing ? jobForm(j) : ''}
     ${!editing && j.notes ? `<details class="job-notes"><summary>Notes</summary><p>${escapeHtml(j.notes).replace(/\n/g, '<br>')}</p></details>` : ''}
   </article>`;
 }
 
+const XSTATE = {
+  paid: ['ok', 'Paid'], due: ['wait', 'Awaiting payment'], overdue: ['bad', 'Overdue'],
+  draft: ['wait', 'Draft in Xero'], void: ['bad', 'Voided in Xero'], missing: ['bad', 'Not found in Xero']
+};
+
+const xeroLink = inv => `https://go.xero.com/AccountsReceivable/View.aspx?InvoiceID=${encodeURIComponent(inv.invoice_id)}`;
+
+/** What Xero says about one of a job's invoice numbers. */
+function xeroBadge(j, { ref, state, invoice: inv }) {
+  const [tone, label] = XSTATE[state];
+  let detail = '';
+  if (state === 'paid') detail = `${inv.invoice_number} · ${money(inv.sub_total)} net`;
+  else if (state === 'due' || state === 'overdue') detail = `${money(inv.amount_due)} due ${fmtDate(String(inv.due_date || '').slice(0, 10))}`;
+  else if (state === 'missing') detail = ref;
+  else if (state === 'draft') detail = `${inv.invoice_number} · ${money(inv.sub_total)} net · approve it in Xero`;
+  else detail = inv.invoice_number;
+  const hint = j.status === 'to_invoice' && (state === 'paid' || state === 'due' || state === 'overdue') ? ' · raised' : '';
+  const name = inv ? `<a href="${escapeHtml(xeroLink(inv))}" target="_blank" rel="noopener">${escapeHtml(label)}</a>` : escapeHtml(label);
+  return `<span class="job-xi" data-tone="${tone}">${name}<small>${escapeHtml(detail + hint)}</small></span>`;
+}
+
+/** "Invoice in Xero": a DRAFT sales invoice for this job, checked and sent in Xero itself. */
+function invoiceForm(j, byNumber) {
+  const f = JOB.invoicing;
+  if (!f.opts) {
+    return `<div class="job-form job-inv"><p class="job-muted">${f.error ? escapeHtml(f.error) : 'Getting your Xero contacts and items…'}</p></div>`;
+  }
+  const { contacts, suggested, items } = f.opts;
+  const raised = jobRaised(j, byNumber);
+  const value = j.value == null ? '' : Math.max(0, Math.round((Number(j.value) - raised) * 100) / 100);
+  const item0 = items.find(i => i.code === 'Installation') ? 'Installation' : items[0]?.code;
+  const busy = f.busy ? 'disabled' : '';
+  return `<form class="job-form job-inv" data-job-invoice="${j.id}">
+      <strong class="job-form-title full">Draft invoice in Xero</strong>
+      <label class="wide">Xero contact <select name="contact_id" required ${busy}>
+        ${suggested ? '' : '<option value="">Choose the contact…</option>'}
+        ${contacts.map(c => `<option value="${escapeHtml(c.id)}" ${c.id === suggested ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+      </select></label>
+      <label class="wide">Item <select name="item_code" required ${busy}>
+        ${items.map(i => `<option value="${escapeHtml(i.code)}" ${i.code === item0 ? 'selected' : ''}>${escapeHtml(i.code)} (account ${escapeHtml(i.account)})</option>`).join('')}
+      </select></label>
+      <label class="full">Description (printed on the invoice) <textarea name="description" rows="3" required ${busy}>${escapeHtml(j.title)}</textarea></label>
+      <label>Amount £ (net) <input name="amount" type="number" min="0.01" step="0.01" required value="${escapeHtml(value)}" ${busy}></label>
+      <label class="wide">Reference <input name="reference" type="text" maxlength="255" value="${escapeHtml(j.title)}" ${busy}></label>
+      <p class="job-muted full">${raised ? `${escapeHtml(money(raised))} already invoiced for this job; the amount is what’s left. ` : ''}VAT is added by Xero from the item’s account. It is created as a <strong>draft</strong>: check it, approve and send it in Xero. Once approved and covering the job, the job moves to Invoiced by itself.</p>
+      ${f.error ? `<p class="job-note full">${escapeHtml(f.error)}</p>` : ''}
+      <div class="job-actions full">
+        <button type="submit" class="job-btn win" ${busy}>${f.busy ? 'Creating in Xero…' : 'Create draft in Xero'}</button>
+        <button type="button" class="job-btn ghost" data-job-act="xero-invoice" data-id="${j.id}">Cancel</button>
+      </div>
+    </form>`;
+}
+
+async function openInvoice(id) {
+  if (JOB.invoicing?.id === id) { JOB.invoicing = null; render(); return; }
+  JOB.invoicing = { id, key: crypto.randomUUID(), opts: null, busy: false, error: '' };
+  render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const { data, error } = await sb.functions.invoke('xero-invoice', { body: { action: 'options', job_id: id } });
+    if (error || data?.error) throw new Error(await fnError(error, data));
+    if (JOB.invoicing?.id !== id) return;
+    if (!data.contacts.length || !data.items.length) throw new Error('No invoices have synced from Xero yet, so there are no contacts or items to choose from. Press Sync now on Sales this month.');
+    JOB.invoicing.opts = data;
+  } catch (err) {
+    if (JOB.invoicing?.id === id) JOB.invoicing.error = 'Could not get the Xero contacts: ' + (err.message || err);
+  }
+  render();
+}
+
+async function createInvoice(id, f) {
+  const form = JOB.invoicing;
+  if (!form || form.id !== id || form.busy) return;
+  const amount = Number(f.amount.value);
+  const req = {
+    action: 'create', job_id: id, request_key: form.key,
+    contact_id: f.contact_id.value, item_code: f.item_code.value,
+    description: f.description.value.trim(), amount, reference: f.reference.value.trim()
+  };
+  if (!req.contact_id) { toast('Choose the Xero contact', 'warning'); return; }
+  if (!req.description) { toast('Describe the work for the invoice', 'warning'); return; }
+  if (!(amount > 0)) { toast('Enter the amount to invoice', 'warning'); return; }
+  const contact = form.opts.contacts.find(c => c.id === req.contact_id)?.name || '';
+  if (!window.confirm(`Create a draft invoice in Xero for ${contact}: ${money(amount)} + VAT?`)) return;
+  form.busy = true; form.error = ''; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const { data, error } = await sb.functions.invoke('xero-invoice', { body: req });
+    if (error || !data?.ok) throw new Error(await fnError(error, data));
+    JOB.invoicing = null;
+    toast(`Draft ${data.invoice_number || 'invoice'} created in Xero for ${money(amount)} + VAT. Check it, approve and send it in Xero.`, 'success', 9000);
+    await load();
+  } catch (err) {
+    if (JOB.invoicing) { JOB.invoicing.busy = false; JOB.invoicing.error = 'Xero did not create the invoice: ' + (err.message || err); }
+    render();
+  }
+}
+
 function jobsHtml() {
+  JOB.byNumber = invoiceIndex(JOB.inv);
   const t = stageTotals(JOB.jobs);
   const total = Object.values(t).reduce((s, x) => s + x.value, 0) || 1;
   const tiles = STAGES.map(([key, label]) => {
@@ -300,7 +442,6 @@ function jobsHtml() {
 function xeroHtml() {
   const x = JOB.xero;
   if (!x) return '';
-  const when = d => (d ? new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
   if (!x.connected) {
     return `<div class="job-panel job-xero"><div class="job-panel-head"><strong>Connect Xero directly</strong>
         <span class="job-muted">Read-only. Invoices and repeating invoices sync every hour, so jobs can be matched to their invoice.</span></div>
@@ -363,10 +504,12 @@ function xeroReturn() {
 }
 
 function salesHtml() {
-  if (!JOB.feed) return xeroHtml() + '<p class="job-empty">Xero sales come from the daily profitability feed, which isn’t available right now.</p>';
+  const s = sales();
+  if (!s) return xeroHtml() + '<p class="job-empty">Xero sales come from the daily profitability feed until Xero is connected, and the feed isn’t available right now.</p>';
   const month = thisMonth();
-  const s = monthSales(JOB.feed, JOB.jobs, { month });
-  const hist = salesHistory(JOB.feed, { month, n: 6 });
+  const direct = s.source === 'xero';
+  const hist = direct ? xeroHistory(JOB.inv, { month, n: 6 }) : salesHistory(JOB.feed, { month, n: 6 });
+  const o = direct ? owed(JOB.inv, today()) : null;
   const max = Math.max(1, ...hist.map(h => h.total), s.projected);
   const parts = [
     ['Invoiced so far', s.invoiced, 'inv'],
@@ -375,18 +518,21 @@ function salesHtml() {
     ['Jobs due to finish this month', s.dueThisMonth, 'due']
   ];
   const pTotal = s.projected || 1;
-  const updated = JOB.feed.generatedAt ? new Date(JOB.feed.generatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  const asOf = direct
+    ? `Xero, synced ${when(JOB.xero.last_sync_at)} (every hour)`
+    : `Xero figures as of ${JOB.feed.generatedAt ? when(JOB.feed.generatedAt) : ''} (the feed refreshes each morning)`;
   return xeroHtml() + `
     <div class="job-panel">
       <div class="job-panel-head"><strong>${escapeHtml(monthName(month))}: on course for ${escapeHtml(money(s.projected))}</strong>
-        <span class="job-muted">Xero figures as of ${escapeHtml(updated)} (the feed refreshes each morning)</span></div>
+        <span class="job-muted">${escapeHtml(asOf)}</span></div>
       <div class="job-proj-bar" role="img" aria-label="Projected ${escapeHtml(money(s.projected))}">
         ${parts.filter(([, v]) => v > 0).map(([l, v, c]) => `<i class="p-${c}" style="width:${(v / pTotal * 100).toFixed(2)}%" title="${escapeHtml(l)}: ${escapeHtml(money(v))}"></i>`).join('')}
       </div>
       <ul class="job-proj-legend">
         ${parts.map(([l, v, c]) => `<li><b class="p-${c}"></b><span>${escapeHtml(l)}</span><strong>${escapeHtml(money(v))}</strong></li>`).join('')}
       </ul>
-      <p class="job-muted">Invoiced so far: ${escapeHtml(money(s.recurring))} recurring, ${escapeHtml(money(s.oneOff))} one-off.${s.other ? ` VoIP Unlimited dealer commission (${escapeHtml(money(s.other))}) is not counted as client sales.` : ''}</p>
+      <p class="job-muted">Invoiced so far: ${escapeHtml(money(s.recurring))} recurring, ${escapeHtml(money(s.oneOff))} one-off. All figures net of VAT.${s.other ? ` VoIP Unlimited dealer commission (${escapeHtml(money(s.other))}) is not counted as client sales.` : ''}</p>
+      ${direct && s.drafts.length ? `<p class="job-muted">${s.drafts.length} draft ${s.drafts.length === 1 ? 'invoice' : 'invoices'} in Xero this month (${escapeHtml(money(s.draftValue))}): not counted until approved.</p>` : ''}
     </div>
 
     <div class="job-panel">
@@ -409,11 +555,15 @@ function salesHtml() {
       <ul class="job-proj-legend inline"><li><b class="p-rec"></b><span>Recurring</span></li><li><b class="p-oneoff"></b><span>One-off</span></li><li><b class="p-proj"></b><span>Still to come (projection)</span></li></ul>
     </div>
 
-    ${s.recurringToCome.length ? `<div class="job-panel">
+    ${s.recurringToCome.length ? (direct ? `<div class="job-panel">
+      <div class="job-panel-head"><strong>Repeating invoices still to be raised this month</strong><span class="job-muted">From Xero’s repeating invoice schedule</span></div>
+      <table class="job-table"><thead><tr><th>Client</th><th>Date</th><th class="num">Net</th></tr></thead>
+      <tbody>${s.recurringToCome.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(fmtDate(r.date))}</td><td class="num">${escapeHtml(money(r.amount))}</td></tr>`).join('')}</tbody></table>
+    </div>` : `<div class="job-panel">
       <div class="job-panel-head"><strong>Repeating invoices not yet raised this month</strong><span class="job-muted">Billed from a repeating invoice last month; shown at last month’s amount</span></div>
       <table class="job-table"><thead><tr><th>Client</th><th class="num">Last month</th></tr></thead>
       <tbody>${s.recurringToCome.map(r => `<tr><td>${escapeHtml(r.name)}</td><td class="num">${escapeHtml(money(r.amount))}</td></tr>`).join('')}</tbody></table>
-    </div>` : ''}
+    </div>`) : ''}
 
     <div class="job-panel">
       <div class="job-panel-head"><strong>Invoiced in ${escapeHtml(monthName(month))}</strong><span class="job-muted">${s.rows.length} ${s.rows.length === 1 ? 'client' : 'clients'}</span></div>
@@ -421,6 +571,18 @@ function salesHtml() {
       <tbody>${s.rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td class="num">${escapeHtml(money(r.recurring))}</td><td class="num">${escapeHtml(money(r.oneOff))}</td><td class="num"><strong>${escapeHtml(money(r.total))}</strong></td></tr>`).join('')}</tbody>
       <tfoot><tr><td colspan="1">Total</td><td class="num" data-label="Recurring">${escapeHtml(money(s.recurring))}</td><td class="num" data-label="One-off">${escapeHtml(money(s.oneOff))}</td><td class="num" data-label="Total"><strong>${escapeHtml(money(s.invoiced))}</strong></td></tr></tfoot></table>`
       : '<p class="job-muted">Nothing invoiced in Xero yet this month.</p>'}
+    </div>
+    ${o ? owedHtml(o) : ''}`;
+}
+
+/** Unpaid invoices by client, most overdue first (Xero's amount due, incl. VAT). */
+function owedHtml(o) {
+  if (!o.count) return '<div class="job-panel"><div class="job-panel-head"><strong>Owed to us</strong></div><p class="job-muted">Every approved invoice is paid.</p></div>';
+  return `<div class="job-panel">
+      <div class="job-panel-head"><strong>Owed to us: ${escapeHtml(money(o.total))}</strong>
+        <span class="job-muted">${o.count} unpaid ${o.count === 1 ? 'invoice' : 'invoices'}${o.overdue ? `, ${escapeHtml(money(o.overdue))} overdue` : ', none overdue'} · incl. VAT</span></div>
+      <table class="job-table"><thead><tr><th>Client</th><th class="num">Invoices</th><th>Oldest overdue</th><th class="num">Overdue</th><th class="num">Owed</th></tr></thead>
+      <tbody>${o.rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td class="num">${r.invoices}</td><td>${r.oldest ? `<span class="job-late">due ${escapeHtml(fmtDate(r.oldest))}</span>` : '—'}</td><td class="num">${r.overdue ? escapeHtml(money(r.overdue)) : '—'}</td><td class="num"><strong>${escapeHtml(money(r.due))}</strong></td></tr>`).join('')}</tbody></table>
     </div>`;
 }
 
@@ -443,6 +605,7 @@ async function onClick(event) {
   if (act === 'import') { importProjects(); return; }
   if (act === 'xero-connect') { xeroConnect(); return; }
   if (act === 'xero-sync') { xeroSync(); return; }
+  if (act === 'xero-invoice') { openInvoice(id); return; }
   if (act === 'delete') {
     if (!window.confirm('Delete this job?')) return;
     try {
@@ -457,6 +620,7 @@ async function onClick(event) {
 
 function onSubmit(event) {
   const form = event.target;
+  if (form.dataset.jobInvoice) { event.preventDefault(); createInvoice(Number(form.dataset.jobInvoice), form.elements); return; }
   if (!form.dataset.jobForm) return;
   event.preventDefault();
   saveJob(form.dataset.jobForm, form.elements);
