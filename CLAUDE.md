@@ -131,17 +131,13 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Jack): Update Client Balances, Create Timesheets Table Email, Archive Old Timesheet Entries.
 
 ## Open items (ask Philip before acting)
-- Kingdom Products "Monthly Renewal" £189.82/mo in Xero has no service line. Proposed
-  (8 Oct): IS + Backup £43.50 (stack), M365 £33.72 (m365), VoIP + FTTP £112.60 (other).
-  Costs from the Atera breakdown (USD): Acronis WS $3.90 + 82 GB × $0.04 + 3 × Webroot
-  $1.20 = $10.78/mo (≈ £8.14). VoIP Unlimited bill p1538966 (1 Oct 2026, reconciles to
-  £406.15): Voxone seat £10.00/mo, FTTP 1000/115 £42.60/mo, so VoIP + FTTP cost £82.60.
-  The bill does not name end clients; the unit prices are the same for every line.
-  Philip to add the three lines in Profitability.
-- Technix retainer: Xero (£215.90 = 194.10 support + 16.80 Exclaimer + 5.00 WFH Beckie)
-  is right; Philip to set the service line sell from £210.90 to £215.90 in the dashboard.
-
-Resolved 8 Oct (feed task maps updated the same day):
+Resolved 8 Oct:
+- Kingdom Products now has service lines matching Xero's £189.82 (IS + Backup 43.50 /
+  8.14 stack; M365 33.72 m365, cost from invoices; VoIP + FTTP 112.60 / 82.60 other).
+  Costs: Atera breakdown (Acronis + Webroot, USD) and VoIP Unlimited bill p1538966
+  (Voxone £10/seat, FTTP £42.60). Technix service lines match Xero (£215.90 retainer).
+- Atera breakdown Sep 2026: hosted storage summary 2,318 GB vs 2,312 GB per client
+  ($0.24 unallocated). Mentioned to Philip; not chased.
 - Exclaimer prints "Gecko IT Services" as end user on some client subscriptions; the
   feed now maps by account code: 7CF1C-80B → Onsite Commercial Services (15-user
   Standard), A9356-F39 → Gecko's own (10-user Starter), `shared: true`, shown as a Gecko
