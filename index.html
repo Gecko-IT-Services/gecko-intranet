@@ -15994,14 +15994,14 @@ function tshFilteredEntries() {
     rows = rows.filter(e => new Date(e.date + 'T00:00:00') >= ms);
   }
 
-  // Sort by date (most recent first by default)
+  // Sort by date, then by when the entry was logged (most recent first by default),
+  // so the entry just logged sits at the top of its day.
+  const loggedAt = e => Date.parse(e.created || '') || Number(e.id) || 0;
   rows.sort((a, b) => {
     const da = a.date || '';
     const db = b.date || '';
-    if (da === db) return 0;
-    // desc (default): newer dates first → b before a when b > a
-    if (TSH.sortDir === 'desc') return db.localeCompare(da);
-    return da.localeCompare(db);
+    const byDate = da === db ? loggedAt(a) - loggedAt(b) : da.localeCompare(db);
+    return TSH.sortDir === 'desc' ? -byDate : byDate;
   });
 
   return rows;
