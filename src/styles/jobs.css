@@ -162,3 +162,7 @@
 /* Invoice in Xero (draft) form */
 #section-jobs .job-inv { border-top: 1px solid var(--green-line); }
 #section-jobs .job-inv .job-muted strong { color: var(--white); }
+
+/* Invoiced view: awaiting payment / not matched / paid */
+#section-jobs .job-list-sub { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 18px 0 8px; color: var(--white); }
+#section-jobs .job-list-sub:first-child { margin-top: 4px; }

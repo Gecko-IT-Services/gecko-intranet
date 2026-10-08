@@ -237,6 +237,31 @@ function invoiceState(inv, today) {
   return { state: inv.due_date && String(inv.due_date) < today ? 'overdue' : 'due', invoice: inv };
 }
 
+/**
+ * Invoiced jobs, grouped for the Invoiced view (nothing is deleted: invoiced jobs are the record):
+ * - awaiting: an invoice still to be paid (or still a draft), most overdue first
+ * - unmatched: no Xero invoice found for it (number missing or not in Xero)
+ * - paid: every invoice paid, newest first; `recent` is those invoiced in the last `days` days
+ */
+export function invoicedGroups(jobs, byNumber, today, { days = 90 } = {}) {
+  const cutoff = new Date(today + 'T00:00:00Z');
+  cutoff.setUTCDate(cutoff.getUTCDate() - days);
+  const since = cutoff.toISOString().slice(0, 10);
+  const awaiting = [], unmatched = [], paid = [];
+  for (const j of jobs) {
+    if (j.status !== 'invoiced') continue;
+    const xs = jobInvoices(j, byNumber, today).filter(x => x.state !== 'void');
+    if (!xs.length || xs.some(x => x.state === 'missing')) unmatched.push(j);
+    else if (xs.every(x => x.state === 'paid')) paid.push(j);
+    else awaiting.push({ job: j, overdue: xs.some(x => x.state === 'overdue'),
+      due: xs.map(x => String(x.invoice?.due_date || '')).filter(Boolean).sort()[0] || '' });
+  }
+  awaiting.sort((a, b) => (b.overdue - a.overdue) || a.due.localeCompare(b.due));
+  const newest = (a, b) => String(b.invoiced_at || '').localeCompare(String(a.invoiced_at || ''));
+  unmatched.sort(newest); paid.sort(newest);
+  return { awaiting: awaiting.map(a => a.job), unmatched, paid, recent: paid.filter(j => String(j.invoiced_at || '9999') >= since) };
+}
+
 export const invoiceIndex = invoices => new Map(invoices.filter(i => i.invoice_number).map(i => [refKey(i.invoice_number), i]));
 
 /** Money owed to Gecko (gross, incl. VAT, as Xero's amount due): total, overdue, and per contact. */

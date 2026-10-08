@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { stageTotals, monthSales, salesHistory, previousMonth, STAGES, xeroMonthSales, xeroHistory, repeatDates, jobInvoices, jobRaised, invoiceIndex, owed } from '../src/core/jobs.js';
+import { stageTotals, monthSales, salesHistory, previousMonth, STAGES, xeroMonthSales, xeroHistory, repeatDates, jobInvoices, jobRaised, invoiceIndex, owed, invoicedGroups } from '../src/core/jobs.js';
 
 assert.equal(previousMonth('2026-01'), '2025-12');
 assert.equal(previousMonth('2026-10'), '2026-09');
@@ -111,6 +111,19 @@ assert.equal(jobRaised({ invoice_ref: 'INV-1, INV-5, INV-4' }, idx), 350, 'draft
 const dep = xeroMonthSales(invoices, [], [{ status: 'to_invoice', value: 1100, invoice_ref: 'INV-1, INV-5' }], { month: '2026-10' });
 assert.equal(dep.toInvoice, 1000);
 assert.equal(dep.drafts.length, 0);
+
+const g = invoicedGroups([
+  { id: 1, status: 'invoiced', invoice_ref: 'INV-1', invoiced_at: '2026-10-01' },
+  { id: 2, status: 'invoiced', invoice_ref: 'INV-2', invoiced_at: '2026-10-03' },
+  { id: 3, status: 'invoiced', invoice_ref: 'INV-7', invoiced_at: '2026-09-10' },
+  { id: 4, status: 'invoiced', invoice_ref: '', invoiced_at: '2026-09-01' },
+  { id: 5, status: 'invoiced', invoice_ref: 'INV-1', invoiced_at: '2026-05-01' },
+  { id: 6, status: 'to_invoice', invoice_ref: 'INV-1' }
+], idx, today);
+assert.deepEqual(g.awaiting.map(j => j.id), [3, 2], 'overdue first');
+assert.deepEqual(g.unmatched.map(j => j.id), [4]);
+assert.deepEqual(g.paid.map(j => j.id), [1, 5]);
+assert.deepEqual(g.recent.map(j => j.id), [1], 'paid in the last 90 days');
 
 const o = owed(invoices, today);
 assert.equal(o.total, 1980);

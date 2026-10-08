@@ -44,6 +44,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   states. Existing CSS tokens only (`--card`, `--border-dim`, `--green`, `--amber`,
   `--red`, `--muted`, `--radius`; fonts Schibsted Grotesk / JetBrains Mono); section
   CSS scoped under `#section-<key>`. `ponytail:` comments mark accepted ceilings.
+- Sidebar order (Philip, 8 Oct): Home (Overview) · Sales (Opportunities, Jobs, Profitability,
+  Clients) · Operations (Timesheets, Alerts, Backups) · Admin (Leave, Mileage, Settings).
 - Mobile: tables with ≥4 columns are turned into stacked cards by a container
   query (`syncTableLabels()` marks them `data-rt`); tab strips are scroll rails.
   Anything new inside a card-mode table must be covered too (see the `tfoot`
@@ -116,7 +118,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 ## Jobs (from 8 Oct 2026)
 - `src/sections/jobs.js` + `src/core/jobs.js` (tests `tests/jobs.mjs`); design note
   `2026-10-08-jobs-design.md`. One-off client work with a value, Quoted → Agreed → In progress →
-  To invoice → Invoiced (or Lost), in Supabase `jobs`. Replaces the old Projects board (off the
+  To invoice → Invoiced (or Lost), in Supabase `jobs`. Invoiced jobs are kept (the record); the Invoiced view
+  groups them Awaiting payment / Not matched / Paid (last 90 days, older on request). Replaces the old Projects board (off the
   menu since 6 Oct); its open projects can be brought across once (`source_ref`).
 - "Sales this month" reads Xero from the feed: invoiced so far + repeating invoices not yet raised
   (last month's recurring contacts missing this month) + jobs to invoice + jobs due this month.
