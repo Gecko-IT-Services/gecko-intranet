@@ -119,7 +119,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - `src/sections/jobs.js` + `src/core/jobs.js` (tests `tests/jobs.mjs`); design note
   `2026-10-08-jobs-design.md`. One-off client work with a value, Quoted → Agreed → In progress →
   To invoice → Invoiced (or Lost), in Supabase `jobs`. Invoiced jobs are kept (the record); the Invoiced view
-  groups them Awaiting payment / Not matched / Paid (last 90 days, older on request). Replaces the old Projects board (off the
+  groups them Awaiting payment / Not matched / Paid (last 90 days, older on request).
+  Tabs at the top (Jobs, Month overview, Still to come, Invoiced in <month>, Owed to us, Xero);
+  chart colours Gecko Green (recurring) & Indigo (one-off), striped = still to come (`--viz-*`). Replaces the old Projects board (off the
   menu since 6 Oct); its open projects can be brought across once (`source_ref`).
 - "Sales this month" reads Xero from the feed: invoiced so far + repeating invoices not yet raised
   (last month's recurring contacts missing this month) + jobs to invoice + jobs due this month.
