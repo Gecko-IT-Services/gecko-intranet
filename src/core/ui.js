@@ -4,3 +4,6 @@ export const escapeHtml = (s) => window.escapeHtml(s);
 
 /** Stamp phone-card labels onto any 4+ column table under `root` (see RESPONSIVE TABLES in index.html). */
 export const syncTableLabels = (root) => window.syncTableLabels?.(root);
+
+/** A client name that opens the client's page when clicked (any section). */
+export const clientLink = (name) => window.clientLink(name);

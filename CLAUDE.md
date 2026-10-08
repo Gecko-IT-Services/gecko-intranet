@@ -45,8 +45,13 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   states. Existing CSS tokens only (`--card`, `--border-dim`, `--green`, `--amber`,
   `--red`, `--muted`, `--radius`; fonts Schibsted Grotesk / JetBrains Mono); section
   CSS scoped under `#section-<key>`. `ponytail:` comments mark accepted ceilings.
-- Sidebar order (Philip, 8 Oct): Home (Overview) · Sales (Opportunities, Jobs, Profitability,
-  Clients) · Operations (Timesheets, Alerts, Backups) · Admin (Leave, Mileage, Settings).
+- Sidebar (Philip, 9 Oct, 8 entries): Home (Overview) · Sales (Clients, Opportunities, Jobs) · Operations
+  (Timesheets, Monitoring) · Admin (Team, Settings). **Hubs** group sections under one entry with the
+  shared tab strip: Clients = Directory + Profitability + client page; Monitoring = Backups + Alerts;
+  Team = Leave + Mileage (`HUBS`/`renderHub` in index.html). Every section uses the same tabs
+  (`src/core/tabs.js`, `.app-tabs` in `src/styles/app.css`). Any client name → `clientLink(name)` →
+  that client's page (`src/sections/client.js`). Navigate with `geckoGo(section, tab)`.
+  Design: `2026-10-09-gecko-hq-structure-design.md` (workflow answers and the stage plan).
 - Mobile: tables with ≥4 columns are turned into stacked cards by a container
   query (`syncTableLabels()` marks them `data-rt`); tab strips are scroll rails.
   Anything new inside a card-mode table must be covered too (see the `tfoot`

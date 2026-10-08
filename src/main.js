@@ -18,6 +18,8 @@ import * as alerts from './sections/alerts.js';
 import * as opportunities from './sections/opportunities.js';
 import * as jobs from './sections/jobs.js';
 import * as overview from './sections/overview.js';
+import * as client from './sections/client.js';
+import * as tabs from './core/tabs.js';
 import * as overviewCore from './core/overview.js';
 import * as cspCosts from './core/csp-costs.js';
 import * as profitFeed from './core/profit-feed.js';
@@ -30,8 +32,11 @@ window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
 window.GeckoSections.backups  = { init: backups.init };
 window.GeckoSections.alerts   = { init: alerts.init };
-window.GeckoSections.opportunities = { init: opportunities.init };
+window.GeckoSections.opportunities = { init: opportunities.init, show: opportunities.show };
 window.GeckoSections.jobs = { init: jobs.init, show: jobs.show };
+window.GeckoSections.client = { init: client.init, open: client.open, current: client.current };
+// The shared tab strip (the shell's hub strip uses it too).
+window.GeckoTabs = tabs;
 
 // Pure logic used by the Profitability section, which still lives in
 // index.html's classic script and therefore cannot import modules itself.
