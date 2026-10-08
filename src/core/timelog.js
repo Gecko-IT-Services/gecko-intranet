@@ -53,7 +53,7 @@ export function balancePreview(client, hours) {
   if (!client || !(Number(client.hoursPurchased) > 0)) return null;
   const before = round2(client.hoursRemaining ?? (client.hoursPurchased - client.hoursUsed));
   const after = round2(before - (Number(hours) || 0));
-  return { before, after, state: after < 0 ? 'over' : after < 1 ? 'crit' : after < 2 ? 'low' : 'ok' };
+  return { before, after, state: after < 0 ? 'over' : after <= 1 ? 'crit' : after < 2 ? 'low' : 'ok' };
 }
 
 // What the log shows as the description (Work Description; the Title for older rows).

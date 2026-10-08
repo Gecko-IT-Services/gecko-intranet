@@ -16,8 +16,8 @@ Philip, 9 Oct 2026: "works, now improve the SSA dashboard tab too" (after the Lo
 ## Rules (`src/core/ssa.js`, tests `tests/ssa.mjs`)
 - The balance is shown exactly as Timesheets holds it; nothing is recalculated (Philip's SSA rule).
 - Use = work entries in the last 90 days ÷ 3. System entries (renewal credits, adjustments) are not work.
-- Status: over (below zero) → renew (under 2h, or under a month at this pace) → low (under 20% of the
-  hours bought, or under two months) → on track; "not used lately" when nothing in 90 days.
+- Status: over (below zero) → renew (1h or less left; Philip, 9 Oct: red only at 1h or below, never from
+  the pace alone) → low (under 20% of the hours bought, or under two months at this pace) → on track; "not used lately" when nothing in 90 days.
 - Run-out date = today + hours left ÷ use per month. None when there is no recent use or the client is over.
 
 ## Not changed

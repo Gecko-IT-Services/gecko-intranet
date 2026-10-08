@@ -16069,7 +16069,7 @@ function tshClientPicked() {
     if (!s || !(s.hoursPurchased > 0)) hint.innerHTML = '<span>No SSA hours on this client</span>';
     else {
       const rem = Number(s.hoursRemaining);
-      const cls = rem < 1 ? 'hrs crit' : rem < 2 ? 'hrs low' : 'hrs';
+      const cls = rem <= 1 ? 'hrs crit' : rem < 2 ? 'hrs low' : 'hrs';
       hint.innerHTML = `<span class="${cls}">${tshFmtHours(rem)}</span> of ${tshFmtHours(s.hoursPurchased)} SSA hours left`;
     }
   }
@@ -16533,7 +16533,7 @@ function tshRenderSsa() {
     <div class="tsh-ssa-kpis">
       <div class="tsh-ssa-kpi"><span>SSA clients</span><strong>${t.clients}</strong><small>on the programme</small></div>
       <div class="tsh-ssa-kpi"><span>Hours left</span><strong>${tshFmtHours(t.remaining)}</strong><small>${t.overBy ? `<b class="red">${tshFmtHours(t.overBy)} over</b> across clients` : 'across all clients'}</small></div>
-      <div class="tsh-ssa-kpi ${t.attention ? 'red' : t.low ? 'amber' : 'green'}"><span>To renew</span><strong>${t.attention}</strong><small>${t.low ? `${t.low} more running low` : t.attention ? 'over or nearly out' : 'everyone has hours'}</small></div>
+      <div class="tsh-ssa-kpi ${t.attention ? 'red' : t.low ? 'amber' : 'green'}"><span>To renew</span><strong>${t.attention}</strong><small>${t.low ? `${t.low} more running low` : t.attention ? '1h or less left, or over' : 'everyone has over 1h'}</small></div>
       <div class="tsh-ssa-kpi"><span>Use per month</span><strong>${escapeHtml(window.GeckoTimelog?.fmtHours(t.perMonth) || tshFmtHours(t.perMonth))}</strong><small>average, last 90 days</small></div>
     </div>
     <div class="tsh-ssa-bar-tools">

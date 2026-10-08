@@ -4,7 +4,7 @@
    Per SSA client: the balance as Timesheets holds it (never recalculated here: Philip's rule),
    how fast hours are being used (the last 90 days of work, System credits/adjustments excluded),
    roughly when they run out, the last six months of use, and the last time work was logged.
-   The status says what needs doing: over → renew → low → ok, or quiet when nothing is being used. */
+   The status says what needs doing: over (below 0) → renew (1h or less) → low → ok, or quiet when nothing is being used. */
 
 const round2 = n => Math.round((Number(n) || 0) * 100) / 100;
 const day = d => String(d || '').slice(0, 10);
@@ -20,9 +20,8 @@ function monthKey(key, back) {
   return d.toISOString().slice(0, 7);
 }
 
-export const RENEW_HOURS = 2;      // under this many hours left: time to renew (as the client page and Overview flag it)
-export const RUNWAY_RENEW = 1;     // or under a month of hours at the current pace
-export const RUNWAY_LOW = 2;       // under two months: running low
+export const RENEW_HOURS = 1;      // 1 hour or less left: renew now (Philip, 9 Oct: red only at 1h or below)
+export const RUNWAY_LOW = 2;       // under two months at the current pace (or under 20% left): running low
 export const STATUS_ORDER = ['over', 'renew', 'low', 'ok', 'quiet'];
 const isWork = e => !/^system$/i.test(String(e.engineer || '').trim()) && Number(e.hours) > 0;
 
@@ -53,7 +52,7 @@ export function ssaBoard(clients, entries, today) {
     const byMonth = months.map(m => ({ month: m, hours: round2(mine.filter(e => day(e.date).slice(0, 7) === m).reduce((t, e) => t + Number(e.hours), 0)) }));
     const last = mine.filter(e => day(e.date) <= today).sort((a, b) => day(b.date).localeCompare(day(a.date)))[0] || null;
     const status = remaining < 0 ? 'over'
-      : remaining < RENEW_HOURS || (runway != null && runway < RUNWAY_RENEW) ? 'renew'
+      : remaining <= RENEW_HOURS ? 'renew'
       : remaining < purchased * 0.2 || (runway != null && runway < RUNWAY_LOW) ? 'low'
       : perMonth === 0 ? 'quiet' : 'ok';
     return {
