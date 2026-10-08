@@ -134,6 +134,11 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Plain-text client passwords exist in SharePoint (Gecko Docs/clients/Technix/…)
   and OneDrive copies. Cyber Essentials risk; move to a password manager.
 - The Ltd started June 2026. Xero months before that are empty and skipped.
+- Planned for w/c 12 Oct 2026 (Philip): (1) security sweep (start with the plain-text
+  passwords above); (2) Atera cost check: each month's Atera bill (SD-Enterprise +
+  AppCenter usage: Acronis, Webroot, Keeper, EndUser Remote; per-client breakdown xlsx)
+  against what each client is billed in Xero, to find seats/workloads billed to us but
+  not to a client, and trim the bill.
 
 Resolved 8 Oct:
 - Kingdom Products now has service lines matching Xero's £189.82 (IS + Backup 43.50 /
