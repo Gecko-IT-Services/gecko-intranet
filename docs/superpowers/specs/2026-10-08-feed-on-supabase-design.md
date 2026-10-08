@@ -1,6 +1,6 @@
 # Profitability feed on Supabase — design
 
-Status: built 8 Oct 2026 (Jack). Phase 6 of `2026-10-07-supabase-migration-design.md`.
+Status: built 8 Oct 2026 (Jack); site switched to the row the same day after Philip's first run (steps 1–3 done). Phase 6 of `2026-10-07-supabase-migration-design.md`.
 
 ## What moves
 `Gecko Dashboard Data/profitability-feed.json` (SharePoint Documents) becomes one row in
