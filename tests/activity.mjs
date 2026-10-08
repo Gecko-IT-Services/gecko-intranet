@@ -6,7 +6,7 @@ assert.deepEqual(followUpChoices(today), [['Tomorrow', '2026-10-09'], ['Next wee
 assert.equal(followUpChoices('2026-10-12')[1][1], '2026-10-19', 'on a Monday, next week is the following Monday');
 
 let r = cleanActivity({ kind: 'call', body: '  Spoke to   Chris about seats ', contact_id: '4', contact_name: 'Chris', follow_up_on: '2026-10-12' }, 'Cowan', today);
-assert.deepEqual(r.row, { client_name: 'Cowan', kind: 'call', body: 'Spoke to Chris about seats', contact_id: 4, contact_name: 'Chris', follow_up_on: '2026-10-12' });
+assert.deepEqual(r.row, { client_name: 'Cowan', kind: 'call', body: 'Spoke to Chris about seats', contact_id: 4, contact_name: 'Chris', follow_up_on: '2026-10-12', duration_min: null, direction: '' });
 assert.equal(cleanActivity({ kind: 'nonsense', body: 'x' }, 'C', today).row.kind, 'note');
 assert.equal(cleanActivity({ body: 'x' }, 'C', today).row.follow_up_on, null);
 assert.match(cleanActivity({ body: ' ' }, 'C', today).error, /Write a line/);
@@ -30,5 +30,27 @@ assert.equal(dueText('2026-10-06', today), '2 days overdue');
 assert.deepEqual(dueFollowUps(all, today).map(a => [a.id, a.late]), [[1, 2], [2, 0]], 'due by today only, not done, not future');
 assert.deepEqual(lastContact(t.items), { kind: 'call', at: '2026-10-07', by: 'Philip', with: 'Chris' });
 assert.equal(lastContact([{ kind: 'note', created_at: '2026-10-01' }]), null, 'a note is not contact');
+
+// Conversations: when, how long, which way (9 Oct)
+{
+  const { durationText } = await import('../src/core/activity.js');
+  const now = '2026-10-08T12:00:00Z';
+  let c = cleanActivity({ kind: 'call', body: 'Chat', happened_at: '2026-10-08T10:32:00Z', duration_min: '15', direction: 'out', now }, 'C', today);
+  assert.deepEqual([c.row.happened_at, c.row.duration_min, c.row.direction], ['2026-10-08T10:32:00.000Z', 15, 'out']);
+  assert.equal(cleanActivity({ kind: 'note', body: 'x', direction: 'in' }, 'C', today).row.direction, '', 'notes have no direction');
+  assert.equal('happened_at' in cleanActivity({ body: 'x' }, 'C', today).row, false, 'no time given: the database stamps now');
+  assert.match(cleanActivity({ body: 'x', happened_at: '2026-10-09T10:00:00Z', now }, 'C', today).error, /future/);
+  assert.match(cleanActivity({ body: 'x', duration_min: '-3' }, 'C', today).error, /minutes/);
+  const tl = timeline([
+    { id: 1, client_name: 'C', kind: 'call', body: 'logged later', created_at: '2026-10-08T12:00:00Z', happened_at: '2026-10-07T09:00:00Z' },
+    { id: 2, client_name: 'C', kind: 'email', body: 'b', created_at: '2026-10-07T15:00:00Z', happened_at: '2026-10-07T15:00:00Z' }
+  ], 'C');
+  assert.deepEqual(tl.items.map(a => a.id), [2, 1], 'ordered by when it happened, not when it was typed');
+  assert.equal(lastContact(tl.items).at, '2026-10-07');
+  assert.equal(durationText(15), '15 min');
+  assert.equal(durationText(65), '1 h 5 min');
+  assert.equal(durationText(60), '1 h');
+  assert.equal(durationText(null), '');
+}
 
 console.log('activity: all tests passed');

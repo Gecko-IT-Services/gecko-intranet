@@ -34,16 +34,36 @@ export function cleanActivity(input, clientName, today) {
   if (!body) return { error: 'Write a line about what happened or what’s needed.' };
   if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) return { error: 'The follow-up date isn’t a date.' };
   if (due && today && due < today) return { error: 'The follow-up date is in the past.' };
+  // When it happened: a local date-time from the form ("2026-10-08T10:32"), never in the future; default now.
+  let happened = null;
+  if (input.happened_at) {
+    const d = new Date(input.happened_at);
+    if (Number.isNaN(d.getTime())) return { error: 'When it happened isn’t a date and time.' };
+    if (input.now && d.getTime() > new Date(input.now).getTime() + 5 * 60000) return { error: 'When it happened is in the future.' };
+    happened = d.toISOString();
+  }
+  const mins = input.duration_min === '' || input.duration_min == null ? null : Math.round(Number(input.duration_min));
+  if (mins != null && (!Number.isFinite(mins) || mins < 0 || mins > 1440)) return { error: 'How long should be minutes, e.g. 15.' };
+  const direction = ['in', 'out'].includes(input.direction) && ['call', 'email'].includes(kind) ? input.direction : '';
   return { row: { client_name: client, kind, body: body.slice(0, 2000), contact_id: input.contact_id ? Number(input.contact_id) : null,
-    contact_name: String(input.contact_name || '').trim(), follow_up_on: due || null } };
+    contact_name: String(input.contact_name || '').trim(), follow_up_on: due || null,
+    ...(happened ? { happened_at: happened } : {}), duration_min: mins || null, direction } };
 }
 
 /** This client's activity, newest first; open follow-ups (soonest first) separately. */
 export function timeline(all, clientName) {
   const mine = (all || []).filter(a => sameClient(a.client_name, clientName));
   const open = mine.filter(a => a.follow_up_on && !a.follow_up_done_at).sort((a, b) => day(a.follow_up_on).localeCompare(day(b.follow_up_on)));
-  const items = mine.slice().sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const when = a => String(a.happened_at || a.created_at || '');
+  const items = mine.slice().sort((a, b) => when(b).localeCompare(when(a)));
   return { open, items };
+}
+
+/** "15 min", "1 h 5 min" (calls and meetings). */
+export function durationText(m) {
+  const n = Number(m);
+  if (!n) return '';
+  return n < 60 ? `${n} min` : `${Math.floor(n / 60)} h${n % 60 ? ` ${n % 60} min` : ''}`;
 }
 
 /** "today", "tomorrow", "in 3 days", "2 days overdue". */
@@ -64,6 +84,7 @@ export function dueFollowUps(all, today) {
 
 /** When the client was last in touch (a call, email, meeting or visit), for the client header. */
 export function lastContact(items) {
-  const t = (items || []).filter(a => a.kind !== 'note').sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
-  return t ? { kind: t.kind, at: day(t.created_at), by: t.created_by || '', with: t.contact_name || '' } : null;
+  const when = a => String(a.happened_at || a.created_at || '');
+  const t = (items || []).filter(a => a.kind !== 'note').sort((a, b) => when(b).localeCompare(when(a)))[0];
+  return t ? { kind: t.kind, at: day(when(t)), by: t.created_by || '', with: t.contact_name || '' } : null;
 }

@@ -21,12 +21,14 @@ import { previousMonth, stageLabel } from '../core/jobs.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { newOpportunity } from '../core/opportunities.js';
 import { ROLES, cleanContact, contactsFor, mainContact, duplicateEmail } from '../core/contacts.js';
-import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, addDays } from '../core/activity.js';
+import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, addDays, durationText } from '../core/activity.js';
+import { cleanProfile, profileFor, addressLine, mapLinks, telHref, mailIdentity, mailSearches, clientMail, stamp } from '../core/profile.js';
+import { graphFetch } from '../core/graph.js';
 
 // adding: the New opportunity form is open (with what's been picked so far); saving: one insert at a time.
 // contactEdit: null, 'new' or the id of the contact being edited.
 const CL = { name: '', tab: 'summary', data: null, loading: false, error: null, dir: '', seq: 0, adding: null, saving: false, contactEdit: null };
-const TABS = ['summary', 'activity', 'contacts', 'invoices', 'services', 'support', 'jobs', 'opportunities'];
+const TABS = ['summary', 'activity', 'emails', 'contacts', 'invoices', 'services', 'support', 'jobs', 'opportunities'];
 
 const els = id => document.getElementById(id);
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
@@ -53,7 +55,7 @@ export function open(name, tab = 'summary') {
   CL.name = name;
   CL.dir = '';
   CL.tab = TABS.includes(tab) ? tab : 'summary';
-  if (!same) { CL.data = null; CL.adding = null; CL.contactEdit = null; CL.actDraft = null; load(); }
+  if (!same) { CL.data = null; CL.adding = null; CL.contactEdit = null; CL.actDraft = null; CL.profileEdit = false; CL.mail = null; load(); }
   render();
 }
 
@@ -70,7 +72,7 @@ async function load() {
     let from = today().slice(0, 7);
     for (let i = 0; i < 12; i++) from = previousMonth(from);
     const q = (table, cols = '*') => settle(sb.from(table).select(cols).then(must));
-    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products, contacts, activity] = await Promise.all([
+    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products, contacts, activity, profiles] = await Promise.all([
       q('gecko_clients', 'title,status,contract_start,notes'),
       q('gecko_services', 'title,client_name,category,cost_per_month,sell_per_month'),
       q('ssa_clients'),
@@ -82,7 +84,8 @@ async function load() {
       q('client_domains', 'client_name,domain'),
       q('opportunity_products', 'key,family,name,unit_price,price_unit,default_mrr,default_one_off,unit_note,active,sort'),
       q('client_contacts'),
-      q('client_activity')
+      q('client_activity'),
+      q('client_profiles')
     ]);
     // SSA: this client's balance (opening + changes, as Timesheets has it) and its entries
     const ssaRow = ssaClients.v?.find(c => sameClient(c.name, name)) || null;
@@ -108,11 +111,14 @@ async function load() {
       hasSsa: !!ssaRow,
       contacts: contacts.v ? contactsFor(contacts.v, name) : null,
       activity: activity.v ? timeline(activity.v, name) : null,
+      details: profiles.v ? profileFor(profiles.v, name) : null, detailsLoaded: !!profiles.v,
+      domainList: (domains.v || []).filter(d => sameClient(d.client_name, name)).map(d => d.domain),
       products: (products.v || []).filter(x => x.active !== false).sort((a, b) => String(a.family).localeCompare(String(b.family)) || (a.sort ?? 0) - (b.sort ?? 0)),
       errors: {
         xero: recent.e?.message || unpaid.e?.message || '', services: services.e?.message || '', ssa: ssaError?.message || '',
         jobs: jobs.e?.message || '', opps: opps.e?.message || '', dealer: dealer.e?.message || '',
         contacts: contacts.e ? (/client_contacts/.test(contacts.e.message || '') ? 'the contacts table isn’t in the database yet (it arrives with this update)' : contacts.e.message) : '',
+        details: profiles.e ? (/client_profiles/.test(profiles.e.message || '') ? 'the client details table isn’t in the database yet (it arrives with this update)' : profiles.e.message) : '',
         activity: activity.e ? (/client_activity/.test(activity.e.message || '') ? 'the activity table isn’t in the database yet (it arrives with this update)' : activity.e.message) : ''
       }
     };
@@ -144,7 +150,7 @@ function render() {
     return;
   }
   if (!p) { mount.innerHTML = `<p class="cl-empty">Loading ${escapeHtml(CL.name)}…</p>`; return; }
-  const pane = { summary: summaryHtml, activity: activityHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
+  const pane = { summary: summaryHtml, activity: activityHtml, emails: emailsHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
   mount.innerHTML = `<div class="app-pane ${CL.dir}">${pane(p, CL.data.errors)}</div>`;
   CL.dir = '';
   syncTableLabels(mount);
@@ -155,13 +161,15 @@ function headHtml(p) {
   const status = p?.gecko?.status || (p ? 'Not on Profitability' : '');
   const main = mainContact(CL.data?.contacts, { name: s?.contact || '', email: s?.email || '' });
   const last = lastContact(CL.data?.activity?.items);
+  const addr = addressLine(CL.data?.details), maps = mapLinks(CL.data?.details), office = telHref(CL.data?.details?.office_phone);
   const due = (CL.data?.activity?.open || []).filter(a => String(a.follow_up_on) <= today());
   const contact = main ? [main.name, main.role && `(${main.role})`].filter(Boolean).join(' ') : '', email = main?.email || '', phone = main?.phone || '';
   const kpi = (label, value, sub, cls = '') => `<div class="cl-kpi ${cls}"><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${sub}</small></div>`;
   const tabs = [
     { key: 'summary', label: 'Summary', badge: p?.flags.filter(f => f.level !== 'info').length || '' , warn: p?.flags.some(f => f.level === 'red') },
     { key: 'activity', label: 'Activity', badge: due.length || '', warn: due.some(a => String(a.follow_up_on) < today()) },
-    { key: 'contacts', label: 'Contacts', badge: CL.data?.contacts?.length || '' },
+    { key: 'emails', label: 'Emails' },
+    { key: 'contacts', label: 'Details & contacts', badge: CL.data?.contacts?.length || '' },
     { key: 'invoices', label: 'Invoices', badge: x?.overdue > 0 ? 'overdue' : '', warn: x?.overdue > 0 },
     { key: 'services', label: 'Services & profit' },
     { key: 'support', label: 'Support hours', badge: s && s.remaining < 2 ? hours(s.remaining) : '', warn: s && s.remaining <= 0 },
@@ -176,9 +184,11 @@ function headHtml(p) {
         <p>${[status && `<span class="cl-chip">${escapeHtml(status)}</span>`,
               contact && escapeHtml(contact),
               email && `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`,
-              phone && `<a href="tel:${escapeHtml(phone.replace(/[^\d+]/g, ''))}">${escapeHtml(phone)}</a>`,
+              phone && `<a href="tel:${escapeHtml(telHref(phone))}" data-cl-call="main">${escapeHtml(phone)}</a>`,
               p?.domains?.length ? escapeHtml(p.domains.join(', ')) : '',
               p?.gecko?.contract_start ? `client since ${escapeHtml(fmtDate(p.gecko.contract_start))}` : '',
+              addr ? `<a href="${escapeHtml(maps.directions)}" target="_blank" rel="noopener" title="Directions in Google Maps">${escapeHtml(addr)}</a>` : '',
+              office ? `<a href="tel:${escapeHtml(office)}" data-cl-call="office" title="Call the office (VoxOne, or whatever handles phone links on this computer)">☎ ${escapeHtml(CL.data.details.office_phone)}</a>` : '',
               last ? `last in touch ${escapeHtml(fmtDate(last.at))} (${escapeHtml(last.kind)}${last.with ? ' with ' + escapeHtml(last.with) : ''})` : ''].filter(Boolean).join(' · ')}</p>
       </div>
       <div class="cl-id-actions">
@@ -323,9 +333,13 @@ function activityHtml() {
   const t = today();
   const contacts = CL.data.contacts || [];
   const draft = CL.actDraft || { kind: 'call', follow: '' };
-  const add = panel('Log activity', `<form class="cl-form cl-act-form" data-cl-form="activity" novalidate>
+  const calling = CL.actDraft?.callStarted ? `<p class="cl-calling">☎ Calling${CL.actDraft.callWith ? ' ' + escapeHtml(CL.actDraft.callWith) : ''} since ${escapeHtml(new Date(CL.actDraft.callStarted).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))}. When you’re done, note what was said and save; how long is filled in for you.</p>` : '';
+  const add = calling + panel('Log activity', `<form class="cl-form cl-act-form" data-cl-form="activity" novalidate>
       <div class="cl-kinds wide" role="radiogroup" aria-label="What kind">${KINDS.map(([k, l]) => `<label class="cl-kind"><input type="radio" name="kind" value="${k}"${draft.kind === k ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
       <label class="wide">What happened / what’s needed <textarea name="body" rows="2" maxlength="2000" placeholder="e.g. Chris wants 3 more Hornet licences from November; send a quote">${escapeHtml(draft.body || '')}</textarea></label>
+      <label>When <input type="datetime-local" name="happened_at" max="${escapeHtml(localNow())}" value="${escapeHtml(draft.when || localNow())}"></label>
+      <label>How long (min) <input type="number" name="duration_min" min="0" max="1440" step="1" inputmode="numeric" value="${escapeHtml(draft.duration ?? '')}" placeholder="calls, meetings"></label>
+      <label>Which way <select name="direction"><option value="">—</option><option value="out"${draft.direction === 'out' ? ' selected' : ''}>We called / wrote</option><option value="in"${draft.direction === 'in' ? ' selected' : ''}>They called / wrote</option></select></label>
       ${contacts.length ? `<label>With <select name="contact_id"><option value="">—</option>${contacts.map(c => `<option value="${c.id}"${String(draft.contact_id) === String(c.id) ? ' selected' : ''}>${escapeHtml(c.name || c.email)}</option>`).join('')}</select></label>` : ''}
       <div class="cl-follow wide"><span>Follow up</span>
         <button type="button" class="cl-chip-btn${!draft.follow ? ' on' : ''}" data-cl-follow="">No</button>
@@ -344,7 +358,7 @@ function activityHtml() {
   }).join('')}</ul>`) : '';
   const items = a.items.length ? `<ol class="cl-tl">${a.items.map(x => `<li class="k-${escapeHtml(x.kind)}">
       <span class="cl-tl-kind">${escapeHtml(KIND_LABEL[x.kind] || x.kind)}</span>
-      <div><p>${escapeHtml(x.body)}</p><small>${escapeHtml(fmtDate(x.created_at))}${x.created_by ? ' · ' + escapeHtml(x.created_by) : ''}${x.contact_name ? ' · with ' + escapeHtml(x.contact_name) : ''}${x.follow_up_on ? ` · follow up ${escapeHtml(fmtDate(x.follow_up_on))}${x.follow_up_done_at ? ' ✓ done' : ''}` : ''}</small></div>
+      <div><p>${escapeHtml(x.body)}</p><small>${escapeHtml(stamp(x.happened_at || x.created_at))}${x.direction ? ' · ' + (x.direction === 'in' ? '↙ incoming' : '↗ outgoing') : ''}${x.duration_min ? ' · ' + escapeHtml(durationText(x.duration_min)) : ''}${x.created_by ? ' · ' + escapeHtml(x.created_by) : ''}${x.contact_name ? ' · with ' + escapeHtml(x.contact_name) : ''}${x.follow_up_on ? ` · follow up ${escapeHtml(fmtDate(x.follow_up_on))}${x.follow_up_done_at ? ' ✓ done' : ''}` : ''}</small></div>
       <button type="button" class="cl-link muted" data-cl-act="act-del" data-id="${x.id}" aria-label="Remove this entry">Remove</button>
     </li>`).join('')}</ol>` : note('Nothing logged yet. Log calls, emails, meetings and visits here so you both know where things stand.');
   return add + fu + panel(`Timeline (${a.items.length})`, items);
@@ -355,8 +369,12 @@ async function saveActivity(form) {
   const f = form.elements;
   const cid = f.contact_id?.value || '';
   const c = (CL.data.contacts || []).find(x => String(x.id) === cid);
-  CL.actDraft = { kind: f.kind.value, body: f.body.value, contact_id: cid, follow: f.follow_up_on.value };
-  const { row, error } = cleanActivity({ kind: f.kind.value, body: f.body.value, contact_id: cid, contact_name: c ? (c.name || c.email) : '', follow_up_on: f.follow_up_on.value }, CL.name, today());
+  const started = CL.actDraft?.callStarted;
+  let duration = f.duration_min.value;
+  if (duration === '' && started && f.kind.value === 'call') duration = String(Math.max(1, Math.round((Date.now() - started) / 60000)));
+  CL.actDraft = { ...(CL.actDraft || {}), kind: f.kind.value, body: f.body.value, contact_id: cid, follow: f.follow_up_on.value, when: f.happened_at.value, duration, direction: f.direction.value };
+  const { row, error } = cleanActivity({ kind: f.kind.value, body: f.body.value, contact_id: cid, contact_name: c ? (c.name || c.email) : '', follow_up_on: f.follow_up_on.value,
+    happened_at: f.happened_at.value ? new Date(f.happened_at.value).toISOString() : '', duration_min: duration, direction: f.direction.value, now: new Date().toISOString() }, CL.name, today());
   if (error) { toast(error, 'warning'); return; }
   CL.saving = true; render();
   try {
@@ -390,6 +408,146 @@ async function activityAct(act, id) {
   } finally { render(); }
 }
 
+// ─── Details: address + map, office number, website, visit notes (Philip, 9 Oct) ───
+
+const localNow = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+
+function detailsHtml() {
+  if (!CL.data.detailsLoaded) return panel('Address & office', failed('Client details', CL.data.errors.details || 'unknown error'));
+  const p = CL.data.details;
+  if (CL.profileEdit || !p) {
+    if (!CL.profileEdit) return panel('Address & office', note('No address or office number yet.'), '<button type="button" class="cl-btn" data-cl-act="profile-edit">+ Add address & office number</button>');
+    const v = p || {};
+    return panel('Address & office', `<form class="cl-form" data-cl-form="profile" novalidate>
+        <label class="wide">Address <input name="address_line1" type="text" maxlength="120" autocomplete="off" value="${escapeHtml(v.address_line1 || '')}" placeholder="e.g. Unit 4, Riverside Business Park"></label>
+        <label class="wide">Address line 2 <input name="address_line2" type="text" maxlength="120" autocomplete="off" value="${escapeHtml(v.address_line2 || '')}"></label>
+        <label>Town <input name="town" type="text" maxlength="80" value="${escapeHtml(v.town || '')}"></label>
+        <label>County <input name="county" type="text" maxlength="80" value="${escapeHtml(v.county || '')}"></label>
+        <label>Postcode <input name="postcode" type="text" maxlength="10" autocapitalize="characters" value="${escapeHtml(v.postcode || '')}" placeholder="e.g. MK40 1AA"></label>
+        <label>Office number <input name="office_phone" type="tel" maxlength="40" value="${escapeHtml(v.office_phone || '')}" placeholder="e.g. 01234 567890"></label>
+        <label class="wide">Website <input name="website" type="text" maxlength="200" value="${escapeHtml(v.website || '')}" placeholder="e.g. acme.co.uk"></label>
+        <label class="wide">Visiting <input name="visit_notes" type="text" maxlength="1000" value="${escapeHtml(v.visit_notes || '')}" placeholder="e.g. Park at the back, ask for Chris at reception. No passwords or alarm codes here."></label>
+        <div class="cl-form-actions wide">
+          <button type="button" class="cl-btn ghost" data-cl-act="profile-cancel">Cancel</button>
+          <button type="submit" class="cl-btn"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </form>`);
+  }
+  const m = mapLinks(p), tel = telHref(p.office_phone), addr = addressLine(p);
+  const lines = [p.address_line1, p.address_line2, p.town, p.county, p.postcode].filter(Boolean);
+  return panel('Address & office', `<div class="cl-details">
+      <div class="cl-details-info">
+        ${lines.length ? `<address>${lines.map(escapeHtml).join('<br>')}</address>` : note('No address yet.')}
+        <div class="cl-details-acts">
+          ${tel ? `<a class="cl-btn" href="tel:${escapeHtml(tel)}" data-cl-call="office">☎ Call ${escapeHtml(p.office_phone)}</a>` : ''}
+          ${m ? `<a class="cl-btn ghost" href="${escapeHtml(m.directions)}" target="_blank" rel="noopener">Directions</a><a class="cl-btn ghost" href="${escapeHtml(m.search)}" target="_blank" rel="noopener">Google Maps</a>` : ''}
+          ${p.website ? `<a class="cl-btn ghost" href="${escapeHtml(p.website)}" target="_blank" rel="noopener">Website</a>` : ''}
+        </div>
+        ${p.visit_notes ? `<p class="cl-visit"><strong>Visiting:</strong> ${escapeHtml(p.visit_notes)}</p>` : ''}
+        ${addr && !m?.embed ? '<p class="cl-muted">No map: the postcode wasn’t found. Check it and save again.</p>' : ''}
+      </div>
+      ${m?.embed ? `<div class="cl-map"><iframe title="Map of ${escapeHtml(CL.name)}" src="${escapeHtml(m.embed)}" loading="lazy" referrerpolicy="no-referrer"></iframe></div>` : ''}
+    </div>`, '<button type="button" class="cl-link" data-cl-act="profile-edit">Edit</button>');
+}
+
+/** The postcode's coordinates for the map (postcodes.io, free, no key). Null when it can't be found. */
+async function geocode(postcode) {
+  if (!postcode) return null;
+  try {
+    const r = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode.replace(/\s+/g, ''))}`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j?.result ? { lat: j.result.latitude, lon: j.result.longitude } : null;
+  } catch { return null; }
+}
+
+async function saveProfile(form) {
+  if (CL.saving) return;
+  const f = form.elements;
+  const { row, error } = cleanProfile(Object.fromEntries(['address_line1', 'address_line2', 'town', 'county', 'postcode', 'office_phone', 'website', 'visit_notes'].map(k => [k, f[k].value])), CL.name);
+  if (error) { toast(error, 'warning', 6000); return; }
+  CL.saving = true; render();
+  try {
+    const old = CL.data.details;
+    const geo = row.postcode && row.postcode !== old?.postcode ? await geocode(row.postcode) : (row.postcode ? { lat: old?.lat, lon: old?.lon } : null);
+    const full = { ...row, lat: geo?.lat ?? null, lon: geo?.lon ?? null, modified_by: (els('userName')?.textContent || '').trim() };
+    const sb = await connectSupabase({ interactive: true });
+    CL.data.details = old
+      ? must(await sb.from('client_profiles').update(full).eq('id', old.id).select('*').single())
+      : must(await sb.from('client_profiles').insert(full).select('*').single());
+    CL.profileEdit = false;
+    toast(row.postcode && !geo?.lat ? 'Saved. The postcode wasn’t found, so there’s no map.' : 'Saved', row.postcode && !geo?.lat ? 'warning' : 'success', 5000);
+  } catch (err) {
+    toast('Could not save: ' + (err.message || err), 'error', 7000);
+  } finally { CL.saving = false; render(); }
+}
+
+// ─── Emails: recent correspondence (read-only) from your mailbox and support@ ───
+
+const SUPPORT_MAILBOX = 'support@gecko-it.com';
+const MAIL_SELECT = 'subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,webLink,internetMessageId';
+
+async function loadMail(interactive = false) {
+  const id = mailIdentity({ contacts: CL.data.contacts || [], domains: CL.data.domainList || [], website: CL.data.details?.website || '' });
+  const terms = mailSearches(id);
+  if (!terms.length) { CL.mail = { state: 'none' }; render(); return; }
+  CL.mail = { state: 'loading', terms }; render();
+  const boxes = [['me', '/me/messages'], ['support', `/users/${encodeURIComponent(SUPPORT_MAILBOX)}/messages`]];
+  const messages = [], errors = [];
+  let consent = false;
+  await Promise.all(boxes.flatMap(([box, path]) => terms.map(async term => {
+    try {
+      const res = await graphFetch(`${path}?$search=${encodeURIComponent(`"${term}"`)}&$top=25&$select=${MAIL_SELECT}`, { scopes: ['Mail.Read.Shared'], interactive });
+      for (const m of res.value || []) messages.push({
+        id: m.id, mailbox: box, subject: m.subject || '(no subject)', from: m.from?.emailAddress?.address || '',
+        fromName: m.from?.emailAddress?.name || '', to: [...(m.toRecipients || []), ...(m.ccRecipients || [])].map(r => r.emailAddress?.address || ''),
+        received: m.receivedDateTime, preview: m.bodyPreview || '', webLink: m.webLink || '', internetMessageId: m.internetMessageId || ''
+      });
+    } catch (err) {
+      if (err?.code === 'CONSENT_REQUIRED') consent = true;
+      else errors.push(`${box === 'me' ? 'your mailbox' : SUPPORT_MAILBOX}: ${/403|Access is denied/i.test(err.message || '') ? 'no access' : (err.message || err)}`);
+    }
+  })));
+  CL.mail = consent && !messages.length ? { state: 'consent' } : { state: 'ok', list: clientMail(messages, id), errors: [...new Set(errors)], terms, at: Date.now() };
+  render();
+}
+
+function emailsHtml() {
+  const m = CL.mail;
+  if (!m) { setTimeout(() => { if (!CL.mail && CL.tab === 'emails') loadMail(false); }, 0); return panel('Emails', note('Looking for emails…')); }
+  if (m.state === 'loading') return panel('Emails', note(`Searching your mailbox and ${SUPPORT_MAILBOX} for ${m.terms.join(', ')}…`));
+  if (m.state === 'none') return panel('Emails', note('Add a contact with an email address, or the website on Details & contacts, so emails can be found.'));
+  if (m.state === 'consent') return panel('Emails', `<p class="cl-muted">Reading emails needs your OK once (the same permission Backups and Alerts use).</p><button type="button" class="cl-btn" data-cl-act="mail-consent">Allow mail access</button>`);
+  const rows = m.list.length ? `<ul class="cl-mail">${m.list.map((x, i) => `<li>
+      <span class="cl-mail-dir ${x.direction}" title="${x.direction === 'in' ? 'From them' : 'From us'}">${x.direction === 'in' ? '↙' : '↗'}</span>
+      <div class="cl-mail-body">
+        <strong>${escapeHtml(x.subject)}</strong>
+        <small>${escapeHtml(stamp(x.received))} · ${x.direction === 'in' ? 'from ' + escapeHtml(x.fromName || x.from) : 'to ' + escapeHtml(x.to.filter(Boolean).slice(0, 2).join(', '))} · ${x.mailbox === 'me' ? 'your mailbox' : 'support@'}</small>
+        ${x.preview ? `<p>${escapeHtml(x.preview.slice(0, 220))}${x.preview.length > 220 ? '…' : ''}</p>` : ''}
+      </div>
+      <div class="cl-mail-acts">${x.webLink ? `<a class="cl-link" href="${escapeHtml(x.webLink)}" target="_blank" rel="noopener">Open in Outlook</a>` : ''}
+        <button type="button" class="cl-link" data-cl-act="mail-log" data-i="${i}">Log it</button></div>
+    </li>`).join('')}</ul>` : note('No emails with this client in your mailbox or support@ recently.');
+  return panel(`Recent emails (${m.list.length})`, rows + (m.errors.length ? `<p class="cl-warn">Not searched: ${escapeHtml(m.errors.join('; '))}</p>` : '')
+    + `<p class="cl-muted">Read-only. Matches ${escapeHtml(m.terms.join(', '))}. Nothing is sent or changed.</p>`,
+    '<button type="button" class="cl-link" data-cl-act="mail-reload">Refresh</button>');
+}
+
+async function logMail(i) {
+  const x = CL.mail?.list?.[i];
+  if (!x) return;
+  const c = (CL.data.contacts || []).find(k => k.email && [x.from, ...x.to].map(a => String(a).toLowerCase()).includes(k.email));
+  const { row, error } = cleanActivity({ kind: 'email', body: `Email: ${x.subject}`, happened_at: x.received, direction: x.direction, contact_id: c?.id || '', contact_name: c ? (c.name || c.email) : '' }, CL.name, today());
+  if (error) { toast(error, 'warning'); return; }
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    must(await sb.from('client_activity').insert({ ...row, created_by: (els('userName')?.textContent || '').trim() }));
+    await reloadActivity(sb);
+    toast('Logged in Activity', 'success');
+  } catch (err) { toast('Could not log it: ' + (err.message || err), 'error', 7000); }
+  render();
+}
+
 // ─── Contacts (Philip, 9 Oct: contacts per client) ───────────────────
 
 function contactsHtml() {
@@ -405,7 +563,7 @@ function contactsHtml() {
         ${c.role ? `<span class="cl-contact-role">${escapeHtml(c.role)}</span>` : ''}
         <span class="cl-contact-lines">
           ${c.email ? `<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>` : ''}
-          ${c.phone ? `<a href="tel:${escapeHtml(c.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(c.phone)}</a>` : ''}
+          ${c.phone ? `<a href="tel:${escapeHtml(telHref(c.phone))}" data-cl-call="${c.id}">☎ ${escapeHtml(c.phone)}</a>` : ''}
         </span>
         ${c.notes ? `<span class="cl-muted">${escapeHtml(c.notes)}</span>` : ''}
       </div>
@@ -415,7 +573,7 @@ function contactsHtml() {
         <button type="button" class="cl-link muted" data-cl-act="contact-del" data-id="${c.id}">Remove</button>
       </div>
     </div>`).join('');
-  return form + panel(`Contacts (${list.length})`,
+  return detailsHtml() + form + panel(`Contacts (${list.length})`,
     list.length ? `<div class="cl-contacts">${cards}</div>` : note('No contacts yet. Add the people you deal with: owner, accounts, office manager.'),
     CL.contactEdit === 'new' ? '' : add);
 }
@@ -571,6 +729,15 @@ function onClick(event) {
     window.geckoGo?.(section, sub, CL.name);
     return;
   }
+  // Calling (tel: link, dialled by VoxOne or whatever handles phone links): get a call log ready on Activity.
+  const call = event.target.closest('[data-cl-call]');
+  if (call) {
+    const who = call.dataset.clCall;
+    const c = (CL.data?.contacts || []).find(x => String(x.id) === who) || (who === 'main' ? (CL.data?.contacts || []).find(x => x.is_main) : null);
+    CL.actDraft = { kind: 'call', direction: 'out', body: '', contact_id: c ? String(c.id) : '', when: localNow(), callStarted: Date.now(), callWith: c ? (c.name || c.email) : 'the office' };
+    setTimeout(() => { if (CL.tab !== 'activity') pick('activity'); else render(); }, 300);
+    return;   // the browser follows the tel: link itself
+  }
   const fb = event.target.closest('[data-cl-follow]');
   if (fb) {
     const form = fb.closest('form');
@@ -586,6 +753,11 @@ function onClick(event) {
     setTimeout(() => els('clWrap')?.querySelector('[data-cl-form="new-opp"] select[name="product"]')?.focus(), 50);
   }
   if (act === 'cancel-opp') { CL.adding = null; render(); }
+  if (act === 'profile-edit') { CL.profileEdit = true; render(); els('clWrap')?.querySelector('[data-cl-form="profile"] [name="address_line1"]')?.focus(); }
+  if (act === 'profile-cancel') { CL.profileEdit = false; render(); }
+  if (act === 'mail-consent') loadMail(true);
+  if (act === 'mail-reload') { CL.mail = null; loadMail(false); }
+  if (act === 'mail-log') logMail(Number(event.target.closest('[data-i]').dataset.i));
   if (act === 'contact-add') { CL.contactEdit = 'new'; render(); els('clWrap')?.querySelector('[data-cl-form="contact"] [name="name"]')?.focus(); }
   if (act === 'contact-edit') { CL.contactEdit = Number(event.target.closest('[data-id]').dataset.id); render(); }
   if (act === 'contact-cancel') { CL.contactEdit = null; render(); }
@@ -601,6 +773,7 @@ export function init() {
     if (e.target.dataset.clForm === 'new-opp') { e.preventDefault(); saveOpp(e.target); }
     if (e.target.dataset.clForm === 'contact') { e.preventDefault(); saveContact(e.target); }
     if (e.target.dataset.clForm === 'activity') { e.preventDefault(); saveActivity(e.target); }
+    if (e.target.dataset.clForm === 'profile') { e.preventDefault(); saveProfile(e.target); }
   });
   section?.addEventListener('change', e => {
     if (e.target.name === 'follow_up_on' && e.target.closest('[data-cl-form="activity"]')) {
