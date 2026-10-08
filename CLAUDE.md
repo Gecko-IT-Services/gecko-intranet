@@ -35,7 +35,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   code. If a feature needs a column, the code must tolerate its absence and the
   toast must say exactly what to add.
 - Secrets never go in the browser: the site is public. Anything needing a key
-  (Xero, TD SYNNEX, Atera) runs outside the site and writes a file (see feed).
+  (Xero, TD SYNNEX, Atera) runs outside the site: the daily feed, or Supabase Edge Functions
+  (`supabase/functions/`, secrets in Supabase › Edge Functions › Secrets, tokens in schema
+  `private`). Xero is connected directly since 8 Oct (`2026-10-08-xero-integration-design.md`).
 - Conventions: feature branch → PR → merge. Design note in
   `docs/superpowers/specs/YYYY-MM-DD-<name>-design.md` for every feature. Every
   rendered value through `escapeHtml`. Error states must never look like empty
@@ -119,6 +121,12 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - "Sales this month" reads Xero from the feed: invoiced so far + repeating invoices not yet raised
   (last month's recurring contacts missing this month) + jobs to invoice + jobs due this month.
   VoIP Unlimited commission is excluded. Invoice-level matching would need a feed change (ask).
+
+## Xero, connected directly (from 8 Oct 2026)
+- Edge Functions `xero-auth` / `xero-callback` / `xero-sync` (Deno, `supabase/functions/`), read-only
+  scope `accounting.invoices.read`. Hourly `pg_cron` sync into `xero_invoices` and
+  `xero_repeating_invoices` (staff read-only); status in `xero_status`; Connect / Sync now on
+  Jobs › Sales. Functions are deployed from the repo after merge (not by the GitHub integration).
 
 ## The feed (where the money numbers come from)
 - `Gecko Dashboard Data/profitability-feed.json` in the portal site's Documents
