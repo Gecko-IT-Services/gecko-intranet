@@ -52,11 +52,9 @@ const els = id => document.getElementById(id);
 async function readFeed() {
   const F = window.ProfitFeed;
   try {
-    const siteId = await resolveSiteId();
-    const item = `/sites/${siteId}/drive/root:/${encodeURI(F.FEED_PATH)}:`;
-    const meta = await graphFetch(item);
-    const url = meta && meta['@microsoft.graph.downloadUrl'];
-    const data = url ? await (await fetch(url, { cache: 'no-store' })).json() : await graphFetch(`${item}/content`);
+    // The shell's loader: file or Supabase row, per CONFIG.DATA_BACKEND.feed.
+    const data = await window.fetchProfitFeed();
+    if (data == null) { OPP.feedNote = 'There is no profitability feed yet, so Xero and supplier data are left out.'; return null; }
     const check = F.validateFeed(data);
     if (!check.ok) { OPP.feedNote = 'The profitability feed failed its checks, so Xero and supplier data are left out.'; return null; }
     return data;

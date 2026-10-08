@@ -7714,6 +7714,7 @@ const CONFIG = {
   DATA_BACKEND: {
     leave:   'supabase',   // switched 7 Oct 2026 by Philip after a green copy
     mileage: 'supabase',   // Mileage + Overview's mileage tiles; switched 7 Oct 2026 by Philip (74 journeys, 1671.4 mi, £834.11)
+    feed:    'sharepoint', // profitability feed (Profitability + Opportunities); 'supabase' once the task writes profit_feed
     clients: 'supabase'    // GeckoClients + GeckoServices (Clients, Profitability, Overview); switched 7 Oct 2026 by Philip (29 clients, 55 lines, £1683.02 / £6027.66 a month)
   },
 
@@ -10729,33 +10730,53 @@ function prfXeroMatchName(xeroName, portalClients) {
    the portal site's Documents: Xero revenue per contact per month, and the
    latest TD SYNNEX CSP invoice per customer. Revenue is applied
    automatically (it only mirrors Xero). Costs still go through the CSP
-   preview, because Apply rewrites GeckoServices rows. */
+   preview, because Apply rewrites GeckoServices rows.
+   From 8 Oct 2026 the same JSON can live in Supabase (table profit_feed, one
+   row); CONFIG.DATA_BACKEND.feed says which one is read. */
+
+/** Where the feed is read from, for messages: the file path or the table. */
+function feedLocation() {
+  return dataBackend('feed') === 'supabase'
+    ? 'the profit_feed table in Supabase'
+    : `${window.ProfitFeed.FEED_PATH} in the portal's Documents`;
+}
+
+/** The raw feed object, or null when there is none yet. Throws on any other failure. */
+async function fetchProfitFeed() {
+  if (dataBackend('feed') === 'supabase') {
+    const sb = await geckoStore().connect();
+    const { data, error } = await sb.from('profit_feed').select('data').eq('id', 1).maybeSingle();
+    if (error) throw new Error(error.message || 'Database request failed');
+    return data ? data.data : null;
+  }
+  const siteId = await resolveSiteId();
+  const item = `/sites/${siteId}/drive/root:/${encodeURI(window.ProfitFeed.FEED_PATH)}:`;
+  let meta;
+  try {
+    // No $select: Graph only includes the download link in a full item.
+    meta = await graphFetch(item);
+  } catch (err) {
+    if (/Graph 404/.test(err.message || '')) return null;
+    throw err;
+  }
+  const url = meta && meta['@microsoft.graph.downloadUrl'];
+  if (url) {
+    // Pre-authenticated link: no bearer token, and never a cached copy.
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`feed download ${res.status}`);
+    return res.json();
+  }
+  // Fallback: Graph's /content endpoint redirects to the same file.
+  return graphFetch(`${item}/content`);
+}
+
 async function prfLoadFeed() {
   const F = window.ProfitFeed;
   if (!F) return;
   PRF.feed = { state: 'loading', data: null, error: null, problems: [] };
   try {
-    const siteId = PRF.siteId || await resolveSiteId();
-    const item = `/sites/${siteId}/drive/root:/${encodeURI(F.FEED_PATH)}:`;
-    let meta;
-    try {
-      // No $select: Graph only includes the download link in a full item.
-      meta = await graphFetch(item);
-    } catch (err) {
-      if (/Graph 404/.test(err.message || '')) { PRF.feed.state = 'missing'; return; }
-      throw err;
-    }
-    let data;
-    const url = meta && meta['@microsoft.graph.downloadUrl'];
-    if (url) {
-      // Pre-authenticated link: no bearer token, and never a cached copy.
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`feed download ${res.status}`);
-      data = await res.json();
-    } else {
-      // Fallback: Graph's /content endpoint redirects to the same file.
-      data = await graphFetch(`${item}/content`);
-    }
+    const data = await fetchProfitFeed();
+    if (data == null) { PRF.feed.state = 'missing'; return; }
     const check = F.validateFeed(data);
     PRF.feed = { state: check.ok ? 'ok' : 'invalid', data, error: null, problems: check.errors };
     if (check.ok) await prfApplyFeedXero(data);
@@ -10803,7 +10824,7 @@ function prfRenderFeedStatus(kind) {
   if (!F || f.state === 'idle' || f.state === 'loading') return '';
   const box = (cls, html) => `<div class="prf-feed ${cls}" role="status">${html}</div>`;
   if (f.state === 'missing') {
-    return box('warn', `Automatic updates are not set up yet: there is no <strong>${escapeHtml(F.FEED_PATH)}</strong> in the portal's Documents. The manual import below still works.`);
+    return box('warn', `Automatic updates are not set up yet: there is no feed in <strong>${escapeHtml(feedLocation())}</strong>. The manual import below still works.`);
   }
   if (f.state === 'error') {
     return box('bad', `Could not read the automatic feed (${escapeHtml(f.error)}). Figures shown are from the last successful update. Refresh to try again.`);
