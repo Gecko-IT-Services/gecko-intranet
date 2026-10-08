@@ -123,6 +123,20 @@ console.log('profit-feed split: ok');
   assert.deepEqual(sep.unassigned.map(l => l.name), ['Gecko IT Services'], 'unknown end user is listed, never dropped');
   assert.equal(sep.total, 229.88, 'total includes shared and unassigned so nothing is lost');
 
+  // Gecko's own Exclaimer subscription (account A9356-F39) is shared, like the Clook reseller plan.
+  const own = good();
+  own.exclaimer = { subscriptions: [
+    { invoice: '2403082', date: '2026-07-10', product: 'Exclaimer Starter Edition for Office 365', users: 10, endUser: 'Gecko IT Services', shared: true, months: 12, net: 78, periodStart: '2026-07-01', periodEnd: '2027-06-30' },
+    { invoice: '2455613', date: '2026-09-10', product: 'Exclaimer Standard Edition for Office 365', users: 15, endUser: 'Onsite Commercial Services', months: 12, net: 185.4, periodStart: '2026-09-02', periodEnd: '2027-09-01' }
+  ] };
+  assert.equal(validateFeed(own).ok, true, 'shared flag on an Exclaimer line is accepted');
+  const ownJul = invoicedCosts(own, '2026-07', () => null);
+  assert.deepEqual([ownJul.shared.map(l => l.net), ownJul.unassigned.length, ownJul.total], [[78], 0, 78], 'own subscription is shared, not unassigned');
+  const onsite = invoicedCosts(own, '2026-09', n => (n === 'Onsite Commercial Services' ? { id: 'osc' } : null));
+  assert.equal(onsite.byClient.get('osc').total, 185.4, '15-user Standard lands on Onsite');
+  own.exclaimer.subscriptions[0].shared = 'yes';
+  assert.match(validateFeed(own).errors.join(), /shared is not true\/false/);
+
   const jul = invoicedCosts(f, '2026-07', n => clients[n] || null);
   assert.deepEqual(jul.unassigned.map(l => l.name), ['slaterfamily.me.uk'], 'a Clook line with no client falls back to its domain');
   assert.equal(invoicedCosts(good(), '2026-09', () => null).total, 0, 'older feeds have no invoiced costs');
