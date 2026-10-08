@@ -83,7 +83,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `timesheet_entries`, flag `CONFIG.DATA_BACKEND.timesheets`) and **every change is still written
   to the Lists** so they stay a complete backup and the flows keep running; entries made in Lists
   or the Power App are brought in on Refresh. Design: `2026-10-08-timesheets-on-supabase-design.md`.
-  Until Philip copies and flips the flag, SharePoint is still the live store. The feed is moving to the
+  Switched 8 Oct 2026 (copy: 22 clients, 1143 entries, 162.75 h, every balance matched). The feed is moving to the
   `profit_feed` table (`CONFIG.DATA_BACKEND.feed`; see `2026-10-08-feed-on-supabase-design.md`).
   Compliance/P&L are not moving; Projects is replaced by Jobs.
 - Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
