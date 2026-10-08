@@ -157,7 +157,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Timesheets › Log Time (9 Oct): time typed as 1:30 / 1h30 / 45m or tapped, SSA balance preview before saving, checks in
   `src/core/timelog.js` (errors stop; duplicates, future/old/weekend dates, long days, going over SSA need **Log anyway**),
   one save at a time, draft kept in the browser. No "Billable" switch: every entry counts against the balance. Design
-  `2026-10-09-timesheets-entry-design.md`.
+  `2026-10-09-timesheets-entry-design.md`. SSA Dashboard (9 Oct): summary, Needs attention/All, per-client ring, status,
+  use per month and run-out date from the last 90 days (`src/core/ssa.js`; balances never recalculated). Design
+  `2026-10-09-ssa-dashboard-design.md`.
 - Phase 4 (8 Oct): the SSA renewal box offers **Create draft in Xero** (same function, `source: 'ssa'`,
   n × SSA at £650, account 214, reference Renewal); drafts for that client in the last 45 days are listed.
 
