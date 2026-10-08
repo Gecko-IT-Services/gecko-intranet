@@ -72,6 +72,18 @@ async function tokenRequest(form: Record<string, string>) {
   return body as { access_token: string; refresh_token: string; expires_in: number; scope?: string };
 }
 
+/**
+ * Which of the organisations shared with the app to use. Gecko has two in Xero: the old
+ * "Gecko IT" (to May 2026) and the Ltd, "Gecko IT Services" (from June 2026). The Ltd is
+ * the one that trades now. An XERO_ORGANISATION secret (exact name) overrides the choice.
+ */
+export function pickOrganisation<T extends { tenantName: string }>(orgs: T[], wanted = Deno.env.get('XERO_ORGANISATION') || '') {
+  const name = (o: T) => o.tenantName.toLowerCase();
+  if (wanted) return orgs.find(o => name(o) === wanted.toLowerCase()) || null;
+  return orgs.find(o => /gecko/.test(name(o)) && /services|ltd|limited/.test(name(o)))
+    || orgs.find(o => /gecko/.test(name(o))) || orgs[0] || null;
+}
+
 /** Code from the consent screen → tokens + the organisation, stored. */
 export async function connect(code: string, email: string) {
   const t = await tokenRequest({ grant_type: 'authorization_code', code, redirect_uri: REDIRECT_URI });
@@ -79,8 +91,15 @@ export async function connect(code: string, email: string) {
   if (!conns.ok) throw new Error(`Xero connections ${conns.status}`);
   const orgs = ((await conns.json()) as { tenantId: string; tenantName: string; tenantType: string }[])
     .filter(c => c.tenantType === 'ORGANISATION');
-  const org = orgs.find(o => /gecko/i.test(o.tenantName)) || orgs[0];
+  const org = pickOrganisation(orgs);
   if (!org) throw new Error('No Xero organisation was shared with the app');
+  // Switching organisation: the other one's invoices must not mix in, and the next sync is a full one.
+  const [prev] = await sql`select tenant_id from private.xero_tokens where id = 1`;
+  if (!prev || prev.tenant_id !== org.tenantId) {
+    await sql`delete from public.xero_invoices`;
+    await sql`delete from public.xero_repeating_invoices`;
+    await sql`update public.xero_status set last_sync_at = null, last_sync_ok = null, invoices = 0, repeating = 0 where id = 1`;
+  }
   const expires = new Date(Date.now() + (t.expires_in - 60) * 1000);
   await sql`insert into private.xero_tokens (id, tenant_id, tenant_name, refresh_token, access_token, access_expires, scopes, connected_by, connected_at)
             values (1, ${org.tenantId}, ${org.tenantName}, ${t.refresh_token}, ${t.access_token}, ${expires}, ${t.scope || SCOPES}, ${email}, now())
