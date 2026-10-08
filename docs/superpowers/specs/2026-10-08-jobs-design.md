@@ -60,6 +60,21 @@ Menu › **Jobs**, two tabs.
 - Matching to Xero invoices and Invoice in Xero: see `2026-10-08-xero-integration-design.md`
   (phases 2 and 3), which replaced the feed-based idea once Xero was connected directly.
 
+## Tabs and chart colours (Philip, 8 Oct: "tabs for each section … nice animations … graph colours need changing")
+- One tab strip at the top of Jobs (rendered by `renderTabs`): **Jobs**, **Month overview**
+  (hero "on course for" figure, projection bar, last six months), **Still to come** (repeating
+  invoices with dates, and jobs to come), **Invoiced in <month>** (per client with a mini bar),
+  **Owed to us** and **Xero** (connection). Tabs without data are left out (no Xero/feed → Jobs only;
+  Owed needs the direct connection). Badges: open jobs, counts, "overdue".
+- Motion: a sliding pill under the active tab, the new pane slides in from the side it came
+  from, bars grow in. Arrow keys / Home / End move along the tabs (ARIA tabs). All motion is off
+  under `prefers-reduced-motion`.
+- Colours: Philip chose **Gecko Green & Indigo** from four validated options. Recurring = green
+  (light #2f7d1f / dark #43a024), one-off = indigo (#5b4bc4 / #9085e9); what is still to come is
+  the same hue striped. Tokens `--viz-rec` / `--viz-one` in `jobs.css`; checked with the dataviz
+  validator (colour-blind ΔE ≥ 25, ≥ 3:1 on the card) in both themes. Hover (or focus) a month
+  for its figures.
+
 ## Not now (ask Philip)
 - Costs per job (materials, hours) for job margin.
 

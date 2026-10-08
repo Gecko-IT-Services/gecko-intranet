@@ -179,9 +179,10 @@ export function xeroMonthSales(invoices, repeating, jobs, { month, exclude = /vo
   const raised = new Map(invoices.filter(i => COUNTED.has(i.status)).map(i => [refKey(i.invoice_number), num(i.sub_total)]));
   const left = j => round2(Math.max(0, num(j.value) - refKeys(j.invoice_ref).reduce((t, k) => t + (raised.get(k) || 0), 0)));
   const covered = j => refKeys(j.invoice_ref).some(k => raised.has(k)) && left(j) === 0;
-  const toInvoiceJobs = jobs.filter(j => j.status === 'to_invoice' && !covered(j));
-  const dueJobs = jobs.filter(j => (j.status === 'agreed' || j.status === 'in_progress') && monthOf(j.target_date) === month && !covered(j));
-  const sum = list => round2(list.reduce((t, j) => t + left(j), 0));
+  // Each carries `left`: its value less what its approved invoices already cover.
+  const toInvoiceJobs = jobs.filter(j => j.status === 'to_invoice' && !covered(j)).map(j => ({ ...j, left: left(j) }));
+  const dueJobs = jobs.filter(j => (j.status === 'agreed' || j.status === 'in_progress') && monthOf(j.target_date) === month && !covered(j)).map(j => ({ ...j, left: left(j) }));
+  const sum = list => round2(list.reduce((t, j) => t + j.left, 0));
   // Drafts made for a job are that job's money (counted with it), not listed again.
   const jobRefs = new Set(jobs.flatMap(j => refKeys(j.invoice_ref)));
   drafts.splice(0, drafts.length, ...drafts.filter(d => !jobRefs.has(refKey(d.invoice_number))));
