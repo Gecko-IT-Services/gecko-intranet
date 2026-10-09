@@ -166,4 +166,39 @@ assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, in
   assert.ok(one.html.includes('Daron &lt;Motors&gt;') && !one.html.includes('<Motors>'), 'escaped');
 }
 
+// The whiteboard
+{
+  const { boardLanes, ideaMove, tilt } = await import('../src/core/jobs.js');
+  const jobs = [
+    { id: 1, status: 'quoted', value: 500, target_date: '2026-11-01' },
+    { id: 2, status: 'quoted', value: 900, target_date: null },
+    { id: 3, status: 'quoted', value: 100, target_date: '2026-10-20' },
+    { id: 4, status: 'invoiced', value: 50 }, { id: 5, status: 'lost' },
+    { id: 6, status: 'agreed', value: 300, source_ref: 'opp:12' }
+  ];
+  const opps = [
+    { id: 10, status: 'idea', one_off: 400, title: 'Wi-Fi', client_name: 'A' },
+    { id: 11, status: 'proposed', one_off: 0, mrr: 30, title: 'Monthly only' },
+    { id: 12, status: 'won', one_off: 300, title: 'Has a job via source_ref' },
+    { id: 13, status: 'won', one_off: 200, title: 'Won, needs a job' },
+    { id: 14, status: 'lost', one_off: 900 },
+    { id: 15, status: 'idea', one_off: 800, job_id: 9 }
+  ];
+  const b = boardLanes(jobs, opps);
+  assert.deepEqual(b.ideas.map(o => o.id), [13, 10], 'won first, then biggest; monthly-only, linked and lost left out');
+  assert.equal(b.ideasValue, 600);
+  assert.deepEqual(b.lanes[0].items.map(j => j.id), [3, 1, 2], 'soonest target first, undated last');
+  assert.equal(b.lanes[0].value, 1500);
+  assert.deepEqual(b.done, { invoiced: 1, lost: 1 });
+
+  const q = ideaMove(opps[0], 'quoted', 'Jack Morris');
+  assert.equal(q.job.status, 'quoted'); assert.equal(q.job.value, 400); assert.equal(q.job.source_ref, 'opp:10');
+  assert.deepEqual(q.opp, { status: 'proposed' });
+  assert.deepEqual(ideaMove(opps[0], 'in_progress').opp, { status: 'won' });
+  assert.deepEqual(ideaMove(opps[3], 'agreed').opp, {}, 'already won');
+  assert.deepEqual(ideaMove(opps[0], 'lost'), { job: null, opp: { status: 'lost' } });
+  assert.equal(ideaMove(opps[0], 'invoiced'), null, 'not straight to invoiced');
+  assert.ok(Math.abs(tilt(7)) <= 0.9 && tilt(7) === tilt(7));
+}
+
 console.log('jobs: ok');

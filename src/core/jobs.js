@@ -351,3 +351,47 @@ export function nudgeEmail({ contactName, firstName = '', invoices, links = {}, 
   const html = paras.map(p => (p === null ? listHtml : `<p>${escHtml(p).replace(/\n/g, '<br>')}</p>`)).join('\n');
   return { subject, html, text, total };
 }
+
+// ─── The whiteboard (Philip and Jack, 9 Oct: "what we'd keep on a whiteboard") ───────────
+// Design: docs/superpowers/specs/2026-10-09-jobs-whiteboard-design.md.
+
+/** The columns of the board, left to right after Ideas; Invoiced and Lost are drop zones. */
+export const BOARD_STAGES = ['quoted', 'agreed', 'in_progress', 'to_invoice'];
+
+/**
+ * Ideas: opportunities with one-off work (idea, proposed, or won with no job yet) that no job came
+ * from. Lanes: open jobs by stage, soonest target first (none last), then the biggest.
+ */
+export function boardLanes(jobs = [], opps = []) {
+  const linked = new Set(jobs.map(j => String(j.source_ref || '')).filter(r => r.startsWith('opp:')).map(r => r.slice(4)));
+  const ideas = opps
+    .filter(o => Number(o.one_off) > 0 && !o.job_id && !linked.has(String(o.id)) && ['idea', 'proposed', 'won'].includes(o.status))
+    .sort((a, b) => (b.status === 'won') - (a.status === 'won') || (Number(b.one_off) || 0) - (Number(a.one_off) || 0));
+  const byDate = (a, b) => String(a.target_date || '9999').localeCompare(String(b.target_date || '9999')) || (Number(b.value) || 0) - (Number(a.value) || 0);
+  const lanes = BOARD_STAGES.map(key => {
+    const items = jobs.filter(j => j.status === key).sort(byDate);
+    return { key, items, value: round2(items.reduce((s, j) => s + (Number(j.value) || 0), 0)) };
+  });
+  const count = k => jobs.filter(j => j.status === k).length;
+  return { ideas, ideasValue: round2(ideas.reduce((s, o) => s + (Number(o.one_off) || 0), 0)), lanes, done: { invoiced: count('invoiced'), lost: count('lost') } };
+}
+
+/**
+ * An idea dropped on a column. Quoted: a quoted job, the deal becomes proposed. Agreed or later: a job
+ * at that stage, the deal is won. Lost: no job, the deal is lost. `opp` is the patch for the opportunity
+ * (job_id is added once the job exists).
+ */
+export function ideaMove(o, stage, owner = '') {
+  if (stage === 'lost') return { job: null, opp: o.status === 'won' ? {} : { status: 'lost' } };
+  if (!BOARD_STAGES.includes(stage)) return null;
+  const job = {
+    client_name: o.client_name, title: o.title, status: stage, value: Number(o.one_off) || null,
+    next_step: o.next_step || '', owner: owner || o.owner || '',
+    notes: `From the opportunity “${o.title}”.`, source_ref: `opp:${o.id}`
+  };
+  const opp = stage === 'quoted' ? (o.status === 'idea' ? { status: 'proposed' } : {}) : (o.status === 'won' ? {} : { status: 'won' });
+  return { job, opp };
+}
+
+/** A sticky's slight lean, the same every time for the same id: -0.9° … 0.9°. */
+export const tilt = id => (((Number(id) || 0) * 37) % 7 - 3) * 0.3;

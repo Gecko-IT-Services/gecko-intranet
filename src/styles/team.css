@@ -1,7 +1,7 @@
 /* Team overview (src/sections/team.js), the first tab of the Team hub.
    Person colours (Philip blue, Jack purple) are shared with Leave and Mileage; the holiday tokens with Leave. */
-:is(#section-team, #section-leave, #section-mileage, #section-timesheets, #section-overview) :is(.tm-philip, .lp-philip) { --who: var(--blue); }
-:is(#section-team, #section-leave, #section-mileage, #section-timesheets, #section-overview) :is(.tm-jack, .lp-jack) { --who: var(--purple); }
+:is(#section-team, #section-leave, #section-mileage, #section-timesheets, #section-overview, #section-jobs) :is(.tm-philip, .lp-philip) { --who: var(--blue); }
+:is(#section-team, #section-leave, #section-mileage, #section-timesheets, #section-overview, #section-jobs) :is(.tm-jack, .lp-jack) { --who: var(--purple); }
 
 /* Holiday tokens (tokensHtml in core/team.js): one pill per day; spent → requested → left, filled bottom-up. */
 :is(#section-team, #section-leave, #section-timesheets) .hol-tokens { display: flex; gap: 4px; }
