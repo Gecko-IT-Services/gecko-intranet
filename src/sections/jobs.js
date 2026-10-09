@@ -20,7 +20,8 @@ import { connectSupabase } from '../core/supabase.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { STAGES, OPEN_STAGES, stageLabel, stageTotals, monthSales, salesHistory, PROJECT_STATUS,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
-  nudgeInvoices, nudgeEmail } from '../core/jobs.js';
+  nudgeInvoices, nudgeEmail, BOARD_STAGES, boardLanes, ideaMove, tilt } from '../core/jobs.js';
+import { newOpportunity } from '../core/opportunities.js';
 
 const JOB = {
   tab: 'jobs',
@@ -36,7 +37,11 @@ const JOB = {
   allPaid: false,               // Invoiced view: show every paid job, not just the last 90 days
   nudges: new Map(),            // Owed to us: contact → last payment reminder drafted (public.payment_nudges)
   nudging: null,                // contact whose reminder is being drafted
-  dir: 'from-right', animate: false   // tab change: which way the new pane slides in
+  dir: 'from-right', animate: false,  // tab change: which way the new pane slides in
+  view: 'board',                // whiteboard | list (remembered in this browser, read in init)
+  opps: [], oppsError: '',      // opportunities with one-off work: the board's Ideas column
+  selected: null,               // the sticky whose full card shows under the board
+  addStage: 'quoted', addingIdea: false, dragging: ''
 };
 
 const money = n => '£' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -78,14 +83,18 @@ async function load() {
   render();
   try {
     const sb = await connectSupabase();
-    const [jobs, clients, feed, xero] = await Promise.all([
+    const [jobs, clients, feed, xero, opps] = await Promise.all([
       sb.from('jobs').select('*').order('modified_at', { ascending: false }).then(must),
       sb.from('gecko_clients').select('title,status').then(must),
       readFeed(),
       // Missing table (before the Xero migration) is not an error for Jobs.
-      sb.from('xero_status').select('*').eq('id', 1).maybeSingle().then(r => (r.error ? null : r.data))
+      sb.from('xero_status').select('*').eq('id', 1).maybeSingle().then(r => (r.error ? null : r.data)),
+      // The board's Ideas; if they can't be read the column says so and the jobs still show.
+      sb.from('opportunities').select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step').then(r => (r.error ? { error: r.error.message } : r.data))
     ]);
     JOB.jobs = jobs;
+    JOB.opps = Array.isArray(opps) ? opps : [];
+    JOB.oppsError = Array.isArray(opps) ? '' : opps.error;
     JOB.xero = xero;
     JOB.feed = feed;
     if (xero?.connected) await Promise.all([loadXero(sb, jobs), loadNudges(sb)]);
@@ -267,7 +276,7 @@ function clientOptions() {
 
 function jobForm(j) {
   const isNew = !j;
-  j = j || { client_name: '', title: '', status: 'quoted', value: '', target_date: '', next_step: '', invoice_ref: '', notes: '' };
+  j = j || { client_name: '', title: '', status: JOB.addStage || 'quoted', value: '', target_date: '', next_step: '', invoice_ref: '', notes: '' };
   return `<form class="job-form${isNew ? ' job-add' : ''}" data-job-form="${isNew ? 'new' : j.id}">
       ${isNew ? '<strong class="job-form-title">New job</strong>' : ''}
       <label class="wide">Client <input name="client_name" type="text" list="jobClientNames" required value="${escapeHtml(j.client_name)}" placeholder="e.g. MSA Safety"></label>
@@ -430,7 +439,11 @@ async function createInvoice(id, f) {
   }
 }
 
+const viewToggle = () => `<div class="job-view" role="group" aria-label="Show jobs as">${[['board', 'Whiteboard'], ['list', 'List']].map(([k, l]) =>
+  `<button type="button" data-job-act="view" data-view="${k}" aria-pressed="${JOB.view === k}">${l}</button>`).join('')}</div>`;
+
 function jobsHtml() {
+  if (JOB.view === 'board') return boardHtml();
   JOB.byNumber = invoiceIndex(JOB.inv);
   const t = stageTotals(JOB.jobs);
   const total = Object.values(t).reduce((s, x) => s + x.value, 0) || 1;
@@ -458,12 +471,173 @@ function jobsHtml() {
     <div class="job-list-head">
       <strong>${escapeHtml(heading)}</strong>
       ${JOB.stage !== 'open' ? '<button type="button" class="job-link" data-job-act="stage" data-stage="open">Back to current jobs</button>' : ''}
+      ${viewToggle()}
       ${JOB.adding ? '' : '<button type="button" class="btn btn-primary" data-job-act="add">Add a job</button>'}
     </div>
     ${JOB.adding ? jobForm(null) : ''}
     ${JOB.stage === 'invoiced' && groups ? invoicedHtml(groups) : `<div class="job-list">${shown.map(jobCard).join('') ||
       `<p class="job-empty">${JOB.jobs.length ? 'No jobs at this stage.' : 'No jobs yet.'}</p>`}</div>`}
     ${imported ? '' : `<p class="job-note"><button type="button" class="job-link" data-job-act="import" ${JOB.importing ? 'disabled' : ''}>${JOB.importing ? 'Importing…' : 'Import open projects from the old board'}</button></p>`}`;
+}
+
+const person = name => (/^philip/i.test(name || '') ? 'philip' : /^jack/i.test(name || '') ? 'jack' : '');
+const shortDate = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+/** One sticky for a job: client, job, next step, value, target date; the next move as one tap. */
+function jobSticky(j) {
+  const p = person(j.owner);
+  const late = j.target_date && j.status !== 'quoted' && j.target_date < today();
+  const xi = onXero() ? jobInvoices(j, JOB.byNumber, today()) : [];
+  const xs = xi.find(x => x.state === 'overdue') || xi.find(x => x.state === 'due') || xi.find(x => x.state === 'draft');
+  const [to, label] = NEXT[j.status][0] || [];
+  return `<article class="job-sticky${p ? ' lp-' + p : ''}${JOB.selected === j.id ? ' on' : ''}" draggable="true" data-drag="job:${j.id}"
+      data-job-act="pick" data-id="${j.id}" tabindex="0" style="--tilt:${tilt(j.id)}deg" aria-label="${escapeHtml(`${j.client_name}: ${j.title}, ${stageLabel(j.status)}`)}">
+    <span class="js-tape" aria-hidden="true"></span>
+    <div class="js-top"><span class="js-client">${escapeHtml(j.client_name)}</span>${p ? `<b class="js-owner" title="${escapeHtml(j.owner)}">${p[0].toUpperCase()}</b>` : ''}</div>
+    <div class="js-title">${escapeHtml(j.title)}</div>
+    ${j.next_step ? `<div class="js-next">${escapeHtml(j.next_step)}</div>` : ''}
+    <div class="js-foot"><strong>${j.value == null ? '<em>no value</em>' : escapeHtml(whole(j.value))}</strong>
+      ${j.target_date ? `<span class="js-date${late ? ' late' : ''}">${late ? 'late · ' : ''}${escapeHtml(shortDate(j.target_date))}</span>` : ''}
+      ${xs ? `<span class="js-x" data-tone="${XSTATE[xs.state][0]}">${escapeHtml(XSTATE[xs.state][1])}</span>` : ''}</div>
+    ${to ? `<button type="button" class="js-move" data-job-act="move" data-status="${to}" data-id="${j.id}" title="Move to ${escapeHtml(stageLabel(to))}">${escapeHtml(label)} →</button>` : ''}
+  </article>`;
+}
+
+/** A pencilled sticky for an opportunity with one-off work: quote it, or (won) make the job. */
+function ideaSticky(o) {
+  const p = person(o.owner);
+  const won = o.status === 'won';
+  return `<article class="job-sticky idea${p ? ' lp-' + p : ''}" draggable="true" data-drag="opp:${o.id}" style="--tilt:${tilt(o.id + 3)}deg"
+      aria-label="${escapeHtml(`Idea: ${o.client_name}: ${o.title}`)}">
+    <div class="js-top"><span class="js-client">${escapeHtml(o.client_name)}</span>${won ? '<span class="badge badge-green">Won</span>' : o.status === 'proposed' ? '<span class="badge">Proposed</span>' : ''}</div>
+    <div class="js-title">${escapeHtml(o.title)}</div>
+    ${o.next_step ? `<div class="js-next">${escapeHtml(o.next_step)}</div>` : ''}
+    <div class="js-foot"><strong>${escapeHtml(whole(o.one_off))}</strong>${Number(o.mrr) ? `<span class="js-date">+ ${escapeHtml(whole(o.mrr))}/mo</span>` : ''}</div>
+    <button type="button" class="js-move" data-job-act="idea" data-stage="${won ? 'agreed' : 'quoted'}" data-id="${o.id}">${won ? 'Create job' : 'Quote it'} →</button>
+  </article>`;
+}
+
+function ideaForm() {
+  return `<form class="job-form job-add" data-job-idea="new">
+      <strong class="job-form-title">New idea</strong>
+      <label class="wide">Client <input name="client_name" type="text" list="jobClientNames" required placeholder="e.g. MSA Safety"></label>
+      <label class="wide">Idea <input name="title" type="text" required placeholder="e.g. Replace the office switches"></label>
+      <label>One-off £ (net) <input name="one_off" type="number" min="0" step="0.01" required placeholder="rough is fine"></label>
+      <label class="wide">Next step <input name="next_step" type="text" placeholder="e.g. Mention at the next visit"></label>
+      <p class="job-muted full">Goes on the Opportunities pipeline as an idea, and on this board.</p>
+      <div class="job-actions full">
+        <button type="button" class="btn btn-ghost btn-sm" data-job-act="cancelidea">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Add idea</button>
+      </div>
+    </form>`;
+}
+
+/**
+ * The whiteboard: Ideas (opportunities with one-off work) then the open stages as columns of stickies;
+ * drag a sticky to another column, or use its arrow. Invoiced and Lost are drop zones under the board.
+ * Clicking a sticky shows its full card (edit, Invoice in Xero) underneath.
+ */
+function boardHtml() {
+  JOB.byNumber = invoiceIndex(JOB.inv);
+  const b = boardLanes(JOB.jobs, JOB.opps);
+  const count = n => `${n} ${n === 1 ? 'job' : 'jobs'}`;
+  const col = (key, label, value, n, body, add) => `<section class="job-col col-${key}" data-drop="${key}" aria-label="${escapeHtml(label)}">
+      <header><strong>${escapeHtml(label)}</strong><span>${escapeHtml(whole(value))}</span><small>${escapeHtml(n)}</small></header>
+      <div class="job-col-body">${body}</div>${add}</section>`;
+  const ideas = col('ideas', 'Ideas', b.ideasValue, `${b.ideas.length} from Opportunities`,
+    JOB.oppsError ? `<p class="job-col-note bad">Opportunities didn’t load: ${escapeHtml(JOB.oppsError)}</p>` : b.ideas.map(ideaSticky).join('') || '<p class="job-col-note">One-off ideas show here.</p>',
+    '<button type="button" class="job-col-add" data-job-act="addidea">+ Idea</button>');
+  const lanes = b.lanes.map(l => col(l.key, stageLabel(l.key), l.value, count(l.items.length), l.items.map(jobSticky).join(''),
+    `<button type="button" class="job-col-add" data-job-act="add" data-stage="${l.key}">+ Add</button>`)).join('');
+  const sel = JOB.jobs.find(j => j.id === JOB.selected);
+  const imported = JOB.jobs.some(j => String(j.source_ref || '').startsWith('projects:'));
+  return `${clientOptions()}
+    <div class="job-list-head"><strong>Whiteboard</strong>${viewToggle()}
+      ${JOB.adding || JOB.addingIdea ? '' : '<button type="button" class="btn btn-primary" data-job-act="add" data-stage="quoted">Add a job</button>'}</div>
+    ${JOB.adding ? jobForm(null) : ''}${JOB.addingIdea ? ideaForm() : ''}
+    <div class="job-board">${ideas}${lanes}</div>
+    <div class="job-drops">
+      <div class="job-drop" data-drop="invoiced"><strong>Invoiced</strong><span>${escapeHtml(count(b.done.invoiced))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="invoiced">See them</button></div>
+      <div class="job-drop" data-drop="lost"><strong>Lost</strong><span>${escapeHtml(count(b.done.lost))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="lost">See them</button></div>
+    </div>
+    ${sel ? `<div class="job-pinned"><div class="job-list-sub"><strong>${escapeHtml(sel.client_name)}</strong><button type="button" class="job-link" data-job-act="pick" data-id="${sel.id}">Close</button></div>${jobCard(sel)}</div>` : ''}
+    ${imported ? '' : `<p class="job-note"><button type="button" class="job-link" data-job-act="import" ${JOB.importing ? 'disabled' : ''}>${JOB.importing ? 'Importing…' : 'Import open projects from the old board'}</button></p>`}`;
+}
+
+/** A sticky dropped on a column (or a sticky's arrow): jobs move stage; ideas become jobs. */
+async function dropOn(ref, stage) {
+  const [kind, raw] = String(ref).split(':');
+  const id = Number(raw);
+  if (kind === 'job') {
+    const j = JOB.jobs.find(x => x.id === id);
+    if (!j || j.status === stage || stage === 'ideas') return;
+    await moveJob(id, stage, { disabled: false });
+    return;
+  }
+  const o = JOB.opps.find(x => x.id === id);
+  const move = o && ideaMove(o, stage, myName());
+  if (!move) { if (o && stage !== 'ideas') toast('An idea goes to Quoted or a later stage first', 'info'); return; }
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    let jobId = null;
+    if (move.job) {
+      const existing = must(await sb.from('jobs').select('*').eq('source_ref', move.job.source_ref).maybeSingle());
+      const row = existing || must(await sb.from('jobs').insert(move.job).select('*').single());
+      if (!existing) JOB.jobs.unshift(row);
+      jobId = row.id;
+    }
+    const patch = { ...move.opp, ...(jobId ? { job_id: jobId } : {}) };
+    if (patch.status === 'won' || patch.status === 'lost') patch.closed_at = new Date().toISOString();
+    if (Object.keys(patch).length) {
+      const row = must(await sb.from('opportunities').update(patch).eq('id', id).select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step').single());
+      JOB.opps = JOB.opps.map(x => (x.id === id ? row : x));
+    }
+    toast(move.job ? `${o.title}: now a job, ${stageLabel(stage)}${patch.status ? ` (opportunity marked ${patch.status})` : ''}` : `${o.title}: marked lost`, 'success', 6000);
+    if (jobId) JOB.selected = jobId;
+    render();
+  } catch (err) { toast('Could not move the idea: ' + (err.message || err), 'error', 8000); }
+}
+
+async function addIdea(f) {
+  const row = newOpportunity({ client: f.client_name.value, title: f.title.value, oneOff: f.one_off.value, nextStep: f.next_step.value, owner: myName() });
+  if (row.error) { toast(row.error, 'warning'); return; }
+  if (!(row.one_off > 0)) { toast('Give it a rough one-off value', 'warning'); return; }
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    JOB.opps.unshift(must(await sb.from('opportunities').insert(row).select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step').single()));
+    JOB.addingIdea = false;
+    toast('Idea added (also on the Opportunities pipeline)', 'success');
+    render();
+  } catch (err) { toast('Could not add the idea: ' + (err.message || err), 'error', 7000); }
+}
+
+/** Drag and drop between the board's columns (mouse and trackpad; on a phone the arrows do it). */
+function onDrag(e) {
+  const zone = e.target.closest?.('[data-drop]');
+  if (e.type === 'dragstart') {
+    const s = e.target.closest?.('[data-drag]');
+    if (!s) return;
+    JOB.dragging = s.dataset.drag;
+    e.dataTransfer.setData('text/plain', JOB.dragging);
+    e.dataTransfer.effectAllowed = 'move';
+    requestAnimationFrame(() => { s.classList.add('dragging'); els('jobWrap')?.classList.add('is-dragging'); });
+  } else if (e.type === 'dragend') {
+    JOB.dragging = '';
+    els('jobWrap')?.classList.remove('is-dragging');
+    document.querySelectorAll('#section-jobs .dragging, #section-jobs .drop-over').forEach(x => x.classList.remove('dragging', 'drop-over'));
+  } else if (e.type === 'dragover' && zone && JOB.dragging) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!zone.classList.contains('drop-over')) {
+      document.querySelectorAll('#section-jobs .drop-over').forEach(x => x.classList.remove('drop-over'));
+      zone.classList.add('drop-over');
+    }
+  } else if (e.type === 'drop' && zone && JOB.dragging) {
+    e.preventDefault();
+    const ref = JOB.dragging;
+    onDrag({ type: 'dragend', target: e.target });
+    dropOn(ref, zone.dataset.drop);
+  }
 }
 
 /**
@@ -807,7 +981,13 @@ async function onClick(event) {
   if (act === 'reload') { load(); return; }
   if (act === 'connect') { try { await connectSupabase({ interactive: true }); load(); } catch (err) { toast(err.message || 'Could not connect', 'error'); } return; }
   if (act === 'stage') { JOB.stage = JOB.stage === btn.dataset.stage ? 'open' : btn.dataset.stage; render(); return; }
-  if (act === 'add') { JOB.adding = true; render(); els('jobWrap')?.querySelector('[data-job-form="new"] [name="client_name"]')?.focus(); return; }
+  if (act === 'view') { JOB.view = btn.dataset.view; JOB.stage = 'open'; try { localStorage.setItem('gecko.jobs.view', JOB.view); } catch { /* private window */ } render(); return; }
+  if (act === 'pick') { JOB.selected = JOB.selected === id ? null : id; render(); if (JOB.selected) els('jobWrap')?.querySelector('.job-pinned')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+  if (act === 'liststage') { JOB.view = 'list'; JOB.stage = btn.dataset.stage; render(); return; }
+  if (act === 'idea') { dropOn(`opp:${id}`, btn.dataset.stage); return; }
+  if (act === 'addidea') { JOB.addingIdea = true; JOB.adding = false; render(); els('jobWrap')?.querySelector('[data-job-idea] [name="client_name"]')?.focus(); return; }
+  if (act === 'cancelidea') { JOB.addingIdea = false; render(); return; }
+  if (act === 'add') { JOB.addStage = btn.dataset.stage || 'quoted'; JOB.addingIdea = false; JOB.adding = true; render(); els('jobWrap')?.querySelector('[data-job-form="new"] [name="client_name"]')?.focus(); return; }
   if (act === 'canceladd') { JOB.adding = false; render(); return; }
   if (act === 'edit') { JOB.editing.has(id) ? JOB.editing.delete(id) : JOB.editing.add(id); render(); return; }
   if (act === 'move') { moveJob(id, btn.dataset.status, btn); return; }
@@ -831,11 +1011,16 @@ async function onClick(event) {
 }
 
 /** Arrow keys move along the tab strip (ARIA tabs pattern). */
-const onKey = event => keyNav(event, 'data-job-tab', switchTab);
+const onKey = event => {
+  const st = event.target.closest?.('.job-sticky[data-job-act="pick"]');
+  if (st && event.target === st && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); st.click(); return; }
+  keyNav(event, 'data-job-tab', switchTab);
+};
 
 function onSubmit(event) {
   const form = event.target;
   if (form.dataset.jobInvoice) { event.preventDefault(); createInvoice(Number(form.dataset.jobInvoice), form.elements); return; }
+  if (form.dataset.jobIdea) { event.preventDefault(); addIdea(form.elements); return; }
   if (!form.dataset.jobForm) return;
   event.preventDefault();
   saveJob(form.dataset.jobForm, form.elements);
@@ -850,10 +1035,12 @@ export function show(tab) {
 }
 
 export function init() {
+  try { JOB.view = localStorage.getItem('gecko.jobs.view') || 'board'; } catch { /* private window: the board */ }
   const section = els('section-jobs');
   section?.addEventListener('click', onClick);
   section?.addEventListener('submit', onSubmit);
   section?.addEventListener('keydown', onKey);
+  for (const t of ['dragstart', 'dragend', 'dragover', 'drop']) section?.addEventListener(t, onDrag);
   window.addEventListener('resize', () => moveInk(tabStrip()));
   els('jobRefresh')?.addEventListener('click', refresh);
   xeroReturn();

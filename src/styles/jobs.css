@@ -239,3 +239,84 @@
 #section-jobs .xero-mark { display: inline-block; width: 52px; height: 15px; vertical-align: -2px; margin-right: 6px; background: #fff;
   -webkit-mask: url(../assets/xero.svg) no-repeat center / contain; mask: url(../assets/xero.svg) no-repeat center / contain; }
 :root[data-theme="light"] #section-jobs .xero-mark { background: #000856; }
+
+/* ── The whiteboard (Jobs tab, default view): Ideas + open stages as columns of stickies ───────────
+   Person colours (--who) come from team.css. A sticky leans slightly (--tilt, the same for the same
+   job) and straightens under the pointer; dragging lifts it; a column under a drag lights up. */
+#section-jobs .job-list-head .job-view { margin-left: 4px; }
+#section-jobs .job-board {
+  display: grid; grid-template-columns: repeat(5, minmax(200px, 1fr)); gap: 12px; align-items: start;
+  padding: 14px; border: 1px solid var(--border-dim); border-radius: var(--radius); overflow-x: auto;
+  background: radial-gradient(circle, color-mix(in srgb, var(--muted) 22%, transparent) 1px, transparent 1.5px) 0 0 / 18px 18px, var(--card);
+}
+#section-jobs .job-col { display: flex; flex-direction: column; gap: 10px; min-height: 180px; padding: 4px 4px 8px; border-radius: var(--radius-sm); border: 1.5px dashed transparent;
+  transition: border-color var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease); }
+#section-jobs .job-col > header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 8px; padding: 2px 6px 8px; border-bottom: 2px solid var(--border-dim); }
+#section-jobs .job-col > header strong { font-size: 13px; font-weight: 800; letter-spacing: -.01em; color: var(--white); }
+#section-jobs .job-col > header span { font: 500 13px var(--font-mono); color: var(--white); }
+#section-jobs .job-col > header small { grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
+#section-jobs .col-to_invoice > header { border-bottom-color: var(--green); }
+#section-jobs .col-ideas > header strong { color: var(--amber); }
+#section-jobs .job-col-body { display: grid; gap: 12px; padding: 4px 2px; }
+#section-jobs .job-col-note { margin: 4px 6px; font-size: 12px; color: var(--muted); }
+#section-jobs .job-col-note.bad { color: var(--red); }
+#section-jobs .job-col-add { align-self: flex-start; margin: 2px 4px 0; padding: 4px 8px; min-height: 0; border: 0; border-radius: var(--radius-pill); background: none;
+  font: 600 12px var(--font-body); color: var(--muted); cursor: pointer; }
+#section-jobs .job-col-add:hover { color: var(--green); background: var(--green-glow); }
+
+#section-jobs .job-sticky {
+  position: relative; display: grid; gap: 6px; padding: 14px 12px 10px; cursor: grab; text-align: left;
+  background: var(--card); border: 1px solid var(--border-dim); border-radius: 4px 4px 10px 4px;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--muted) 18%, transparent), 0 6px 14px -8px color-mix(in srgb, var(--muted) 45%, transparent);
+  transform: rotate(var(--tilt, 0deg)); transition: transform var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease), opacity var(--dur-2) var(--ease);
+}
+#section-jobs .job-sticky:hover, #section-jobs .job-sticky:focus-visible { transform: rotate(0) translateY(-2px); box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--muted) 70%, transparent); }
+#section-jobs .job-sticky:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+#section-jobs .job-sticky.on { border-color: var(--green); box-shadow: 0 0 0 2px var(--green-glow), 0 10px 22px -10px color-mix(in srgb, var(--muted) 70%, transparent); }
+#section-jobs .job-sticky.dragging { opacity: .35; }
+#section-jobs .js-tape { position: absolute; top: -6px; left: 50%; width: 38px; height: 12px; margin-left: -19px; border-radius: 2px; transform: rotate(-2deg);
+  background: color-mix(in srgb, var(--who, var(--muted)) 35%, transparent); }
+#section-jobs .js-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+#section-jobs .js-client { flex: 1; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-jobs .js-owner { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 800;
+  color: var(--who); background: color-mix(in srgb, var(--who) 14%, transparent); }
+#section-jobs .js-title { font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--white); }
+#section-jobs .js-next { font-size: 12px; line-height: 1.35; color: var(--muted); }
+#section-jobs .js-next::before { content: '→ '; color: var(--green); font-weight: 700; }
+#section-jobs .js-foot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+#section-jobs .js-foot strong { font: 500 15px var(--font-mono); letter-spacing: -.02em; color: var(--white); }
+#section-jobs .js-foot strong em { font: 400 12px var(--font-body); color: var(--muted); }
+#section-jobs .js-date { font: 500 11px var(--font-mono); color: var(--muted); }
+#section-jobs .js-date.late { color: var(--red); }
+#section-jobs .js-x { font-size: 11px; font-weight: 600; color: var(--muted); }
+#section-jobs .js-x[data-tone="bad"] { color: var(--red); }
+#section-jobs .js-x[data-tone="wait"] { color: var(--amber); }
+#section-jobs .js-move { justify-self: start; margin-top: 2px; padding: 3px 9px; min-height: 0; border: 1px solid var(--border-dim); border-radius: var(--radius-pill);
+  background: transparent; font: 600 11px var(--font-body); color: var(--white); cursor: pointer; }
+#section-jobs .js-move:hover { border-color: var(--green); color: var(--green); }
+#section-jobs .job-sticky.idea { border-style: dashed; background: color-mix(in srgb, var(--amber) 6%, var(--card)); }
+#section-jobs .job-sticky.idea .js-title { font-weight: 600; }
+
+/* While dragging, every column shows it can take the sticky; the one underneath lights up. */
+#section-jobs .is-dragging .job-col, #section-jobs .is-dragging .job-drop { border-color: var(--border); }
+#section-jobs .job-col.drop-over, #section-jobs .job-drop.drop-over { border-color: var(--green); background: var(--green-glow); }
+
+#section-jobs .job-drops { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+#section-jobs .job-drop { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 1.5px dashed var(--border-dim); border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--muted); transition: border-color var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease); }
+#section-jobs .job-drop strong { color: var(--white); }
+#section-jobs .job-drop .job-link { margin-left: auto; }
+#section-jobs .job-pinned { margin-top: 16px; animation: job-pin var(--dur-3) var(--ease) both; }
+@keyframes job-pin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #section-jobs .job-sticky { transform: none; transition: none; }
+  #section-jobs .job-pinned { animation: none; }
+}
+/* Phone: the columns become a rail you swipe through, one column at a time; the arrows move stickies. */
+@media (max-width: 760px) {
+  #section-jobs .job-board { grid-template-columns: repeat(5, 82%); scroll-snap-type: x mandatory; padding: 12px; gap: 10px; }
+  #section-jobs .job-col { scroll-snap-align: start; }
+  #section-jobs .job-sticky { cursor: default; }
+  #section-jobs .job-drops { grid-template-columns: minmax(0, 1fr); }
+}
