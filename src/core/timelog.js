@@ -71,31 +71,31 @@ export function checkEntry(entry, { today, entries = [], client = null } = {}) {
   const h = entry.hours;
   if (!entry.clientId) errors.push({ field: 'client', text: 'Choose the client.' });
   if (!entry.engineer) errors.push({ field: 'engineer', text: 'Choose who did the work.' });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day(entry.date))) errors.push({ field: 'date', text: 'Choose the date of the work.' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day(entry.date))) errors.push({ field: 'date', text: 'Choose the date.' });
   if (!h || !h.ok) {
     errors.push({ field: 'hours', text: h?.reason === 'zero' ? 'Time must be at least 15 minutes.'
-      : h?.reason === 'empty' || !h ? 'Enter the time spent, e.g. 1.5, 1:30 or 45m.' : 'Time not recognised. Try 1.5, 1:30, 1h30 or 45m.' });
+      : h?.reason === 'empty' || !h ? 'Enter the time, e.g. 1:30 or 45m.' : 'Time not recognised. Try 1:30 or 45m.' });
   } else if (h.hours > MAX_ENTRY_HOURS) {
-    errors.push({ field: 'hours', text: `${fmtHours(h.hours)} in one entry is more than ${MAX_ENTRY_HOURS}h. Split it by day.` });
+    errors.push({ field: 'hours', text: `${fmtHours(h.hours)} is over ${MAX_ENTRY_HOURS}h. Split it by day.` });
   }
-  if (!String(entry.description || '').trim()) errors.push({ field: 'desc', text: 'Add a short description of the work.' });
+  if (!String(entry.description || '').trim()) errors.push({ field: 'desc', text: 'Add a description.' });
   if (errors.length) return { errors, warnings };
 
   const date = day(entry.date);
-  if (date > today) warnings.push({ field: 'date', text: `The date is in the future (${date}).` });
-  else if (daysBetween(date, today) > OLD_DAYS) warnings.push({ field: 'date', text: `The date is ${daysBetween(date, today)} days ago.` });
-  if (dow(date) === 0 || dow(date) === 6) warnings.push({ field: 'date', text: 'The date is a weekend.' });
+  if (date > today) warnings.push({ field: 'date', text: `Date is in the future (${date}).` });
+  else if (daysBetween(date, today) > OLD_DAYS) warnings.push({ field: 'date', text: `Date is ${daysBetween(date, today)} days ago.` });
+  if (dow(date) === 0 || dow(date) === 6) warnings.push({ field: 'date', text: 'Date is a weekend.' });
 
   const same = entries.filter(e => day(e.date) === date && e.engineer === entry.engineer);
   const dupe = same.find(e => e.clientName === entry.clientName && Math.abs(Number(e.hours) - h.hours) < 1e-9
     && (norm(described(e)) === norm(entry.description) || !norm(described(e))));
-  if (dupe) warnings.push({ field: 'desc', text: `${entry.engineer} already logged ${fmtHours(h.hours)} for ${entry.clientName} on this day${described(dupe) ? ` (“${described(dupe)}”)` : ''}. Is this a duplicate?` });
+  if (dupe) warnings.push({ field: 'desc', text: `${entry.engineer} already logged ${fmtHours(h.hours)} for ${entry.clientName} that day${described(dupe) ? ` (“${described(dupe)}”)` : ''}. A duplicate?` });
 
   const dayTotal = round2(same.reduce((t, e) => t + (Number(e.hours) || 0), 0) + h.hours);
-  if (dayTotal > LONG_DAY_HOURS) warnings.push({ field: 'hours', text: `This makes ${fmtHours(dayTotal)} for ${entry.engineer} on this day.` });
+  if (dayTotal > LONG_DAY_HOURS) warnings.push({ field: 'hours', text: `${entry.engineer} would have ${fmtHours(dayTotal)} that day.` });
 
   const bal = balancePreview(client, h.hours);
-  if (bal && bal.after < 0) warnings.push({ field: 'hours', text: `${entry.clientName} goes ${fmtHours(-bal.after)} over their SSA hours. Consider a renewal.` });
+  if (bal && bal.after < 0) warnings.push({ field: 'hours', text: `${entry.clientName} goes ${fmtHours(-bal.after)} over their SSA hours.` });
   return { errors, warnings };
 }
 

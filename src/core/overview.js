@@ -83,11 +83,11 @@ export function attention(d, today, now = new Date()) {
   const plural = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 
   const x = d.xero;
-  if (x && !x.connected) add('xero', 'red', 'Xero isn’t connected', 'Sales, invoices owed and job matching need it. Connect it on Jobs › Xero.', { section: 'jobs', tab: 'xero' });
-  else if (x && x.last_sync_ok === false) add('xero', 'red', 'The last Xero sync failed', x.last_error || 'Open Jobs › Xero and press Sync now.', { section: 'jobs', tab: 'xero' });
+  if (x && !x.connected) add('xero', 'red', 'Xero isn’t connected', 'Sales, owed and job matching need it.', { section: 'jobs', tab: 'xero' });
+  else if (x && x.last_sync_ok === false) add('xero', 'red', 'The last Xero sync failed', x.last_error || 'No error message.', { section: 'jobs', tab: 'xero' });
   else if (x && x.last_sync_at && (now - new Date(x.last_sync_at)) > STALE_SYNC_HOURS * 3600e3) {
     const h = Math.floor((now - new Date(x.last_sync_at)) / 3600e3);
-    add('xero', 'amber', `Xero last synced ${h} hours ago`, 'It normally syncs every hour. Figures may be out of date.', { section: 'jobs', tab: 'xero' });
+    add('xero', 'amber', `Xero last synced ${h} hours ago`, 'Figures may be out of date.', { section: 'jobs', tab: 'xero' });
   }
 
   if (d.inv) {
@@ -102,7 +102,7 @@ export function attention(d, today, now = new Date()) {
     if (drafts.length) {
       const fromJobs = drafts.filter(i => jobRefs.has(refKey(i.invoice_number))).length;
       add('drafts', 'amber', `${plural(drafts.length, 'draft invoice')} waiting in Xero`,
-        `${names(drafts.map(i => `${i.invoice_number || 'no number'} ${i.contact_name || ''}`.trim()))}${fromJobs ? ` · ${fromJobs} from jobs` : ''}. Approve and send in Xero.`,
+        `${names(drafts.map(i => `${i.invoice_number || 'no number'} ${i.contact_name || ''}`.trim()))}${fromJobs ? ` · ${fromJobs} from jobs` : ''}`,
         { section: 'jobs', tab: 'overview' });
     }
   }
@@ -134,7 +134,7 @@ export function attention(d, today, now = new Date()) {
     const st = d.opps.map(o => ({ o, s: dealState(o, today) }));
     const due = st.filter(x => x.s.followUpDue).sort((a, b) => b.s.followUpLate - a.s.followUpLate);
     for (const { o, s } of due.slice(0, 5)) add('deal_follow_up', s.followUpLate > 7 ? 'red' : 'amber',
-      `Chase ${o.client_name}: ${o.title}${s.followUpLate ? ` (${dueText(o.follow_up_on, today)})` : ' today'}`, o.next_step || 'Follow-up date reached on the pipeline.', { section: 'opportunities', tab: 'pipeline' });
+      `Chase ${o.client_name}: ${o.title}${s.followUpLate ? ` (${dueText(o.follow_up_on, today)})` : ' today'}`, o.next_step || '', { section: 'opportunities', tab: 'pipeline' });
     if (due.length > 5) add('deal_follow_up_more', 'amber', `${plural(due.length - 5, 'more deal follow-up')} due`, names(due.slice(5).map(x => x.o.client_name)), { section: 'opportunities', tab: 'pipeline' });
     const since = new Date(Date.parse(today + 'T00:00:00Z') - 60 * 86400000).toISOString().slice(0, 10);
     const setup = st.filter(x => (x.s.needsJob || x.s.needsBilling) && day(x.o.closed_at || x.o.modified_at) >= since);
@@ -152,7 +152,7 @@ export function attention(d, today, now = new Date()) {
     for (const p of due.slice(0, 3)) {
       const late = day(p.follow_up_on) < today;
       add('prospect_follow_up', Date.parse(today) - Date.parse(day(p.follow_up_on)) > 7 * 86400000 ? 'red' : 'amber',
-        `Chase prospect ${p.company}${late ? ` (${dueText(p.follow_up_on, today)})` : ' today'}`, p.next_step || 'Follow-up date reached.', { section: 'opportunities', tab: 'prospects' });
+        `Chase prospect ${p.company}${late ? ` (${dueText(p.follow_up_on, today)})` : ' today'}`, p.next_step || '', { section: 'opportunities', tab: 'prospects' });
     }
     if (due.length > 3) add('prospect_follow_up_more', 'amber', `${plural(due.length - 3, 'more prospect')} to chase`, names(due.slice(3).map(p => p.company)), { section: 'opportunities', tab: 'prospects' });
   }
@@ -160,7 +160,7 @@ export function attention(d, today, now = new Date()) {
   if (d.ssa) {
     const low = d.ssa.filter(c => !c.archived && c.remaining != null && c.remaining < LOW_SSA_HOURS).sort((a, b) => a.remaining - b.remaining);
     if (low.length) add('ssa', low.some(c => c.remaining <= 0) ? 'red' : 'amber', `${plural(low.length, 'SSA client')} low on hours`,
-      names(low.map(c => `${c.name} ${round2(c.remaining)}h`)) + '. Renew from Timesheets › SSA.', { section: 'timesheets', tab: 'ssa' });
+      names(low.map(c => `${c.name} ${round2(c.remaining)}h`)), { section: 'timesheets', tab: 'ssa' });
   }
 
   if (d.leave) {
@@ -173,7 +173,7 @@ export function attention(d, today, now = new Date()) {
     const month = today.slice(0, 7);
     const old = d.journeys.filter(j => j.date && !j.claimedDate && j.date.slice(0, 7) < month);
     if (old.length) add('mileage', 'info', `${money2(sum(old, j => num(j.amount)))} mileage not yet claimed`,
-      `${plural(old.length, 'journey')} from before this month. Send it from Mileage › Email my claim.`, { section: 'mileage' });
+      `${plural(old.length, 'journey')} before this month`, { section: 'mileage' });
   }
 
   if (d.opps) {

@@ -91,7 +91,7 @@ assert.equal(by.to_invoice.title, '1 job ready to invoice · £900.00', 'a job i
 assert.equal(by.late_jobs.title, '1 job past its target date');
 assert.match(by.late_jobs.detail, /H Ltd: Move/);
 assert.equal(by.ssa.level, 'red', 'a client out of hours is red');
-assert.match(by.ssa.detail, /^Out Ltd -0\.25h, Low Ltd 1\.5h\./, 'emptiest first, archived left out');
+assert.match(by.ssa.detail, /^Out Ltd -0\.25h, Low Ltd 1\.5h$/, 'emptiest first, archived left out');
 assert.equal(by.leave.title, '1 leave request to approve', 'past pending requests are not counted');
 assert.match(by.leave.detail, /Jack 12–13 Oct/);
 assert.equal(by.mileage.title, '£22.50 mileage not yet claimed', 'claimed and this month left out');
@@ -166,7 +166,7 @@ console.log('overview: all tests passed');
     { company: 'Later', stage: 'new', follow_up_on: '2026-10-20' }
   ] }, '2026-10-08').filter(i => i.key === 'prospect_follow_up');
   assert.deepEqual(items.map(i => [i.level, i.title, i.detail]), [
-    ['red', 'Chase prospect Old Co (18 days overdue)', 'Follow-up date reached.'],
+    ['red', 'Chase prospect Old Co (18 days overdue)', ''],
     ['amber', 'Chase prospect Acme today', 'Book site visit']
   ]);
   assert.deepEqual(items[0].go, { section: 'opportunities', tab: 'prospects' });

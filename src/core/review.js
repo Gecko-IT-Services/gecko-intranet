@@ -34,8 +34,8 @@ export const monthEndSoon = today => workingDaysLeft(today) <= 5;
 
 /** The checks a person ticks (saved per month in month_end_checks). */
 export const MANUAL = [
-  { key: 'tdsynnex', label: 'TD SYNNEX licence check', detail: 'Licence invoice against what each client is billed in Xero (seats and SKUs).', go: 'profitability' },
-  { key: 'atera', label: 'Atera cost check', detail: 'Atera bill (seats, Acronis, Webroot, Keeper) against what each client is billed.', go: 'profitability' }
+  { key: 'tdsynnex', label: 'TD SYNNEX licence check', detail: 'Licence invoice vs what each client is billed.', go: 'profitability' },
+  { key: 'atera', label: 'Atera cost check', detail: 'Atera bill vs what each client is billed.', go: 'profitability' }
 ];
 
 /**
@@ -48,13 +48,13 @@ export function monthEnd(d, today) {
   const month = today.slice(0, 7);
   const items = [];
   const add = (key, label, state, detail, go) => items.push({ key, label, state, detail, go });
-  const missing = (key, label, what, go) => add(key, label, 'check', `${what} didn’t load, so this can’t be checked.`, go);
+  const missing = (key, label, what, go) => add(key, label, 'check', `Not checked: ${what} didn’t load.`, go);
 
   if (d.inv && d.rep) {
     const s = xeroMonthSales(d.inv, d.rep, d.jobs || [], { month });
     const left = s.recurringToCome;
     add('repeating', 'Repeating invoices raised', left.length ? 'todo' : 'done',
-      left.length ? `${plural(left.length, 'repeating invoice')} still to go out this month (${gbp(s.toCome)}): ${left.slice(0, 3).map(r => r.name).join(', ')}${left.length > 3 ? '…' : ''}` : 'Every repeating invoice for this month has gone out.', 'jobs:tocome');
+      left.length ? `${plural(left.length, 'repeating invoice')} still to go out this month (${gbp(s.toCome)}): ${left.slice(0, 3).map(r => r.name).join(', ')}${left.length > 3 ? '…' : ''}` : 'All gone out.', 'jobs:tocome');
     const drafts = d.inv.filter(i => DRAFTS.has(i.status) && String(i.invoice_date || '').slice(0, 7) <= month);
     add('drafts', 'Draft invoices approved in Xero', drafts.length ? 'todo' : 'done',
       drafts.length ? `${plural(drafts.length, 'draft')} waiting: ${drafts.slice(0, 3).map(i => i.invoice_number || i.contact_name).join(', ')}` : 'No drafts waiting.', 'jobs:overview');
@@ -67,7 +67,7 @@ export function monthEnd(d, today) {
       const notChased = late.filter(r => !recent.has(r.name));
       add('chased', 'Overdue invoices chased', notChased.length ? 'todo' : 'done',
         !late.length ? 'Nothing overdue.' : notChased.length ? `${plural(notChased.length, 'client')} overdue and not nudged in the last two weeks: ${notChased.slice(0, 3).map(r => `${r.name} ${gbp(r.overdue)}`).join(', ')}`
-          : late.length === 1 ? 'The overdue client was nudged in the last two weeks.' : `All ${late.length} overdue clients nudged in the last two weeks.`, 'jobs:owed');
+          : late.length === 1 ? 'Nudged in the last two weeks.' : `All ${late.length} nudged in the last two weeks.`, 'jobs:owed');
     }
   } else {
     missing('repeating', 'Repeating invoices raised', 'Xero', 'jobs:xero');
@@ -78,35 +78,35 @@ export function monthEnd(d, today) {
   if (d.jobs) {
     const done = d.jobs.filter(j => j.status === 'to_invoice');
     add('invoice_jobs', 'Finished jobs invoiced', done.length ? 'todo' : 'done',
-      done.length ? `${plural(done.length, 'job')} ready to invoice: ${done.slice(0, 3).map(j => `${j.client_name}: ${j.title}`).join(', ')}` : 'No finished job is waiting for an invoice.', 'jobs:jobs');
+      done.length ? `${plural(done.length, 'job')} ready to invoice: ${done.slice(0, 3).map(j => `${j.client_name}: ${j.title}`).join(', ')}` : 'None waiting.', 'jobs:jobs');
     const due = d.jobs.filter(j => (j.status === 'agreed' || j.status === 'in_progress') && j.target_date && day(j.target_date) <= lastDay(month));
     add('job_dates', 'Job dates still right', due.length ? 'todo' : 'done',
-      due.length ? `${plural(due.length, 'job')} due by month end and not finished: move it on or change its date.` : 'No open job is due by month end.', 'jobs:jobs');
+      due.length ? `${plural(due.length, 'job')} due by month end and not finished.` : 'No open job is due by month end.', 'jobs:jobs');
   } else missing('invoice_jobs', 'Finished jobs invoiced', 'Jobs', 'jobs:jobs');
 
   if (d.journeys) {
     const open = d.journeys.filter(j => !j.claimedDate && j.date && j.date.slice(0, 7) <= month);
     add('mileage', 'Mileage claimed', open.length ? 'todo' : 'done',
-      open.length ? `${plural(open.length, 'journey')} not claimed (${gbp(open.reduce((t, j) => t + num(j.amount), 0))}). Send it from Mileage › Email my claim.` : 'All mileage claimed.', 'mileage');
+      open.length ? `${plural(open.length, 'journey')} not claimed (${gbp(open.reduce((t, j) => t + num(j.amount), 0))}).` : 'All mileage claimed.', 'mileage');
   } else missing('mileage', 'Mileage claimed', 'Mileage', 'mileage');
 
   if (d.ssa) {
     const low = d.ssa.filter(c => !c.archived && c.remaining != null && c.remaining < 2);
     add('ssa', 'SSA renewals sent', low.length ? 'todo' : 'done',
-      low.length ? `${plural(low.length, 'client')} under 2 hours: ${low.slice(0, 3).map(c => `${c.name} ${round2(c.remaining)}h`).join(', ')}` : 'Every SSA client has 2 hours or more.', 'timesheets:ssa');
+      low.length ? `${plural(low.length, 'client')} under 2 hours: ${low.slice(0, 3).map(c => `${c.name} ${round2(c.remaining)}h`).join(', ')}` : 'All 2h or more.', 'timesheets:ssa');
   } else missing('ssa', 'SSA renewals sent', 'SSA balances', 'timesheets:ssa');
 
   if (d.entries && d.leave) {
     const gaps = timesheetGaps(d.entries, d.leave, today);
     const n = Object.values(gaps).reduce((t, g) => t + g.length, 0);
     add('timesheets', 'Timesheets complete', n ? 'check' : 'done',
-      n ? Object.entries(gaps).filter(([, g]) => g.length).map(([p, g]) => `${p}: nothing logged on ${plural(g.length, 'working day')}`).join(' · ') + ' (fine if there was no client work).' : 'Time logged on every working day this month.', 'timesheets:week');
+      n ? Object.entries(gaps).filter(([, g]) => g.length).map(([p, g]) => `${p}: nothing logged on ${plural(g.length, 'working day')}`).join(' · ') : 'Every working day logged.', 'timesheets:week');
   }
 
   if (d.leave) {
     const pending = d.leave.filter(l => l.status === 'Pending' && day(l.end || l.start) >= today);
     add('leave', 'Leave requests answered', pending.length ? 'todo' : 'done',
-      pending.length ? `${plural(pending.length, 'request')} waiting for approval.` : 'No requests waiting.', 'leave');
+      pending.length ? `${plural(pending.length, 'request')} waiting.` : 'None waiting.', 'leave');
   }
 
   const ticks = new Map((d.ticks || []).map(t => [t.item, t]));

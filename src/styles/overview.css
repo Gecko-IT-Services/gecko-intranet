@@ -30,7 +30,7 @@
 
 /* Sales tile: invoiced so far against what the month is on course for */
 #section-overview .ovw-bar { display: flex; gap: 2px; height: 8px; margin-top: 10px; border-radius: var(--radius-pill); background: var(--border-dim); overflow: hidden; }
-#section-overview .ovw-bar > i { display: block; height: 100%; transform-origin: left; animation: ovw-grow-x .8s cubic-bezier(.2, .8, .2, 1) both; }
+#section-overview .ovw-bar > i { display: block; height: 100%; transform-origin: left; animation: ovw-grow-x .6s var(--ease) both; }
 
 /* — Two columns: Needs attention (wider) + This week — */
 #section-overview .ovw-split { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -45,7 +45,7 @@
 #section-overview .ovw-attn li {
   display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 12px; align-items: center;
   padding: 11px 18px; border-bottom: 1px solid var(--border-dim);
-  animation: ovw-rise .45s cubic-bezier(.2, .8, .2, 1) both;
+  animation: ovw-rise var(--dur-3) var(--ease) both;
 }
 #section-overview .ovw-attn li:last-child { border-bottom: none; }
 #section-overview .ovw-attn li:nth-child(2) { animation-delay: .04s; }
@@ -87,7 +87,7 @@
 #section-overview .ovw-week .none { font-size: 12px; color: var(--muted); }
 #section-overview .ovw-hours { display: grid; gap: 6px; }
 #section-overview .ovw-hours div { display: grid; grid-template-columns: 54px minmax(0, 1fr) 48px; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
-#section-overview .ovw-hours i { display: block; height: 6px; border-radius: var(--radius-pill); background: var(--blue); transform-origin: left; animation: ovw-grow-x .8s cubic-bezier(.2, .8, .2, 1) both; }
+#section-overview .ovw-hours i { display: block; height: 6px; border-radius: var(--radius-pill); background: var(--blue); transform-origin: left; animation: ovw-grow-x .6s var(--ease) both; }
 #section-overview .ovw-hours em { font-style: normal; font-family: var(--font-mono); color: var(--white); text-align: right; }
 
 /* Last six months (same marks as Jobs › Month overview) */
@@ -96,7 +96,7 @@
 #section-overview .ovw-hist-col .t { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
 #section-overview .ovw-hist-col .m { font-size: 12px; color: var(--muted); }
 #section-overview .ovw-hist-col.cur .m { color: var(--white); font-weight: 700; }
-#section-overview .ovw-hist-bar { flex: 1; width: 100%; max-width: 44px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; transform-origin: bottom; animation: ovw-grow-y .8s cubic-bezier(.2, .8, .2, 1) both; }
+#section-overview .ovw-hist-bar { flex: 1; width: 100%; max-width: 44px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; transform-origin: bottom; animation: ovw-grow-y .6s var(--ease) both; }
 #section-overview .ovw-hist-bar i { display: block; width: 100%; }
 #section-overview .ovw-hist-bar i:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
 #section-overview .ovw-legend { list-style: none; margin: 0; padding: 10px 18px 14px; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
@@ -147,7 +147,7 @@
 #section-overview .ovw-stat {
   font: inherit; text-align: left; cursor: pointer; display: grid; gap: 3px; align-content: start; min-width: 0;
   color: var(--white); transition: background-color var(--dur-2) var(--ease);
-  animation: ovw-rise .45s cubic-bezier(.2, .8, .2, 1) both;
+  animation: ovw-rise var(--dur-3) var(--ease) both;
 }
 #app #section-overview .ovw-stat:hover { background: var(--card-hover); }
 #section-overview .ovw-stat:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
@@ -187,7 +187,7 @@
 #section-overview .ovw-me-ring strong { font-family: var(--font-mono); font-size: 20px; font-weight: 500; color: var(--white); }
 #section-overview .ovw-me-ring span { font-size: 11px; color: var(--muted); }
 #section-overview .ovw-me-list { list-style: none; margin: 0; padding: 4px 0; }
-#section-overview .ovw-me-list li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--border-dim); animation: ovw-rise .4s cubic-bezier(.2, .8, .2, 1) both; }
+#section-overview .ovw-me-list li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--border-dim); animation: ovw-rise var(--dur-3) var(--ease) both; }
 #section-overview .ovw-me-list li:last-child { border-bottom: none; }
 #section-overview .ovw-me-list strong { display: block; font-size: 14px; color: var(--white); font-weight: 600; }
 #section-overview .ovw-me-list p { margin: 2px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; overflow-wrap: anywhere; }
@@ -207,7 +207,7 @@
 #section-overview .ovw-rv-hours small { grid-column: 2 / 4; }
 #section-overview .ovw-rv-hours strong { font-family: var(--font-mono); font-weight: 500; text-align: right; color: var(--blue); }
 #section-overview .ovw-rv-hours .bars { display: grid; gap: 3px; }
-#section-overview .ovw-rv-hours .bars i, #section-overview .ovw-rv-legend b { display: block; height: 7px; border-radius: var(--radius-pill); min-width: 2px; transform-origin: left; animation: ovw-grow-x .8s cubic-bezier(.2, .8, .2, 1) both; }
+#section-overview .ovw-rv-hours .bars i, #section-overview .ovw-rv-legend b { display: block; height: 7px; border-radius: var(--radius-pill); min-width: 2px; transform-origin: left; animation: ovw-grow-x .6s var(--ease) both; }
 #section-overview .ovw-rv .now { background: var(--blue); }
 #section-overview .ovw-rv .prev { background: color-mix(in srgb, var(--blue) 35%, transparent); }
 #section-overview .ovw-rv-legend { margin: 0; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }

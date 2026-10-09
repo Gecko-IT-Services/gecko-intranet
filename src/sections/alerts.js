@@ -126,7 +126,7 @@ export function assess(issue) {
   const server = isServer(device);
   const key = isKeyMachine(device);
 
-  if (kind === 'snmp') return { level: 'noise', why: 'Printer not answering SNMP; it is usually asleep' };
+  if (kind === 'snmp') return { level: 'noise', why: 'Printer asleep (SNMP)' };
 
   if (server && kind !== 'cpu' && kind !== 'memory') {
     return { level: 'critical', why: 'Server' };
@@ -141,7 +141,7 @@ export function assess(issue) {
     case 'service':
       if (key) return { level: 'important', why: 'Backup agent stopped on a key machine' };
       if (days >= 2) return { level: 'important', why: `Backup agent stopped on ${days} separate days` };
-      return { level: 'noise', why: 'One-off backup agent stop, usually an Acronis update' };
+      return { level: 'noise', why: 'One-off backup agent stop' };
 
     case 'offline':
       if (isHomeMachine(device)) return { level: 'noise', why: 'Home PC switched off' };
@@ -156,7 +156,7 @@ export function assess(issue) {
     default:
       // Something Atera started alerting on that these rules don't know yet:
       // surface it rather than hide it.
-      return { level: 'important', why: 'New type of alert, check it' };
+      return { level: 'important', why: 'New type of alert' };
   }
 }
 
@@ -247,7 +247,7 @@ export function buildIssues(entries, now = new Date(), resolutions = new Map()) 
       // never sit in the filtered pile either.
       is.reopened = r;
       if (is.level === 'noise') is.level = 'important';
-      is.why = `Back after being resolved by ${r.by || 'someone'} on ${r.at.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' })}. ${a.why}`;
+      is.why = `Back since ${r.at.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' })}. ${a.why}`;
     }
     issues.push(is);
   }
@@ -551,16 +551,14 @@ const LEVEL = { critical: 'Act today', important: 'This week', noise: 'Filtered'
 
 const consentMessage = () => `
   <div class="bkp-error">
-    <strong>The portal needs permission to read the support mailbox.</strong>
-    This section reads Atera alert emails in ${escapeHtml(MAILBOX)}.
+    <strong>No permission to read ${escapeHtml(MAILBOX)}.</strong>
     <button type="button" class="btn btn-sm btn-primary" id="alrGrant">Grant mailbox access</button>
   </div>`;
 
 const noAccessMessage = () => `
   <div class="bkp-error">
     <strong>Your account can't open ${escapeHtml(MAILBOX)}.</strong>
-    Give your user Full Access to the support mailbox in the Exchange admin
-    centre, then press Refresh.
+    Needs Full Access in Exchange admin (can take an hour).
   </div>`;
 
 export function renderKpis(stats) {
@@ -570,7 +568,7 @@ export function renderKpis(stats) {
   return tile(v('critical'), 'Act today', 'fail')
        + tile(v('important'), 'This week', 'warn')
        + tile(v('resolved'), 'Resolved', 'ok')
-       + tile(v('noise'), `Filtered${stats ? ` (${stats.alerts} emails read)` : ''}`, 'muted');
+       + tile(v('noise'), 'Filtered', 'muted');
 }
 
 export function renderIssue(is) {
@@ -619,7 +617,7 @@ function render() {
   const rtoggle = document.getElementById('alrShowResolved');
   if (rtoggle) rtoggle.checked = ALR.showResolved;
 
-  if (ALR.loading && !ALR.issues) { mount.innerHTML = '<p class="bkp-empty">Reading Atera alerts from the support mailbox…</p>'; return; }
+  if (ALR.loading && !ALR.issues) { mount.innerHTML = '<p class="bkp-empty">Loading alerts…</p>'; return; }
   if (ALR.error === 'CONSENT')   { mount.innerHTML = consentMessage(); return; }
   if (ALR.error === 'NO_ACCESS') { mount.innerHTML = noAccessMessage(); return; }
   if (ALR.error) {
@@ -636,7 +634,7 @@ function render() {
 
   const main = actionable.length
     ? table(actionable.map(renderIssue).join(''))
-    : `<p class="bkp-empty"><strong>Nothing needs attention.</strong> ${ALR.stats.alerts} alert emails in the last ${ALR.days} days, all filtered as noise.</p>`;
+    : '<p class="bkp-empty">Nothing needs attention.</p>';
 
   const noisePart = ALR.showNoise && noise.length
     ? `<h3 class="alr-h">Filtered (${noise.length} issues, ${ALR.stats.noiseAlerts} emails)</h3>${table(noise.map(renderIssue).join(''))}`
@@ -645,16 +643,15 @@ function render() {
   const resolvedPart = ALR.showResolved
     ? (resolved.length
         ? `<h3 class="alr-h">Resolved (${resolved.length})</h3>${table(resolved.map(renderIssue).join(''))}`
-        : '<h3 class="alr-h">Resolved</h3><p class="bkp-empty">Nothing marked resolved in this window yet.</p>')
+        : '<h3 class="alr-h">Resolved</h3><p class="bkp-empty">None in this window.</p>')
     : '';
 
   mount.innerHTML = `
-    ${ALR.resolutionsMissing ? '<p class="bkp-note">Resolved alerts are kept in the Gecko database. Press Resolved on any alert to connect to it.</p>' : ''}
-    ${ALR.capped ? `<p class="bkp-note">Showing the newest ${SAFETY_LIMIT.toLocaleString('en-GB')} emails. Pick a shorter window for the full picture.</p>` : ''}
+    ${ALR.resolutionsMissing ? '<p class="bkp-note">Not connected to the database: resolved alerts can’t be shown.</p>' : ''}
+    ${ALR.capped ? `<p class="bkp-note">Newest ${SAFETY_LIMIT.toLocaleString('en-GB')} emails only. Pick a shorter window.</p>` : ''}
     ${main}
     ${noisePart}
-    ${resolvedPart}
-    <p class="bkp-foot">Press Resolved once an issue is dealt with: it disappears for everyone and comes back, marked "Back again", only if Atera alerts on it again. Repeats are folded into one row per device and problem. Atera doesn't email when an alert clears, so anything quiet for ${QUIET_DAYS}+ days drops to Filtered unless it's critical. Turn on "Resolved" emails in Atera to close issues for certain.</p>`;
+    ${resolvedPart}`;
   syncTableLabels(mount);
 }
 
@@ -694,13 +691,13 @@ async function openEmail(key) {
   const backdrop = document.getElementById('alrBackdrop');
   const body = document.getElementById('alrModalBody');
   if (!issue || !backdrop || !body) return;
-  openModal('Email the client', '<p class="bkp-sub">Preparing the email…</p>');
+  openModal('Email the client', '<p class="bkp-sub">Preparing…</p>');
 
   const contact = matchClient(issue.client, await loadContacts());
   const draft = composeEmail(issue, contact, senderName());
   const note = contact
-    ? `To: ${escapeHtml(contact.primaryContact || contact.name)}, the contact on the Clients list for ${escapeHtml(contact.name)}. Change it if someone else uses ${escapeHtml(issue.device)}.`
-    : `No contact found for ${escapeHtml(issue.client)} on the Clients list. Add the address below.`;
+    ? `To: ${escapeHtml(contact.primaryContact || contact.name)} (${escapeHtml(contact.name)}).`
+    : `No contact found for ${escapeHtml(issue.client)}.`;
 
   body.innerHTML = `
     <form class="prj-form" id="alrEmailForm">
@@ -737,7 +734,7 @@ async function openEmail(key) {
 
 const setupMessage = () => `
   <div class="prj-form">
-    <p><strong>Connect to the Gecko database.</strong> Resolved alerts are kept there so you and Jack see the same thing. Connect once with your Microsoft account.</p>
+    <p><strong>Connect to the Gecko database</strong> to save resolved alerts.</p>
     <div class="prj-form-actions">
       <button type="button" class="btn btn-ghost" id="alrResolveCancel">Cancel</button>
       <button type="button" class="btn btn-primary" id="alrRetryList">Connect</button>
@@ -772,7 +769,7 @@ function openResolve(key) {
     <form class="prj-form" id="alrResolveForm">
       <p><strong>${escapeHtml(issue.client)}</strong> · ${escapeHtml(issue.device)}<br><span class="bkp-sub">${escapeHtml(issue.label)}</span></p>
       <label>What was done? (optional)<textarea id="alrResolveNote" rows="3" placeholder="e.g. Cleared 40 GB of temp files, D: now at 61%"></textarea></label>
-      ${issue.resolveUrl ? `<p class="bkp-sub">Atera keeps its own copy of the alert. <a href="${escapeHtml(issue.resolveUrl)}" target="_blank" rel="noopener noreferrer">Clear it in Atera too</a> (opens Atera).</p>` : ''}
+      ${issue.resolveUrl ? `<p class="bkp-sub"><a href="${escapeHtml(issue.resolveUrl)}" target="_blank" rel="noopener noreferrer">Clear it in Atera too</a></p>` : ''}
       <div class="prj-form-actions">
         <button type="button" class="btn btn-ghost" id="alrResolveCancel">Cancel</button>
         <button type="submit" class="btn btn-primary">Mark resolved</button>

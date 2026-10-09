@@ -443,8 +443,6 @@ body {
   margin-bottom: 28px;
 }
 
-.login-card p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
-
 #signInBtn {
   width: 100%; min-height: 44px; padding: 12px 18px;
   border-radius: var(--radius-sm);
@@ -1050,7 +1048,6 @@ body {
   letter-spacing: .07em; text-transform: uppercase;
   margin-bottom: 3px;
 }
-#section-overview .ovw-actions-text p { color: var(--muted); font-size: 12px; }
 #section-overview .ovw-actions-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* — Error / empty state for the whole section — */
@@ -1245,7 +1242,6 @@ body {
   background: var(--card); border: 1px solid var(--border-dim);
   border-radius: var(--radius);
 }
-#section-profitability .prf-li { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
 #section-profitability .prf-leg-r { margin-left: auto; font-size: 10px; color: var(--muted); display: flex; gap: 10px; }
 #section-profitability .prf-m-hi { color: var(--green); font-weight: 700; }
 #section-profitability .prf-m-md { color: var(--amber); font-weight: 700; }
@@ -1675,7 +1671,6 @@ body {
   letter-spacing: .06em; text-transform: uppercase; display: block;
 }
 #section-profitability .prf-gtlbl strong span { color: var(--green); }
-#section-profitability .prf-gtlbl p { font-size: 10px; color: var(--muted); margin-top: 3px; }
 #section-profitability .prf-gtstats { display: flex; flex-wrap: wrap; }
 #section-profitability .prf-gtst { padding: 0 22px; border-right: 1px solid var(--border); text-align: center; }
 #section-profitability .prf-gtst:last-child { border-right: none; padding-right: 0; }
@@ -1700,7 +1695,6 @@ body {
   letter-spacing: .05em; text-transform: uppercase;
   color: var(--white); margin-bottom: 6px;
 }
-#section-profitability .prf-empty p { color: var(--muted); font-size: 13px; }
 
 /* — Profitability modal (mirrors mil-modal pattern, slightly wider for forms) — */
 #section-profitability .prf-modal-bg {
@@ -2817,7 +2811,6 @@ body {
   font-size: 16px; letter-spacing: .06em; text-transform: uppercase;
   margin-bottom: 8px;
 }
-#section-clients .cli-empty p,
 #section-clients .cli-error p { color: var(--muted); font-size: 13px; }
 
 /* — Modal (mirrors prf-modal pattern; separate ID so modules stay independent) — */
@@ -3171,11 +3164,6 @@ body {
 #section-timesheets .tsh-sync[data-state="warn"] { border-color: var(--amber-border); color: var(--white); }
 #section-timesheets .tsh-sync strong { color: var(--white); }
 #section-timesheets .tsh-sync .tsh-ssa-link { margin-left: 0; }
-#section-timesheets .tsh-ssa-note {
-  margin-top: 14px; padding: 10px 14px;
-  background: var(--green-glow); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); font-size: 11px; color: var(--green);
-}
 
 /* — Weekly summary blocks — */
 
@@ -3421,20 +3409,16 @@ body {
 #section-settings .set-status-pill.bad {
   color: var(--red); background: var(--red-dim); border: 1px solid var(--red-border);
 }
-#section-settings .set-change-list,
 #section-settings .set-watch-list {
   padding: 8px 18px 14px;
   display: grid; gap: 8px;
 }
-#section-settings .set-change,
 #section-settings .set-watch {
   display: grid; grid-template-columns: 92px 1fr;
   gap: 12px; padding: 9px 0;
   border-bottom: 1px solid var(--border-dim);
 }
-#section-settings .set-change:last-child,
 #section-settings .set-watch:last-child { border-bottom: none; }
-#section-settings .set-change-date,
 #section-settings .set-watch-tone {
   font-family: var(--font-body);
   font-size: 12px; font-weight: 800;
@@ -3443,7 +3427,6 @@ body {
 }
 #section-settings .set-watch-tone.warn { color: var(--amber); }
 #section-settings .set-watch-tone.bad { color: var(--red); }
-#section-settings .set-change-text,
 #section-settings .set-watch-text {
   color: var(--white); font-size: 13px; line-height: 1.4;
 }
@@ -3516,9 +3499,6 @@ body {
   padding: 18px 20px;
   display: flex; align-items: center; gap: 14px;
   flex-wrap: wrap;
-}
-#section-settings .set-actions-note {
-  font-size: 11px; color: var(--muted); flex: 1;
 }
 
 /* ── Responsive ── */
@@ -5219,7 +5199,6 @@ body::before {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  #section-settings .set-change,
   #section-settings .set-watch {
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
@@ -5491,12 +5470,10 @@ body::before {
 :root[data-theme="light"] .set-detail-label,
 :root[data-theme="light"] .set-pref-label,
 :root[data-theme="light"] .set-label,
-:root[data-theme="light"] .set-actions-note,
 :root[data-theme="light"] .set-profile-email,
 :root[data-theme="light"] .ovw-ops-head p,
 :root[data-theme="light"] .ovw-op .op-label,
 :root[data-theme="light"] .ovw-op .op-note,
-:root[data-theme="light"] .ovw-actions-text p,
 :root[data-theme="light"] .prf-sum-sub,
 :root[data-theme="light"] .mil-kpi .k-sub,
 :root[data-theme="light"] .tsh-ssa-hint,
@@ -5508,7 +5485,6 @@ body::before {
 :root[data-theme="light"] .set-badge,
 :root[data-theme="light"] .pnl-month,
 :root[data-theme="light"] .prf-leg-r,
-:root[data-theme="light"] .prf-li,
 :root[data-theme="light"] .cli-toolbar-meta,
 :root[data-theme="light"] .tsh-last-sync,
 :root[data-theme="light"] .cmp-last-sync {
@@ -6168,7 +6144,6 @@ body::before {
     </div>
     <h1>GECKO <span>HQ</span></h1>
     <div class="login-sub">Gecko IT Services</div>
-    <p>Sign in with your Microsoft 365 account to access internal tools.</p>
     <button id="signInBtn" type="button">
       <span aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span><span data-signin-label>Sign in with Microsoft</span>
     </button>
@@ -6289,7 +6264,7 @@ body::before {
 
       <div class="section-head">
         <h1>Overview <span>Dashboard</span></h1>
-        <p>Morning check and the business at a glance · <span id="ovwHeadMonth">—</span></p>
+        <p><span id="ovwHeadMonth">—</span></p>
         <div class="ovw-head-actions">
           <button class="ovw-refresh" id="ovwRefresh" type="button" onclick="ovwRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -6313,7 +6288,6 @@ body::before {
 
       <div class="section-head">
         <h1>Client <span>Profitability</span></h1>
-        <p>Service-by-service cost &amp; margin analysis — reconciled to Xero.</p>
         <div class="prf-head-actions">
           <!-- Phase 5: client CRUD moved to Directory (Phase 5).
                Orphaned functions cleaned up in Phase 9. Service-line
@@ -6409,7 +6383,7 @@ body::before {
 
       <div class="section-head">
         <h1>Mileage <span>Tracker</span></h1>
-        <p>HMRC-compliant journey log · Tax Year <span id="milTaxYear">2026/27</span> · Philip Morris &amp; Jack Morris</p>
+        <p>Tax year <span id="milTaxYear">2026/27</span></p>
         <div class="mil-head-actions">
           <button class="mil-refresh" id="milClaimEmailBtn" type="button" onclick="milEmailClaim()" title="Email your unclaimed journeys since your last claim">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -6445,12 +6419,10 @@ body::before {
           <div class="mil-kpi combined">
             <div class="k-label">Combined Total</div>
             <div class="k-value" id="milKpiCombined">£0.00</div>
-            <div class="k-sub" id="milKpiLabel">Business expense (self-assessment)</div>
           </div>
           <div class="mil-kpi tax">
             <div class="k-label" id="milKpiTaxSaveLabel">Income Tax Saving (est. 20%)</div>
             <div class="k-value" id="milKpiTaxSave">£0.00</div>
-            <div class="k-sub" id="milKpiTaxSaveSub">Effective tax saving</div>
           </div>
           <!-- Unclaimed pill (Phase 5.5) — spans full width on its own row so
                it sits under the four main KPI tiles without disturbing them. -->
@@ -6478,12 +6450,10 @@ body::before {
             <div class="mil-card-head"><h3>Add journey</h3></div>
 
             <div class="mil-hmrc-hint">
-              <span><strong>HMRC Approved Rates:</strong></span>
-              <span>From 20 July 2026 · 55p/mile (first 10,000 miles)</span>
+              <span><strong>HMRC rates:</strong></span>
+              <span>55p/mile for the first 10,000 miles (from 20 July 2026)</span>
               <span class="sep">·</span>
-              <span>Above 10,000 miles · 25p/mile</span>
-              <span class="sep">·</span>
-              <span>Selecting a client auto-fills the distance</span>
+              <span>25p/mile above 10,000</span>
             </div>
 
             <form class="mil-form" id="milForm" onsubmit="return milAddJourney(event)">
@@ -6600,10 +6570,6 @@ body::before {
               <h3>Pre-set client distances</h3>
               <span class="count" id="milClientsCount">0 clients</span>
             </div>
-            <p style="color:var(--muted);font-size:12px;margin-bottom:14px;">
-              Round-trip distances from your home base. Selecting a client when adding a journey auto-fills the mileage.
-              Edit a value inline and tab away (or press Enter) to save.
-            </p>
             <div class="mil-clients" id="milClientsList">
               <div class="mil-empty" style="grid-column:1/-1;">Loading clients…</div>
             </div>
@@ -6641,14 +6607,14 @@ body::before {
         <div class="mil-panel" id="milPanelExport" role="tabpanel">
           <div class="mil-card" style="margin-bottom:16px;">
             <div class="mil-card-head">
-              <h3>Tax Year Export</h3>
+              <h3>Tax year export</h3>
               <button class="btn btn-primary" type="button" onclick="milDownloadCsv()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Download CSV
               </button>
             </div>
             <p style="color:var(--muted);font-size:12px;" id="milExportSubtitle">
-              Full per-driver journey list for tax year <strong id="milExportYear" style="color:var(--white)">2026/27</strong>.
+              Tax year <strong id="milExportYear" style="color:var(--white)">2026/27</strong>
             </p>
 
             <div class="mil-export-grid" style="margin-top:16px;">
@@ -6658,7 +6624,7 @@ body::before {
                   <span class="veh" id="milExpPhilipRole">· Sole Trader · Tesla</span>
                 </div>
                 <div class="mec-total" id="milExpPhilipAmt">£0.00</div>
-                <div class="mec-sub"><span id="milExpPhilipMiles">0</span> miles · Total reimbursement</div>
+                <div class="mec-sub"><span id="milExpPhilipMiles">0</span> miles</div>
               </div>
               <div class="mil-card mil-export-card" style="margin:0;background:var(--dark);">
                 <div class="mec-head">
@@ -6666,7 +6632,7 @@ body::before {
                   <span class="veh" id="milExpJackRole">· Employee · Hyundai Kona</span>
                 </div>
                 <div class="mec-total" id="milExpJackAmt">£0.00</div>
-                <div class="mec-sub"><span id="milExpJackMiles">0</span> miles · Total reimbursement</div>
+                <div class="mec-sub"><span id="milExpJackMiles">0</span> miles</div>
               </div>
             </div>
 
@@ -6679,8 +6645,7 @@ body::before {
           </div>
 
           <div class="mil-hmrc-note" id="milHmrcNote">
-            <strong>HMRC Mileage Record Requirements</strong>
-            This log captures every required field — date, destination, business purpose, miles, and reimbursement amount. Retain records for 6 years after the end of the tax year. As a sole trader, Philip claims mileage allowance as a business expense on his Self Assessment (SA103). Jack's mileage is reimbursed directly by the business — retain bank statements as evidence of payment.
+            <strong>HMRC records</strong>
           </div>
         </div>
 
@@ -6734,7 +6699,6 @@ body::before {
 
       <div class="section-head">
         <h1>Client <span>Directory</span></h1>
-        <p>Unified contact, contract &amp; SSA view — single source of truth for client metadata.</p>
         <div class="cli-head-actions">
           <button class="btn btn-primary" type="button" onclick="cliOpenClientModal()">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -6841,7 +6805,6 @@ body::before {
     <section class="section" id="section-team">
       <div class="section-head">
         <h1>The <span>Team</span></h1>
-        <p>Who’s in, holiday left, the next four weeks, hours and mileage.</p>
         <div class="head-actions">
           <button class="head-btn" id="teamRefresh" type="button" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -6856,7 +6819,6 @@ body::before {
     <section class="section" id="section-opportunities">
       <div class="section-head">
         <h1>Sales <span>Opportunities</span></h1>
-        <p>Where each client has a gap we can fill, and the pipeline that grows recurring revenue.</p>
         <div class="head-actions">
           <button class="head-btn" id="oppRefresh" type="button" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -6887,7 +6849,6 @@ body::before {
     <section class="section" id="section-jobs">
       <div class="section-head">
         <h1>Jobs <span>Board</span></h1>
-        <p>Current work and its value, what’s ready to invoice, and how the month’s sales are tracking in Xero.</p>
         <div class="head-actions">
           <button class="head-btn" id="jobRefresh" type="button" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -6917,7 +6878,6 @@ body::before {
 
       <div class="section-head">
         <h1>Backup <span>Status</span></h1>
-        <p>Latest Acronis result for every client backup job.</p>
         <div class="bkp-head-actions">
           <div class="bkp-window" role="group" aria-label="Time window">
             <button type="button" data-bkp-hours="24" aria-pressed="true">24 h</button>
@@ -6957,7 +6917,6 @@ body::before {
 
       <div class="section-head">
         <h1>Atera <span>Alerts</span></h1>
-        <p>Only the alerts that need a person. Noise filtered out.</p>
         <div class="alr-head-actions">
           <div class="bkp-window" role="group" aria-label="Time window">
             <button type="button" data-alr-days="7" aria-pressed="true">7 days</button>
@@ -7004,7 +6963,6 @@ body::before {
 
       <div class="section-head">
         <h1>Time<span>sheets</span></h1>
-        <p>Time tracking for SSA client work &amp; internal projects — Philip Morris &amp; Jack Morris</p>
         <div class="tsh-head-actions">
           <button class="tsh-refresh" id="tshRefresh" type="button" onclick="tshRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -7157,7 +7115,7 @@ body::before {
     <section class="section" id="section-leave">
       <div class="section-head">
         <h1>Annual <span>Leave</span></h1>
-        <p>Shared leave planner · Tax Year <span id="levTaxYear">—</span> · hours stored, days shown where useful</p>
+        <p>Tax year <span id="levTaxYear">—</span></p>
         <div class="lev-head-actions">
           <div class="lev-month-sel" role="group" aria-label="Leave calendar month selector">
             <button class="lev-month-btn" type="button" onclick="levChangeMonth(-1)" aria-label="Previous month" title="Previous month">
@@ -7209,7 +7167,7 @@ body::before {
                 <input class="lev-input" type="date" id="levStartDate" onchange="levUpdateEstimate()" required>
               </div>
               <div class="lev-field">
-                <label for="levEndDate">End Date</label>
+                <label for="levEndDate">End date</label>
                 <input class="lev-input" type="date" id="levEndDate" onchange="levUpdateEstimate()" required>
               </div>
               <div class="lev-field">
@@ -7227,7 +7185,7 @@ body::before {
                 <input class="lev-input" type="number" id="levHours" min="0.5" step="0.25" required oninput="levHoursEdited()">
               </div>
               <div class="lev-field full">
-                <div class="lev-hint" id="levEstimateHint">Select dates to calculate working-day hours. Weekends are excluded.</div>
+                <div class="lev-hint" id="levEstimateHint"></div>
               </div>
               <div class="lev-field full">
                 <label for="levNotes">Notes</label>
@@ -7244,7 +7202,7 @@ body::before {
 
           <div class="lev-card lev-calendar">
             <div class="lev-card-head" style="padding:16px 16px 0;margin-bottom:12px;">
-              <h3>Shared Calendar</h3>
+              <h3>Shared calendar</h3>
               <span id="levCalendarCount">—</span>
             </div>
             <div id="levCalendar"></div>
@@ -7253,7 +7211,7 @@ body::before {
 
         <div class="lev-card">
           <div class="lev-card-head">
-            <h3>Leave Requests</h3>
+            <h3>Leave requests</h3>
             <span id="levRequestCount">—</span>
           </div>
           <div class="lev-toolbar" id="levFilters">
@@ -7270,8 +7228,8 @@ body::before {
                   <th scope="col">Dates</th>
                   <th scope="col">Hours</th>
                   <th scope="col">Status</th>
-                  <th scope="col">Requested By</th>
-                  <th scope="col">Approved By</th>
+                  <th scope="col">Requested by</th>
+                  <th scope="col">Approved by</th>
                   <th scope="col">Created</th>
                   <th scope="col">Notes</th>
                   <th scope="col">Actions</th>
@@ -7437,7 +7395,6 @@ body::before {
     <section class="section" id="section-settings">
       <div class="section-head">
         <h1>Settings <span>&amp; Info</span></h1>
-        <p>Portal configuration, account information, and system details.</p>
       </div>
       <div class="set-wrap">
 
@@ -7462,7 +7419,7 @@ body::before {
           </div>
           <div class="set-profile-details">
             <div class="set-detail">
-              <span class="set-detail-label">Job Title</span>
+              <span class="set-detail-label">Job title</span>
               <span class="set-detail-value" id="setJobTitle">—</span>
             </div>
             <div class="set-detail">
@@ -7521,12 +7478,12 @@ body::before {
           <div class="set-card">
             <div class="set-card-head">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-              <h3>Azure App Registration</h3>
+              <h3>Azure app registration</h3>
             </div>
             <div class="set-card-body">
               <div class="set-row"><span class="set-label">Client ID</span><span class="set-value set-mono" id="setClientId">—</span></div>
               <div class="set-row"><span class="set-label">Tenant ID</span><span class="set-value set-mono" id="setTenantId">—</span></div>
-              <div class="set-row"><span class="set-label">SharePoint Site</span><span class="set-value set-mono" id="setSpSite">—</span></div>
+              <div class="set-row"><span class="set-label">SharePoint site</span><span class="set-value set-mono" id="setSpSite">—</span></div>
               <div class="set-row"><span class="set-label">Auth scopes</span><span class="set-value set-mono" id="setScopes">—</span></div>
             <div class="set-row"><span class="set-label">Redirect URI</span><span class="set-value set-mono" id="setRedirect">—</span></div>
             </div>
@@ -7535,10 +7492,10 @@ body::before {
           <div class="set-card">
             <div class="set-card-head">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              <h3>SharePoint Lists</h3>
+              <h3>SharePoint lists</h3>
             </div>
             <div class="set-card-body" id="setListsBody">
-              <div class="set-row"><span class="set-label set-muted">Visit a section to resolve list IDs</span></div>
+              <div class="set-row"><span class="set-label set-muted">Not resolved yet</span></div>
             </div>
           </div>
         </div>
@@ -7547,7 +7504,7 @@ body::before {
         <div class="set-card">
           <div class="set-card-head">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <h3>Portal Info</h3>
+            <h3>Portal info</h3>
           </div>
           <div class="set-card-body">
             <div class="set-row"><span class="set-label">Version</span><span class="set-value">Phase 11 — Annual Leave</span></div>
@@ -7562,10 +7519,10 @@ body::before {
         <div class="set-card">
           <div class="set-card-head">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 8L9 4l-3 8H2"/></svg>
-            <h3>System Health</h3>
+            <h3>System health</h3>
           </div>
           <div class="set-card-body" id="setHealthBody">
-            <div class="set-row"><span class="set-label set-muted">Open sections to populate live health checks</span></div>
+            <div class="set-row"><span class="set-label set-muted">Not checked yet</span></div>
           </div>
         </div>
 
@@ -7573,21 +7530,13 @@ body::before {
         <div class="set-card">
           <div class="set-card-head">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <h3>Operational Watchlist</h3>
+            <h3>Operational watchlist</h3>
           </div>
           <div class="set-watch-list" id="setWatchlistBody">
-            <div class="set-watch"><span class="set-watch-tone">Info</span><span class="set-watch-text">Visit Overview, Profitability, Mileage or Timesheets to populate watchlist signals.</span></div>
+            <div class="set-watch"><span class="set-watch-tone">Info</span><span class="set-watch-text">Nothing loaded yet.</span></div>
           </div>
         </div>
 
-        <!-- ── Changelog ── -->
-        <div class="set-card">
-          <div class="set-card-head">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-            <h3>Changelog</h3>
-          </div>
-          <div class="set-change-list" id="setChangelogBody"></div>
-        </div>
 
         <!-- ── Actions ── -->
         <div class="set-actions">
@@ -7599,7 +7548,6 @@ body::before {
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Clear cache &amp; sign out
           </button>
-          <p class="set-actions-note">Backup exports SharePoint list data you can access. Clear Cache removes localStorage and signs out.</p>
         </div>
 
       </div>
@@ -7779,9 +7727,11 @@ function togglePortalSidebar() {
 function setPreference(key, value) {
   SETTINGS_PREFS[key] = value;
   savePortalPreferences();
-  applyPortalPreferences();
+  // Crossfade the theme/density change rather than snapping (where the browser can).
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (document.startViewTransition && !calm) document.startViewTransition(applyPortalPreferences);
+  else applyPortalPreferences();
   renderSettingsPreferences();
-  toast('Preference updated', 'success');
 }
 
 function renderSettingsPreferences() {
@@ -9307,7 +9257,7 @@ function ovwAttentionHtml(core, today) {
     <div class="ovw-card-head"><h3>Needs attention</h3>
       <span class="ovw-count ${red ? 'red' : act ? '' : 'good'}">${act ? act : 'All clear'}</span></div>
     ${items.length ? `<ul class="ovw-attn">${items.map(i => `<li class="${i.level}"><span class="dot" aria-hidden="true"></span>
-        <div><strong>${escapeHtml(i.title)}</strong><p>${escapeHtml(i.detail)}</p></div>
+        <div><strong>${escapeHtml(i.title)}</strong>${i.detail ? `<p>${escapeHtml(i.detail)}</p>` : ''}</div>
         <button type="button" ${ovwGoAttr(i.go)} aria-label="${escapeHtml('Open: ' + i.title)}">Open →</button></li>`).join('')}</ul>`
       : `<div class="ovw-clear"><b>✓</b> Nothing needs you right now.</div>`}
     ${missing.length ? `<p class="ovw-warn-line">Not checked: ${escapeHtml(missing.join(', '))}.</p>` : ''}
@@ -9376,7 +9326,7 @@ function ovwGlanceHtml() {
     <ul class="ovw-glance">
       <li><span>Active clients<small>${clients.isNew ? `${clients.isNew} new · ` : ''}${clients.winding ? `${clients.winding} winding down` : 'none winding down'}</small></span><strong>${clients.headline}</strong></li>
       <li><span>SSA clients<small>${escapeHtml(ovwHours(ssaHours))} prepaid hours left in all</small></span><strong>${OVW.ssaLoaded ? ssa.length : '—'}</strong></li>
-      <li><span>Opportunity ideas<small>${won ? `${won} won this month` : 'Gaps found, not yet proposed'}</small></span><strong>${ideas == null ? '—' : ideas}</strong></li>
+      <li><span>Opportunity ideas<small>${won ? `${won} won this month` : ''}</small></span><strong>${ideas == null ? '—' : ideas}</strong></li>
       <li><span>Mileage this month<small>${mileage.count} journey${mileage.count === 1 ? '' : 's'} · ${escapeHtml(ovwFmt(mileage.amount))}</small></span><strong>${escapeHtml(ovwFmtMiles(mileage.miles))}</strong></li>
     </ul>
   </div>`;
@@ -9400,7 +9350,6 @@ function ovwRenderAll() {
     <div class="ovw-actions">
       <div class="ovw-actions-text">
         <h4>Quick actions</h4>
-        <p>Jump straight to the most common tasks.</p>
       </div>
       <div class="ovw-actions-btns">
         <button class="btn btn-primary" type="button" onclick="ovwGoLogTime()">
@@ -9469,11 +9418,11 @@ function ovwMonthEndHtml(me) {
   return `<div class="ovw-me-head">
       <div class="ovw-me-ring" style="--done:${(pct * 100).toFixed(1)}"><strong>${me.done}/${me.total}</strong><span>done</span></div>
       <div><h2>Closing ${escapeHtml(monthName)}</h2>
-        <p>${me.daysLeft ? `${me.daysLeft} working day${me.daysLeft === 1 ? '' : 's'} left this month.` : 'The month has ended: finish what’s left.'} Ticks come from the data, so they update as the work is done; the supplier checks are ticked by hand.</p></div>
+        <p>${me.daysLeft ? `${me.daysLeft} working day${me.daysLeft === 1 ? '' : 's'} left.` : 'The month has ended.'}</p></div>
     </div>
     <div class="ovw-card"><ul class="ovw-me-list">${me.items.map(i => `<li class="${i.state}">
         <span class="ovw-me-ic" aria-hidden="true">${icon[i.state]}</span>
-        <div><strong>${escapeHtml(i.label)}</strong><p>${escapeHtml(i.detail)}</p></div>
+        <div><strong>${escapeHtml(i.label)}</strong>${i.detail ? `<p>${escapeHtml(i.detail)}</p>` : ''}</div>
         <span class="ovw-me-acts">
           ${i.manual ? `<button type="button" class="ovw-me-tick" data-ovw-tick="${escapeHtml(i.key)}" data-on="${i.state === 'done' ? '1' : '0'}">${i.state === 'done' ? 'Untick' : 'Mark done'}</button>` : ''}
           ${i.go ? `<button type="button" data-ovw-go="${escapeHtml(i.go)}">Open →</button>` : ''}
@@ -9523,7 +9472,7 @@ function ovwReviewHtml(w) {
         ${list(p.won, o => `<li><span>${clientLink(o.client_name)}: ${escapeHtml(o.title)}</span><span>won</span></li>`)}` : '<p class="ovw-rv-none">Opportunities didn’t load.</p>'}</div></div>`;
   const chase = w.nudges ? `${w.nudges.length} payment reminder${w.nudges.length === 1 ? '' : 's'} drafted` : '';
   const off = w.nextOff ? (w.nextOff.length ? w.nextOff.map(l => `${l.person} ${window.GeckoOverview.shortRange(l.start, l.end)}${l.status === 'Pending' ? ' (pending)' : ''}`).join(', ') : 'Nobody off next week') : '';
-  return `<div class="ovw-hello"><h2>Week of ${escapeHtml(range)}</h2><p>How the week went, against the one before.${chase ? ' · ' + escapeHtml(chase) : ''}${off ? ' · Next week: ' + escapeHtml(off) : ''}</p></div>
+  return `<div class="ovw-hello"><h2>Week of ${escapeHtml(range)}</h2><p>${[chase, off ? 'Next week: ' + off : ''].filter(Boolean).map(escapeHtml).join(' · ')}</p></div>
     <div class="ovw-rv-grid">${hoursCard}${moneyCard}${jobsCard}${pipeCard}</div>`;
 }
 
@@ -9550,9 +9499,9 @@ function ovwHelloHtml() {
   const h = new Date().getHours();
   const first = (document.getElementById('userName')?.textContent || '').trim().split(/\s+/)[0];
   const hello = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-  const at = OVW.mon?.at ? ` · backups and alerts checked ${OVW.mon.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : '';
+  const at = OVW.mon?.at ? `Backups and alerts checked ${OVW.mon.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : '';
   return `<div class="ovw-hello"><h2>${escapeHtml(hello)}${first && first !== 'Not' ? ', ' + escapeHtml(first) : ''}</h2>
-    <p>${escapeHtml(new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }))}${escapeHtml(at)}</p></div>`;
+    ${at ? `<p>${escapeHtml(at)}</p>` : ''}</div>`;
 }
 
 /** Red items on Today: failed backups, critical alerts, money overdue, SSA clients out of hours. */
@@ -9605,7 +9554,7 @@ function ovwStatusHtml(core, today) {
   const late = w.jobsDue.filter(j => String(j.target_date).slice(0, 10) < today);
   const jobs = !db.jobs ? tile('jobs:jobs', 'Jobs', '—', 'didn’t load')
     : late.length ? tile('jobs:jobs', 'Jobs', `${late.length} late`, `${w.jobsDue.length - late.length} more due this week`, 'warn')
-    : tile('jobs:jobs', 'Jobs', w.jobsDue.length ? `${w.jobsDue.length} due this week` : 'Nothing due', 'this week (Mon–Sun)', 'good');
+    : tile('jobs:jobs', 'Jobs', w.jobsDue.length ? `${w.jobsDue.length} due this week` : 'Nothing due', '', 'good');
   const off = w.away.filter(l => l.now && l.status === 'Approved');
   const team = !db.leave ? tile('team', 'Team', '—', 'didn’t load')
     : off.length ? tile('team', 'Team', `${off.map(l => l.person).join(' & ')} off`, 'today', 'info')
@@ -10170,8 +10119,8 @@ function prfRenderSeedBanner() {
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
       </div>
       <div class="prf-seed-text">
-        <h3>No Clients Yet</h3>
-        <p>Both SharePoint lists are empty. You can seed the dashboard with the existing client list (24 clients, ~60 service lines) from Philip's prototype, or start from scratch by adding clients manually.</p>
+        <h3>No clients yet</h3>
+        <p>Seed 24 clients (~60 service lines) or add them in the Directory.</p>
       </div>
       <div class="prf-seed-actions">
         <!-- Phase 5: "Add Manually" now navigates to the Directory, which owns client CRUD. -->
@@ -10224,7 +10173,7 @@ function prfRenderSummary() {
       <div class="prf-sum-s"><div class="prf-sum-v">${t.activeClients}</div><div class="prf-sum-l">Active Clients</div></div>
       <div class="prf-sum-s">
         <div class="prf-sum-v">${prfFmt(sp.recurring)}</div><div class="prf-sum-l">Recurring Revenue</div>
-        <div class="prf-sum-sub amber">From Xero · monthly lines ${prfFmt(t.sell)}</div>
+        <div class="prf-sum-sub amber">Monthly lines ${prfFmt(t.sell)}</div>
       </div>
       <div class="prf-sum-s">
         <div class="prf-sum-v">${prfFmt(t.cost)}</div><div class="prf-sum-l">Total Cost</div>
@@ -10305,12 +10254,8 @@ function prfRenderControls() {
 }
 
 function prfRenderLegend() {
-  const items = PRF_CATS.map(c =>
-    `<span class="prf-li"><span class="prf-ct prf-ct-${c.key}">${escapeHtml(c.label)}</span>${escapeHtml(c.desc)}</span>`
-  ).join('');
   return `
     <div class="prf-leg">
-      ${items}
       <div class="prf-leg-r">
         <span>Margin:</span>
         <span class="prf-m-hi">■ ≥70%</span>
@@ -10323,11 +10268,10 @@ function prfRenderLegend() {
 function prfRenderCards() {
   const clients = prfRankedClients();
   if (PRF.clients.length === 0) {
-    return `<div class="prf-empty"><h3>No clients</h3><p>Add a client to start tracking profitability.</p></div>`;
+    return `<div class="prf-empty"><h3>No clients</h3></div>`;
   }
   if (clients.length === 0) {
-    const cat = PRF.filterCat === 'all' ? 'current filters' : (PRF_CATS.find(c => c.key === PRF.filterCat)?.label || PRF.filterCat);
-    return `<div class="prf-empty"><h3>No clients match</h3><p>No clients have services matching ${escapeHtml(cat)}.</p></div>`;
+    return `<div class="prf-empty"><h3>No clients match</h3></div>`;
   }
   return clients.map(prfRenderCard).join('');
 }
@@ -10406,7 +10350,7 @@ function prfRenderCard(client) {
 
   // Empty service prompt if no services yet
   if (t.all.length === 0 && !invTotal) {
-    rows = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);font-size:12px;font-style:italic">No ${escapeHtml(scopeName || 'services')} lines to show.</td></tr>`;
+    rows = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);font-size:12px;font-style:italic">No ${escapeHtml(scopeName || 'service')} lines.</td></tr>`;
   }
 
   // Add-service trigger row
@@ -10414,7 +10358,7 @@ function prfRenderCard(client) {
 
   // Retainer notice banner if any retainer services
   const retNote = retainers.length > 0
-    ? `<div class="prf-ret-notice">⚡ Retainer revenue (${prfFmt(retainers.reduce((a, s) => a + s.sell, 0))}/mo) — product cost £0. Labour cost not allocated.</div>`
+    ? `<div class="prf-ret-notice">Retainers ${prfFmt(retainers.reduce((a, s) => a + s.sell, 0))}/mo: labour not costed.</div>`
     : '';
 
   // Xero reconciliation row — Phase 10: read from XeroHistory for selected month
@@ -10433,7 +10377,7 @@ function prfRenderCard(client) {
     : null;
   const xeroRowHtml = split ? `
             <tr class="prf-xrow">
-              <td colspan="2"><span class="prf-xlbl">📊 Xero this month (ex VAT) — recurring vs the monthly lines above</span></td>
+              <td colspan="2"><span class="prf-xlbl">Xero this month (ex VAT)</span></td>
               <td colspan="4">
                 <div class="prf-xsplit">
                   <span title="Service lines billed monthly; hosting is left out because it is billed annually">Monthly lines: <strong>${prfFmtForce(fullTotals.sell)}</strong></span>
@@ -10483,7 +10427,7 @@ function prfRenderCard(client) {
               <td></td>
             </tr>
             ${xeroRowHtml || `<tr class="prf-xrow">
-              <td colspan="2"><span class="prf-xlbl">📊 Xero reconciliation — actual invoiced amount (ex VAT)</span></td>
+              <td colspan="2"><span class="prf-xlbl">Xero reconciliation (ex VAT)</span></td>
               <td colspan="4">
                 <div class="prf-xctrl">
                   <span class="prf-xcalc">Calculated ${scoped ? 'all-client' : ''}: <strong>${prfFmtForce(fullTotals.sell)}</strong></span>
@@ -10563,7 +10507,6 @@ function prfRenderGrandTotal() {
     <div class="prf-gtot">
       <div class="prf-gtlbl">
         <strong>GRAND TOTAL — <span>ALL CLIENTS</span></strong>
-        <p>Revenue is what Xero billed in ${prfMonthLabel(selMonth)}: repeating invoices count as recurring, everything else as one-off. Cost is from the service lines.</p>
       </div>
       <div class="prf-gtstats">
         <div class="prf-gtst"><span class="v" style="color:var(--red)">${prfFmt(t.cost)}</span><span class="l">Total Cost</span></div>
@@ -10580,7 +10523,6 @@ function prfRenderGrandTotal() {
     <div class="prf-gtot">
       <div class="prf-gtlbl">
         <strong>GRAND TOTAL — <span>${escapeHtml(scopeName)}</span></strong>
-        <p>Expected = from ${scoped ? escapeHtml(scopeName) + ' ' : ''}service lines (GeckoServices). Xero Actual is only compared in the all-client view for ${prfMonthLabel(selMonth)}.</p>
       </div>
       <div class="prf-gtstats">
         <div class="prf-gtst"><span class="v" style="color:var(--red)">${prfFmt(t.cost)}</span><span class="l">Total Cost</span></div>
@@ -11014,18 +10956,18 @@ function prfRenderFeedStatus(kind) {
   if (!F || f.state === 'idle' || f.state === 'loading') return '';
   const box = (cls, html) => `<div class="prf-feed ${cls}" role="status">${html}</div>`;
   if (f.state === 'missing') {
-    return box('warn', `Automatic updates are not set up yet: there is no feed in <strong>${escapeHtml(feedLocation())}</strong>. The manual import below still works.`);
+    return box('warn', `No feed in <strong>${escapeHtml(feedLocation())}</strong>. Use the manual import below.`);
   }
   if (f.state === 'error') {
-    return box('bad', `Could not read the automatic feed (${escapeHtml(f.error)}). Figures shown are from the last successful update. Refresh to try again.`);
+    return box('bad', `Couldn’t read the feed (${escapeHtml(f.error)}). Showing the last good update. Refresh to try again.`);
   }
   if (f.state === 'invalid') {
-    return box('bad', `The automatic feed was rejected and nothing was applied: ${escapeHtml(f.problems.slice(0, 3).join('; '))}.`);
+    return box('bad', `Feed rejected, nothing applied: ${escapeHtml(f.problems.slice(0, 3).join('; '))}.`);
   }
   const data  = f.data;
   const when  = escapeHtml(F.describeWhen(data.generatedAt));
   const stale = F.isStale(data);
-  const staleNote = stale ? ' The nightly update looks to have stopped, so these may be out of date.' : '';
+  const staleNote = stale ? ' The nightly update looks stopped: may be out of date.' : '';
 
   if (kind === 'xero') {
     let extra = '';
@@ -11042,22 +10984,22 @@ function prfRenderFeedStatus(kind) {
       const parts = [...seen].map(([sup, e]) => `${escapeHtml(sup)} ${e.refs.size === 1 ? `invoice ${escapeHtml([...e.refs][0])}` : `${e.refs.size} invoices`}, ${prfFmtForce(e.total)}`);
       const month = prfMonthLabel(PRF.selectedMonth || prfCurrentMonth());
       extra += box('ok', parts.length
-        ? `Supplier invoices charged to ${escapeHtml(month)}: ${parts.join(' · ')}. Each sits on its client in the month it is dated; nothing to apply by hand.`
-        : `No supplier invoices dated ${escapeHtml(month)} yet. TD SYNNEX bills around the 16th, so until then licence cost for the month is nil.`);
+        ? `Supplier invoices in ${escapeHtml(month)}: ${parts.join(' · ')}.`
+        : `No supplier invoices dated ${escapeHtml(month)} yet: licence cost is nil until TD SYNNEX bills (~16th).`);
     }
     if (inv && (inv.shared.length || inv.unassigned.length)) {
       const li = l => `<li>${escapeHtml(l.supplier)}: ${escapeHtml(l.name ? l.name + ' — ' : '')}${escapeHtml(l.desc)} ${prfFmtForce(l.net)} (${escapeHtml(l.date)})</li>`;
       const sharedHtml = inv.shared.length ? `<div>Shared, not charged to any client:</div><ul>${inv.shared.map(li).join('')}</ul>` : '';
-      const unHtml = inv.unassigned.length ? `<div>Not tied to a client — tell Felix which client these belong to:</div><ul>${inv.unassigned.map(li).join('')}</ul>` : '';
-      extra += box(inv.unassigned.length ? 'warn' : 'ok', `Supplier invoices this month that sit in the total but on no card. ${sharedHtml}${unHtml}`);
+      const unHtml = inv.unassigned.length ? `<div>No client (tell Felix which):</div><ul>${inv.unassigned.map(li).join('')}</ul>` : '';
+      extra += box(inv.unassigned.length ? 'warn' : 'ok', `In the total but on no card: ${sharedHtml}${unHtml}`);
     }
-    return box(stale ? 'warn' : 'ok', `Automatic from Xero, updated ${when}.${staleNote}`) + extra;
+    return box(stale ? 'warn' : 'ok', `Xero updated ${when}.${staleNote}`) + extra;
   }
 
   const c = data.csp;
   if (!c) {
     const why = data.cspError ? ` ${escapeHtml(data.cspError)}` : '';
-    return box('warn', `No TD SYNNEX invoice in the latest update.${why} Use the manual import below if costs need changing.`);
+    return box('warn', `No TD SYNNEX invoice in the latest update.${why}`);
   }
   const last = cspReadLastImport();
   const applied = last && last.invoice === c.invoice;
@@ -11294,7 +11236,7 @@ function prfRenderXeroImport() {
       <div style="flex:1;min-width:250px">
         <h4>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          Xero Reconciliation
+          Xero reconciliation
         </h4>
         ${prfRenderFeedStatus('xero')}
         <div class="prf-drop-zone" id="prfDropZone"
@@ -11306,10 +11248,10 @@ function prfRenderXeroImport() {
           <input type="file" id="prfCsvFile" accept=".csv" onchange="prfHandleFileInput(this)">
         </div>
         <div class="prf-xero-actions">
-          <label><input type="checkbox" ${PRF.includeDrafts ? 'checked' : ''} onchange="PRF.includeDrafts=this.checked"> Include Draft invoices</label>
+          <label><input type="checkbox" ${PRF.includeDrafts ? 'checked' : ''} onchange="PRF.includeDrafts=this.checked"> Include drafts</label>
           ${PRF.xeroImported ? `
             <button class="prf-refresh" type="button" onclick="document.getElementById('prfCsvFile').value='';document.getElementById('prfCsvFile').click()" style="padding:4px 10px;font-size:11px">Re-import</button>
-            <button class="prf-refresh" type="button" onclick="prfClearXeroData()" style="padding:4px 10px;font-size:11px;color:var(--red)">Clear Xero Data</button>
+            <button class="prf-refresh" type="button" onclick="prfClearXeroData()" style="padding:4px 10px;font-size:11px;color:var(--red)">Clear Xero data</button>
           ` : ''}
         </div>
       </div>
@@ -12008,7 +11950,7 @@ function prfServiceFormRow({ clientId = null, mode, svc = null }) {
       </td>
       <td><input type="number" step="0.01" min="0" name="svcCost" placeholder="0.00" value="${editing ? svc.cost : ''}"></td>
       <td><input type="number" step="0.01" min="0" name="svcSell" placeholder="0.00" value="${editing ? svc.sell : ''}"></td>
-      <td colspan="2" style="font-size:11px;color:var(--muted)">Margin auto-calculated</td>
+      <td colspan="2"></td>
       <td>
         <div class="prf-eactions">
           <button class="prf-iconbtn" type="button" title="Save" onclick="prfSaveServiceRow(this,${editing ? `'${sid}'` : 'null'},${cid ? `'${cid}'` : 'null'})">
@@ -12172,8 +12114,7 @@ function prfConfirmSeed() {
   const totalClients  = PRF_SEED_DATA.length;
   const totalServices = PRF_SEED_DATA.reduce((a, c) => a + c.services.length, 0);
   const body = `
-    <p>This will create <strong>${totalClients} clients</strong> and <strong>${totalServices} services</strong> in your SharePoint lists. Existing data won't be touched, but the seed only runs when both lists are empty (which they are right now).</p>
-    <p style="color:var(--muted);font-size:12px">You can edit, add to, or delete any of this data afterwards. The seed runs once.</p>
+    <p>Creates <strong>${totalClients} clients</strong> and <strong>${totalServices} services</strong>.</p>
     <div class="prf-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="prfCloseModal()">Cancel</button>
       <button class="btn btn-primary" type="button" onclick="prfDoSeed()">Seed data</button>
@@ -12970,18 +12911,14 @@ const ENTITY_CONFIG = {
       'Jack Morris':   { role: 'Employee',    vehicle: 'Hyundai Kona' }
     },
     // ─ Export tab heading and footer copy
-    exportTitle: 'Tax Year Export',
-    exportSubtitle: 'Full per-driver journey list for tax year {{year}} — give this to your accountant or attach to your Self Assessment.',
+    exportSubtitle: 'Tax year {{year}}',
     // ─ HMRC compliance note (shown below export cards)
-    hmrcNote: `<strong>HMRC Mileage Record Requirements</strong>
-This log captures every required field — date, destination, business purpose, miles, and reimbursement amount. Retain records for 6 years after the end of the tax year. As a sole trader, Philip claims mileage allowance as a business expense on his Self Assessment (SA103). Jack's mileage is reimbursed directly by the business — retain bank statements as evidence of payment.`,
-    // ─ KPI label (shown in top cards)
-    kpiLabel: 'Business expense (self-assessment)',
+    hmrcNote: `<strong>HMRC records</strong>
+Keep for 6 years after the end of the tax year. Philip claims on his Self Assessment (SA103); keep bank statements as proof of Jack's reimbursements.`,
     // ─ Tax saving — for sole traders, the deduction reduces personal income tax
     taxSaving: {
       rate: 0.20,
       kpiTitle: 'Income Tax Saving (est. 20%)',
-      kpiSub:   'Effective tax saving',
       cellLabel:'Tax Saving (20%)'
     },
     _note: 'Sole trader entity: drivers claim expense on personal tax return, reimbursement is self-employment income'
@@ -12993,13 +12930,10 @@ This log captures every required field — date, destination, business purpose, 
       'Jack Morris':   { role: 'Employee',  vehicle: 'Hyundai Kona' }
     },
     // ─ Export tab heading and footer copy
-    exportTitle: 'Tax Year Export',
-    exportSubtitle: 'Full per-driver journey list for tax year {{year}} — company claims the reimbursement as an operating expense (Corp. Tax deductible); driver receives tax-free payment up to AMAP rates.',
+    exportSubtitle: 'Tax year {{year}}',
     // ─ HMRC compliance note (shown below export cards)
-    hmrcNote: `<strong>HMRC Mileage Record Requirements</strong>
-This log captures every required field — date, destination, business purpose, miles, and reimbursement amount. Retain records for 6 years after the end of the tax year. The company reimburses mileage at 55p/mile for journeys dated from 20 July 2026 (45p/mile for earlier journeys), up to 10,000 miles per driver per tax year, and 25p/mile thereafter. The company claims the full reimbursement as a deductible operating expense, reducing Corporation Tax liability. Retain bank statements or payroll records as evidence of payment.`,
-    // ─ KPI label (shown in top cards)
-    kpiLabel: 'Operating expense (Corp. Tax deductible)',
+    hmrcNote: `<strong>HMRC records</strong>
+Keep for 6 years after the end of the tax year, with bank statements or payroll records as proof of payment. Rates: 55p/mile from 20 July 2026 (45p before), up to 10,000 miles per driver per tax year, then 25p/mile.`,
     // ─ Tax saving — for ltd cos, the reimbursement reduces Corporation Tax
     //   25% main rate applies to profits over £250k; 19% small profits rate applies
     //   below £50k. Marginal relief sits between. Using 25% as a conservative upper-
@@ -13007,7 +12941,6 @@ This log captures every required field — date, destination, business purpose, 
     taxSaving: {
       rate: 0.25,
       kpiTitle: 'Corp. Tax Saving (est. 25%)',
-      kpiSub:   'Estimated CT relief on reimbursement',
       cellLabel:'CT Saving (25%)'
     },
     _note: 'Limited company entity: company claims expense (reduces CT), driver receives tax-free reimbursement (AMAP rates)'
@@ -13400,7 +13333,7 @@ function milRenderLog() {
       <tr><td colspan="10">
         <div class="mil-empty">
           <div class="e-ic"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
-          <div>No journeys to show${filterParts.length ? ` — try adjusting the filters` : ''}.</div>
+          <div>${filterParts.length ? 'No journeys match.' : 'No journeys yet.'}</div>
         </div>
       </td></tr>`;
     // Reset head check + selection counters so they don't lie about an empty list
@@ -13451,7 +13384,7 @@ function milRenderClients() {
     `${MIL.clients.length} ${MIL.clients.length === 1 ? 'client' : 'clients'}`;
 
   if (MIL.clients.length === 0) {
-    wrap.innerHTML = `<div class="mil-empty" style="grid-column:1/-1;">No clients yet — add one below.</div>`;
+    wrap.innerHTML = `<div class="mil-empty" style="grid-column:1/-1;">No clients yet.</div>`;
   } else {
     wrap.innerHTML = MIL.clients.map(c => `
       <div class="mil-client-row" data-id="${c.id}">
@@ -13486,7 +13419,7 @@ function milRenderMonth() {
       <div class="mil-card">
         <div class="mil-empty">
           <div class="e-ic"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-          No journeys recorded yet — monthly breakdown will appear here once journeys are added.
+          No journeys yet.
         </div>
       </div>`;
     return;
@@ -14296,12 +14229,10 @@ async function initMileage() {
     escapeHtml(subRaw).replace('{{year}}', yearTag);
 
   document.getElementById('milHmrcNote').innerHTML   = milConfig('hmrcNote');
-  document.getElementById('milKpiLabel').textContent = milConfig('kpiLabel');
 
   // Tax-saving labels (entity-aware: 20% income tax for sole trader, 25% CT for ltd)
   const ts = milConfig('taxSaving');
   document.getElementById('milKpiTaxSaveLabel').textContent = ts.kpiTitle;
-  document.getElementById('milKpiTaxSaveSub').textContent   = ts.kpiSub;
   document.getElementById('milYtTaxSaveLabel').textContent  = ts.cellLabel;
 
   // Driver descriptions
@@ -14710,8 +14641,7 @@ function cliRenderAll() {
     if (toolbar) toolbar.style.display = 'none';
     wrap.innerHTML = `
       <div class="cli-empty">
-        <h3>No Clients Yet</h3>
-        <p>Add a client to get started, or check that the GeckoClients and Clients SharePoint lists are populated.</p>
+        <h3>No clients yet</h3>
       </div>`;
     return;
   }
@@ -14731,8 +14661,7 @@ function cliRenderAll() {
   if (rows.length === 0) {
     wrap.innerHTML = `
       <div class="cli-empty">
-        <h3>No matches</h3>
-        <p>No clients match "${escapeHtml(CLI.search)}". Try a different search term.</p>
+        <h3>No clients match “${escapeHtml(CLI.search)}”</h3>
       </div>`;
     return;
   }
@@ -14979,7 +14908,7 @@ function cliOpenClientModal(id = null) {
 
   const body = `
     <div class="cli-form-grp">
-      <label>Client Name</label>
+      <label>Client name</label>
       <input type="text" id="cliClName" value="${escapeHtml(client.name || '')}" placeholder="e.g. ALS Locksmiths" autocomplete="off">
     </div>
     <div class="cli-form-grp">
@@ -14998,10 +14927,6 @@ function cliOpenClientModal(id = null) {
       <label>Notes (optional)</label>
       <textarea id="cliClNotes" rows="3">${escapeHtml(client.notes || '')}</textarea>
     </div>
-    <p style="font-size:11px;color:var(--muted);margin-top:-4px">
-      Contact details (Primary Contact, Email) and SSA hours live on the
-      <strong>Clients</strong> SharePoint list, which is managed there directly.
-    </p>
     <div class="cli-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="cliCloseModal()">Cancel</button>
       <button class="btn btn-primary" type="button" onclick="cliSaveClient(${isEdit ? `'${id}'` : 'null'})">${isEdit ? 'Save' : 'Add client'}</button>
@@ -15086,7 +15011,7 @@ function cliConfirmDeleteClient(id) {
 
   const body = `
     <p>Delete <strong>${escapeHtml(client.name)}</strong>${linkedCount > 0 ? ` and all <strong>${linkedCount} linked service line${linkedCount === 1 ? '' : 's'}</strong>` : ''}?</p>
-    ${ssaRow ? `<p style="font-size:11px;color:var(--amber)">⚠ This client also has an SSA row in the <strong>Clients</strong> list, which will <strong>not</strong> be touched (it's read-only from this portal). Remove it directly in SharePoint if needed.</p>` : ''}
+    ${ssaRow ? `<p style="font-size:11px;color:var(--amber)">⚠ Its SSA row in the <strong>Clients</strong> list is <strong>not</strong> deleted; remove it in SharePoint if needed.</p>` : ''}
     <p>This cannot be undone.</p>
     <div class="cli-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="cliCloseModal()">Cancel</button>
@@ -15735,11 +15660,9 @@ function tshSyncHtml() {
   const s = TSH.sync;
   const parts = [];
   if (!s.listsOk) {
-    parts.push(`<strong>Could not reach the Lists backup</strong> (${escapeHtml(s.listsError)}). Time is saved in the Gecko database; Lists catches up on a later refresh.`);
+    parts.push(`<strong>Couldn’t reach the Lists backup</strong> (${escapeHtml(s.listsError)}). Saved in the database; Lists catches up on a later refresh.`);
   } else if (s.pending) {
     parts.push(`<strong>${s.pending} change${s.pending === 1 ? '' : 's'} not yet in the Lists backup.</strong> <button class="tsh-ssa-link strong" type="button" onclick="tshRefreshData()">Try again</button>`);
-  } else {
-    parts.push('Saved in the Gecko database. <strong>Lists backup up to date.</strong>');
   }
   if (s.broughtIn) parts.push(`${s.broughtIn} change${s.broughtIn === 1 ? '' : 's'} made in Lists brought in.`);
   if (s.gone.length) {
@@ -15747,6 +15670,7 @@ function tshSyncHtml() {
       <button class="tsh-ssa-link strong" type="button" onclick="tshResolveGone('remove')">Remove here too</button>
       <button class="tsh-ssa-link" type="button" onclick="tshResolveGone('restore')">Put back in Lists</button>`);
   }
+  if (!parts.length) return '';
   const state = !s.listsOk || s.pending || s.gone.length ? 'warn' : 'ok';
   return `<div class="tsh-sync" data-state="${state}" role="status">${parts.join(' ')}</div>`;
 }
@@ -15785,7 +15709,7 @@ function tshOpenAdjust(clientId) {
   const c = TSH.ssaClients.find(x => String(x.id) === String(clientId));
   if (!c) return;
   tshOpenModal(`Adjust ${c.name}`, `
-    <p style="font-size:12px;">Remaining now: <strong style="color:var(--white)">${tshFmtHours(c.hoursRemaining)}</strong>. Adjustments are logged as a System entry, so the client's timesheet and the Lists backup show them too.</p>
+    <p style="font-size:12px;">Remaining now: <strong style="color:var(--white)">${tshFmtHours(c.hoursRemaining)}</strong></p>
     <div class="tsh-form-grp">
       <label>Adjustment</label>
       <select id="tshAdjDir">
@@ -16092,7 +16016,7 @@ function tshFormChanged() {
     const balHtml = bal
       ? `<span class="tsh-sum-bal ${bal.state}">SSA ${escapeHtml(TL.fmtHours(bal.before))} → ${bal.after < 0 ? escapeHtml(TL.fmtHours(-bal.after)) + ' over' : escapeHtml(bal.after ? TL.fmtHours(bal.after) : '0h') + ' left'}</span>`
       : v.ssa && v.ssa.hoursPurchased > 0 ? '' : '<span class="tsh-sum-muted">No SSA hours</span>';
-    sum.innerHTML = v.clientName ? `<span>${bits.join(' · ')}</span>${balHtml}` : '<span class="tsh-sum-muted">Choose a client to start</span>';
+    sum.innerHTML = v.clientName ? `<span>${bits.join(' · ')}</span>${balHtml}` : '<span class="tsh-sum-muted"></span>';
   }
   // A change after warnings were shown asks again; checks already on screen are kept current.
   if (TSHF.confirmed && TSHF.confirmed !== tshSig(v)) TSHF.confirmed = '';
@@ -16112,8 +16036,7 @@ function tshShowChecks(res) {
   for (const e of res.errors) tshEl(TSH_FIELD_IDS[e.field])?.classList.add('tsh-bad');
   box.hidden = false;
   box.className = 'tsh-checks ' + (res.errors.length ? 'err' : 'warn');
-  box.innerHTML = `<strong>${res.errors.length ? 'Before this can be logged' : 'Check before logging'}</strong><ul>${items.map(i => `<li class="${i.kind}">${escapeHtml(i.text)}</li>`).join('')}</ul>`
-    + (res.errors.length ? '' : '<span class="tsh-checks-hint">If it’s right, press <b>Log anyway</b>.</span>');
+  box.innerHTML = `<strong>${res.errors.length ? 'Before this can be logged' : 'Check before logging'}</strong><ul>${items.map(i => `<li class="${i.kind}">${escapeHtml(i.text)}</li>`).join('')}</ul>`;
 }
 
 function tshSetButton(state) {
@@ -16350,7 +16273,7 @@ function tshRenderLog() {
   }
 
   if (rows.length === 0) {
-    wrap.innerHTML = '<div class="tsh-empty"><h3>No entries</h3><p>No timesheet entries match the current filters.</p></div>';
+    wrap.innerHTML = '<div class="tsh-empty"><h3>No entries</h3></div>';
     return;
   }
 
@@ -16385,7 +16308,7 @@ function tshRenderLog() {
         <thead><tr>
           <th>Date</th><th>Engineer</th><th>Client</th>
           <th class="col-desc">Description</th>
-          <th class="col-cat">Work Type</th>
+          <th class="col-cat">Work type</th>
           <th class="num">Hours</th><th>Actions</th>
         </tr></thead>
         <tbody>${tbody}</tbody>
@@ -16478,7 +16401,7 @@ function tshRenderSsa() {
     .sort((a, b) => a.name.localeCompare(b.name));
   const archivedHtml = archived.length ? `
     <details class="tsh-ssa-archived" ${TSH.showArchived ? 'open' : ''} ontoggle="TSH.showArchived = this.open">
-      <summary>Archived — off the SSA programme (${archived.length})</summary>
+      <summary>Archived (${archived.length})</summary>
       <div class="tsh-ssa-archived-list">
         ${archived.map(c => `
           <div class="tsh-ssa-archived-row">
@@ -16488,21 +16411,20 @@ function tshRenderSsa() {
             <button class="tsh-ssa-link" type="button" onclick="tshSetArchived('${jsAttr(c.id)}', false)">Restore</button>
           </div>`).join('')}
       </div>
-      <div class="tsh-ssa-note">Archived clients keep their logged hours and history but are left out of the SSA cards, the client picker and the Overview count.</div>
     </details>` : '';
 
   if (!board.rows.length) {
-    wrap.innerHTML = tshSyncHtml() + '<div class="tsh-empty"><h3>No SSA Clients</h3><p>No clients have an active SSA agreement (Hours Purchased &gt; 0).</p></div>' + archivedHtml;
+    wrap.innerHTML = tshSyncHtml() + '<div class="tsh-empty"><h3>No SSA clients</h3></div>' + archivedHtml;
     return;
   }
   const attention = board.rows.filter(r => ['over', 'renew', 'low'].includes(r.status)).length;
   wrap.innerHTML = `
     ${tshSyncHtml()}
     <div class="tsh-ssa-kpis">
-      <div class="tsh-ssa-kpi"><span>SSA clients</span><strong>${t.clients}</strong><small>on the programme</small></div>
-      <div class="tsh-ssa-kpi"><span>Hours left</span><strong>${tshFmtHours(t.remaining)}</strong><small>${t.overBy ? `<b class="red">${tshFmtHours(t.overBy)} over</b> across clients` : 'across all clients'}</small></div>
-      <div class="tsh-ssa-kpi ${t.attention ? 'red' : t.low ? 'amber' : 'green'}"><span>To renew</span><strong>${t.attention}</strong><small>${t.low ? `${t.low} more running low` : t.attention ? '1h or less left, or over' : 'everyone has over 1h'}</small></div>
-      <div class="tsh-ssa-kpi"><span>Use per month</span><strong>${escapeHtml(window.GeckoTimelog?.fmtHours(t.perMonth) || tshFmtHours(t.perMonth))}</strong><small>average, last 90 days</small></div>
+      <div class="tsh-ssa-kpi"><span>SSA clients</span><strong>${t.clients}</strong></div>
+      <div class="tsh-ssa-kpi"><span>Hours left</span><strong>${tshFmtHours(t.remaining)}</strong>${t.overBy ? `<small><b class="red">${tshFmtHours(t.overBy)} over</b></small>` : ''}</div>
+      <div class="tsh-ssa-kpi ${t.attention ? 'red' : t.low ? 'amber' : 'green'}"><span>To renew</span><strong>${t.attention}</strong>${t.low ? `<small>${t.low} more running low</small>` : ''}</div>
+      <div class="tsh-ssa-kpi"><span>Use per month</span><strong>${escapeHtml(window.GeckoTimelog?.fmtHours(t.perMonth) || tshFmtHours(t.perMonth))}</strong><small>last 90 days</small></div>
     </div>
     <div class="tsh-ssa-bar-tools">
       <div class="tsh-ssa-views" role="group" aria-label="Which clients">
@@ -16512,10 +16434,6 @@ function tshRenderSsa() {
       <input class="tsh-input tsh-ssa-search" id="tshSsaSearch" type="search" placeholder="Find a client…" aria-label="Find an SSA client" value="${escapeHtml(TSH.ssaQ || '')}">
     </div>
     <div class="tsh-ssa-grid" id="tshSsaGrid"></div>
-    <div class="tsh-ssa-note">${tshOnDb()
-      ? 'Balances update the moment time is logged. Anything added in Lists or the Power App is brought in when you click Refresh.'
-      : 'SSA hours sync from SharePoint. If the Power App was used recently, click Refresh to get the latest totals.'}
-      Use per month and run-out dates are from the last 90 days of logged work.</div>
     ${archivedHtml}`;
   tshRenderSsaGrid();
 }
@@ -16535,7 +16453,7 @@ document.addEventListener('input', e => {
 async function tshSetArchived(clientId, archived) {
   const c = TSH.ssaClients.find(x => x.id === clientId);
   if (!c) return;
-  if (archived && !confirm(`Archive ${c.name}? They come off the SSA cards and the client picker. Their ${tshFmtHours(c.hoursUsed)} logged hours and all entries are kept, and you can restore them here any time.`)) return;
+  if (archived && !confirm(`Archive ${c.name}? Their ${tshFmtHours(c.hoursUsed)} and all entries are kept; restore any time.`)) return;
   const was = c.archived;
   c.archived = archived;                      // optimistic; reverted on failure
   tshRenderSsa();
@@ -16664,16 +16582,16 @@ function tshRenewRender() {
     const opts = Array.from({ length: R.SSA_MAX_BLOCKS }, (_, i) => i + 1)
       .map(n => `<option value="${n}" ${n === r.blocks ? 'selected' : ''}>${n} × ${R.SSA_BLOCK_HOURS} hours (${money(R.xeroInvoice(n).net)} + VAT)</option>`).join('');
     const noEmail = to.length === 0
-      ? `<p class="tsh-renew-warn">No email address on the Clients list for ${escapeHtml(r.name)}. Add one in its Email column in SharePoint, click Refresh, then renew.</p>` : '';
+      ? `<p class="tsh-renew-warn">No email for ${escapeHtml(r.name)} on the Clients list. Add it in SharePoint, then Refresh.</p>` : '';
     tshOpenModal(`Renew SSA — ${r.name}`, `
       <div class="tsh-form-grp">
         <label for="tshRenewBlocks">Hours to add</label>
         <select id="tshRenewBlocks" onchange="tshRenewBlocksChanged(this.value)">${opts}</select>
       </div>
       <ol class="tsh-renew-plan">
-        <li>Adds a System credit of <strong>+${hours} hours</strong> to the timesheet. ${tshOnDb() ? 'The balance updates straight away (and in the Lists backup).' : 'SharePoint\'s balance flow applies it within about a minute.'}</li>
-        <li>${CONFIG.SSA_EMAIL_MODE === 'send' ? 'Emails' : 'Puts in <strong>your Outlook Drafts</strong>'} the latest timesheet from <strong>${escapeHtml(CONFIG.SSA_FROM_MAILBOX)}</strong> to ${to.length ? escapeHtml(to.join(', ')) : '<em>no address</em>'}, copied to ${escapeHtml(CONFIG.SSA_TIMESHEET_CC.join(', '))}${CONFIG.SSA_EMAIL_MODE === 'send' ? '' : ', for you to check and send'}, and saves a copy in Gecko Docs.</li>
-        <li>Then offers to create the invoice as a <strong>draft in Xero</strong> (${inv.quantity} × ${escapeHtml(inv.itemCode)}, ${money(inv.total)} inc VAT) for you to check, approve and send.</li>
+        <li>Adds a System credit of <strong>+${hours} hours</strong>.</li>
+        <li>${CONFIG.SSA_EMAIL_MODE === 'send' ? 'Emails' : 'Puts in <strong>your Outlook Drafts</strong>'} the timesheet from <strong>${escapeHtml(CONFIG.SSA_FROM_MAILBOX)}</strong> to ${to.length ? escapeHtml(to.join(', ')) : '<em>no address</em>'} (cc ${escapeHtml(CONFIG.SSA_TIMESHEET_CC.join(', '))}) and saves a copy in Gecko Docs.</li>
+        <li>Offers a <strong>draft in Xero</strong>: ${inv.quantity} × ${escapeHtml(inv.itemCode)}, ${money(inv.total)} inc VAT.</li>
       </ol>
       ${noEmail}
       <div class="tsh-mm-actions">
@@ -16764,7 +16682,7 @@ async function tshRenewMailPermission() {
   } catch (err) {
     console.error('Mail permission not granted:', err);
     toast('Microsoft needs your permission to ' + (CONFIG.SSA_EMAIL_MODE === 'send' ? 'send from the support mailbox' : 'save drafts in your mailbox')
-      + ', but its window was blocked or closed. In Chrome, click the blocked pop-up icon at the right of the address bar, choose "Always allow", then try again. Nothing was changed.', 'error', 10000);
+      + ', but the pop-up was blocked or closed. Allow pop-ups for this site (Chrome: icon at the right of the address bar), then try again. Nothing was changed.', 'error', 10000);
     return false;
   }
 }
@@ -17049,7 +16967,7 @@ function tshRenewXeroHtml(r, inv, money) {
   if (x.result) {
     return `<div class="tsh-renew-xero done">
         <div class="tsh-renew-xero-h">✓ Draft ${escapeHtml(x.result.invoice_number || 'invoice')} created in Xero</div>
-        <p class="tsh-renew-sub">${money(inv.net)} + VAT for ${inv.quantity} × ${escapeHtml(inv.itemCode)}, to ${escapeHtml(x.result.contact)}. Check it, approve and send it in Xero.</p>
+        <p class="tsh-renew-sub">${money(inv.net)} + VAT to ${escapeHtml(x.result.contact)}. Approve and send it in Xero.</p>
         <div class="tsh-mm-actions"><a class="btn" href="${escapeHtml(tshXeroLink(x.result.invoice_id))}" target="_blank" rel="noopener">Open ${escapeHtml(x.result.invoice_number || 'the draft')} in Xero</a></div>
       </div>`;
   }
@@ -17071,7 +16989,7 @@ function tshRenewXeroHtml(r, inv, money) {
       </table>
       ${recent.length ? `<p class="tsh-renew-warn">Already made for ${escapeHtml(r.name)} in the last 45 days: ${recent.map(p => `${escapeHtml(p.invoice_number)} (${p.quantity} × SSA, ${escapeHtml(String(p.status || 'draft').toLowerCase())}, ${escapeHtml(new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))})`).join(', ')}. Only create another if this is a new renewal.</p>` : ''}
       ${x.error ? `<p class="tsh-renew-warn">${escapeHtml(x.error)}</p>` : ''}
-      <p class="tsh-renew-sub">Created as a <strong>draft</strong>: you approve and send it in Xero. Due on the client’s usual terms.</p>
+      <p class="tsh-renew-sub">Created as a <strong>draft</strong>; you approve and send it in Xero.</p>
       <div class="tsh-mm-actions">
         <button class="btn btn-ghost" type="button" onclick="tshRenewCopyXero()">Copy details</button>
         <button class="btn" type="button" ${busy} onclick="tshRenewXeroCreate()">${x.busy ? 'Creating in Xero…' : 'Create draft in Xero'}</button>
@@ -17097,7 +17015,7 @@ async function tshRenewXeroCreate() {
       amount: inv.unitAmount, quantity: inv.quantity, reference: inv.reference
     });
     x.result = { ...res, contact };
-    toast(`Draft ${res.invoice_number || 'invoice'} created in Xero. Check it, approve and send it in Xero.`, 'success', 8000);
+    toast(`Draft ${res.invoice_number || 'invoice'} created in Xero: approve and send it there.`, 'success', 8000);
   } catch (err) {
     x.error = 'Xero did not create the invoice: ' + (err.message || err) + ' (Copy details still works.)';
   } finally {
@@ -17158,7 +17076,7 @@ function tshRenderWeekly() {
 
   const delta = w.prevTotal || w.total
     ? `<small class="${w.change > 0 ? 'up' : w.change < 0 ? 'down' : ''}">${w.change > 0 ? '▲' : w.change < 0 ? '▼' : '='} ${escapeHtml(tshH(Math.abs(w.change)) )} vs week before (${escapeHtml(tshH(w.prevTotal))})</small>`
-    : '<small>nothing the week before either</small>';
+    : '';
   const engTiles = w.engineers.filter(p => W.ENGINEERS.includes(p) || w.byEng[p]).map(p => {
     const share = w.total ? Math.round(w.byEng[p] / w.total * 100) : 0;
     const daysWorked = w.days.filter(d => d.byEng[p]).length;
@@ -17176,7 +17094,7 @@ function tshRenderWeekly() {
   }).join('');
   const gapsBy = W.ENGINEERS.map(p => [p, w.gaps.filter(g => g.engineer === p).map(g => tshDayLbl(g.date, { weekday: 'short' }))]).filter(([, d]) => d.length);
   const gapsHtml = gapsBy.length
-    ? `<p class="tsh-wk-gaps"><strong>Nothing logged</strong> ${gapsBy.map(([p, d]) => `${escapeHtml(p)}: ${escapeHtml(d.join(', '))}`).join(' · ')} <span>(leave, or time still to log)</span></p>` : '';
+    ? `<p class="tsh-wk-gaps"><strong>Nothing logged</strong> ${gapsBy.map(([p, d]) => `${escapeHtml(p)}: ${escapeHtml(d.join(', '))}`).join(' · ')}</p>` : '';
 
   const barList = (rows, kind) => {
     if (!rows.length) return '<p class="tsh-wk-muted">Nothing logged this week.</p>';
@@ -17224,14 +17142,13 @@ function tshRenderWeekly() {
       <div class="tsh-wk-card"><div class="tsh-wk-card-head"><strong>By work type</strong><span>${w.types.length}</span></div>${barList(w.types, 'type')}</div>
     </div>
     <div class="tsh-wk-card">
-      <div class="tsh-wk-card-head"><strong>Last 8 weeks</strong><span>click a week to open it</span></div>
+      <div class="tsh-wk-card-head"><strong>Last 8 weeks</strong></div>
       <div class="tsh-wk-trend">${trendHtml}</div>
     </div>
     <div class="tsh-wk-card">
       <div class="tsh-wk-card-head"><strong>Entries</strong><span>${w.entries.length}</span></div>
       <div class="tsh-wk-ents">${entriesHtml}</div>
     </div>
-    <p class="tsh-wk-note">Work only: System credits and adjustments aren’t counted. Weeks run Monday to Sunday.</p>
   </div>`;
 }
 document.addEventListener('click', e => {
@@ -17395,7 +17312,7 @@ function tshConfirmDelete(entryId) {
   const body = `
     <p>Delete this timesheet entry?</p>
     <p style="color:var(--white);">${fmtDate(e.date)} — ${escapeHtml(e.clientName)} — ${tshFmtHours(e.hours)} (${escapeHtml(e.engineer)})</p>
-    <p style="font-size:11px;">This will also adjust the client's SSA hours if applicable. This action cannot be undone.</p>
+    <p style="font-size:11px;">Adjusts the client's SSA hours if applicable. Can't be undone.</p>
     <div class="tsh-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">Cancel</button>
       <button class="btn" type="button" style="background:var(--red);border-color:var(--red);color:var(--white);" onclick="tshDeleteConfirmed('${entryId}')">Delete entry</button>
@@ -17808,7 +17725,7 @@ function levOpenEditModal(id) {
         <select class="lev-select" id="levEditType">${typeOptions}</select>
       </div>
       <div class="lev-field">
-        <label for="levEditStart">Start Date</label>
+        <label for="levEditStart">Start date</label>
         <input class="lev-input" type="date" id="levEditStart" value="${escapeHtml(req.startDate)}" onchange="levUpdateEditEstimate()">
       </div>
       <div class="lev-field">
@@ -17972,9 +17889,9 @@ function levUpdateEstimate() {
   const hint = document.getElementById('levEstimateHint');
   if (hint) {
     const days = levWorkingDays(start, end);
-    if (!start || !end) hint.textContent = 'Select dates to calculate working-day hours. Weekends are excluded.';
-    else if (!days) hint.textContent = 'No working weekdays in this range. Choose weekdays or enter custom hours.';
-    else hint.textContent = `${days} working day${days === 1 ? '' : 's'} · ${levFmtHoursDays(mode === 'custom' ? Number(hoursEl?.value) || 0 : hrs)} · weekends excluded.`;
+    if (!start || !end) hint.textContent = '';
+    else if (!days) hint.textContent = 'No weekdays in this range.';
+    else hint.textContent = `${days} working day${days === 1 ? '' : 's'} · ${levFmtHoursDays(mode === 'custom' ? Number(hoursEl?.value) || 0 : hrs)}`;
   }
 }
 
@@ -18215,7 +18132,7 @@ function levRenderMobileAgenda(monthStart, monthEnd) {
     }
     d.setDate(d.getDate() + 1);
   }
-  return `<div class="lev-mobile-agenda">${days.join('') || '<div class="lev-agenda-empty">No approved or pending leave this month.</div>'}</div>`;
+  return `<div class="lev-mobile-agenda">${days.join('') || '<div class="lev-agenda-empty">No leave this month.</div>'}</div>`;
 }
 
 function levRenderCalendar() {
@@ -18282,7 +18199,7 @@ function levRenderTable() {
   const rows = levFilteredRequests();
   if (count) count.textContent = `${rows.length} record${rows.length === 1 ? '' : 's'}`;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="lev-empty">No leave records match this view.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="lev-empty">No leave in this view.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(r => {
@@ -18296,10 +18213,10 @@ function levRenderTable() {
     ].join('') || '<span style="color:var(--muted)">-</span>';
     return `<tr class="lev-row" onclick="levOpenEditModal('${r.id}')">
       <td><strong>${escapeHtml(r.person)}</strong><div style="font-size:11px;color:var(--muted)">${escapeHtml(r.leaveType)}</div></td>
-      <td>${escapeHtml(levDateRangeLabel(r.startDate, r.endDate))}<div style="font-size:11px;color:var(--muted)">${escapeHtml(r.taxYear)}</div></td>
+      <td>${escapeHtml(levDateRangeLabel(r.startDate, r.endDate))}</td>
       <td>${escapeHtml(levFmtHoursDays(r.hours))}</td>
       <td><span class="lev-status ${levStatusClass(r.status)}">${escapeHtml(r.status)}</span></td>
-      <td>${escapeHtml(r.requestedBy || '-')}<div style="font-size:11px;color:var(--muted)">${escapeHtml(r.requestedByEmail || '')}</div></td>
+      <td>${escapeHtml(r.requestedBy || '-')}</td>
       <td>${escapeHtml(r.approvedBy || '-')}</td>
       <td>${fmtDate(r.created)}</td>
       <td>${escapeHtml(r.notes || '-')}</td>
@@ -18323,7 +18240,7 @@ function levRenderError(err) {
   const kpis = document.getElementById('levKpis');
   if (!kpis) return;
   if (err?.code === 'DB_SIGNIN_REQUIRED') {
-    kpis.innerHTML = `<div class="lev-card" style="grid-column:1/-1"><div class="lev-empty">Leave now lives in the Gecko database. Connect once with your Microsoft account to load it. <button type="button" class="lev-refresh" onclick="levConnect()">Connect</button></div></div>`;
+    kpis.innerHTML = `<div class="lev-card" style="grid-column:1/-1"><div class="lev-empty">Connect to the database to load leave. <button type="button" class="lev-refresh" onclick="levConnect()">Connect</button></div></div>`;
     return;
   }
   kpis.innerHTML = `<div class="state-error" style="grid-column:1/-1"><strong>Leave could not load</strong><span>${escapeHtml(err.message || err)}</span></div>`;
@@ -18395,9 +18312,9 @@ function levSetDefaultFormValues() {
   if (startEl && !startEl.value) startEl.value = today();
   if (endEl && !endEl.value) endEl.value = startEl?.value || today();
   const mode = document.getElementById('levModeHint');
-  if (mode) mode.textContent = levIsPhilip() ? 'Philip bookings save as approved' : 'Jack requests start as pending';
+  if (mode) mode.textContent = levIsPhilip() ? 'Saves as approved' : 'Saves as pending';
   const submit = document.getElementById('levSubmitBtn');
-  if (submit) submit.lastChild.textContent = levIsPhilip() ? ' Book Leave' : ' Request Leave';
+  if (submit) submit.lastChild.textContent = levIsPhilip() ? ' Book leave' : ' Request leave';
   const copy = document.getElementById('levCopy');
   if (copy) copy.hidden = !(levIsPhilip() && levBackend() === 'sharepoint');
   LEV.hoursEdited = false;
@@ -19351,7 +19268,7 @@ function renderSettings() {
     }
 
     if (lists.length === 0) {
-      listsBody.innerHTML = '<div class="set-row"><span class="set-label set-muted">Visit a section to resolve list IDs</span></div>';
+      listsBody.innerHTML = '<div class="set-row"><span class="set-label set-muted">Not resolved yet</span></div>';
     } else {
       listsBody.innerHTML = lists.map(l =>
         `<div class="set-row"><span class="set-list-name">${escapeHtml(l.name)}</span><span class="set-list-id">${escapeHtml(l.id)}</span></div>`
@@ -19362,7 +19279,6 @@ function renderSettings() {
   // — Fetch full profile from Microsoft Graph (async, fills in after load) —
   setRenderHealth();
   setRenderWatchlist();
-  setRenderChangelog();
   setLoadProfile();
   setLoadProfilePhoto();
 }
@@ -19449,28 +19365,12 @@ function setRenderWatchlist() {
     items.push({
       tone: 'ok',
       label: 'Clear',
-      text: 'No obvious issues from currently loaded sections. Visit each section or refresh data for a fuller check.'
+      text: 'Nothing flagged in the loaded sections.'
     });
   }
 
   body.innerHTML = items.slice(0, 8).map(item =>
     `<div class="set-watch"><span class="set-watch-tone ${item.tone === 'ok' ? '' : item.tone}">${escapeHtml(item.label)}</span><span class="set-watch-text">${escapeHtml(item.text)}</span></div>`
-  ).join('');
-}
-
-function setRenderChangelog() {
-  const body = document.getElementById('setChangelogBody');
-  if (!body) return;
-  const changes = [
-    ['June 2026', 'Annual Leave planner added with SharePoint-backed requests, approvals, calendar view, and 20 working day default entitlement.'],
-    ['May 2026', 'P&L imports now support CSV/XLSX, month switching, SharePoint site-wide storage, and summary insights.'],
-    ['May 2026', 'Profitability gained category-aware ranking by profit, revenue, margin, cost, Xero variance, or client name.'],
-    ['May 2026', 'Timesheets description now writes to the SharePoint WorkDescription field.'],
-    ['May 2026', 'Mobile layout, light mode, transparent logo/favicon, and stale Microsoft session recovery were tightened up.'],
-    ['May 2026', 'Settings now includes health checks, watchlist signals, changelog, and portal backup export.']
-  ];
-  body.innerHTML = changes.map(([date, text]) =>
-    `<div class="set-change"><span class="set-change-date">${escapeHtml(date)}</span><span class="set-change-text">${escapeHtml(text)}</span></div>`
   ).join('');
 }
 

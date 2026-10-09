@@ -12,7 +12,8 @@
    3  Figures          one hairline-divided panel, mono values
    4  Error state      red-tinted box; never the empty state's look
    5  Lists            full 1px borders; status shown by a dot or badge, not a side stripe
-   6  Badges           .badge (status, small caps) */
+   6  Badges           .badge (status, small caps)
+   7  Motion           one curve (--ease), three speeds (--dur-1/2/3) */
 
 
 /* ── 1 · Header actions ─────────────────────────────────────────────── */
@@ -30,7 +31,8 @@
   min-height: 34px; padding: 7px 14px; border-radius: var(--radius-pill);
   border: 1px solid var(--border-dim); background: var(--panel); color: var(--muted);
   font: 500 13px/1.2 var(--font-body); box-shadow: none; cursor: pointer; text-decoration: none;
-  transition: background-color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+  transition: background-color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
+              transform var(--dur-1) var(--ease);
 }
 #app .section-head :is(.ovw-refresh, .prf-refresh, .prf-manage-link, .prf-export-btn, .mil-refresh,
                        .cli-refresh, .tsh-refresh, .lev-refresh, .cmp-refresh, .prj-refresh, .bkp-refresh, .head-btn):hover {
@@ -76,7 +78,7 @@
 #app :is(.bkp-window, .cli-view-toggle) button {
   min-height: 28px; padding: 4px 12px; border: 0; border-radius: var(--radius-pill); background: transparent;
   color: var(--muted); font: 500 12px/1.2 var(--font-body); box-shadow: none; cursor: pointer;
-  transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+  transition: background-color var(--dur-2) var(--ease), color var(--dur-2) var(--ease), transform var(--dur-1) var(--ease);
 }
 #app :is(.bkp-window, .cli-view-toggle) button:hover { color: var(--white); }
 #app :is(.bkp-window button[aria-pressed="true"], .cli-view-toggle .cli-vt-btn.active) {
@@ -154,6 +156,40 @@
 
 /* ── 6 · Badges ─────────────────────────────────────────────────────── */
 #app .badge { border-radius: var(--radius-pill); padding: 2px 8px; font-size: 10px; line-height: 1.5; white-space: nowrap; }
+
+
+/* ── 7 · Motion ─────────────────────────────────────────────────────── */
+/* Content replacing a "Loading…" placeholder fades in from src/main.js (WAAPI), so it never snaps. */
+@keyframes gk-fade { from { opacity: 0; } }
+@keyframes gk-rise { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+
+/* Every press gives the same small push. */
+#app :is(.section-head .head-btn, .section-head [class$="-refresh"], .app-tabs button,
+         .bkp-window button, .cli-view-toggle button):active:not(:disabled) { transform: translateY(1px); }
+
+/* Dialogs: the backdrop fades, the panel rises into place. */
+#app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .cmp-modal-bg, .lev-modal-bg, .prj-backdrop) {
+  background: var(--overlay); animation: gk-fade var(--dur-2) var(--ease) both;
+}
+#app :is(.prf-modal, .mil-modal, .cli-modal, .tsh-modal, .cmp-modal, .lev-modal, .prj-modal) {
+  animation: gk-rise var(--dur-3) var(--ease) both;
+}
+
+/* Expanding a <details> opens smoothly where the browser can size to auto. */
+@supports (interpolate-size: allow-keywords) {
+  #app { interpolate-size: allow-keywords; }
+  #app details::details-content {
+    height: 0; overflow: clip;
+    transition: height var(--dur-3) var(--ease), content-visibility var(--dur-3) allow-discrete;
+  }
+  #app details[open]::details-content { height: auto; }
+}
+
+/* Toasts live outside #app: rise in, leave a little faster than they came. */
+.toast { animation: gk-toast-in var(--dur-3) var(--ease) both; }
+.toast.fade { animation: gk-toast-out var(--dur-2) cubic-bezier(.5, 0, .75, 0) forwards; }
+@keyframes gk-toast-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+@keyframes gk-toast-out { to { opacity: 0; transform: translateY(6px) scale(.98); } }
 
 
 @media (max-width: 560px) {
