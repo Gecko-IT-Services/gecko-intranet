@@ -282,26 +282,6 @@ body {
 
 :root[data-theme="light"] body { background: var(--dark); }
 
-:root[data-density="compact"] {
-  --header-h: 52px;
-  --radius: 8px;
-  --radius-sm: 6px;
-}
-
-:root[data-density="compact"] .section { padding-top: 26px; }
-:root[data-density="compact"] .section-head { padding: 22px 24px; margin-bottom: 14px; }
-:root[data-density="compact"] .card { padding: 16px; }
-:root[data-density="compact"] .btn { padding: 6px 12px; }
-:root[data-density="compact"] th,
-:root[data-density="compact"] td { padding-top: 8px; padding-bottom: 8px; }
-
-:root[data-density="roomy"] .section { padding-top: 42px; }
-:root[data-density="roomy"] .section-head { padding: 34px 30px; margin-bottom: 26px; }
-:root[data-density="roomy"] .card { padding: 26px; }
-:root[data-density="roomy"] .btn { padding: 10px 18px; }
-:root[data-density="roomy"] th,
-:root[data-density="roomy"] td { padding-top: 13px; padding-bottom: 13px; }
-
 /* — Shared utility classes — */
 /* .barlow is a legacy class name from an earlier typeface. Kept so existing
    markup/JS that adds it still resolves to the current display family. */
@@ -2721,288 +2701,65 @@ body {
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   SETTINGS SECTION (Phase 7)                                      ║
    ║                                                                   ║
-   ║   Portal info, account details, system configuration.             ║
+   ║   Who's signed in, appearance, backup and sign-out.               ║
    ║   Scoped under `#section-settings .set-*` to avoid bleed.        ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
-#section-settings .set-wrap {
-  display: flex; flex-direction: column; gap: 14px;
-}
+#section-settings .set-wrap { display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
 
-/* ── User Profile Hero Card ── */
-#section-settings .set-profile-card {
-  background: var(--card);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius);
-  overflow: hidden;
-  transition: border-color .2s ease;
-}
-#section-settings .set-profile-card:hover { border-color: var(--border); }
-#section-settings .set-profile-top {
-  padding: 28px 24px 20px;
-  display: flex; align-items: center; gap: 22px;
-  border-bottom: 1px solid var(--border-dim);
-}
-#section-settings .set-avatar-wrap {
-  position: relative; flex-shrink: 0;
-}
-#section-settings .set-avatar {
-  width: 72px; height: 72px; border-radius: 50%;
-  background: var(--green-glow); border: 2px solid var(--border);
-  color: var(--green);
-  font-family: var(--font-body);
-  font-weight: 800; font-size: 24px;
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
-  transition: border-color .2s ease;
-}
-#section-settings .set-avatar img {
-  width: 100%; height: 100%; object-fit: cover;
-  border-radius: 50%;
-}
-#section-settings .set-avatar-ring {
-  position: absolute; bottom: 2px; right: 2px;
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--green);
-  border: 3px solid var(--card);
-}
-#section-settings .set-profile-name {
-  font-family: var(--font-body);
-  font-weight: 800; font-size: 24px;
-  letter-spacing: .04em; text-transform: uppercase;
-  color: var(--white); line-height: 1.1;
-}
-#section-settings .set-profile-email {
-  font-size: 13px; color: var(--muted);
-  margin-top: 3px;
-}
-#section-settings .set-profile-badges {
-  display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
-}
-#section-settings .set-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 10px; border-radius: 999px;
-  font-size: 10px; font-weight: 700;
-  letter-spacing: .06em; text-transform: uppercase;
-}
-#section-settings .set-badge-role {
-  background: var(--blue-dim); color: var(--blue);
-  border: 1px solid var(--blue-border);
-}
-#section-settings .set-badge-status {
-  background: var(--green-glow); color: var(--green);
-  border: 1px solid var(--border);
-}
-#section-settings .set-status-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--green);
-  animation: setDotPulse 2s ease-in-out infinite;
-}
-@keyframes setDotPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .4; }
-}
-#section-settings .set-profile-details {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-top: none;
-}
-#section-settings .set-detail {
-  padding: 14px 20px;
-  border-right: 1px solid var(--border-dim);
-  display: flex; flex-direction: column; gap: 3px;
-}
-#section-settings .set-detail:last-child { border-right: none; }
-#section-settings .set-detail-label {
-  font-size: 9px; color: var(--muted);
-  letter-spacing: .1em; text-transform: uppercase;
-}
-#section-settings .set-detail-value {
-  font-size: 13px; color: var(--white);
-  font-weight: 500;
-}
-
-/* ── Two-column grid (Azure + Lists) ── */
-#section-settings .set-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 14px;
-}
-
-/* ── Standard settings cards ── */
 #section-settings .set-card {
-  background: var(--card);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius);
-  overflow: hidden;
-  transition: border-color .2s ease;
+  background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius); overflow: hidden;
 }
-#section-settings .set-card:hover { border-color: var(--border); }
-#section-settings .set-card-head {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border-dim);
-  display: flex; align-items: center; gap: 10px;
-  color: var(--muted);
-}
-#section-settings .set-card-head h3 {
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 14px;
-  letter-spacing: .07em; text-transform: uppercase;
-  color: var(--white); flex: 1;
-}
+#section-settings .set-card-head { padding: 14px 18px; border-bottom: 1px solid var(--border-dim); }
+#section-settings .set-card-head h3 { font-family: var(--font-body); font-weight: 700; font-size: 14px; color: var(--white); }
 #section-settings .set-card-body { padding: 4px 0; }
-#section-settings .set-row {
-  padding: 10px 18px;
-  display: flex; align-items: center; gap: 14px;
-  border-bottom: 1px solid var(--border-dim);
-}
-#section-settings .set-row:last-child { border-bottom: none; }
-#section-settings .set-label {
-  font-size: 12px; color: var(--muted);
-  min-width: 120px; flex-shrink: 0;
-}
-#section-settings .set-label.set-muted {
-  font-style: italic; min-width: auto;
-}
-#section-settings .set-value {
-  font-size: 13px; color: var(--white);
-  font-weight: 500; word-break: break-all;
-}
-#section-settings .set-mono {
-  font-family: var(--font-mono);
-  font-size: 13px; letter-spacing: .02em;
-  color: var(--green);
-}
-#section-settings .set-list-name {
-  font-weight: 600; color: var(--white);
-  margin-right: 6px;
-}
-#section-settings .set-list-id {
-  font-family: var(--font-mono);
-  font-size: 11px; color: var(--muted);
-  word-break: break-all;
-}
-#section-settings .set-status-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 3px 9px; border-radius: 999px;
-  font-size: 10px; font-weight: 800;
-  letter-spacing: .07em; text-transform: uppercase;
-}
-#section-settings .set-status-pill.ok {
-  color: var(--green); background: var(--green-glow); border: 1px solid var(--border);
-}
-#section-settings .set-status-pill.warn {
-  color: var(--amber); background: var(--amber-dim); border: 1px solid var(--amber-border);
-}
-#section-settings .set-status-pill.bad {
-  color: var(--red); background: var(--red-dim); border: 1px solid var(--red-border);
-}
-#section-settings .set-watch-list {
-  padding: 8px 18px 14px;
-  display: grid; gap: 8px;
-}
-#section-settings .set-watch {
-  display: grid; grid-template-columns: 92px 1fr;
-  gap: 12px; padding: 9px 0;
-  border-bottom: 1px solid var(--border-dim);
-}
-#section-settings .set-watch:last-child { border-bottom: none; }
-#section-settings .set-watch-tone {
-  font-family: var(--font-body);
-  font-size: 12px; font-weight: 800;
-  letter-spacing: .06em; text-transform: uppercase;
-  color: var(--green);
-}
-#section-settings .set-watch-tone.warn { color: var(--amber); }
-#section-settings .set-watch-tone.bad { color: var(--red); }
-#section-settings .set-watch-text {
-  color: var(--white); font-size: 13px; line-height: 1.4;
-}
 
-/* ── Personalisation ── */
-#section-settings .set-preferences-card .set-card-body {
-  padding: 18px;
+/* Who's signed in */
+#section-settings .set-me { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+#section-settings .set-avatar {
+  width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: var(--green-glow); border: 1px solid var(--border); color: var(--green);
+  font-family: var(--font-body); font-weight: 800; font-size: 14px;
 }
-#section-settings .set-pref-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-#section-settings .set-pref-group {
-  min-width: 0;
-}
-#section-settings .set-pref-label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--muted);
-  letter-spacing: .09em;
-  text-transform: uppercase;
-}
-#section-settings .set-segmented {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
+#section-settings .set-me-text { display: flex; flex-direction: column; min-width: 0; }
+#section-settings .set-me-text strong { color: var(--white); font-size: 14px; }
+#section-settings .set-me-text span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+
+/* Appearance */
+#section-settings .set-preferences-card .set-card-body { padding: 18px; }
+#section-settings .set-pref-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+#section-settings .set-pref-group { min-width: 0; }
+#section-settings .set-pref-label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--muted); }
+#section-settings .set-segmented { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 #section-settings .set-seg-btn {
-  min-height: 36px;
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.02);
-  color: var(--muted);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+  min-height: 36px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm);
+  background: transparent; color: var(--muted); font-family: var(--font-body); font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
-#section-settings .set-seg-btn:hover {
-  border-color: var(--border);
-  color: var(--white);
-}
-#section-settings .set-seg-btn.active {
-  background: var(--green-glow);
-  border-color: var(--green);
-  color: var(--green);
-  box-shadow: 0 0 0 1px var(--green-line) inset;
-}
+#section-settings .set-seg-btn:hover { border-color: var(--border); color: var(--white); }
+#section-settings .set-seg-btn.active { background: var(--green-glow); border-color: var(--green); color: var(--green); }
 #section-settings .set-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 6px;
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
+  width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px;
+  box-shadow: 0 0 0 2px var(--border-dim);
 }
 #section-settings .set-swatch.green { background: #52b02e; }
 #section-settings .set-swatch.blue { background: #4a9edd; }
 #section-settings .set-swatch.amber { background: #e09a2e; }
 
-/* ── Actions bar ── */
-#section-settings .set-actions {
-  background: var(--card);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  display: flex; align-items: center; gap: 14px;
-  flex-wrap: wrap;
+/* Data and sign-in: what each button is for, then the button */
+#section-settings .set-row {
+  padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  border-bottom: 1px solid var(--border-dim);
 }
+#section-settings .set-row:last-child { border-bottom: none; }
+#section-settings .set-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#section-settings .set-row-text strong { color: var(--white); font-size: 13px; }
+#section-settings .set-row-text span { color: var(--muted); font-size: 12px; }
 
-/* ── Responsive ── */
-@media (max-width: 900px) {
-  #section-settings .set-profile-top { flex-direction: column; text-align: center; }
-  #section-settings .set-profile-badges { justify-content: center; }
-  #section-settings .set-profile-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #section-settings .set-detail:nth-child(2) { border-right: none; }
-  #section-settings .set-grid { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 560px) {
   #section-settings .set-pref-grid { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 520px) {
-  #section-settings .set-profile-details { grid-template-columns: minmax(0, 1fr); }
-  #section-settings .set-detail { border-right: none; border-bottom: 1px solid var(--border-dim); }
-  #section-settings .set-detail:last-child { border-bottom: none; }
-  #section-settings .set-segmented { grid-template-columns: minmax(0, 1fr); }
+  #section-settings .set-row { flex-direction: column; align-items: stretch; }
+  #section-settings .set-row .btn { width: 100%; justify-content: center; min-height: 42px; }
 }
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
@@ -4398,35 +4155,8 @@ body::before {
   }
 
   #section-clients .cli-grid,
-  #section-timesheets .tsh-ssa-grid,
-  #section-settings .set-grid,
-  #section-settings .set-profile-details{
+  #section-timesheets .tsh-ssa-grid {
     grid-template-columns: minmax(0, 1fr) !important;
-  }
-
-  #section-settings .set-profile-top {
-    align-items: flex-start;
-  }
-
-  #section-settings .set-row {
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  #section-settings .set-actions {
-    align-items: stretch;
-  }
-
-  #section-settings .set-actions .btn {
-    width: 100%;
-    justify-content: center;
-    min-height: 42px;
-  }
-
-  #section-settings .set-value,
-  #section-settings .set-list-id {
-    word-break: break-word;
-    text-align: right;
   }
 
   /* These six tables used to be pinned to 680px here and left to scroll
@@ -4491,11 +4221,6 @@ body::before {
 
   #section-profitability .prf-sum-strip {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  #section-settings .set-watch {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
   }
 
   .sb-backdrop.show {
@@ -4758,10 +4483,7 @@ body::before {
 }
 
 :root[data-theme="light"] table thead th,
-:root[data-theme="light"] .set-detail-label,
 :root[data-theme="light"] .set-pref-label,
-:root[data-theme="light"] .set-label,
-:root[data-theme="light"] .set-profile-email,
 :root[data-theme="light"] .ovw-ops-head p,
 :root[data-theme="light"] .ovw-op .op-label,
 :root[data-theme="light"] .ovw-op .op-note,
@@ -4771,7 +4493,6 @@ body::before {
 }
 
 :root[data-theme="light"] .badge,
-:root[data-theme="light"] .set-badge,
 :root[data-theme="light"] .pnl-month,
 :root[data-theme="light"] .tsh-last-sync,
 :root[data-theme="light"] .cmp-last-sync {
@@ -6601,56 +6322,24 @@ body::before {
 
     <!-- ═══ SETTINGS SECTION ═══════════════════════════════════════ -->
     <section class="section" id="section-settings">
+
       <div class="section-head">
-        <h1>Settings <span>&amp; Info</span></h1>
+        <h1>Settings</h1>
       </div>
+
+      <!-- Design: docs/superpowers/specs/2026-10-09-simpler-settings-design.md -->
       <div class="set-wrap">
 
-        <!-- ── User Profile Card (hero) ── -->
-        <div class="set-profile-card" id="setProfileCard">
-          <div class="set-profile-top">
-            <div class="set-avatar-wrap">
-              <div class="set-avatar" id="setAvatar">—</div>
-              <div class="set-avatar-ring"></div>
-            </div>
-            <div class="set-profile-info">
-              <h2 class="set-profile-name" id="setProfileName">—</h2>
-              <p class="set-profile-email" id="setProfileEmail">—</p>
-              <div class="set-profile-badges">
-                <span class="set-badge set-badge-role" id="setProfileRole">Engineer</span>
-                <span class="set-badge set-badge-status">
-                  <span class="set-status-dot"></span>
-                  Signed in
-                </span>
-              </div>
-            </div>
-          </div>
-          <div class="set-profile-details">
-            <div class="set-detail">
-              <span class="set-detail-label">Job title</span>
-              <span class="set-detail-value" id="setJobTitle">—</span>
-            </div>
-            <div class="set-detail">
-              <span class="set-detail-label">Department</span>
-              <span class="set-detail-value" id="setDepartment">—</span>
-            </div>
-            <div class="set-detail">
-              <span class="set-detail-label">Office</span>
-              <span class="set-detail-value" id="setOffice">—</span>
-            </div>
-            <div class="set-detail">
-              <span class="set-detail-label">Phone</span>
-              <span class="set-detail-value" id="setPhone">—</span>
-            </div>
+        <div class="set-card set-me">
+          <div class="set-avatar" id="setAvatar" aria-hidden="true">—</div>
+          <div class="set-me-text">
+            <strong id="setProfileName">—</strong>
+            <span id="setProfileEmail">—</span>
           </div>
         </div>
 
-        <!-- ── Appearance Preferences ── -->
         <div class="set-card set-preferences-card">
-          <div class="set-card-head">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6 2 11c0 3.5 2.9 6.5 6.9 7.7.9.3 1.6 1 1.6 1.9v.2c0 .7.6 1.2 1.3 1.2H12c5.5 0 10-4 10-9S17.5 2 12 2Z"/><path d="M14 18.5c.7-1.9 2.6-2.2 4.1-2"/></svg>
-            <h3>Appearance</h3>
-          </div>
+          <div class="set-card-head"><h3>Appearance</h3></div>
           <div class="set-card-body">
             <div class="set-pref-grid">
               <div class="set-pref-group">
@@ -6659,14 +6348,6 @@ body::before {
                   <button class="set-seg-btn" type="button" data-pref-key="theme" data-pref-value="dark" onclick="setPreference('theme','dark')">Dark</button>
                   <button class="set-seg-btn" type="button" data-pref-key="theme" data-pref-value="light" onclick="setPreference('theme','light')">Light</button>
                   <button class="set-seg-btn" type="button" data-pref-key="theme" data-pref-value="system" onclick="setPreference('theme','system')">System</button>
-                </div>
-              </div>
-              <div class="set-pref-group">
-                <span class="set-pref-label">Density</span>
-                <div class="set-segmented" id="setDensityChoice">
-                  <button class="set-seg-btn" type="button" data-pref-key="density" data-pref-value="comfortable" onclick="setPreference('density','comfortable')">Comfort</button>
-                  <button class="set-seg-btn" type="button" data-pref-key="density" data-pref-value="compact" onclick="setPreference('density','compact')">Compact</button>
-                  <button class="set-seg-btn" type="button" data-pref-key="density" data-pref-value="roomy" onclick="setPreference('density','roomy')">Roomy</button>
                 </div>
               </div>
               <div class="set-pref-group">
@@ -6681,81 +6362,18 @@ body::before {
           </div>
         </div>
 
-        <!-- ── Two-column grid: Azure + SharePoint Lists ── -->
-        <div class="set-grid">
-          <div class="set-card">
-            <div class="set-card-head">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-              <h3>Azure app registration</h3>
-            </div>
-            <div class="set-card-body">
-              <div class="set-row"><span class="set-label">Client ID</span><span class="set-value set-mono" id="setClientId">—</span></div>
-              <div class="set-row"><span class="set-label">Tenant ID</span><span class="set-value set-mono" id="setTenantId">—</span></div>
-              <div class="set-row"><span class="set-label">SharePoint site</span><span class="set-value set-mono" id="setSpSite">—</span></div>
-              <div class="set-row"><span class="set-label">Auth scopes</span><span class="set-value set-mono" id="setScopes">—</span></div>
-            <div class="set-row"><span class="set-label">Redirect URI</span><span class="set-value set-mono" id="setRedirect">—</span></div>
-            </div>
-          </div>
-
-          <div class="set-card">
-            <div class="set-card-head">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              <h3>SharePoint lists</h3>
-            </div>
-            <div class="set-card-body" id="setListsBody">
-              <div class="set-row"><span class="set-label set-muted">Not resolved yet</span></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── Portal Info ── -->
         <div class="set-card">
-          <div class="set-card-head">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <h3>Portal info</h3>
-          </div>
+          <div class="set-card-head"><h3>Data and sign-in</h3></div>
           <div class="set-card-body">
-            <div class="set-row"><span class="set-label">Version</span><span class="set-value">Phase 11 — Annual Leave</span></div>
-            <div class="set-row"><span class="set-label">Hosting</span><span class="set-value">GitHub Pages</span></div>
-            <div class="set-row"><span class="set-label">Auth library</span><span class="set-value">MSAL.js v3 (jsDelivr CDN)</span></div>
-            <div class="set-row"><span class="set-label">API</span><span class="set-value">Microsoft Graph v1.0</span></div>
-            <div class="set-row"><span class="set-label">Portal URL</span><span class="set-value set-mono">gecko-it-services.github.io/gecko-intranet</span></div>
+            <div class="set-row">
+              <div class="set-row-text"><strong>Export backup</strong><span>Every SharePoint list and database table as one JSON file.</span></div>
+              <button class="btn btn-sm" type="button" onclick="setExportBackup()">Export backup</button>
+            </div>
+            <div class="set-row">
+              <div class="set-row-text"><strong>Clear cache &amp; sign out</strong><span>If sign-in gets stuck on this device.</span></div>
+              <button class="btn btn-sm btn-danger" type="button" onclick="setClearAndSignOut()">Clear cache &amp; sign out</button>
+            </div>
           </div>
-        </div>
-
-        <!-- ── System Health ── -->
-        <div class="set-card">
-          <div class="set-card-head">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 8L9 4l-3 8H2"/></svg>
-            <h3>System health</h3>
-          </div>
-          <div class="set-card-body" id="setHealthBody">
-            <div class="set-row"><span class="set-label set-muted">Not checked yet</span></div>
-          </div>
-        </div>
-
-        <!-- ── Operational Watchlist ── -->
-        <div class="set-card">
-          <div class="set-card-head">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <h3>Operational watchlist</h3>
-          </div>
-          <div class="set-watch-list" id="setWatchlistBody">
-            <div class="set-watch"><span class="set-watch-tone">Info</span><span class="set-watch-text">Nothing loaded yet.</span></div>
-          </div>
-        </div>
-
-
-        <!-- ── Actions ── -->
-        <div class="set-actions">
-          <button class="btn" type="button" onclick="setExportBackup()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export portal backup
-          </button>
-          <button class="btn btn-danger" type="button" onclick="setClearAndSignOut()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Clear cache &amp; sign out
-          </button>
         </div>
 
       </div>
@@ -6866,7 +6484,6 @@ const SETTINGS_PREF_DEFAULTS = {
   // Light is the portal's default surface. Dark remains fully supported
   // and is one tap away in Settings.
   theme: 'light',
-  density: 'comfortable',
   accent: 'green',
   sidebar: 'expanded'   // 'expanded' | 'collapsed' — desktop rail only
 };
@@ -6876,6 +6493,7 @@ function loadPortalPreferences() {
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_PREF_KEY) || '{}');
     SETTINGS_PREFS = { ...SETTINGS_PREF_DEFAULTS, ...saved };
+    delete SETTINGS_PREFS.density;   // no longer a choice (9 Oct 2026); an old saved one is dropped
   } catch {
     SETTINGS_PREFS = { ...SETTINGS_PREF_DEFAULTS };
   }
@@ -6898,7 +6516,7 @@ function applyPortalPreferences() {
   const root = document.documentElement;
   root.dataset.theme = resolvedPortalTheme();
   root.dataset.themeChoice = SETTINGS_PREFS.theme;
-  root.dataset.density = SETTINGS_PREFS.density;
+  delete root.dataset.density;   // density was dropped from Settings (9 Oct 2026)
   root.dataset.accent = SETTINGS_PREFS.accent;
   root.dataset.sidebar = SETTINGS_PREFS.sidebar;
   syncSidebarCollapseState();
@@ -6935,7 +6553,7 @@ function togglePortalSidebar() {
 function setPreference(key, value) {
   SETTINGS_PREFS[key] = value;
   savePortalPreferences();
-  // Crossfade the theme/density change rather than snapping (where the browser can).
+  // Crossfade the theme/accent change rather than snapping (where the browser can).
   const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (document.startViewTransition && !calm) document.startViewTransition(applyPortalPreferences);
   else applyPortalPreferences();
@@ -17654,179 +17272,19 @@ async function initCompliance() {
    ║                                                                   ║
    ║   SETTINGS SECTION (Phase 7)                                      ║
    ║                                                                   ║
-   ║   Portal info panel. Populates on navTo('settings') with          ║
-   ║   current user details, Azure config, and resolved list IDs       ║
-   ║   from all modules.                                               ║
+   ║   Who's signed in, theme and accent, backup and sign-out.         ║
+   ║   Design: 2026-10-09-simpler-settings-design.md                   ║
    ║                                                                   ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
 function renderSettings() {
   renderSettingsPreferences();
-
-  // — Profile card: populate from activeAccount immediately —
-  const name  = activeAccount?.name || activeAccount?.username || '—';
-  const email = activeAccount?.username || '—';
-
-  const nameEl  = document.getElementById('setProfileName');
-  const emailEl = document.getElementById('setProfileEmail');
-  const avatarEl = document.getElementById('setAvatar');
-  if (nameEl)  nameEl.textContent  = name;
-  if (emailEl) emailEl.textContent = email;
-  if (avatarEl) avatarEl.textContent = initialsFor(name);
-
-  // — Azure config —
-  const cidEl   = document.getElementById('setClientId');
-  const tidEl   = document.getElementById('setTenantId');
-  const spEl    = document.getElementById('setSpSite');
-  const scEl    = document.getElementById('setScopes');
-  const rdEl    = document.getElementById('setRedirect');
-  if (cidEl) cidEl.textContent = CONFIG.CLIENT_ID || '—';
-  if (tidEl) tidEl.textContent = CONFIG.TENANT_ID || '—';
-  if (spEl)  spEl.textContent  = CONFIG.SP_HOST + CONFIG.SP_SITE;
-  if (scEl)  scEl.textContent  = (CONFIG.SCOPES || []).join(', ');
-  if (rdEl)  rdEl.textContent  = window.location.origin + window.location.pathname;
-
-  // — Resolved list IDs (gathered from all module state objects) —
-  const listsBody = document.getElementById('setListsBody');
-  if (listsBody) {
-    const lists = [];
-    if (OVW.listIds.journeys)    lists.push({ name: 'MileageJourneys', id: OVW.listIds.journeys });
-    if (OVW.listIds.services)    lists.push({ name: 'GeckoServices',   id: OVW.listIds.services });
-    if (OVW.listIds.clients)     lists.push({ name: 'GeckoClients',    id: OVW.listIds.clients });
-    if (OVW.listIds.timesheets)  lists.push({ name: 'Timesheets',      id: OVW.listIds.timesheets });
-    if (OVW.listIds.ssaClients)  lists.push({ name: 'Clients (SSA)',   id: OVW.listIds.ssaClients });
-    // TSH lists (deduplicate by ID)
-    if (TSH.listIds.timesheets && !lists.find(l => l.id === TSH.listIds.timesheets))
-      lists.push({ name: 'Timesheets', id: TSH.listIds.timesheets });
-    if (TSH.listIds.clients && !lists.find(l => l.id === TSH.listIds.clients))
-      lists.push({ name: 'Clients (SSA)', id: TSH.listIds.clients });
-    // MIL lists
-    if (typeof MIL !== 'undefined' && MIL.listIds) {
-      if (MIL.listIds.journeys && !lists.find(l => l.id === MIL.listIds.journeys))
-        lists.push({ name: 'MileageJourneys', id: MIL.listIds.journeys });
-      if (MIL.listIds.clients && !lists.find(l => l.id === MIL.listIds.clients))
-        lists.push({ name: 'MileageClients', id: MIL.listIds.clients });
-    }
-    // CMP lists
-    if (typeof CMP !== 'undefined' && CMP.listIds) {
-      if (CMP.listIds.compliance && !lists.find(l => l.id === CMP.listIds.compliance))
-        lists.push({ name: 'GeckoCompliance', id: CMP.listIds.compliance });
-    }
-    if (typeof LEV !== 'undefined' && LEV.listIds) {
-      if (LEV.listIds.requests && !lists.find(l => l.id === LEV.listIds.requests))
-        lists.push({ name: 'GeckoLeaveRequests', id: LEV.listIds.requests });
-      if (LEV.listIds.entitlements && !lists.find(l => l.id === LEV.listIds.entitlements))
-        lists.push({ name: 'GeckoLeaveEntitlements', id: LEV.listIds.entitlements });
-    }
-    if (typeof PNL !== 'undefined' && PNL.listId && !lists.find(l => l.id === PNL.listId)) {
-      lists.push({ name: 'GeckoPnLReports', id: PNL.listId });
-    }
-
-    if (lists.length === 0) {
-      listsBody.innerHTML = '<div class="set-row"><span class="set-label set-muted">Not resolved yet</span></div>';
-    } else {
-      listsBody.innerHTML = lists.map(l =>
-        `<div class="set-row"><span class="set-list-name">${escapeHtml(l.name)}</span><span class="set-list-id">${escapeHtml(l.id)}</span></div>`
-      ).join('');
-    }
-  }
-
-  // — Fetch full profile from Microsoft Graph (async, fills in after load) —
-  setRenderHealth();
-  setRenderWatchlist();
-  setLoadProfile();
-  setLoadProfilePhoto();
-}
-
-function setHealthPill(tone, label) {
-  return `<span class="set-status-pill ${tone}">${escapeHtml(label)}</span>`;
-}
-
-function setRenderHealth() {
-  const body = document.getElementById('setHealthBody');
-  if (!body) return;
-  const rows = [
-    ['Microsoft session', activeAccount ? setHealthPill('ok', 'Signed in') : setHealthPill('bad', 'Not signed in')],
-    ['SharePoint site', CONFIG.siteId ? setHealthPill('ok', 'Resolved') : setHealthPill('warn', 'Resolves on demand')],
-    ['List catalogue', CONFIG._listsCache?.length ? `${setHealthPill('ok', CONFIG._listsCache.length + ' lists')} ` : setHealthPill('warn', 'Not loaded')],
-    ['P&L storage', PNL?.sharePointReady ? setHealthPill('ok', 'SharePoint') : (PNL?.listId ? setHealthPill('ok', 'List found') : setHealthPill('warn', 'Loads on P&L open'))],
-    ['Profitability data', PRF?.clients?.length ? setHealthPill('ok', `${PRF.clients.length} clients`) : setHealthPill('warn', 'Not loaded')],
-    ['Mileage data', MIL?.journeys?.length ? setHealthPill('ok', `${MIL.journeys.length} journeys`) : setHealthPill('warn', 'Not loaded')],
-    ['Timesheets data', TSH?.entries?.length ? setHealthPill('ok', `${TSH.entries.length} entries`) : setHealthPill('warn', 'Not loaded')],
-    ['Leave data', LEV?.requests?.length ? setHealthPill('ok', `${LEV.requests.length} requests`) : (LEV?.listIds?.requests ? setHealthPill('ok', 'List found') : setHealthPill('warn', 'Not loaded'))],
-    ['Compliance data', CMP?.items?.length ? setHealthPill('ok', `${CMP.items.length} items`) : setHealthPill('warn', 'Not loaded')]
-  ];
-  body.innerHTML = rows.map(([label, value]) =>
-    `<div class="set-row"><span class="set-label">${escapeHtml(label)}</span><span class="set-value">${value}</span></div>`
-  ).join('');
-}
-
-function setRenderWatchlist() {
-  const body = document.getElementById('setWatchlistBody');
-  if (!body) return;
-  const items = [];
-
-  if (PRF?.clients?.length) {
-    const lowMargin = PRF.clients
-      .map(c => ({ client: c, totals: prfClientTotals(c.name) }))
-      .filter(r => r.totals.sell > 0 && r.totals.margin < 0.4)
-      .sort((a, b) => a.totals.margin - b.totals.margin)
-      .slice(0, 3);
-    lowMargin.forEach(r => items.push({
-      tone: 'warn',
-      label: 'Margin',
-      text: `${r.client.name} margin is ${prfFmtPct(r.totals.margin)} on ${prfFmt(r.totals.sell)} expected revenue.`
-    }));
-  }
-
-  if (MIL?.journeys?.length) {
-    const unclaimed = MIL.journeys.filter(j => !j.claimedDate);
-    const amount = unclaimed.reduce((a, j) => a + (Number(j.amount) || 0), 0);
-    if (unclaimed.length) items.push({
-      tone: 'warn',
-      label: 'Mileage',
-      text: `${unclaimed.length} mileage journeys are awaiting claim (${typeof milFmtMoney === 'function' ? milFmtMoney(amount) : pnlFmt(amount)}).`
-    });
-  }
-
-  if (OVW?.ssaClients?.length) {
-    OVW.ssaClients
-      .filter(c => c.hoursRemaining !== null && c.hoursRemaining < 2)
-      .slice(0, 3)
-      .forEach(c => items.push({
-        tone: 'bad',
-        label: 'SSA',
-        text: `${c.name} has ${Number(c.hoursRemaining).toFixed(1)} SSA hours remaining.`
-      }));
-  }
-
-  if (CMP?.items?.length) {
-    const overdue = CMP.items.filter(i => i.status === 'Overdue');
-    const dueSoon = CMP.items.filter(i => i.status === 'Due Soon');
-    if (overdue.length) items.push({ tone: 'bad', label: 'Compliance', text: `${overdue.length} compliance item${overdue.length === 1 ? '' : 's'} overdue.` });
-    else if (dueSoon.length) items.push({ tone: 'warn', label: 'Compliance', text: `${dueSoon.length} compliance item${dueSoon.length === 1 ? '' : 's'} due soon.` });
-  }
-
-  if (LEV?.requests?.length) {
-    const pending = LEV.requests.filter(r => r.status === 'Pending');
-    if (pending.length) items.push({
-      tone: 'warn',
-      label: 'Leave',
-      text: `${pending.length} leave request${pending.length === 1 ? '' : 's'} awaiting approval.`
-    });
-  }
-
-  if (items.length === 0) {
-    items.push({
-      tone: 'ok',
-      label: 'Clear',
-      text: 'Nothing flagged in the loaded sections.'
-    });
-  }
-
-  body.innerHTML = items.slice(0, 8).map(item =>
-    `<div class="set-watch"><span class="set-watch-tone ${item.tone === 'ok' ? '' : item.tone}">${escapeHtml(item.label)}</span><span class="set-watch-text">${escapeHtml(item.text)}</span></div>`
-  ).join('');
+  // Who's signed in, from the Microsoft account (no Graph call).
+  const name = activeAccount?.name || activeAccount?.username || '—';
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  set('setProfileName', name);
+  set('setProfileEmail', activeAccount?.username || '—');
+  set('setAvatar', initialsFor(name));
 }
 
 async function setFetchListItemsForBackup(siteId, listId) {
@@ -17899,61 +17357,11 @@ async function setExportBackup() {
     setDownloadJson(`gecko-portal-backup-${date}.json`, backup);
     if (dbError) toast('Backup exported, but it is incomplete: not every database table could be read (' + dbError + ')', 'error', 9000);
     else toast('Portal backup exported (SharePoint lists and database)', 'success', 3000);
-    setRenderHealth();
   } catch (err) {
     console.error('Portal backup failed:', err);
     toast('Backup failed: ' + (err.message || 'unknown error'), 'error', 6000);
   } finally {
     showLoading(false);
-  }
-}
-
-/**
- * Fetch the signed-in user's full profile from Microsoft Graph (/me).
- * Populates: job title, department, office location, phone.
- * Runs silently — if it fails (permissions, network), fields stay as "—".
- */
-async function setLoadProfile() {
-  try {
-    const profile = await graphFetch('/me');
-    const setVal = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val || '—';
-    };
-    setVal('setJobTitle',   profile.jobTitle);
-    setVal('setDepartment', profile.department);
-    setVal('setOffice',     profile.officeLocation);
-    setVal('setPhone',      profile.businessPhones?.[0] || profile.mobilePhone);
-
-    // Update profile role badge with job title if available
-    const roleEl = document.getElementById('setProfileRole');
-    if (roleEl && profile.jobTitle) roleEl.textContent = profile.jobTitle;
-  } catch (err) {
-    console.warn('Settings: could not load profile:', err.message);
-  }
-}
-
-/**
- * Fetch the signed-in user's profile photo from Microsoft Graph.
- * Uses /me/photo/$value which returns a binary image blob.
- * Falls back gracefully to initials if no photo is set.
- */
-async function setLoadProfilePhoto() {
-  try {
-    const token = await getToken();
-    const res = await fetch(CONFIG.GRAPH_BASE + '/me/photo/$value', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!res.ok) return; // 404 = no photo set, fail silently
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const avatarEl = document.getElementById('setAvatar');
-    if (avatarEl) {
-      avatarEl.innerHTML = `<img src="${url}" alt="Profile photo">`;
-    }
-  } catch (err) {
-    // No photo available — keep initials. This is normal for many M365 accounts.
-    console.warn('Settings: profile photo not available:', err.message);
   }
 }
 

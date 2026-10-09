@@ -226,6 +226,8 @@
   /* The top bar already names the page on a phone; the band keeps just its actions (and date/tax year). */
   #app .section-head { padding: 12px 14px; margin-bottom: 14px; }
   #app .section-head h1 { display: none; }
+  /* A band with nothing but its heading (Settings) would be left empty: drop it. */
+  #app .section-head:not(:has(> :not(h1))) { display: none; }
   #app .section-head > p { margin: 0 0 8px; }
   #app .section-head :is([class$="-head-actions"], .head-actions, .pnl-actions) { margin-top: 0; }
 

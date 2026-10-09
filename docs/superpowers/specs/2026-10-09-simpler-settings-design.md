@@ -14,7 +14,8 @@ watchlist (a second, older Needs attention) and two buttons.
 - **Appearance**: Theme (Light / Dark / System) and Accent (Green / Blue / Amber), as before.
 - **Data and sign-in**: Export backup ("Every SharePoint list and database table as one JSON file") and
   Clear cache & sign out ("If sign-in gets stuck on this device"), each with its one-line reason.
-- Header "Settings". Shared design system: `.btn`, the segmented control, sentence case.
+- Header "Settings". Shared design system: `.btn`, the segmented control, sentence case. On a phone the
+  header band is hidden when it holds only its heading (system.css; the top bar names the page).
 
 ## Removed
 - Job title, department, office, phone, the profile photo, and their two Graph calls (`/me`,
