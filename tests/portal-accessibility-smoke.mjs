@@ -5,7 +5,7 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 
 const navButtons = html.match(/<button class="sb-link\b[^>]*data-section=/g) ?? [];
 // 9 original sections + Projects + Backups + Alerts, minus Projects,
-// Compliance and P&L taken off the sidebar on 6 Oct 2026 (sections still in the code),
+// Compliance and P&L taken off the sidebar on 6 Oct 2026 (their code removed 9 Oct 2026),
 // plus Opportunities (8 Oct 2026). 9 Oct 2026 (Philip): 8 entries, with hubs: Clients (Directory,
 // Profitability, client page), Monitoring (Backups, Alerts), Team (Leave, Mileage).
 assert.equal(navButtons.length, 8, 'every sidebar destination should be a semantic button');

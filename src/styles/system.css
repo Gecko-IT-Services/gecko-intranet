@@ -19,8 +19,7 @@
 
 /* ── 1 · Header actions ─────────────────────────────────────────────── */
 #app :is(.ovw-head-actions, .prf-head-actions, .mil-head-actions, .cli-head-actions, .tsh-head-actions,
-         .lev-head-actions, .bkp-head-actions, .alr-head-actions,
-         .pnl-actions, .head-actions) {
+         .lev-head-actions, .bkp-head-actions, .alr-head-actions, .head-actions) {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px;
 }
 
@@ -109,12 +108,12 @@
 
 
 /* ── 3 · Figures: one hairline-divided panel ────────────────────────── */
-#app :is(.job-kpis, .opp-kpis, .bkp-kpis, .ovw-stats, .prf-sum-strip, .pnl-summary, .cl-kpis, .kpi-panel) {
+#app :is(.job-kpis, .opp-kpis, .bkp-kpis, .ovw-stats, .prf-sum-strip, .cl-kpis, .kpi-panel) {
   gap: 1px; background: var(--hair); border: 1px solid var(--border-dim);
   border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
 }
 #app .job-kpis:empty { display: none; }
-#app :is(.job-kpi, .opp-kpi, .bkp-kpi, .ovw-stat, .prf-sum-s, .pnl-kpi, .cl-kpi, .kpi) {
+#app :is(.job-kpi, .opp-kpi, .bkp-kpi, .ovw-stat, .prf-sum-s, .cl-kpi, .kpi) {
   background: var(--card); border: 0; border-radius: 0; box-shadow: none; padding: 14px 16px 16px;
 }
 /* Label above the value in every panel (some sections render it after). */
@@ -248,7 +247,7 @@
   /* A band with nothing but its heading (Settings) would be left empty: drop it. */
   #app .section-head:not(:has(> :not(h1))) { display: none; }
   #app .section-head > p { margin: 0 0 8px; }
-  #app .section-head :is([class$="-head-actions"], .head-actions, .pnl-actions) { margin-top: 0; }
+  #app .section-head :is([class$="-head-actions"], .head-actions) { margin-top: 0; }
 
   /* The client page's h1 is the client's name, and Overview's is the greeting: not the page's name, so keep them, smaller. */
   #app :is(#section-client, #section-overview) .section-head h1 { display: block; font-size: 22px; }
