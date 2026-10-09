@@ -38,15 +38,14 @@ export const person = name => {
 
 /**
  * Holiday for one person this tax year, as Leave counts it: entitlement (+ carry over + adjustment)
- * minus approved Annual Leave overlapping the year; pending shown separately.
+ * minus approved Annual Leave starting in the year (one booking across 5/6 April counts once); pending shown separately.
  * requests: [{ person, start, end, hours, status, type }], entitlements: [{ person, tax_year, entitlement_hours, carry_over_hours, adjustment_hours }]
  */
 export function holiday(requests, entitlements, who, ty) {
   const e = (entitlements || []).find(x => person(x.person) === who && x.tax_year === ty);
   const entitlement = e ? round2(Number(e.entitlement_hours || 0) + Number(e.carry_over_hours || 0) + Number(e.adjustment_hours || 0)) : DEFAULT_ENTITLEMENT;
-  const b = taxYearBounds(ty);
   const mine = (requests || []).filter(r => person(r.person) === who && (r.type || 'Annual Leave') === 'Annual Leave'
-    && day(r.start) <= b.end && day(r.end || r.start) >= b.start);
+    && day(r.start) && taxYear(day(r.start)) === ty);
   const booked = round2(mine.filter(r => r.status === 'Approved').reduce((t, r) => t + Number(r.hours || 0), 0));
   const pending = round2(mine.filter(r => r.status === 'Pending').reduce((t, r) => t + Number(r.hours || 0), 0));
   return { entitlement, booked, pending, remaining: round2(entitlement - booked), days: round2((entitlement - booked) / DAY_HOURS) };

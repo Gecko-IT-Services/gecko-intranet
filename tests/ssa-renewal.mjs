@@ -38,6 +38,11 @@ assert.deepEqual(
   timesheetEntries([...cowan, { id: '1114', date: '2026-09-23T23:00:00Z', hours: 0.5, engineer: 'Jack' }]).map(e => e.id),
   ['1126', '1127', '1123', '1114']
 );
+// A hand give-back after the last renewal is neither the previous credit nor printed as a renewal.
+const giveBack = { id: '1130', date: '2026-10-01T23:00:00Z', hours: -0.5, engineer: 'System', description: 'Adjustment – logged twice' };
+assert.deepEqual(timesheetEntries([...cowan, giveBack]).map(e => e.id), ['1130', '1126', '1127', '1123']);
+assert.deepEqual(emailRow({ ...giveBack, dateKey: '2026-10-02' }).hours, '-0.50');
+assert.equal(emailRow({ ...giveBack, dateKey: '2026-10-02' }).description, 'Adjustment – logged twice');
 // Only one credit ever: everything is listed.
 assert.equal(timesheetEntries(cowan.filter(e => e.id !== '1113')).length, 5);
 

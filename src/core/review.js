@@ -82,7 +82,10 @@ export function monthEnd(d, today) {
     const due = d.jobs.filter(j => (j.status === 'agreed' || j.status === 'in_progress') && j.target_date && day(j.target_date) <= lastDay(month));
     add('job_dates', 'Job dates still right', due.length ? 'todo' : 'done',
       due.length ? `${plural(due.length, 'job')} due by month end and not finished.` : 'No open job is due by month end.', 'jobs:jobs');
-  } else missing('invoice_jobs', 'Finished jobs invoiced', 'Jobs', 'jobs:jobs');
+  } else {
+    missing('invoice_jobs', 'Finished jobs invoiced', 'Jobs', 'jobs:jobs');
+    missing('job_dates', 'Job dates still right', 'Jobs', 'jobs:jobs');
+  }
 
   if (d.journeys) {
     const open = d.journeys.filter(j => !j.claimedDate && j.date && j.date.slice(0, 7) <= month);
@@ -101,13 +104,13 @@ export function monthEnd(d, today) {
     const n = Object.values(gaps).reduce((t, g) => t + g.length, 0);
     add('timesheets', 'Timesheets complete', n ? 'check' : 'done',
       n ? Object.entries(gaps).filter(([, g]) => g.length).map(([p, g]) => `${p}: nothing logged on ${plural(g.length, 'working day')}`).join(' · ') : 'Every working day logged.', 'timesheets:week');
-  }
+  } else missing('timesheets', 'Timesheets complete', d.entries ? 'Leave' : 'Timesheets', 'timesheets:week');
 
   if (d.leave) {
     const pending = d.leave.filter(l => l.status === 'Pending' && day(l.end || l.start) >= today);
     add('leave', 'Leave requests answered', pending.length ? 'todo' : 'done',
       pending.length ? `${plural(pending.length, 'request')} waiting.` : 'None waiting.', 'leave');
-  }
+  } else missing('leave', 'Leave requests answered', 'Leave', 'leave');
 
   const ticks = new Map((d.ticks || []).map(t => [t.item, t]));
   for (const m of MANUAL) {
