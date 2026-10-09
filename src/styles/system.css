@@ -72,17 +72,17 @@
 
 
 /* Segmented choices (time window, table/cards) look like the tab strips: green = selected. */
-#app :is(.bkp-window, .cli-view-toggle, .job-view) {
+#app :is(.bkp-window, .cli-filter, .job-view) {
   display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border-dim);
   border-radius: var(--radius-pill); background: var(--card); box-shadow: none; overflow: visible;
 }
-#app :is(.bkp-window, .cli-view-toggle, .job-view) button {
+#app :is(.bkp-window, .cli-filter, .job-view) button {
   min-height: 28px; padding: 4px 12px; border: 0; border-radius: var(--radius-pill); background: transparent;
   color: var(--muted); font: 500 12px/1.2 var(--font-body); box-shadow: none; cursor: pointer;
   transition: background-color var(--dur-2) var(--ease), color var(--dur-2) var(--ease), transform var(--dur-1) var(--ease);
 }
-#app :is(.bkp-window, .cli-view-toggle, .job-view) button:hover { color: var(--white); }
-#app :is(.bkp-window button[aria-pressed="true"], .job-view button[aria-pressed="true"], .cli-view-toggle .cli-vt-btn.active) {
+#app :is(.bkp-window, .cli-filter, .job-view) button:hover { color: var(--white); }
+#app :is(.bkp-window button[aria-pressed="true"], .job-view button[aria-pressed="true"], .cli-filter .cli-fbtn.active) {
   background: var(--green); color: var(--on-green); font-weight: 600;
 }
 
@@ -166,7 +166,7 @@
 
 /* Every press gives the same small push. */
 #app :is(.section-head .head-btn, .section-head [class$="-refresh"], .app-tabs button,
-         .bkp-window button, .cli-view-toggle button):active:not(:disabled) { transform: translateY(1px); }
+         .bkp-window button, .cli-filter button):active:not(:disabled) { transform: translateY(1px); }
 
 /* Dialogs: the backdrop fades, the panel rises into place. */
 #app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .cmp-modal-bg, .lev-modal-bg, .prj-backdrop) {
@@ -231,8 +231,6 @@
 
   /* The client page's h1 is the client's name, not the page's: keep it, smaller. */
   #app #section-client .section-head h1 { display: block; font-size: 22px; }
-  /* Table vs cards is a desktop choice; the phone gets the compact rows. */
-  #app #section-clients .cli-view-toggle { display: none; }
 
   /* Figure strips: two across, an odd last figure takes the row (no empty grey cell). */
   #app :is(.ovw-kpis.ovw-money, .prf-sum-strip) { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; overflow: visible; }
