@@ -2732,340 +2732,6 @@ body {
 }
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
-   ║   COMPLIANCE SECTION (Phase 8)                                    ║
-   ║   Compliance & audit tracker — certifications, insurance, audits. ║
-   ║   Scoped under `#section-compliance .cmp-*` to avoid bleed.       ║
-   ╚═══════════════════════════════════════════════════════════════════╝ */
-
-/* ─── Head actions row ─────────────────────────────────────────────── */
-#section-compliance .cmp-head-actions {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px;
-}
-#section-compliance .cmp-refresh {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 14px; border-radius: 999px; background: transparent;
-  color: var(--muted); border: 1px solid var(--border-dim);
-  font-family: var(--font-body); font-size: 12px;
-  cursor: pointer; transition: all .15s;
-}
-#section-compliance .cmp-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
-#section-compliance .cmp-refresh:disabled { opacity: .5; cursor: not-allowed; }
-#section-compliance .cmp-refresh svg { transition: transform .4s ease; }
-#section-compliance .cmp-refresh.spinning svg { animation: spin 1s linear infinite; }
-#section-compliance .cmp-last-sync { font-size: 11px; color: var(--muted); margin-left: auto; }
-
-/* ─── Tabs ─────────────────────────────────────────────────────────── */
-#section-compliance .cmp-tabs {
-  display: flex; gap: 0; border-bottom: 1px solid var(--border-dim);
-  margin: 14px 0 0;
-}
-#section-compliance .cmp-tab {
-  padding: 10px 20px; cursor: pointer; font-size: 12px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
-  border-bottom: 2px solid transparent; transition: all .15s;
-  background: none; border-top: none; border-left: none; border-right: none;
-  font-family: var(--font-body);
-}
-#section-compliance .cmp-tab:hover { color: var(--white); }
-#section-compliance .cmp-tab.active {
-  color: var(--green); border-bottom-color: var(--green);
-}
-#section-compliance .cmp-panel { display: none; }
-#section-compliance .cmp-panel.active { display: block; animation: fadeIn .2s ease; }
-
-/* ─── KPI summary strip ───────────────────────────────────────────── */
-#section-compliance .cmp-kpi-strip {
-  display: flex; gap: 0; margin: 14px 0;
-  border: 1px solid var(--border-dim); border-radius: var(--radius);
-  overflow: hidden; background: var(--card);
-}
-#section-compliance .cmp-kpi {
-  flex: 1; padding: 14px 16px; border-right: 1px solid var(--border-dim);
-  text-align: center;
-}
-#section-compliance .cmp-kpi:last-child { border-right: none; }
-#section-compliance .cmp-kpi-val {
-  font-family: var(--font-body); font-size: 24px;
-  font-weight: 800; display: block; letter-spacing: .02em;
-}
-#section-compliance .cmp-kpi-lbl {
-  font-size: 9px; text-transform: uppercase; letter-spacing: .07em;
-  color: var(--muted); margin-top: 2px;
-}
-
-/* ─── Category group ───────────────────────────────────────────────── */
-#section-compliance .cmp-group { margin-bottom: 18px; }
-#section-compliance .cmp-group-head {
-  font-family: var(--font-body); font-size: 13px;
-  font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
-  color: var(--muted); padding: 6px 0; border-bottom: 1px solid var(--border-dim);
-  margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
-}
-#section-compliance .cmp-group-count {
-  font-size: 11px; color: var(--muted); font-weight: 600;
-}
-
-/* ─── Dashboard item card ──────────────────────────────────────────── */
-#section-compliance .cmp-item {
-  background: var(--card); border: 1px solid var(--border-dim);
-  border-radius: var(--radius-sm); margin-bottom: 8px;
-  overflow: hidden; transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
-}
-#section-compliance .cmp-item:hover { border-color: var(--border); box-shadow: var(--shadow-sm); }
-/* Status-tinted pills so overdue/due-soon read as distinct, separated cards
-   (previously white-on-white in light theme). */
-#section-compliance .cmp-item.cmp-overdue {
-  background: var(--red-dim); border-color: var(--red-border);
-}
-#section-compliance .cmp-item.cmp-due-soon {
-  background: var(--amber-dim); border-color: var(--amber-border);
-}
-#section-compliance .cmp-item-head {
-  padding: 10px 14px; display: flex; align-items: center; gap: 10px;
-  cursor: pointer; user-select: none; transition: background .15s;
-}
-#section-compliance .cmp-item-head:hover { background: var(--row-hover); }
-#section-compliance .cmp-item-title {
-  flex: 1; font-weight: 600; font-size: 13px; color: var(--white);
-}
-#section-compliance .cmp-item-meta {
-  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
-}
-#section-compliance .cmp-item-date {
-  font-family: var(--font-body); font-size: 13px;
-  font-weight: 600; color: var(--muted); white-space: nowrap;
-}
-#section-compliance .cmp-item-owner {
-  font-size: 11px; color: var(--muted); white-space: nowrap;
-}
-#section-compliance .cmp-item-chev {
-  font-size: 10px; color: var(--muted); transition: transform .2s; flex-shrink: 0;
-}
-#section-compliance .cmp-item.open .cmp-item-chev { transform: rotate(180deg); }
-
-/* ─── Item expanded body ───────────────────────────────────────────── */
-#section-compliance .cmp-item-body {
-  display: none; padding: 0 14px 12px; border-top: 1px solid var(--border-dim);
-}
-#section-compliance .cmp-item.open .cmp-item-body { display: block; }
-#section-compliance .cmp-item-detail {
-  font-size: 12px; color: var(--muted); padding: 6px 0;
-  border-bottom: 1px solid var(--border-dim);
-}
-#section-compliance .cmp-item-detail:last-child { border-bottom: none; }
-#section-compliance .cmp-item-detail strong {
-  color: var(--white); font-weight: 600;
-}
-#section-compliance .cmp-item-detail a {
-  color: var(--green); text-decoration: none;
-}
-#section-compliance .cmp-item-detail a:hover { text-decoration: underline; }
-#section-compliance .cmp-item-actions {
-  display: flex; gap: 6px; padding: 8px 0 0; justify-content: flex-end;
-}
-
-/* ─── Status pill ──────────────────────────────────────────────────── */
-#section-compliance .cmp-sp {
-  display: inline-block; padding: 2px 9px; border-radius: 999px;
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .04em; white-space: nowrap;
-}
-#section-compliance .cmp-sp-current  { background: var(--green-glow); color: var(--green); border: 1px solid var(--border); }
-#section-compliance .cmp-sp-due-soon { background: var(--amber-dim);  color: var(--amber); border: 1px solid var(--amber-border); }
-#section-compliance .cmp-sp-overdue  { background: var(--red-dim);    color: var(--red);   border: 1px solid var(--red-border); }
-#section-compliance .cmp-sp-expired  { background: var(--red-dim);    color: var(--red);   border: 1px solid var(--red-border); opacity: 0.7; }
-#section-compliance .cmp-sp-not-started { background: var(--border-dim); color: var(--muted); border: 1px solid var(--border-dim); }
-
-/* ─── Category pill ────────────────────────────────────────────────── */
-#section-compliance .cmp-cat {
-  display: inline-block; padding: 2px 8px; border-radius: 999px;
-  font-size: 9px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .05em; white-space: nowrap;
-}
-#section-compliance .cmp-cat-certification { background: var(--green-glow); color: var(--green); }
-#section-compliance .cmp-cat-insurance     { background: var(--blue-dim);   color: var(--blue); }
-#section-compliance .cmp-cat-audit         { background: var(--purple-dim); color: var(--purple); }
-#section-compliance .cmp-cat-registration  { background: var(--teal-dim);   color: var(--teal); }
-#section-compliance .cmp-cat-policy        { background: var(--amber-dim);  color: var(--amber); }
-#section-compliance .cmp-cat-other         { background: var(--border-dim); color: var(--muted); }
-
-/* ─── Manage tab: form card ────────────────────────────────────────── */
-#section-compliance .cmp-card {
-  background: var(--card); border: 1px solid var(--border-dim);
-  border-radius: var(--radius); padding: 0; margin-bottom: 14px;
-  overflow: hidden;
-}
-#section-compliance .cmp-card-head {
-  padding: 14px 18px; border-bottom: 1px solid var(--border-dim);
-}
-#section-compliance .cmp-card-head h3 {
-  font-family: var(--font-body); font-size: 14px;
-  font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-  color: var(--green);
-}
-#section-compliance .cmp-form {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px;
-  padding: 18px;
-}
-#section-compliance .cmp-field { display: flex; flex-direction: column; gap: 6px; }
-#section-compliance .cmp-field.full { grid-column: 1 / -1; }
-#section-compliance .cmp-field label {
-  font-size: 10px; text-transform: uppercase; letter-spacing: .07em;
-  color: var(--muted); font-weight: 600;
-}
-#section-compliance .cmp-input,
-#section-compliance .cmp-select,
-#section-compliance .cmp-textarea {
-  padding: 8px 12px; background: var(--dark); color: var(--white);
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  font-family: var(--font-body); font-size: 13px;
-  outline: none; transition: border-color .15s;
-}
-#section-compliance .cmp-input:focus,
-#section-compliance .cmp-select:focus,
-#section-compliance .cmp-textarea:focus { border-color: var(--green); background: var(--inset); }
-#section-compliance .cmp-input::placeholder,
-#section-compliance .cmp-textarea::placeholder { color: var(--muted); }
-#section-compliance .cmp-select {
-  appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a8f80'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 10px center;
-  padding-right: 28px;
-}
-#section-compliance .cmp-textarea { resize: vertical; min-height: 60px; }
-#section-compliance .cmp-form-actions {
-  grid-column: 1 / -1; display: flex; justify-content: flex-end;
-  gap: 8px; padding-top: 4px;
-}
-
-/* ─── Toggle (recurring) ───────────────────────────────────────────── */
-#section-compliance .cmp-toggle-wrap {
-  display: flex; align-items: center; gap: 10px;
-}
-#section-compliance .cmp-toggle {
-  position: relative; display: inline-block; width: 36px; height: 20px;
-}
-#section-compliance .cmp-toggle input { display: none; }
-#section-compliance .cmp-toggle-track {
-  position: absolute; inset: 0; background: var(--border-dim);
-  border-radius: 10px; transition: background .2s; cursor: pointer;
-}
-#section-compliance .cmp-toggle input:checked + .cmp-toggle-track { background: var(--green); }
-#section-compliance .cmp-toggle-knob {
-  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
-  background: var(--white); border-radius: 50%; transition: left .2s;
-  pointer-events: none;
-}
-#section-compliance .cmp-toggle input:checked ~ .cmp-toggle-knob { left: 18px; }
-#section-compliance .cmp-toggle-label { font-size: 12px; color: var(--muted); }
-
-/* ─── Manage tab: table ────────────────────────────────────────────── */
-#section-compliance .cmp-filters {
-  display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;
-}
-#section-compliance .cmp-chip {
-  padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border-dim);
-  background: transparent; color: var(--muted); font-size: 11px;
-  font-family: var(--font-body); cursor: pointer; transition: all .15s;
-}
-#section-compliance .cmp-chip:hover { color: var(--white); border-color: var(--border); }
-#section-compliance .cmp-chip.active {
-  background: var(--green-glow); color: var(--green); border-color: var(--green);
-}
-#section-compliance .cmp-filter-sep {
-  width: 1px; height: 16px; background: var(--border-dim); margin: 0 4px;
-}
-#section-compliance .cmp-filter-label {
-  font-size: 9px; text-transform: uppercase; letter-spacing: .07em;
-  color: var(--muted); margin-right: 2px; font-weight: 600;
-}
-#section-compliance .cmp-tbl-wrap { overflow-x: auto; border-radius: var(--radius-sm); }
-#section-compliance .cmp-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-#section-compliance .cmp-tbl thead th {
-  padding: 8px 12px; text-align: left; font-size: 9px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
-  background: var(--card); border-bottom: 1px solid var(--border-dim);
-  cursor: pointer; user-select: none; white-space: nowrap;
-}
-#section-compliance .cmp-tbl thead th:hover { color: var(--green); }
-#section-compliance .cmp-tbl tbody td {
-  padding: 10px 12px; border-bottom: 1px solid var(--border-dim);
-  vertical-align: middle;
-}
-#section-compliance .cmp-tbl tbody tr:last-child td { border-bottom: none; }
-#section-compliance .cmp-tbl tbody tr:hover td { background: var(--row-hover); }
-
-/* ─── Icon button (edit/delete) ────────────────────────────────────── */
-#section-compliance .cmp-iconbtn {
-  background: none; border: 1px solid var(--border-dim); border-radius: 6px;
-  color: var(--muted); cursor: pointer; padding: 5px 7px;
-  display: inline-flex; align-items: center; justify-content: center;
-  transition: all .15s;
-}
-#section-compliance .cmp-iconbtn:hover { color: var(--green); border-color: var(--green); }
-#section-compliance .cmp-iconbtn.del:hover { color: var(--red); border-color: var(--red); }
-
-/* ─── Modal ────────────────────────────────────────────────────────── */
-#section-compliance .cmp-modal-bg {
-  position: fixed; inset: 0; background: var(--overlay);
-  display: none; align-items: center; justify-content: center;
-  z-index: 1500; animation: fadeIn .15s ease;
-}
-#section-compliance .cmp-modal-bg.show { display: flex; }
-#section-compliance .cmp-modal {
-  width: 100%; max-width: 520px; margin: 20px;
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 24px;
-  box-shadow: 0 20px 50px var(--shadow-heavy);
-  max-height: 90vh; overflow-y: auto;
-}
-#section-compliance .cmp-modal h3 {
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 17px;
-  letter-spacing: .06em; text-transform: uppercase; margin-bottom: 14px;
-}
-#section-compliance .cmp-modal p { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
-#section-compliance .cmp-mm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-
-/* ─── Empty / seed state ───────────────────────────────────────────── */
-#section-compliance .cmp-empty {
-  text-align: center; padding: 48px 24px;
-  border: 1px dashed var(--border); border-radius: var(--radius);
-  margin: 18px 0;
-  overflow: hidden;
-}
-#section-compliance .cmp-empty h3 {
-  font-family: var(--font-body); font-size: 16px;
-  font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-  margin-bottom: 8px;
-}
-#section-compliance .cmp-empty p { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
-#section-compliance .cmp-seed-list {
-  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
-}
-#section-compliance .cmp-seed-btn {
-  padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border);
-  background: var(--green-glow); color: var(--green);
-  font-family: var(--font-body); font-size: 12px;
-  cursor: pointer; transition: all .15s;
-}
-#section-compliance .cmp-seed-btn:hover { background: var(--green); color: var(--on-green); }
-
-/* ─── Mobile/tablet ────────────────────────────────────────────────── */
-@media (max-width: 760px) {
-  #section-compliance .cmp-kpi-strip { flex-wrap: wrap; }
-  #section-compliance .cmp-kpi { flex: 1 1 33%; min-width: 90px; }
-  #section-compliance .cmp-form { grid-template-columns: minmax(0, 1fr); }
-  #section-compliance .cmp-tbl thead th.col-owner,
-  #section-compliance .cmp-tbl tbody td.col-owner { display: none; }
-  #section-compliance .cmp-tbl thead th.col-client,
-  #section-compliance .cmp-tbl tbody td.col-client { display: none; }
-}
-@media (max-width: 520px) {
-  #section-compliance .cmp-kpi { flex: 1 1 50%; }
-  #section-compliance .cmp-item-meta { flex-wrap: wrap; gap: 6px; }
-}
-
-/* ╔═══════════════════════════════════════════════════════════════════╗
    ║   ANNUAL LEAVE SECTION (Phase 11)                                ║
    ║   Scoped under `#section-leave .lev-*` to avoid bleed.           ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
@@ -3270,10 +2936,6 @@ body::before {
 #section-timesheets .tsh-ssa-card,
 #section-leave .lev-card,
 #section-settings .set-card,
-  #section-compliance .cmp-kpi,
-  #section-compliance .cmp-item,
-  #section-compliance .cmp-form,
-  #section-compliance .cmp-empty,
   #section-overview .ovw-ops {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.028), rgba(255,255,255,0.006)),
@@ -3287,8 +2949,7 @@ body::before {
 #section-overview .ovw-kpi:hover,
 #section-overview .ovw-card:hover,
 #section-clients .cli-card:hover,
-#section-leave .lev-card:hover,
-#section-compliance .cmp-item:hover{
+#section-leave .lev-card:hover {
   border-color: var(--border);
   box-shadow: var(--shadow-md);
 }
@@ -3396,11 +3057,7 @@ body::before {
 #section-timesheets .tsh-chip,
 #section-leave .lev-refresh,
 #section-leave .lev-month-btn,
-#section-leave .lev-chip,
-#section-compliance .cmp-refresh,
-#section-compliance .cmp-tab,
-#section-compliance .cmp-chip,
-#section-compliance .cmp-seed-btn {
+#section-leave .lev-chip {
   box-shadow: 0 1px 0 rgba(255,255,255,0.035) inset;
 }
 
@@ -3425,10 +3082,7 @@ textarea,
 #section-timesheets .tsh-textarea,
 #section-leave .lev-input,
 #section-leave .lev-select,
-#section-leave .lev-textarea,
-#section-compliance .cmp-input,
-#section-compliance .cmp-select,
-#section-compliance .cmp-textarea {
+#section-leave .lev-textarea {
   background-color: rgba(5,7,6,0.62);
   border-color: rgba(230,242,232,0.12);
 }
@@ -3443,8 +3097,7 @@ textarea:focus {
    (replaces the 6-separate-cards "hero-metric" template). Applied across
    every section's stat strip for a consistent precision-instrument read. */
 #section-overview .ovw-kpis,
-#section-timesheets .tsh-kpi-strip,
-#section-compliance .cmp-kpi-strip{
+#section-timesheets .tsh-kpi-strip {
   gap: 1px;
   background: var(--hair);
   border: 1px solid var(--border-dim);
@@ -3454,8 +3107,7 @@ textarea:focus {
 }
 
 #section-overview .ovw-kpi,
-#section-timesheets .tsh-kpi,
-#section-compliance .cmp-kpi{
+#section-timesheets .tsh-kpi {
   padding: 16px 18px 18px;
   background: var(--card);
   border: none !important;
@@ -3464,15 +3116,13 @@ textarea:focus {
   transition: background var(--dur-2) var(--ease);
 }
 #section-overview .ovw-kpi:hover,
-#section-timesheets .tsh-kpi:hover,
-#section-compliance .cmp-kpi:hover{
+#section-timesheets .tsh-kpi:hover {
   background: var(--card-hover);
   box-shadow: none !important;
 }
 
 #section-overview .ovw-kpi .k-value,
-#section-timesheets .tsh-kpi .k-value,
-#section-compliance .cmp-kpi .k-value {
+#section-timesheets .tsh-kpi .k-value {
   font-family: var(--font-mono);
   font-weight: 500;
   letter-spacing: -0.03em;
@@ -3503,8 +3153,7 @@ tbody td {
 #section-mileage .mil-claim-modal,
 #section-clients .cli-modal,
 #section-timesheets .tsh-modal,
-#section-leave .lev-modal,
-#section-compliance .cmp-modal {
+#section-leave .lev-modal {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.034), rgba(255,255,255,0.008)),
     var(--card);
@@ -3763,8 +3412,7 @@ body::before {
 #section-mileage .mil-head-actions,
 #section-clients .cli-head-actions,
 #section-timesheets .tsh-head-actions,
-#section-leave .lev-head-actions,
-#section-compliance .cmp-head-actions {
+#section-leave .lev-head-actions {
   margin-top: 14px;
 }
 
@@ -3776,8 +3424,7 @@ body::before {
 #section-clients .cli-refresh,
 #section-timesheets .tsh-refresh,
 #section-leave .lev-refresh,
-#section-leave .lev-month-sel,
-#section-compliance .cmp-refresh {
+#section-leave .lev-month-sel {
   min-height: 34px;
   border-radius: 10px;
   background: rgba(5,7,6,0.46);
@@ -3937,8 +3584,7 @@ body::before {
   #section-mileage .mil-head-actions,
   #section-clients .cli-head-actions,
   #section-timesheets .tsh-head-actions,
-  #section-leave .lev-head-actions,
-  #section-compliance .cmp-head-actions {
+  #section-leave .lev-head-actions {
     width: 100%;
     gap: 8px;
   }
@@ -3951,9 +3597,7 @@ body::before {
   #section-clients .cli-refresh,
   #section-timesheets .tsh-refresh,
   #section-leave .lev-refresh,
-  #section-leave .lev-month-sel,
-  #section-compliance .cmp-refresh,
-  #section-compliance .cmp-head-actions .btn {
+  #section-leave .lev-month-sel {
     min-height: 40px;
     padding: 8px 12px;
   }
@@ -3962,16 +3606,14 @@ body::before {
   #section-overview .ovw-row,
   #section-overview .ovw-ops-grid,
   #section-timesheets .tsh-kpi-strip,
-  #section-compliance .cmp-kpi-strip,
-  .demo-preview-grid{
+  .demo-preview-grid {
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 10px;
   }
 
   #section-overview .ovw-kpi,
   #section-timesheets .tsh-kpi,
-  #section-compliance .cmp-kpi,
-  .demo-preview-card{
+  .demo-preview-card {
     min-height: 96px;
     padding: 16px;
   }
@@ -3997,8 +3639,7 @@ body::before {
 
   #section-mileage .mil-filter,
   #section-timesheets .tsh-filters,
-  #section-leave .lev-toolbar,
-  #section-compliance .cmp-filters {
+  #section-leave .lev-toolbar {
     display: flex;
     flex-wrap: nowrap;
     gap: 7px;
@@ -4046,8 +3687,7 @@ body::before {
 
   #section-mileage .mil-filter::-webkit-scrollbar,
   #section-timesheets .tsh-filters::-webkit-scrollbar,
-  #section-leave .lev-toolbar::-webkit-scrollbar,
-  #section-compliance .cmp-filters::-webkit-scrollbar {
+  #section-leave .lev-toolbar::-webkit-scrollbar {
     display: none;
   }
 
@@ -4059,7 +3699,6 @@ body::before {
 
   #section-mileage .mil-tabs,
   #section-timesheets .tsh-tabs,
-  #section-compliance .cmp-tabs,
   #section-clients .cli-filter {
     display: flex;
     overflow-x: auto;
@@ -4069,14 +3708,12 @@ body::before {
 
   #section-mileage .mil-tabs::-webkit-scrollbar,
   #section-timesheets .tsh-tabs::-webkit-scrollbar,
-  #section-compliance .cmp-tabs::-webkit-scrollbar,
   #section-clients .cli-filter::-webkit-scrollbar {
     display: none;
   }
 
   #section-mileage .mil-tab,
   #section-timesheets .tsh-tab,
-  #section-compliance .cmp-tab,
   #section-clients .cli-fbtn {
     min-height: 40px;
     white-space: nowrap;
@@ -4086,22 +3723,19 @@ body::before {
   #section-mileage .mil-form,
   #section-timesheets .tsh-form,
   #section-leave .lev-form,
-  #section-compliance .cmp-form,
   #section-clients .cli-toolbar {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 
   #section-mileage .mil-form-actions,
   #section-timesheets .tsh-form-actions,
-  #section-leave .lev-form-actions,
-  #section-compliance .cmp-form-actions {
+  #section-leave .lev-form-actions {
     justify-content: stretch;
   }
 
   #section-mileage .mil-form-actions .btn,
   #section-timesheets .tsh-form-actions .btn,
-  #section-leave .lev-form-actions .btn,
-  #section-compliance .cmp-form-actions .btn {
+  #section-leave .lev-form-actions .btn {
     width: 100%;
     justify-content: center;
   }
@@ -4121,7 +3755,6 @@ body::before {
   #section-clients .cli-tbl,
   #section-timesheets .tsh-tbl,
   #section-leave .lev-tbl,
-  #section-compliance .cmp-tbl,
   #section-profitability .prf-stbl {
     min-width: 0;
   }
@@ -4129,8 +3762,7 @@ body::before {
   #section-mileage .mil-tbl-wrap,
   #section-clients .cli-tbl-wrap,
   #section-timesheets .tsh-tbl-wrap,
-  #section-leave .lev-tbl-wrap,
-  #section-compliance .cmp-tbl-wrap {
+  #section-leave .lev-tbl-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -4140,8 +3772,7 @@ body::before {
   #section-mileage .mil-claim-modal,
   #section-clients .cli-modal,
   #section-timesheets .tsh-modal,
-  #section-leave .lev-modal,
-  #section-compliance .cmp-modal {
+  #section-leave .lev-modal {
     width: calc(100vw - 24px);
     max-width: calc(100vw - 24px);
     margin: 12px;
@@ -4283,8 +3914,7 @@ body::before {
 :root[data-theme="light"] #section-clients .cli-refresh,
 :root[data-theme="light"] #section-timesheets .tsh-refresh,
 :root[data-theme="light"] #section-leave .lev-refresh,
-:root[data-theme="light"] #section-leave .lev-month-sel,
-:root[data-theme="light"] #section-compliance .cmp-refresh {
+:root[data-theme="light"] #section-leave .lev-month-sel {
   background: var(--panel);
   border-color: var(--border-dim);
   color: var(--muted);
@@ -4425,10 +4055,7 @@ body::before {
 :root[data-theme="light"] #section-timesheets .tsh-textarea,
 :root[data-theme="light"] #section-leave .lev-input,
 :root[data-theme="light"] #section-leave .lev-select,
-:root[data-theme="light"] #section-leave .lev-textarea,
-:root[data-theme="light"] #section-compliance .cmp-input,
-:root[data-theme="light"] #section-compliance .cmp-select,
-:root[data-theme="light"] #section-compliance .cmp-textarea {
+:root[data-theme="light"] #section-leave .lev-textarea {
   background-color: #ffffff;
   border-color: rgba(23,32,27,0.16);
   color: #17201b;
@@ -4439,15 +4066,13 @@ body::before {
 :root[data-theme="light"] .ovw-ops-head p,
 :root[data-theme="light"] .ovw-op .op-label,
 :root[data-theme="light"] .ovw-op .op-note,
-:root[data-theme="light"] .tsh-ssa-hint,
-:root[data-theme="light"] .cmp-meta{
+:root[data-theme="light"] .tsh-ssa-hint {
   color: #405247 !important;
 }
 
 :root[data-theme="light"] .badge,
 :root[data-theme="light"] .pnl-month,
-:root[data-theme="light"] .tsh-last-sync,
-:root[data-theme="light"] .cmp-last-sync {
+:root[data-theme="light"] .tsh-last-sync {
   font-weight: 700;
 }
 
@@ -4546,22 +4171,10 @@ body::before {
    than hiding them behind a scroll. */
 
 #section-mileage .mil-filter,
-#section-timesheets .tsh-filters,
-#section-compliance .cmp-filter {
+#section-timesheets .tsh-filters {
   flex-wrap: wrap;
   row-gap: 6px;
 }
-
-/* Same shape of bug as the SSA cards: a nowrap flex row on a narrow
-   screen, with children that cannot shrink, so the content walked out of
-   its own container instead of the container clipping or scrolling.
-   Compliance list rows overflowed by ~70px and the profitability legend
-   by nearly 350px. */
-#section-compliance .cmp-item-head {
-  flex-wrap: wrap;
-  row-gap: 4px;
-}
-#section-compliance .cmp-item-meta { min-width: 0; }
 
 /* Tab strips are an ordered, single-line control and must stay on one
    line, so they become a proper scroll rail: momentum scrolling, no
@@ -4812,8 +4425,7 @@ body::before {
   #section-mileage .mil-tbl-wrap,
   #section-leave .lev-tbl-wrap,
   #section-clients .cli-tbl-wrap,
-  #section-timesheets .tsh-tbl-wrap,
-  #section-compliance .cmp-tbl-wrap { overflow-x: visible; }
+  #section-timesheets .tsh-tbl-wrap { overflow-x: visible; }
 
   /* Mileage claim mode: the header checkbox is the only "select all
      shown" control there is, so instead of hiding the header outright
@@ -4860,13 +4472,11 @@ body::before {
   /* KPI clusters: one metric per screen turned the dashboard into a
      1,300px scroll before any content. Two-up restores glanceability;
      the mono figures step down to stay inside the narrower column. */
-  #section-overview .ovw-kpis,
-  #section-compliance .cmp-kpis {
+  #section-overview .ovw-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   #section-overview .ovw-kpi .k-value,
-  #section-leave .lev-kpi .k-value,
-  #section-compliance .cmp-kpi .k-value{
+  #section-leave .lev-kpi .k-value {
     font-size: 21px;
     letter-spacing: -0.035em;
   }
@@ -4876,8 +4486,7 @@ body::before {
 /* Genuinely narrow hardware (iPhone SE and down) cannot hold two
    currency figures side by side. */
 @media (max-width: 379px) {
-  #section-overview .ovw-kpis,
-  #section-compliance .cmp-kpis { grid-template-columns: minmax(0, 1fr); }
+  #section-overview .ovw-kpis { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ─── 5 · Touch hit areas ─────────────────────────────────────────────
@@ -4903,10 +4512,8 @@ body::before {
   /* Switches are a 38x20 label wrapping a display:none checkbox, so they
      cannot simply be grown without moving the track. An invisible
      overlay inside the label extends the hit area in place. */
-  #portalShell .tsh-toggle,
-  #portalShell .cmp-toggle { touch-action: manipulation; }
-  #portalShell .tsh-toggle::after,
-  #portalShell .cmp-toggle::after {
+  #portalShell .tsh-toggle { touch-action: manipulation; }
+  #portalShell .tsh-toggle::after {
     content: '';
     position: absolute;
     top: 50%; left: 50%;
@@ -4935,7 +4542,6 @@ body::before {
   #portalShell .mil-claimed-link,
   #portalShell .tsh-ssa-link,
   #portalShell .cli-iconbtn,
-  #portalShell .cmp-iconbtn,
   #portalShell .lev-iconbtn,
   #portalShell .prf-iconbtn {
     display: inline-flex;
@@ -6078,145 +5684,6 @@ body::before {
     </section>
 
 
-    <!-- ═══════════════════════════════════════════════════════════════
-         COMPLIANCE SECTION (Phase 8)
-         — Compliance & audit tracker: certifications, insurance, audits,
-           registrations, policies. Reads/writes `GeckoCompliance` list.
-         — Reads `GeckoClients` for client dropdown (no writes).
-         — Lazy-loaded on first nav (see initCompliance).
-         — Future: Overview KPI integration (compliance items due).
-         ═══════════════════════════════════════════════════════════════ -->
-    <section class="section" id="section-compliance">
-      <div class="section-head">
-        <h1>Compliance <span>&amp; Audit</span></h1>
-        <p>Certifications, insurance, audit records, and key compliance dates.</p>
-        <div class="cmp-head-actions">
-          <button class="btn btn-primary" type="button" onclick="cmpSwitchTab('manage')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add item
-          </button>
-          <button class="cmp-refresh" id="cmpRefresh" type="button" onclick="cmpRefreshData()" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-            Refresh
-          </button>
-          <span class="cmp-last-sync" id="cmpLastSync"></span>
-        </div>
-      </div>
-
-      <!-- Tab strip -->
-      <div class="cmp-tabs">
-        <button class="cmp-tab active" type="button" data-tab="dashboard" onclick="cmpSwitchTab('dashboard')">Dashboard</button>
-        <button class="cmp-tab" type="button" data-tab="manage" onclick="cmpSwitchTab('manage')">Manage Items</button>
-      </div>
-
-      <!-- ─── Dashboard panel ──────────────────────────────────────── -->
-      <div class="cmp-panel active" id="cmpDashboard">
-        <!-- KPI strip (populated by JS) -->
-        <div class="cmp-kpi-strip" id="cmpKpiStrip"></div>
-        <!-- Grouped items (populated by JS) -->
-        <div id="cmpDashboardBody"></div>
-      </div>
-
-      <!-- ─── Manage panel ─────────────────────────────────────────── -->
-      <div class="cmp-panel" id="cmpManage">
-        <div class="cmp-card" style="margin-top:14px">
-          <div class="cmp-card-head"><h3>Add compliance item</h3></div>
-          <div class="cmp-form" id="cmpAddForm">
-            <div class="cmp-field">
-              <label>Title</label>
-              <input class="cmp-input" type="text" id="cmpTitle" placeholder="e.g. Cyber Essentials Renewal" autocomplete="off">
-            </div>
-            <div class="cmp-field">
-              <label>Category</label>
-              <select class="cmp-select" id="cmpCategory">
-                <option value="Certification">Certification</option>
-                <option value="Insurance">Insurance</option>
-                <option value="Audit">Audit</option>
-                <option value="Registration">Registration</option>
-                <option value="Policy">Policy</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div class="cmp-field">
-              <label>Due date</label>
-              <input class="cmp-input" type="date" id="cmpDueDate">
-            </div>
-            <div class="cmp-field">
-              <label>Owner</label>
-              <select class="cmp-select" id="cmpOwner">
-                <option value="Both">Both</option>
-                <option value="Philip">Philip</option>
-                <option value="Jack">Jack</option>
-              </select>
-            </div>
-            <div class="cmp-field">
-              <label>Client</label>
-              <select class="cmp-select" id="cmpClient">
-                <option value="">— Company Wide —</option>
-              </select>
-            </div>
-            <div class="cmp-field">
-              <label>Evidence URL (optional)</label>
-              <input class="cmp-input" type="url" id="cmpEvidenceUrl" placeholder="https://..." autocomplete="off">
-            </div>
-            <div class="cmp-field full">
-              <label>Notes (optional)</label>
-              <textarea class="cmp-textarea" id="cmpNotes" rows="2" placeholder="Details, reference numbers, etc."></textarea>
-            </div>
-            <div class="cmp-field">
-              <label>Recurring</label>
-              <div class="cmp-toggle-wrap">
-                <label class="cmp-toggle">
-                  <input type="checkbox" id="cmpRecurring" checked onchange="cmpToggleFrequency()">
-                  <span class="cmp-toggle-track"></span>
-                  <span class="cmp-toggle-knob"></span>
-                </label>
-                <span class="cmp-toggle-label" id="cmpRecurringLabel">Yes</span>
-              </div>
-            </div>
-            <div class="cmp-field" id="cmpFreqField">
-              <label>Frequency (months)</label>
-              <input class="cmp-input" type="number" id="cmpFrequency" value="12" min="1" step="1">
-            </div>
-            <div class="cmp-form-actions">
-              <button class="btn btn-primary" type="button" onclick="cmpAddItem()">Add item</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="cmp-filters" id="cmpFilters"></div>
-
-        <!-- All items table -->
-        <div class="cmp-tbl-wrap">
-          <table class="cmp-tbl" id="cmpTable">
-            <thead>
-              <tr>
-                <th onclick="cmpSort('title')">Title</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th onclick="cmpSort('dueDate')">Due date</th>
-                <th class="col-owner">Owner</th>
-                <th class="col-client">Client</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="cmpTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ─── Modal (edit / confirm) ───────────────────────────────── -->
-      <div class="cmp-modal-bg" id="cmpModalBg" role="dialog" aria-modal="true" onclick="if(event.target===this)cmpCloseModal()">
-        <div class="cmp-modal">
-          <h3 id="cmpModalTitle">—</h3>
-          <div id="cmpModalBody"></div>
-        </div>
-      </div>
-
-    </section>
-
-
     <!-- ═══ SETTINGS SECTION ═══════════════════════════════════════ -->
     <section class="section" id="section-settings">
 
@@ -6364,7 +5831,6 @@ const SECTION_TITLES = {
   team:          'TEAM',
   timesheets:    'TIMESHEETS',
   leave:         'TEAM · LEAVE',
-  compliance:    'COMPLIANCE',
   backups:       'MONITORING · BACKUPS',
   alerts:        'MONITORING · ALERTS',
   settings:      'SETTINGS'
@@ -7101,9 +6567,6 @@ function navTo(sectionKey) {
   }
   if (sectionKey === 'leave' && typeof initLeave === 'function') {
     initLeave();
-  }
-  if (sectionKey === 'compliance' && typeof initCompliance === 'function') {
-    initCompliance();
   }
   if (sectionKey === 'settings' && typeof renderSettings === 'function') {
     renderSettings();
@@ -12743,7 +12206,6 @@ function cliSetSort(key) {
 }
 
 
-
 // ─── Cross-link to Profitability ──────────────────────────────────────
 /**
  * Navigate to the Profitability section and ensure the named client's
@@ -13898,9 +13360,6 @@ document.addEventListener('keydown', e => {
   const enter = e.key === 'Enter' && !e.shiftKey && !e.isComposing;
   if (enter && e.target?.closest?.('#tshForm') && (e.metaKey || e.ctrlKey || e.target.id === 'tshDesc')) { e.preventDefault(); tshEl('tshForm').requestSubmit(); }
 });
-
-
-
 
 
 // ─── Add Entry handler ───────────────────────────────────────────────
@@ -16096,870 +15555,6 @@ async function initLeave() {
     }
   });
   await levRefreshData(true);
-}
-
-
-/* ╔═══════════════════════════════════════════════════════════════════╗
-   ║                                                                   ║
-   ║   COMPLIANCE SECTION (Phase 8)                                    ║
-   ║                                                                   ║
-   ║   Compliance & audit tracker. Reads/writes GeckoCompliance list.  ║
-   ║   Reads GeckoClients for the client dropdown (no writes).         ║
-   ║   Status is computed from DueDate on every render.                ║
-   ║   Module pattern: CMP state, cmp-prefixed functions.              ║
-   ║                                                                   ║
-   ║   Future: Overview KPI integration (compliance items due).        ║
-   ║                                                                   ║
-   ╚═══════════════════════════════════════════════════════════════════╝ */
-
-const CMP = {
-  initialised: false,
-  loading:     false,
-  siteId:      null,
-  listIds:     { compliance: null, geckoClients: null },
-  items:       [],   // [{ id, title, category, status, dueDate, completedDate, clientName, owner, notes, evidenceUrl, recurring, frequencyMonths }]
-  clients:     [],   // [{ name }] — from GeckoClients, for the client dropdown
-  activeTab:   'dashboard',
-  filter:      { category: 'all', status: 'all', owner: 'all' },
-  sortBy:      'dueDate',
-  sortDir:     'asc',
-  lastSync:    null
-};
-
-// ─── Category display config ─────────────────────────────────────────
-const CMP_CAT_ORDER = ['Certification', 'Insurance', 'Audit', 'Registration', 'Policy', 'Other'];
-const CMP_CAT_CLASS = {
-  Certification: 'cmp-cat-certification',
-  Insurance:     'cmp-cat-insurance',
-  Audit:         'cmp-cat-audit',
-  Registration:  'cmp-cat-registration',
-  Policy:        'cmp-cat-policy',
-  Other:         'cmp-cat-other'
-};
-
-// ─── SVG icons (inline stroke-based, no emojis) ──────────────────────
-const CMP_ICONS = {
-  edit:     '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
-  del:      '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
-  check:    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-  link:     '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
-  chevron:  '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
-  shield:   '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-  calendar: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
-};
-
-// ─── Helpers ─────────────────────────────────────────────────────────
-
-/** Safe string for onclick attributes — uses shared jsAttr() */
-/**
- * Compute status from DueDate and CompletedDate.
- * Returns: 'Overdue' | 'Due Soon' | 'Current' | 'Not Started'
- */
-function cmpComputeStatus(dueDate, completedDate, recurring = true) {
-  // A one-off item that has been done is done, whatever its due date.
-  if (completedDate && !recurring) return 'Current';
-  if (!dueDate) return 'Not Started';
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate + 'T00:00:00');
-  const comp = completedDate ? new Date(completedDate + 'T00:00:00') : null;
-
-  // Overdue: due date has passed and either no completion or completion was before this due date
-  if (due < today && (!comp || comp < due)) return 'Overdue';
-
-  // Due soon: within 30 days
-  const thirtyDays = new Date(today);
-  thirtyDays.setDate(thirtyDays.getDate() + 30);
-  if (due <= thirtyDays) return 'Due Soon';
-
-  return 'Current';
-}
-
-/** Status pill class */
-function cmpStatusClass(status) {
-  switch (status) {
-    case 'Current':     return 'cmp-sp-current';
-    case 'Due Soon':    return 'cmp-sp-due-soon';
-    case 'Overdue':     return 'cmp-sp-overdue';
-    case 'Expired':     return 'cmp-sp-expired';
-    case 'Not Started': return 'cmp-sp-not-started';
-    default:            return 'cmp-sp-not-started';
-  }
-}
-
-/** Category pill class */
-function cmpCatClass(cat) {
-  return CMP_CAT_CLASS[cat] || 'cmp-cat-other';
-}
-
-/** Days until due (negative = overdue) */
-function cmpDaysUntil(dueDate) {
-  if (!dueDate) return Infinity;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate + 'T00:00:00');
-  return Math.ceil((due - today) / (1000 * 60 * 60 * 24));
-}
-
-/** Format relative due date string */
-function cmpDueLabel(dueDate) {
-  if (!dueDate) return 'No due date';
-  const days = cmpDaysUntil(dueDate);
-  if (days < 0) return `${Math.abs(days)}d overdue`;
-  if (days === 0) return 'Due today';
-  if (days === 1) return 'Due tomorrow';
-  if (days <= 30) return `${days}d remaining`;
-  return fmtDate(dueDate);
-}
-
-
-// ─── SharePoint — resolve site + list IDs ────────────────────────────
-
-async function cmpResolveListIds() {
-  if (CMP.siteId && CMP.listIds.compliance && CMP.listIds.geckoClients) return;
-
-  CMP.siteId = await resolveSiteId();
-  const allLists = await fetchAllLists();
-  for (const l of allLists) {
-    if (l.displayName === 'GeckoCompliance'  || l.name === 'GeckoCompliance')  CMP.listIds.compliance   = l.id;
-    if (l.displayName === 'GeckoClients'     || l.name === 'GeckoClients')     CMP.listIds.geckoClients = l.id;
-  }
-  if (!CMP.listIds.compliance)   throw new Error('GeckoCompliance list not found in SharePoint site');
-  if (!CMP.listIds.geckoClients) throw new Error('GeckoClients list not found in SharePoint site');
-}
-
-
-// ─── SharePoint — load data ──────────────────────────────────────────
-
-async function cmpLoadItems() {
-  let allItems = [];
-  let nextUrl = `/sites/${CMP.siteId}/lists/${CMP.listIds.compliance}/items?$expand=fields&$top=${CONFIG.GRAPH_PAGE_SIZE}`;
-  while (nextUrl) {
-    const res = await graphFetch(nextUrl);
-    allItems = allItems.concat(res.value || []);
-    nextUrl = res['@odata.nextLink'] || null;
-    if (allItems.length > CONFIG.GRAPH_SAFETY_LIMIT) break; // safety
-  }
-
-  CMP.items = allItems.map(it => {
-    const f = it.fields || {};
-
-    // Category — try multiple internal name variants (SharePoint Choice column quirk)
-    let category = f.Category || '';
-    if (!category) {
-      for (const k of Object.keys(f)) {
-        if (k.toLowerCase() === 'category' && f[k]) { category = f[k]; break; }
-      }
-    }
-
-    // Owner — same Choice column handling
-    let owner = f.Owner || '';
-    if (!owner) {
-      for (const k of Object.keys(f)) {
-        if (k.toLowerCase() === 'owner' && f[k]) { owner = f[k]; break; }
-      }
-    }
-
-    // Status from SharePoint (stored for consistency but recomputed on render)
-    let storedStatus = f.Status || '';
-    if (!storedStatus) {
-      for (const k of Object.keys(f)) {
-        if (k.toLowerCase() === 'status' && f[k]) { storedStatus = f[k]; break; }
-      }
-    }
-
-    const dueDate       = f.DueDate       ? spDateToLocalDateKey(f.DueDate)       : '';
-    const completedDate = f.CompletedDate  ? spDateToLocalDateKey(f.CompletedDate) : '';
-
-    // Recurring — Yes/No column
-    let recurring = true;
-    if (f.Recurring === false || f.Recurring === 'false') recurring = false;
-    if (f.Recurring === true || f.Recurring === 'true') recurring = true;
-
-    const frequencyMonths = Number(f.FrequencyMonths) || 12;
-
-    return {
-      id:              it.id,
-      title:           f.Title || '',
-      category:        category || 'Other',
-      status:          cmpComputeStatus(dueDate, completedDate, recurring), // always recompute
-      dueDate,
-      completedDate,
-      clientName:      f.ClientName || '',
-      owner:           owner || 'Both',
-      notes:           f.Notes || '',
-      evidenceUrl:     f.EvidenceUrl || '',
-      recurring,
-      frequencyMonths
-    };
-  });
-}
-
-async function cmpLoadClients() {
-  // Reuse CLI's geckoClients if already loaded
-  if (CLI.geckoClients && CLI.geckoClients.length > 0) {
-    CMP.clients = CLI.geckoClients.map(c => ({ name: c.name })).sort((a, b) => a.name.localeCompare(b.name));
-    return;
-  }
-
-  const items = await clientListItems('gecko_clients', CMP.siteId, CMP.listIds.geckoClients, 500);
-  CMP.clients = items
-    .map(it => ({ name: (it.fields || {}).Title || '' }))
-    .filter(c => c.name)
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-
-// ─── Refresh data ────────────────────────────────────────────────────
-
-async function cmpRefreshData(silent = false) {
-  if (CMP.loading) return;
-  CMP.loading = true;
-
-  const refreshBtn = document.getElementById('cmpRefresh');
-  if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.classList.add('spinning'); }
-  if (!silent) showLoading(true);
-
-  try {
-    await cmpResolveListIds();
-    await Promise.all([cmpLoadItems(), cmpLoadClients()]);
-    CMP.lastSync = new Date();
-
-    // Populate client dropdown
-    cmpPopulateClientDropdown();
-
-    // Render current tab
-    cmpRender();
-
-    if (!silent) toast('Compliance data loaded', 'success');
-  } catch (err) {
-    console.error('Compliance load failed:', err);
-    toast('Failed to load compliance data: ' + (err.message || 'unknown'), 'error', 5000);
-  } finally {
-    CMP.loading = false;
-    if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.classList.remove('spinning'); }
-    showLoading(false);
-  }
-}
-
-
-// ─── Populate client dropdown ────────────────────────────────────────
-
-function cmpPopulateClientDropdown() {
-  const sel = document.getElementById('cmpClient');
-  if (!sel) return;
-  const val = sel.value; // preserve current selection
-  sel.innerHTML = '<option value="">— Company Wide —</option>' +
-    CMP.clients.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
-  if (val) sel.value = val;
-}
-
-
-// ─── Render ──────────────────────────────────────────────────────────
-
-function cmpRender() {
-  // Update last sync
-  const syncEl = document.getElementById('cmpLastSync');
-  if (syncEl && CMP.lastSync) {
-    syncEl.textContent = 'Synced ' + CMP.lastSync.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  }
-
-  if (CMP.activeTab === 'dashboard') {
-    cmpRenderDashboard();
-  } else {
-    cmpRenderManage();
-  }
-}
-
-
-// ─── Dashboard rendering ─────────────────────────────────────────────
-
-function cmpRenderDashboard() {
-  // KPI strip
-  const total      = CMP.items.length;
-  const current    = CMP.items.filter(i => i.status === 'Current').length;
-  const dueSoon    = CMP.items.filter(i => i.status === 'Due Soon').length;
-  const overdue    = CMP.items.filter(i => i.status === 'Overdue').length;
-  const notStarted = CMP.items.filter(i => i.status === 'Not Started').length;
-
-  const kpiEl = document.getElementById('cmpKpiStrip');
-  if (kpiEl) {
-    kpiEl.innerHTML = `
-      <div class="cmp-kpi"><span class="cmp-kpi-val" style="color:var(--white)">${total}</span><span class="cmp-kpi-lbl">Total Items</span></div>
-      <div class="cmp-kpi"><span class="cmp-kpi-val" style="color:var(--green)">${current}</span><span class="cmp-kpi-lbl">Current</span></div>
-      <div class="cmp-kpi"><span class="cmp-kpi-val" style="color:var(--amber)">${dueSoon}</span><span class="cmp-kpi-lbl">Due Soon</span></div>
-      <div class="cmp-kpi"><span class="cmp-kpi-val" style="color:var(--red)">${overdue}</span><span class="cmp-kpi-lbl">Overdue</span></div>
-      <div class="cmp-kpi"><span class="cmp-kpi-val" style="color:var(--muted)">${notStarted}</span><span class="cmp-kpi-lbl">Not Started</span></div>
-    `;
-  }
-
-  // Body: group by category
-  const bodyEl = document.getElementById('cmpDashboardBody');
-  if (!bodyEl) return;
-
-  if (CMP.items.length === 0) {
-    bodyEl.innerHTML = cmpEmptyState();
-    return;
-  }
-
-  // Group items by category, ordered by CMP_CAT_ORDER
-  const groups = {};
-  for (const cat of CMP_CAT_ORDER) groups[cat] = [];
-  for (const item of CMP.items) {
-    const cat = CMP_CAT_ORDER.includes(item.category) ? item.category : 'Other';
-    groups[cat].push(item);
-  }
-
-  // Sort items within each group: overdue first, then due soon, then current, then not started; then by dueDate asc
-  const statusOrder = { 'Overdue': 0, 'Due Soon': 1, 'Current': 2, 'Not Started': 3 };
-  for (const cat of CMP_CAT_ORDER) {
-    groups[cat].sort((a, b) => {
-      const so = (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4);
-      if (so !== 0) return so;
-      // By due date ascending (no date = last)
-      const da = a.dueDate || '9999-12-31';
-      const db = b.dueDate || '9999-12-31';
-      return da.localeCompare(db);
-    });
-  }
-
-  let html = '';
-  for (const cat of CMP_CAT_ORDER) {
-    if (groups[cat].length === 0) continue;
-    html += `<div class="cmp-group">
-      <div class="cmp-group-head">
-        <span class="cmp-cat ${cmpCatClass(cat)}">${escapeHtml(cat)}</span>
-        <span class="cmp-group-count">${groups[cat].length} item${groups[cat].length !== 1 ? 's' : ''}</span>
-      </div>`;
-    for (const item of groups[cat]) {
-      html += cmpRenderDashboardItem(item);
-    }
-    html += `</div>`;
-  }
-  bodyEl.innerHTML = html;
-}
-
-function cmpRenderDashboardItem(item) {
-  const borderClass = item.status === 'Overdue' ? 'cmp-overdue' : item.status === 'Due Soon' ? 'cmp-due-soon' : '';
-  const clientLabel = item.clientName ? ` — ${escapeHtml(item.clientName)}` : '';
-  const dueLabel = cmpDueLabel(item.dueDate);
-  const dueColor = item.status === 'Overdue' ? 'var(--red)' : item.status === 'Due Soon' ? 'var(--amber)' : 'var(--muted)';
-
-  // Expanded details
-  let details = '';
-  if (item.completedDate) {
-    details += `<div class="cmp-item-detail"><strong>Last completed:</strong> ${fmtDate(item.completedDate)}</div>`;
-  }
-  if (item.recurring) {
-    details += `<div class="cmp-item-detail"><strong>Recurrence:</strong> Every ${item.frequencyMonths} month${item.frequencyMonths !== 1 ? 's' : ''}</div>`;
-  }
-  if (item.notes) {
-    details += `<div class="cmp-item-detail"><strong>Notes:</strong> ${escapeHtml(item.notes)}</div>`;
-  }
-  if (item.evidenceUrl) {
-    details += `<div class="cmp-item-detail"><strong>Evidence:</strong> <a href="${escapeHtml(item.evidenceUrl)}" target="_blank" rel="noopener">${escapeHtml(item.evidenceUrl.length > 60 ? item.evidenceUrl.slice(0, 57) + '...' : item.evidenceUrl)} ${CMP_ICONS.link}</a></div>`;
-  }
-  if (item.clientName) {
-    details += `<div class="cmp-item-detail"><strong>Client:</strong> ${escapeHtml(item.clientName)}
-      <button class="cmp-iconbtn" type="button" style="margin-left:6px;padding:3px 6px" title="View in Directory" onclick="navTo('clients')">
-        ${CMP_ICONS.link}
-      </button>
-    </div>`;
-  }
-  details += `<div class="cmp-item-detail"><strong>Owner:</strong> ${escapeHtml(item.owner)}</div>`;
-
-  // Actions
-  const actions = `<div class="cmp-item-actions">
-    <button class="btn btn-ghost" type="button" style="font-size:11px;padding:5px 12px" onclick="cmpMarkComplete('${item.id}')" title="Mark as complete">
-      ${CMP_ICONS.check} Complete
-    </button>
-    <button class="cmp-iconbtn" type="button" onclick="cmpOpenEditModal('${item.id}')" title="Edit">${CMP_ICONS.edit}</button>
-    <button class="cmp-iconbtn del" type="button" onclick="cmpConfirmDelete('${item.id}')" title="Delete">${CMP_ICONS.del}</button>
-  </div>`;
-
-  return `<div class="cmp-item ${borderClass}" id="cmp-item-${item.id}">
-    <div class="cmp-item-head" onclick="cmpToggleItem('${item.id}')">
-      <span class="cmp-sp ${cmpStatusClass(item.status)}">${escapeHtml(item.status)}</span>
-      <span class="cmp-item-title">${escapeHtml(item.title)}${clientLabel}</span>
-      <div class="cmp-item-meta">
-        <span class="cmp-item-date" style="color:${dueColor}">${CMP_ICONS.calendar} ${dueLabel}</span>
-        <span class="cmp-item-owner">${escapeHtml(item.owner)}</span>
-        <span class="cmp-item-chev">${CMP_ICONS.chevron}</span>
-      </div>
-    </div>
-    <div class="cmp-item-body">
-      ${details}
-      ${actions}
-    </div>
-  </div>`;
-}
-
-function cmpToggleItem(id) {
-  const el = document.getElementById('cmp-item-' + id);
-  if (el) el.classList.toggle('open');
-}
-
-function cmpEmptyState() {
-  return `<div class="cmp-empty">
-    <div style="color:var(--green);margin-bottom:12px">${CMP_ICONS.shield}</div>
-    <h3>No compliance items yet</h3>
-    <p>Get started by adding your first compliance obligation. Here are some common ones:</p>
-    <div class="cmp-seed-list">
-      <button class="cmp-seed-btn" type="button" onclick="cmpSeedItem('Cyber Essentials Renewal','Certification')">Cyber Essentials Renewal</button>
-      <button class="cmp-seed-btn" type="button" onclick="cmpSeedItem('PI Insurance Renewal','Insurance')">PI Insurance Renewal</button>
-      <button class="cmp-seed-btn" type="button" onclick="cmpSeedItem('ICO Registration','Registration')">ICO Registration</button>
-    </div>
-  </div>`;
-}
-
-function cmpSeedItem(title, category) {
-  cmpSwitchTab('manage');
-  setTimeout(() => {
-    const titleEl = document.getElementById('cmpTitle');
-    const catEl = document.getElementById('cmpCategory');
-    if (titleEl) titleEl.value = title;
-    if (catEl) catEl.value = category;
-    titleEl?.focus();
-  }, 100);
-}
-
-
-// ─── Manage tab rendering ────────────────────────────────────────────
-
-function cmpRenderManage() {
-  cmpRenderFilters();
-  cmpRenderTable();
-}
-
-function cmpRenderFilters() {
-  const el = document.getElementById('cmpFilters');
-  if (!el) return;
-
-  const catChips = ['all', ...CMP_CAT_ORDER].map(c => {
-    const active = CMP.filter.category === c ? ' active' : '';
-    const label = c === 'all' ? 'All' : c;
-    return `<button class="cmp-chip${active}" type="button" onclick="cmpFilterCat('${jsAttr(c)}')">${escapeHtml(label)}</button>`;
-  }).join('');
-
-  const statusChips = ['all', 'Current', 'Due Soon', 'Overdue', 'Not Started'].map(s => {
-    const active = CMP.filter.status === s ? ' active' : '';
-    const label = s === 'all' ? 'All' : s;
-    return `<button class="cmp-chip${active}" type="button" onclick="cmpFilterStatus('${jsAttr(s)}')">${escapeHtml(label)}</button>`;
-  }).join('');
-
-  const ownerChips = ['all', 'Philip', 'Jack', 'Both'].map(o => {
-    const active = CMP.filter.owner === o ? ' active' : '';
-    const label = o === 'all' ? 'All' : o;
-    return `<button class="cmp-chip${active}" type="button" onclick="cmpFilterOwner('${jsAttr(o)}')">${escapeHtml(label)}</button>`;
-  }).join('');
-
-  el.innerHTML = `
-    <span class="cmp-filter-label">Category</span>${catChips}
-    <span class="cmp-filter-sep"></span>
-    <span class="cmp-filter-label">Status</span>${statusChips}
-    <span class="cmp-filter-sep"></span>
-    <span class="cmp-filter-label">Owner</span>${ownerChips}
-  `;
-}
-
-function cmpRenderTable() {
-  const tbody = document.getElementById('cmpTableBody');
-  if (!tbody) return;
-
-  let items = [...CMP.items];
-
-  // Apply filters
-  if (CMP.filter.category !== 'all') items = items.filter(i => i.category === CMP.filter.category);
-  if (CMP.filter.status !== 'all')   items = items.filter(i => i.status === CMP.filter.status);
-  if (CMP.filter.owner !== 'all')    items = items.filter(i => i.owner === CMP.filter.owner);
-
-  // Sort
-  items.sort((a, b) => {
-    let cmp = 0;
-    if (CMP.sortBy === 'title') {
-      cmp = a.title.localeCompare(b.title);
-    } else {
-      // dueDate: no date goes to end
-      const da = a.dueDate || '9999-12-31';
-      const db = b.dueDate || '9999-12-31';
-      cmp = da.localeCompare(db);
-    }
-    return CMP.sortDir === 'desc' ? -cmp : cmp;
-  });
-
-  if (items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No items match the current filters</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = items.map(item => `<tr>
-    <td style="font-weight:600">${escapeHtml(item.title)}</td>
-    <td><span class="cmp-cat ${cmpCatClass(item.category)}">${escapeHtml(item.category)}</span></td>
-    <td><span class="cmp-sp ${cmpStatusClass(item.status)}">${escapeHtml(item.status)}</span></td>
-    <td style="font-family:var(--font-body);font-weight:600">${fmtDate(item.dueDate)}</td>
-    <td class="col-owner">${escapeHtml(item.owner)}</td>
-    <td class="col-client">${item.clientName ? escapeHtml(item.clientName) : '<span style="color:var(--muted)">Company</span>'}</td>
-    <td>
-      <button class="cmp-iconbtn" type="button" onclick="cmpOpenEditModal('${item.id}')" title="Edit">${CMP_ICONS.edit}</button>
-      <button class="cmp-iconbtn del" type="button" onclick="cmpConfirmDelete('${item.id}')" title="Delete">${CMP_ICONS.del}</button>
-    </td>
-  </tr>`).join('');
-}
-
-
-// ─── Filter + sort handlers ──────────────────────────────────────────
-
-function cmpFilterCat(cat)    { CMP.filter.category = cat; cmpRenderManage(); }
-function cmpFilterStatus(st)  { CMP.filter.status = st;    cmpRenderManage(); }
-function cmpFilterOwner(ow)   { CMP.filter.owner = ow;     cmpRenderManage(); }
-
-function cmpSort(field) {
-  if (CMP.sortBy === field) {
-    CMP.sortDir = CMP.sortDir === 'asc' ? 'desc' : 'asc';
-  } else {
-    CMP.sortBy = field;
-    CMP.sortDir = 'asc';
-  }
-  cmpRenderTable();
-}
-
-
-// ─── Tab switching ───────────────────────────────────────────────────
-
-function cmpSwitchTab(tab) {
-  CMP.activeTab = tab;
-  document.querySelectorAll('#section-compliance .cmp-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.tab === tab);
-  });
-  document.getElementById('cmpDashboard').classList.toggle('active', tab === 'dashboard');
-  document.getElementById('cmpManage').classList.toggle('active', tab === 'manage');
-  cmpRender();
-}
-
-
-// ─── Toggle recurring field visibility ───────────────────────────────
-
-function cmpToggleFrequency() {
-  const checked = document.getElementById('cmpRecurring')?.checked;
-  const freqField = document.getElementById('cmpFreqField');
-  const label = document.getElementById('cmpRecurringLabel');
-  if (freqField) freqField.style.display = checked ? '' : 'none';
-  if (label) label.textContent = checked ? 'Yes' : 'No';
-}
-
-
-// ─── CRUD: Add item ──────────────────────────────────────────────────
-
-async function cmpAddItem() {
-  const title    = document.getElementById('cmpTitle')?.value.trim();
-  const category = document.getElementById('cmpCategory')?.value || 'Other';
-  const dueDate  = document.getElementById('cmpDueDate')?.value || '';
-  const owner    = document.getElementById('cmpOwner')?.value || 'Both';
-  const client   = document.getElementById('cmpClient')?.value || '';
-  const notes    = document.getElementById('cmpNotes')?.value.trim() || '';
-  const evidUrl  = document.getElementById('cmpEvidenceUrl')?.value.trim() || '';
-  const recurring = document.getElementById('cmpRecurring')?.checked ?? true;
-  const freqMonths = Number(document.getElementById('cmpFrequency')?.value) || 12;
-
-  if (!title) { toast('Title is required', 'warning'); return; }
-  if (!dueDate) { toast('Due date is required', 'warning'); return; }
-
-  const computedStatus = cmpComputeStatus(dueDate, '');
-
-  showLoading(true);
-  try {
-    const fields = {
-      Title:           title,
-      Category:        category,
-      Status:          computedStatus,
-      DueDate:         dueDate,
-      Owner:           owner,
-      Recurring:       recurring,
-      FrequencyMonths: freqMonths
-    };
-    if (client)   fields.ClientName  = client;
-    if (notes)    fields.Notes       = notes;
-    if (evidUrl)  fields.EvidenceUrl = evidUrl;
-
-    await graphFetch(`/sites/${CMP.siteId}/lists/${CMP.listIds.compliance}/items`, {
-      method: 'POST',
-      body: JSON.stringify({ fields })
-    });
-
-    toast('Compliance item added', 'success');
-
-    // Clear form
-    document.getElementById('cmpTitle').value = '';
-    document.getElementById('cmpDueDate').value = '';
-    document.getElementById('cmpNotes').value = '';
-    document.getElementById('cmpEvidenceUrl').value = '';
-    document.getElementById('cmpClient').value = '';
-    document.getElementById('cmpCategory').value = 'Certification';
-    document.getElementById('cmpOwner').value = 'Both';
-    document.getElementById('cmpRecurring').checked = true;
-    document.getElementById('cmpFrequency').value = '12';
-    cmpToggleFrequency();
-
-    await cmpRefreshData(true);
-  } catch (err) {
-    console.error('Add compliance item failed:', err);
-    toast('Failed to add item: ' + (err.message || 'unknown'), 'error');
-  } finally {
-    showLoading(false);
-  }
-}
-
-
-// ─── CRUD: Edit item (modal) ─────────────────────────────────────────
-
-function cmpOpenEditModal(id) {
-  const item = CMP.items.find(i => i.id === id);
-  if (!item) { toast('Item not found', 'error'); return; }
-
-  const clientOptions = '<option value="">— Company Wide —</option>' +
-    CMP.clients.map(c => `<option value="${escapeHtml(c.name)}"${c.name === item.clientName ? ' selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
-
-  const body = `
-    <div class="cmp-field" style="margin-bottom:14px">
-      <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600">Title</label>
-      <input class="cmp-input" type="text" id="cmpEditTitle" value="${escapeHtml(item.title)}" style="width:100%">
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-      <div class="cmp-field">
-        <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600">Category</label>
-        <select class="cmp-select" id="cmpEditCat" style="width:100%">
-          ${CMP_CAT_ORDER.map(c => `<option value="${c}"${c === item.category ? ' selected' : ''}>${c}</option>`).join('')}
-        </select>
-      </div>
-      <div class="cmp-field">
-        <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600">Due Date</label>
-        <input class="cmp-input" type="date" id="cmpEditDue" value="${item.dueDate}" style="width:100%">
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-      <div class="cmp-field">
-        <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600">Owner</label>
-        <select class="cmp-select" id="cmpEditOwner" style="width:100%">
-          <option value="Both"${item.owner === 'Both' ? ' selected' : ''}>Both</option>
-          <option value="Philip"${item.owner === 'Philip' ? ' selected' : ''}>Philip</option>
-          <option value="Jack"${item.owner === 'Jack' ? ' selected' : ''}>Jack</option>
-        </select>
-      </div>
-      <div class="cmp-field">
-        <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600">Client</label>
-        <select class="cmp-select" id="cmpEditClient" style="width:100%">${clientOptions}</select>
-      </div>
-    </div>
-    <div class="cmp-field" style="margin-bottom:14px">
-      <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600">Evidence URL</label>
-      <input class="cmp-input" type="url" id="cmpEditEvidence" value="${escapeHtml(item.evidenceUrl)}" style="width:100%">
-    </div>
-    <div class="cmp-field" style="margin-bottom:14px">
-      <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600">Notes</label>
-      <textarea class="cmp-textarea" id="cmpEditNotes" rows="3" style="width:100%">${escapeHtml(item.notes)}</textarea>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-      <div class="cmp-field">
-        <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600">Recurring</label>
-        <div class="cmp-toggle-wrap">
-          <label class="cmp-toggle">
-            <input type="checkbox" id="cmpEditRecurring" ${item.recurring ? 'checked' : ''} onchange="document.getElementById('cmpEditFreqWrap').style.display=this.checked?'':'none'">
-            <span class="cmp-toggle-track"></span>
-            <span class="cmp-toggle-knob"></span>
-          </label>
-          <span class="cmp-toggle-label">${item.recurring ? 'Yes' : 'No'}</span>
-        </div>
-      </div>
-      <div class="cmp-field" id="cmpEditFreqWrap" style="${item.recurring ? '' : 'display:none'}">
-        <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600">Frequency (months)</label>
-        <input class="cmp-input" type="number" id="cmpEditFreq" value="${item.frequencyMonths}" min="1" step="1" style="width:100%">
-      </div>
-    </div>
-    <div class="cmp-mm-actions">
-      <button class="btn btn-ghost" type="button" onclick="cmpCloseModal()">Cancel</button>
-      <button class="btn btn-primary" type="button" onclick="cmpSaveEdit('${item.id}')">Save changes</button>
-    </div>
-  `;
-
-  document.getElementById('cmpModalTitle').textContent = 'Edit compliance item';
-  document.getElementById('cmpModalBody').innerHTML = body;
-  document.getElementById('cmpModalBg').classList.add('show');
-  setTimeout(() => document.getElementById('cmpEditTitle')?.focus(), 50);
-}
-
-async function cmpSaveEdit(id) {
-  const title    = document.getElementById('cmpEditTitle')?.value.trim();
-  const category = document.getElementById('cmpEditCat')?.value || 'Other';
-  const dueDate  = document.getElementById('cmpEditDue')?.value || '';
-  const owner    = document.getElementById('cmpEditOwner')?.value || 'Both';
-  const client   = document.getElementById('cmpEditClient')?.value || '';
-  const evidence = document.getElementById('cmpEditEvidence')?.value.trim() || '';
-  const notes    = document.getElementById('cmpEditNotes')?.value.trim() || '';
-  const recurring = document.getElementById('cmpEditRecurring')?.checked ?? true;
-  const freqMonths = Number(document.getElementById('cmpEditFreq')?.value) || 12;
-
-  if (!title) { toast('Title is required', 'warning'); return; }
-
-  // Find existing item to get completedDate for status computation
-  const existing = CMP.items.find(i => i.id === id);
-  const computedStatus = cmpComputeStatus(dueDate, existing?.completedDate || '', recurring);
-
-  showLoading(true);
-  try {
-    const fields = {
-      Title:           title,
-      Category:        category,
-      Status:          computedStatus,
-      DueDate:         dueDate || null,
-      Owner:           owner,
-      ClientName:      client,
-      Notes:           notes,
-      EvidenceUrl:     evidence,
-      Recurring:       recurring,
-      FrequencyMonths: freqMonths
-    };
-
-    await graphFetch(`/sites/${CMP.siteId}/lists/${CMP.listIds.compliance}/items/${id}/fields`, {
-      method: 'PATCH',
-      body: JSON.stringify(fields)
-    });
-
-    cmpCloseModal();
-    toast('Item updated', 'success');
-    await cmpRefreshData(true);
-  } catch (err) {
-    console.error('Edit compliance item failed:', err);
-    toast('Failed to update item: ' + (err.message || 'unknown'), 'error');
-  } finally {
-    showLoading(false);
-  }
-}
-
-
-// ─── CRUD: Delete item ───────────────────────────────────────────────
-
-function cmpConfirmDelete(id) {
-  const item = CMP.items.find(i => i.id === id);
-  if (!item) { toast('Item not found', 'error'); return; }
-
-  const body = `
-    <p>Are you sure you want to delete <strong>${escapeHtml(item.title)}</strong>? This cannot be undone.</p>
-    <div class="cmp-mm-actions">
-      <button class="btn btn-ghost" type="button" onclick="cmpCloseModal()">Cancel</button>
-      <button class="btn" type="button" style="background:var(--red);border-color:var(--red);color:var(--white)" onclick="cmpDeleteItem('${item.id}')">Delete</button>
-    </div>
-  `;
-
-  document.getElementById('cmpModalTitle').textContent = 'Confirm delete';
-  document.getElementById('cmpModalBody').innerHTML = body;
-  document.getElementById('cmpModalBg').classList.add('show');
-}
-
-async function cmpDeleteItem(id) {
-  showLoading(true);
-  try {
-    await graphFetch(`/sites/${CMP.siteId}/lists/${CMP.listIds.compliance}/items/${id}`, {
-      method: 'DELETE'
-    });
-
-    cmpCloseModal();
-    toast('Item deleted', 'success');
-    await cmpRefreshData(true);
-  } catch (err) {
-    console.error('Delete compliance item failed:', err);
-    toast('Failed to delete item: ' + (err.message || 'unknown'), 'error');
-  } finally {
-    showLoading(false);
-  }
-}
-
-
-// ─── Mark Complete ───────────────────────────────────────────────────
-
-async function cmpMarkComplete(id) {
-  const item = CMP.items.find(i => i.id === id);
-  if (!item) { toast('Item not found', 'error'); return; }
-
-  const fields = {
-    CompletedDate: today()
-  };
-
-  if (item.recurring && item.dueDate) {
-    // Calculate new due date: old due date + frequency months
-    const oldDue = new Date(item.dueDate + 'T00:00:00');
-    const dayOfMonth = oldDue.getDate();
-    oldDue.setDate(1);
-    oldDue.setMonth(oldDue.getMonth() + item.frequencyMonths);
-    // 31 Aug + 6 months is 28/29 Feb, not 3 March.
-    oldDue.setDate(Math.min(dayOfMonth, new Date(oldDue.getFullYear(), oldDue.getMonth() + 1, 0).getDate()));
-    const newDue = oldDue.getFullYear() + '-' + String(oldDue.getMonth() + 1).padStart(2, '0') + '-' + String(oldDue.getDate()).padStart(2, '0');
-    fields.DueDate = newDue;
-    fields.Status = 'Current';
-
-    showLoading(true);
-    try {
-      await graphFetch(`/sites/${CMP.siteId}/lists/${CMP.listIds.compliance}/items/${id}/fields`, {
-        method: 'PATCH',
-        body: JSON.stringify(fields)
-      });
-      toast(`Renewed — next due ${fmtDate(newDue)}`, 'success');
-      await cmpRefreshData(true);
-    } catch (err) {
-      console.error('Mark complete failed:', err);
-      toast('Failed to mark complete: ' + (err.message || 'unknown'), 'error');
-    } finally {
-      showLoading(false);
-    }
-  } else {
-    // Non-recurring: just mark complete
-    fields.Status = 'Current';
-
-    showLoading(true);
-    try {
-      await graphFetch(`/sites/${CMP.siteId}/lists/${CMP.listIds.compliance}/items/${id}/fields`, {
-        method: 'PATCH',
-        body: JSON.stringify(fields)
-      });
-      toast('Marked as complete', 'success');
-      await cmpRefreshData(true);
-    } catch (err) {
-      console.error('Mark complete failed:', err);
-      toast('Failed to mark complete: ' + (err.message || 'unknown'), 'error');
-    } finally {
-      showLoading(false);
-    }
-  }
-}
-
-
-// ─── Modal helpers ───────────────────────────────────────────────────
-
-function cmpOpenModal(title, bodyHtml) {
-  document.getElementById('cmpModalTitle').textContent = title;
-  document.getElementById('cmpModalBody').innerHTML = bodyHtml;
-  document.getElementById('cmpModalBg').classList.add('show');
-}
-
-function cmpCloseModal() {
-  document.getElementById('cmpModalBg').classList.remove('show');
-  document.getElementById('cmpModalBody').innerHTML = '';
-}
-
-
-// ─── Init ────────────────────────────────────────────────────────────
-
-async function initCompliance() {
-  if (CMP.initialised) return;
-  CMP.initialised = true;
-
-  // Modal: close on ESC
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && document.getElementById('cmpModalBg')?.classList.contains('show')) {
-      cmpCloseModal();
-    }
-  });
-
-  await cmpRefreshData(true);
 }
 
 
