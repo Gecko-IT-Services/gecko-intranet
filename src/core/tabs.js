@@ -21,6 +21,18 @@ export function moveInk(strip) {
   const ink = strip?.querySelector('.app-tab-ink');
   const on = strip?.querySelector('[aria-selected="true"]');
   if (!ink || !on) return;
+  // Rendered while its section is hidden (a background load): nothing to measure yet, so place
+  // the ink the moment the strip gets a size instead of leaving it at width 0.
+  if (!strip.offsetWidth) {
+    if (!strip.inkWait && typeof ResizeObserver === 'function') {
+      strip.inkWait = new ResizeObserver(() => {
+        if (!strip.offsetWidth) return;
+        strip.inkWait.disconnect(); strip.inkWait = null; moveInk(strip);
+      });
+      strip.inkWait.observe(strip);
+    }
+    return;
+  }
   requestAnimationFrame(() => {
     ink.style.width = on.offsetWidth + 'px';
     ink.style.transform = `translateX(${on.offsetLeft}px)`;
