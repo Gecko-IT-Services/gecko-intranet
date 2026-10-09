@@ -17,6 +17,7 @@
 import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
+import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { STAGES, OPEN_STAGES, stageLabel, stageTotals, monthSales, salesHistory, PROJECT_STATUS,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
   nudgeInvoices, nudgeEmail } from '../core/jobs.js';
@@ -35,7 +36,7 @@ const JOB = {
   allPaid: false,               // Invoiced view: show every paid job, not just the last 90 days
   nudges: new Map(),            // Owed to us: contact → last payment reminder drafted (public.payment_nudges)
   nudging: null,                // contact whose reminder is being drafted
-  dir: 'next', animate: false   // tab change: which way the new pane slides in
+  dir: 'from-right', animate: false   // tab change: which way the new pane slides in
 };
 
 const money = n => '£' + (Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -92,6 +93,8 @@ async function load() {
     const names = new Set(clients.filter(c => c.status !== 'Inactive').map(c => c.title).filter(Boolean));
     for (const j of jobs) names.add(j.client_name);
     JOB.clients = [...names].sort((a, b) => a.localeCompare(b));
+    const synced = els('jobLastSync');
+    if (synced) synced.textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
     JOB.error = err;
   } finally {
@@ -228,15 +231,15 @@ function render() {
   if (JOB.error) {
     const e = JOB.error;
     mount.innerHTML = e.code === 'DB_SIGNIN_REQUIRED'
-      ? '<div class="job-error"><strong>Connect to the Gecko database</strong>Jobs are kept in the database. Connect once with your Microsoft account.<button type="button" class="job-btn" data-job-act="connect">Connect</button></div>'
-      : `<div class="job-error"><strong>Could not load jobs.</strong>${escapeHtml(e.message || e)}<button type="button" class="job-btn" data-job-act="reload">Retry</button></div>`;
+      ? '<div class="job-error"><strong>Connect to the Gecko database</strong>Jobs are kept in the database. Connect once with your Microsoft account.<button type="button" class="btn btn-primary btn-sm" data-job-act="connect">Connect</button></div>'
+      : `<div class="job-error"><strong>Could not load jobs.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-job-act="reload">Retry</button></div>`;
     return;
   }
   mount.innerHTML = (JOB.feedNote && !onXero() && JOB.tab !== 'jobs' ? `<p class="job-note">${escapeHtml(JOB.feedNote)}</p>` : '') +
     `<div class="job-pane">${JOB.tab === 'jobs' ? jobsHtml() : tabHtml(s)}</div>`;
   if (JOB.animate) {
     JOB.animate = false;
-    mount.firstElementChild?.classList.add('job-enter', JOB.dir === 'prev' ? 'from-left' : 'from-right');
+    mount.firstElementChild?.classList.add('job-enter', JOB.dir);
   }
   syncTableLabels(mount);
 }
@@ -277,9 +280,9 @@ function jobForm(j) {
       <label class="wide">Next step <input name="next_step" type="text" value="${escapeHtml(j.next_step || '')}" placeholder="e.g. Order switches"></label>
       ${isNew ? '' : `<label class="full">Notes <textarea name="notes" rows="2">${escapeHtml(j.notes || '')}</textarea></label>`}
       <div class="job-actions full">
-        <button type="submit" class="job-btn">${isNew ? 'Add job' : 'Save'}</button>
-        <button type="button" class="job-btn ghost" data-job-act="${isNew ? 'canceladd' : 'edit'}" data-id="${isNew ? '' : j.id}">Cancel</button>
-        ${isNew ? '' : `<button type="button" class="job-btn ghost danger" data-job-act="delete" data-id="${j.id}">Delete</button>`}
+        ${isNew ? '' : `<button type="button" class="btn btn-danger btn-sm" data-job-act="delete" data-id="${j.id}">Delete</button>`}
+        <button type="button" class="btn btn-ghost btn-sm" data-job-act="${isNew ? 'canceladd' : 'edit'}" data-id="${isNew ? '' : j.id}">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">${isNew ? 'Add job' : 'Save'}</button>
       </div>
     </form>`;
 }
@@ -318,9 +321,9 @@ function jobCard(j) {
       ${xi.map(x => xeroBadge(j, x)).join('')}
     </div>
     <div class="job-actions">
-      ${NEXT[j.status].map(([to, label]) => `<button type="button" class="job-btn${to === 'invoiced' || to === 'to_invoice' ? ' win' : to === 'lost' ? ' ghost' : ' ghost'}" data-job-act="move" data-status="${to}" data-id="${j.id}">${label}</button>`).join('')}
-      ${canInvoice ? `<button type="button" class="job-btn ${j.status === 'to_invoice' ? 'win' : 'ghost'}" data-job-act="xero-invoice" data-id="${j.id}" aria-expanded="${invoicing}">${invoicing ? 'Close' : 'Invoice in Xero'}</button>` : ''}
-      <button type="button" class="job-btn ghost" data-job-act="edit" data-id="${j.id}" aria-expanded="${editing}">${editing ? 'Close' : 'Edit'}</button>
+      ${NEXT[j.status].map(([to, label]) => `<button type="button" class="btn btn-sm${(to === 'invoiced' && !canInvoice) || to === 'to_invoice' ? ' btn-success' : ''}" data-job-act="move" data-status="${to}" data-id="${j.id}">${label}</button>`).join('')}
+      ${canInvoice ? `<button type="button" class="btn btn-sm${j.status === 'to_invoice' ? ' btn-success' : ''}" data-job-act="xero-invoice" data-id="${j.id}" aria-expanded="${invoicing}">${invoicing ? 'Close' : 'Invoice in Xero'}</button>` : ''}
+      <button type="button" class="btn btn-ghost btn-sm" data-job-act="edit" data-id="${j.id}" aria-expanded="${editing}">${editing ? 'Close' : 'Edit'}</button>
     </div>
     ${invoicing ? invoiceForm(j, byNumber) : ''}
     ${editing ? jobForm(j) : ''}
@@ -353,7 +356,9 @@ function xeroBadge(j, { ref, state, invoice: inv }) {
 function invoiceForm(j, byNumber) {
   const f = JOB.invoicing;
   if (!f.opts) {
-    return `<div class="job-form job-inv"><p class="job-muted">${f.error ? escapeHtml(f.error) : 'Getting your Xero contacts and items…'}</p></div>`;
+    return `<div class="job-form job-inv">${f.error
+      ? `<div class="job-error full"><strong>Could not get the Xero contacts</strong>${escapeHtml(f.error)}<button type="button" class="btn btn-sm" data-job-act="xero-retry" data-id="${j.id}">Retry</button></div>`
+      : '<p class="job-muted">Getting your Xero contacts and items…</p>'}</div>`;
   }
   const { contacts, suggested, items } = f.opts;
   const raised = jobRaised(j, byNumber);
@@ -373,10 +378,10 @@ function invoiceForm(j, byNumber) {
       <label>Amount £ (net) <input name="amount" type="number" min="0.01" step="0.01" required value="${escapeHtml(value)}" ${busy}></label>
       <label class="wide">Reference <input name="reference" type="text" maxlength="255" value="${escapeHtml(j.title)}" ${busy}></label>
       <p class="job-muted full">${raised ? `${escapeHtml(money(raised))} already invoiced for this job; the amount is what’s left. ` : ''}VAT is added by Xero from the item’s account. It is created as a <strong>draft</strong>: check it, approve and send it in Xero. Once approved and covering the job, the job moves to Invoiced by itself.</p>
-      ${f.error ? `<p class="job-note full">${escapeHtml(f.error)}</p>` : ''}
+      ${f.error ? `<p class="job-note bad full">${escapeHtml(f.error)}</p>` : ''}
       <div class="job-actions full">
-        <button type="submit" class="job-btn win" ${busy}>${f.busy ? 'Creating in Xero…' : 'Create draft in Xero'}</button>
-        <button type="button" class="job-btn ghost" data-job-act="xero-invoice" data-id="${j.id}">Cancel</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-job-act="xero-invoice" data-id="${j.id}">Cancel</button>
+        <button type="submit" class="btn btn-success btn-sm" ${busy}>${f.busy ? 'Creating in Xero…' : 'Create draft in Xero'}</button>
       </div>
     </form>`;
 }
@@ -393,7 +398,7 @@ async function openInvoice(id) {
     if (!data.contacts.length || !data.items.length) throw new Error('No invoices have synced from Xero yet, so there are no contacts or items to choose from. Press Sync now on Sales this month.');
     JOB.invoicing.opts = data;
   } catch (err) {
-    if (JOB.invoicing?.id === id) JOB.invoicing.error = 'Could not get the Xero contacts: ' + (err.message || err);
+    if (JOB.invoicing?.id === id) JOB.invoicing.error = String(err.message || err);
   }
   render();
 }
@@ -454,7 +459,7 @@ function jobsHtml() {
     <div class="job-list-head">
       <strong>${escapeHtml(heading)}</strong>
       ${JOB.stage !== 'open' ? '<button type="button" class="job-link" data-job-act="stage" data-stage="open">Back to current jobs</button>' : ''}
-      ${JOB.adding ? '' : '<button type="button" class="job-btn" data-job-act="add">Add a job</button>'}
+      ${JOB.adding ? '' : '<button type="button" class="btn btn-primary" data-job-act="add">Add a job</button>'}
     </div>
     ${JOB.adding ? jobForm(null) : ''}
     ${JOB.stage === 'invoiced' && groups ? invoicedHtml(groups) : `<div class="job-list">${shown.map(jobCard).join('') ||
@@ -486,15 +491,15 @@ function xeroHtml() {
   if (!x.connected) {
     return `<div class="job-panel job-xero"><div class="job-panel-head"><strong>Connect Xero directly</strong>
         <span class="job-muted">Invoices and repeating invoices sync every hour, so jobs can be matched to their invoice and invoiced as drafts in Xero.</span></div>
-      <button type="button" class="job-btn" data-job-act="xero-connect" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Opening Xero…' : 'Connect Xero'}</button></div>`;
+      <button type="button" class="btn btn-primary btn-sm" data-job-act="xero-connect" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Opening Xero…' : 'Connect Xero'}</button></div>`;
   }
   const state = x.last_sync_ok === false ? 'bad' : 'ok';
   return `<div class="job-panel job-xero" data-state="${state}">
       <div class="job-panel-head"><strong>Xero: ${escapeHtml(x.tenant_name || 'connected')}</strong>
         <span class="job-muted">${x.last_sync_at ? `${x.last_sync_ok === false ? 'Last sync failed' : 'Synced'} ${escapeHtml(when(x.last_sync_at))} · ` : ''}${escapeHtml(String(x.invoices))} invoices, ${escapeHtml(String(x.repeating))} repeating · syncs hourly</span></div>
-      ${x.last_sync_ok === false ? `<p class="job-note">${escapeHtml(x.last_error)}</p>` : ''}
-      <div class="job-actions"><button type="button" class="job-btn ghost" data-job-act="xero-sync" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Syncing…' : 'Sync now'}</button>
-        <button type="button" class="job-btn ghost" data-job-act="xero-connect">Reconnect</button></div>
+      ${x.last_sync_ok === false ? `<p class="job-note bad">${escapeHtml(x.last_error)}</p>` : ''}
+      <div class="job-actions"><button type="button" class="btn btn-sm" data-job-act="xero-sync" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Syncing…' : 'Sync now'}</button>
+        <button type="button" class="btn btn-sm" data-job-act="xero-connect">Reconnect</button></div>
     </div>`;
 }
 
@@ -540,7 +545,7 @@ async function xeroSync() {
 async function refresh() {
   const btn = els('jobRefresh');
   if (!btn || btn.disabled || JOB.loading) return;
-  btn.disabled = true; btn.textContent = 'Refreshing…';
+  btn.disabled = true; btn.classList.add('spinning'); btn.setAttribute('aria-busy', 'true');
   let synced = '';
   try {
     if (JOB.xero?.connected) {
@@ -555,7 +560,7 @@ async function refresh() {
     if (JOB.error) toast('Could not reload jobs: ' + (JOB.error.message || JOB.error), 'error', 8000);
     else toast('Jobs refreshed' + synced, synced.includes('failed') ? 'warning' : 'success', 6000);
   } finally {
-    btn.disabled = false; btn.textContent = 'Refresh';
+    btn.disabled = false; btn.classList.remove('spinning'); btn.removeAttribute('aria-busy');
   }
 }
 
@@ -587,44 +592,34 @@ function tabList(s) {
   return tabs;
 }
 
+const tabStrip = () => document.querySelector('#section-jobs > .app-tabs, #section-jobs > .job-tabs');
+
 function renderTabs(tabs) {
-  const strip = document.querySelector('#section-jobs .job-tabs');
+  let strip = tabStrip();
   if (!strip) return;
   // While loading, keep a tab asked for from Overview (show()) until its data is in.
   if (!JOB.loading && !tabs.some(([k]) => k === JOB.tab)) JOB.tab = 'jobs';
   const sig = tabs.map(t => t.join(':')).join('|');
   if (strip.dataset.sig !== sig) {
+    strip.outerHTML = tabsHtml(tabs.map(([key, label, badge]) => ({ key, label, badge, warn: badge === 'overdue' || badge === '!' })),
+      JOB.tab, { attr: 'data-job-tab', controls: 'jobWrap', label: 'Jobs views' });
+    strip = tabStrip();
     strip.dataset.sig = sig;
-    strip.innerHTML = tabs.map(([k, label, badge]) => `<button type="button" role="tab" id="jobTab-${k}" data-job-tab="${k}" aria-controls="jobWrap" aria-selected="false" tabindex="-1">
-        <span>${escapeHtml(label)}</span>${badge ? `<b class="job-tab-badge${badge === 'overdue' || badge === '!' ? ' warn' : ''}">${escapeHtml(badge)}</b>` : ''}</button>`).join('') +
-      '<i class="job-tab-ink" aria-hidden="true"></i>';
+    strip.querySelectorAll('[data-job-tab]').forEach(b => { b.id = `jobTab-${b.dataset.jobTab}`; });
   }
-  let active = null;
   strip.querySelectorAll('[data-job-tab]').forEach(b => {
     const on = b.dataset.jobTab === JOB.tab;
     b.setAttribute('aria-selected', String(on));
     b.tabIndex = on ? 0 : -1;
-    if (on) active = b;
   });
   els('jobWrap')?.setAttribute('aria-labelledby', `jobTab-${JOB.tab}`);
-  moveInk(strip, active);
-}
-
-/** The sliding underline under the active tab. */
-function moveInk(strip, active) {
-  const ink = strip?.querySelector('.job-tab-ink');
-  if (!ink || !active) return;
-  requestAnimationFrame(() => {
-    ink.style.width = active.offsetWidth + 'px';
-    ink.style.transform = `translateX(${active.offsetLeft}px)`;
-    if (strip.scrollWidth > strip.clientWidth) active.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-  });
+  moveInk(strip);
 }
 
 function switchTab(key) {
   if (key === JOB.tab) return;
   const keys = [...document.querySelectorAll('#section-jobs [data-job-tab]')].map(b => b.dataset.jobTab);
-  JOB.dir = keys.indexOf(key) > keys.indexOf(JOB.tab) ? 'next' : 'prev';
+  JOB.dir = direction(keys, JOB.tab, key);
   JOB.tab = key;
   JOB.animate = true;
   render();
@@ -754,8 +749,8 @@ function nudgeCell(r) {
   const by = last ? String(last.created_by || '').split(/\s+/)[0] : '';
   return `<div class="job-nudge">
       ${last ? `<span class="job-muted">Nudged ${escapeHtml(when)}${by ? ` by ${escapeHtml(by)}` : ''}</span>` : ''}
-      ${last?.webLink ? `<a class="job-btn ghost" href="${escapeHtml(last.webLink)}" target="_blank" rel="noopener">Open draft</a>` : ''}
-      <button type="button" class="job-btn${last || !r.overdue ? ' ghost' : ''}" data-job-act="nudge" data-name="${escapeHtml(r.name)}" ${busy || JOB.nudging ? 'disabled' : ''}>${busy ? 'Drafting…' : last ? 'Nudge again' : 'Nudge'}</button>
+      ${last?.webLink ? `<a class="btn btn-ghost btn-sm" href="${escapeHtml(last.webLink)}" target="_blank" rel="noopener">Open draft</a>` : ''}
+      <button type="button" class="btn btn-sm${last || !r.overdue ? '' : ' btn-primary'}" data-job-act="nudge" data-name="${escapeHtml(r.name)}" ${busy || JOB.nudging ? 'disabled' : ''}>${busy ? 'Drafting…' : last ? 'Nudge again' : 'Nudge'}</button>
     </div>`;
 }
 
@@ -822,6 +817,7 @@ async function onClick(event) {
   if (act === 'xero-connect') { xeroConnect(); return; }
   if (act === 'xero-sync') { xeroSync(); return; }
   if (act === 'xero-invoice') { openInvoice(id); return; }
+  if (act === 'xero-retry') { JOB.invoicing = null; openInvoice(id); return; }
   if (act === 'allpaid') { JOB.allPaid = !JOB.allPaid; render(); return; }
   if (act === 'nudge') { nudge(btn.dataset.name); return; }
   if (act === 'delete') {
@@ -837,17 +833,7 @@ async function onClick(event) {
 }
 
 /** Arrow keys move along the tab strip (ARIA tabs pattern). */
-function onKey(event) {
-  const tab = event.target.closest('[data-job-tab]');
-  if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-  const all = [...document.querySelectorAll('#section-jobs [data-job-tab]')];
-  const i = all.indexOf(tab);
-  const next = event.key === 'Home' ? all[0] : event.key === 'End' ? all.at(-1)
-    : all[(i + (event.key === 'ArrowRight' ? 1 : -1) + all.length) % all.length];
-  event.preventDefault();
-  switchTab(next.dataset.jobTab);
-  document.querySelector(`#section-jobs [data-job-tab="${next.dataset.jobTab}"]`)?.focus();
-}
+const onKey = event => keyNav(event, 'data-job-tab', switchTab);
 
 function onSubmit(event) {
   const form = event.target;
@@ -870,7 +856,7 @@ export function init() {
   section?.addEventListener('click', onClick);
   section?.addEventListener('submit', onSubmit);
   section?.addEventListener('keydown', onKey);
-  window.addEventListener('resize', () => moveInk(section?.querySelector('.job-tabs'), section?.querySelector('[data-job-tab][aria-selected="true"]')));
+  window.addEventListener('resize', () => moveInk(tabStrip()));
   els('jobRefresh')?.addEventListener('click', refresh);
   xeroReturn();
   load();

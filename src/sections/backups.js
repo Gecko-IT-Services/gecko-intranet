@@ -233,7 +233,10 @@ async function load({ interactive = false } = {}) {
 
 function setBusy(busy) {
   const btn = document.getElementById('bkpRefresh');
-  if (btn) { btn.disabled = busy; btn.classList.toggle('spinning', busy); }
+  if (!btn) return;
+  btn.disabled = busy;
+  btn.classList.toggle('spinning', busy);
+  if (busy) btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy');
 }
 
 // ─── Render ───────────────────────────────────────────────────────────
@@ -251,7 +254,7 @@ const consentMessage = () => `
     This section reads Acronis emails in ${escapeHtml(MAILBOX)} and needs the
     Mail.Read.Shared permission on the portal's app registration. Once it has
     been added in Entra, grant it here.
-    <button type="button" id="bkpGrant">Grant mailbox access</button>
+    <button type="button" class="btn btn-sm btn-primary" id="bkpGrant">Grant mailbox access</button>
   </div>`;
 
 const noAccessMessage = () => `
@@ -263,14 +266,14 @@ const noAccessMessage = () => `
 
 export function renderKpis(board, filter) {
   const t = board ? board.totals : { ok: '–', warn: '–', fail: '–' };
-  const tile = (key, val, label, color) => `
+  const tile = (key, val, label, tone) => `
     <button type="button" class="bkp-kpi" data-bkp-filter="${key}" aria-pressed="${String(filter === key)}">
-      <span class="bkp-kpi-val" style="color:var(${color})">${val}</span><span class="bkp-kpi-lbl">${label}</span>
+      <span class="bkp-kpi-val${tone ? ` is-${tone}` : ''}">${val}</span><span class="bkp-kpi-lbl">${label}</span>
     </button>`;
-  return tile('all', board ? board.jobCount : '–', 'Jobs reporting', '--white')
-       + tile('ok', t.ok, 'Succeeded', '--green')
-       + tile('warn', t.warn, 'With warnings', '--amber')
-       + tile('fail', t.fail, 'Failed', '--red');
+  return tile('all', board ? board.jobCount : '–', 'Jobs reporting', '')
+       + tile('ok', t.ok, 'Succeeded', 'ok')
+       + tile('warn', t.warn, 'With warnings', 'warn')
+       + tile('fail', t.fail, 'Failed', 'fail');
 }
 
 export function renderAlerts(alerts) {
@@ -324,6 +327,7 @@ export function renderClient(client, { filter = 'all', query = '' } = {}) {
   return `
     <details class="bkp-client bkp-client-${client.worst}"${open ? ' open' : ''}>
       <summary>
+        <span class="bkp-dot" role="img" aria-label="${STATUS_LABEL[client.worst]}"></span>
         <span class="bkp-client-name">${escapeHtml(client.name)}
           <span class="bkp-sub">${client.jobs.length} job${client.jobs.length === 1 ? '' : 's'} · last email ${escapeHtml(fmtWhen(client.last))}</span></span>
         <span class="bkp-counts">${count('ok')}${count('warn')}${count('fail')}</span>
@@ -357,7 +361,7 @@ function render() {
       <div class="bkp-error">
         <strong>Could not load backup emails.</strong>
         ${escapeHtml(BKP.error)}
-        <button type="button" id="bkpRetry">Retry</button>
+        <button type="button" class="btn btn-sm" id="bkpRetry">Retry</button>
       </div>`;
     return;
   }

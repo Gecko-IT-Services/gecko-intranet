@@ -535,7 +535,10 @@ async function importOldResolutions(sb) {
 
 function setBusy(busy) {
   const btn = document.getElementById('alrRefresh');
-  if (btn) { btn.disabled = busy; btn.classList.toggle('spinning', busy); }
+  if (!btn) return;
+  btn.disabled = busy;
+  btn.classList.toggle('spinning', busy);
+  if (busy) btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy');
 }
 
 // ─── Render ───────────────────────────────────────────────────────────
@@ -550,7 +553,7 @@ const consentMessage = () => `
   <div class="bkp-error">
     <strong>The portal needs permission to read the support mailbox.</strong>
     This section reads Atera alert emails in ${escapeHtml(MAILBOX)}.
-    <button type="button" id="alrGrant">Grant mailbox access</button>
+    <button type="button" class="btn btn-sm btn-primary" id="alrGrant">Grant mailbox access</button>
   </div>`;
 
 const noAccessMessage = () => `
@@ -562,12 +565,12 @@ const noAccessMessage = () => `
 
 export function renderKpis(stats) {
   const v = k => stats ? stats[k] : '–';
-  const tile = (val, label, color) => `
-    <div class="bkp-kpi alr-kpi"><span class="bkp-kpi-val" style="color:var(${color})">${val}</span><span class="bkp-kpi-lbl">${label}</span></div>`;
-  return tile(v('critical'), 'Act today', '--red')
-       + tile(v('important'), 'This week', '--amber')
-       + tile(v('resolved'), 'Resolved', '--green')
-       + tile(v('noise'), `Filtered${stats ? ` (${stats.alerts} emails read)` : ''}`, '--muted');
+  const tile = (val, label, tone) => `
+    <div class="bkp-kpi alr-kpi"><span class="bkp-kpi-val is-${tone}">${val}</span><span class="bkp-kpi-lbl">${label}</span></div>`;
+  return tile(v('critical'), 'Act today', 'fail')
+       + tile(v('important'), 'This week', 'warn')
+       + tile(v('resolved'), 'Resolved', 'ok')
+       + tile(v('noise'), `Filtered${stats ? ` (${stats.alerts} emails read)` : ''}`, 'muted');
 }
 
 export function renderIssue(is) {
@@ -586,8 +589,8 @@ export function renderIssue(is) {
       <td class="bkp-mono">${escapeHtml(seen)}<span class="bkp-sub">first ${escapeHtml(fmtWhen(is.first))}</span>${is.link ? `<a class="bkp-sub" href="${escapeHtml(is.link)}" target="_blank" rel="noopener noreferrer">view alert</a>` : ''}</td>
       <td class="bkp-mono">${escapeHtml(fmtWhen(is.last))}${is.quiet ? '<span class="bkp-sub">quiet since</span>' : ''}</td>
       <td class="alr-actions">${is.level === 'resolved'
-        ? `<span class="bkp-sub">${escapeHtml(fmtWhen(is.resolution.at))}</span><button type="button" class="alr-email" data-alr-undo="${escapeHtml(is.key)}">Undo</button>`
-        : `<button type="button" class="alr-email" data-alr-email="${escapeHtml(is.key)}">Email client</button><button type="button" class="alr-email alr-resolve" data-alr-resolve="${escapeHtml(is.key)}">Resolved</button>`}</td>
+        ? `<span class="bkp-sub">${escapeHtml(fmtWhen(is.resolution.at))}</span><button type="button" class="btn btn-sm" data-alr-undo="${escapeHtml(is.key)}">Undo</button>`
+        : `<button type="button" class="btn btn-sm" data-alr-email="${escapeHtml(is.key)}">Email client</button><button type="button" class="btn btn-sm" data-alr-resolve="${escapeHtml(is.key)}">Resolved</button>`}</td>
     </tr>`;
 }
 
@@ -620,7 +623,7 @@ function render() {
   if (ALR.error === 'CONSENT')   { mount.innerHTML = consentMessage(); return; }
   if (ALR.error === 'NO_ACCESS') { mount.innerHTML = noAccessMessage(); return; }
   if (ALR.error) {
-    mount.innerHTML = `<div class="bkp-error"><strong>Could not load Atera alerts.</strong>${escapeHtml(ALR.error)}<button type="button" id="alrRetry">Retry</button></div>`;
+    mount.innerHTML = `<div class="bkp-error"><strong>Could not load Atera alerts.</strong>${escapeHtml(ALR.error)}<button type="button" class="btn btn-sm" id="alrRetry">Retry</button></div>`;
     return;
   }
   if (!ALR.issues) return;
@@ -706,9 +709,9 @@ async function openEmail(key) {
       <label>Subject<input id="alrEmailSubject" value="${escapeHtml(draft.subject)}"></label>
       <label>Message<textarea id="alrEmailBody" rows="14">${escapeHtml(draft.body)}</textarea></label>
       <div class="prj-form-actions">
-        <button type="button" id="alrEmailCancel">Cancel</button>
-        <button type="button" id="alrEmailCopy">Copy text</button>
-        <button type="submit" class="prj-primary">Open in Outlook</button>
+        <button type="button" class="btn btn-ghost" id="alrEmailCancel">Cancel</button>
+        <button type="button" class="btn" id="alrEmailCopy">Copy text</button>
+        <button type="submit" class="btn btn-primary">Open in Outlook</button>
       </div>
     </form>`;
   document.getElementById('alrEmailSubject')?.focus();
@@ -736,8 +739,8 @@ const setupMessage = () => `
   <div class="prj-form">
     <p><strong>Connect to the Gecko database.</strong> Resolved alerts are kept there so you and Jack see the same thing. Connect once with your Microsoft account.</p>
     <div class="prj-form-actions">
-      <button type="button" id="alrResolveCancel">Close</button>
-      <button type="button" class="prj-primary" id="alrRetryList">Connect</button>
+      <button type="button" class="btn btn-ghost" id="alrResolveCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="alrRetryList">Connect</button>
     </div>
   </div>`;
 
@@ -771,8 +774,8 @@ function openResolve(key) {
       <label>What was done? (optional)<textarea id="alrResolveNote" rows="3" placeholder="e.g. Cleared 40 GB of temp files, D: now at 61%"></textarea></label>
       ${issue.resolveUrl ? `<p class="bkp-sub">Atera keeps its own copy of the alert. <a href="${escapeHtml(issue.resolveUrl)}" target="_blank" rel="noopener noreferrer">Clear it in Atera too</a> (opens Atera).</p>` : ''}
       <div class="prj-form-actions">
-        <button type="button" id="alrResolveCancel">Cancel</button>
-        <button type="submit" class="prj-primary">Mark resolved</button>
+        <button type="button" class="btn btn-ghost" id="alrResolveCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Mark resolved</button>
       </div>
     </form>`);
   document.getElementById('alrResolveNote')?.focus();

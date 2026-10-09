@@ -1052,26 +1052,6 @@ body {
 }
 #section-overview .ovw-actions-text p { color: var(--muted); font-size: 12px; }
 #section-overview .ovw-actions-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-#section-overview .ovw-act-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 16px; border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all .15s ease;
-  border: 1px solid var(--border);
-  background: var(--green); color: var(--on-green);
-  border-color: var(--green);
-}
-#section-overview .ovw-act-btn:hover {
-  background: var(--green-dark); border-color: var(--green-dark); color: var(--white);
-}
-#section-overview .ovw-act-btn.ghost {
-  background: transparent; color: var(--white);
-  border-color: var(--border-dim);
-}
-#section-overview .ovw-act-btn.ghost:hover {
-  background: var(--green-glow); color: var(--green); border-color: var(--green);
-}
 
 /* — Error / empty state for the whole section — */
 #section-overview .ovw-error {
@@ -2624,14 +2604,6 @@ body {
 #section-clients .cli-copy-result:empty { display: none; }
 #section-clients .cli-copy-result[data-state="ok"]  { color: var(--green); }
 #section-clients .cli-copy-result[data-state="bad"] { color: var(--red); }
-#section-clients .cli-add-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 14px; border-radius: 999px;
-  background: var(--green); color: var(--on-green);
-  border: 1px solid var(--green); font-family: var(--font-body);
-  font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s;
-}
-#section-clients .cli-add-btn:hover { background: var(--green-dark); border-color: var(--green-dark); color: var(--white); }
 
 #section-clients .cli-refresh {
   display: inline-flex; align-items: center; gap: 6px;
@@ -3475,16 +3447,6 @@ body {
 #section-settings .set-watch-text {
   color: var(--white); font-size: 13px; line-height: 1.4;
 }
-#section-settings .set-action-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 16px; border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: 13px; font-weight: 700;
-  cursor: pointer; transition: all .15s ease;
-  border: 1px solid var(--green);
-  background: var(--green); color: var(--on-green);
-}
-#section-settings .set-action-btn:hover { background: var(--green-dark); border-color: var(--green-dark); color: var(--white); }
 
 /* ── Personalisation ── */
 #section-settings .set-preferences-card .set-card-body {
@@ -3554,18 +3516,6 @@ body {
   padding: 18px 20px;
   display: flex; align-items: center; gap: 14px;
   flex-wrap: wrap;
-}
-#section-settings .set-signout-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 18px; border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all .15s ease;
-  border: 1px solid var(--red);
-  background: var(--red-dim); color: var(--red);
-}
-#section-settings .set-signout-btn:hover {
-  background: var(--red); color: var(--white);
 }
 #section-settings .set-actions-note {
   font-size: 11px; color: var(--muted); flex: 1;
@@ -4365,7 +4315,6 @@ body::before {
 #signOutBtn,
 .sb-toggle,
 #section-overview .ovw-refresh,
-#section-overview .ovw-act-btn,
 #section-profitability .prf-refresh,
 #section-profitability .prf-manage-link,
 #section-profitability .prf-export-btn,
@@ -4375,7 +4324,6 @@ body::before {
 #section-mileage .mil-refresh,
 #section-mileage .mil-tab,
 #section-mileage .mil-chip,
-#section-clients .cli-add-btn,
 #section-clients .cli-refresh,
 #section-clients .cli-vt-btn,
 #section-timesheets .tsh-refresh,
@@ -4393,9 +4341,7 @@ body::before {
 
 .btn-primary,
 #signInBtn,
-#section-overview .ovw-act-btn,
-#section-profitability .prf-add-btn,
-#section-clients .cli-add-btn {
+#section-profitability .prf-add-btn {
   box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 10px 24px rgba(82,176,46,0.16);
 }
 
@@ -5135,7 +5081,7 @@ body::before {
   #section-leave .lev-form-actions .btn,
   #section-compliance .cmp-form-actions .btn,
   #section-overview .ovw-actions-btns,
-  #section-overview .ovw-act-btn {
+  #section-overview .ovw-actions-btns .btn {
     width: 100%;
     justify-content: center;
   }
@@ -5196,8 +5142,7 @@ body::before {
     align-items: stretch;
   }
 
-  #section-settings .set-action-btn,
-  #section-settings .set-signout-btn {
+  #section-settings .set-actions .btn {
     width: 100%;
     justify-content: center;
     min-height: 42px;
@@ -6201,6 +6146,8 @@ body::before {
 }
 
 </style>
+<!-- The shared design system: loads last so it wins over the per-section copies above. -->
+<link rel="stylesheet" href="src/styles/system.css">
 </head>
 <body>
 
@@ -6318,7 +6265,7 @@ body::before {
   <!-- ═══════════════════════════════════════════════════════════════
        MAIN CONTENT AREA
        ═══════════════════════════════════════════════════════════════ -->
-  <main class="main">
+  <main class="main" id="app">
 
     <div class="top-bar">
       <button class="sb-toggle" id="sbToggle" type="button" onclick="openSidebar()" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
@@ -6344,7 +6291,7 @@ body::before {
         <h1>Overview <span>Dashboard</span></h1>
         <p>Morning check and the business at a glance · <span id="ovwHeadMonth">—</span></p>
         <div class="ovw-head-actions">
-          <button class="ovw-refresh" id="ovwRefresh" type="button" onclick="ovwRefreshData()" title="Reload from SharePoint">
+          <button class="ovw-refresh" id="ovwRefresh" type="button" onclick="ovwRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
@@ -6391,7 +6338,7 @@ body::before {
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
           </button>
-          <button class="prf-refresh" id="prfRefresh" type="button" onclick="prfRefreshData()" title="Reload from SharePoint" aria-label="Reload from SharePoint">
+          <button class="prf-refresh" id="prfRefresh" type="button" onclick="prfRefreshData()" title="Reload" aria-label="Reload from SharePoint">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
@@ -6422,7 +6369,7 @@ body::before {
         <h1>Profit <span>&amp; Loss</span></h1>
         <p>Xero P&amp;L CSV/XLSX import, operating-profit view and clean CSV export.</p>
         <div class="pnl-actions">
-          <button class="pnl-btn primary" type="button" onclick="document.getElementById('pnlCsvFile').click()">
+          <button class="btn btn-primary" type="button" onclick="document.getElementById('pnlCsvFile').click()">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Import CSV/XLSX
           </button>
@@ -6436,11 +6383,11 @@ body::before {
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
-          <button class="pnl-btn" type="button" onclick="pnlExportCsv()">
+          <button class="btn" type="button" onclick="pnlExportCsv()">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV
           </button>
-          <button class="pnl-btn danger" type="button" onclick="pnlClearData()">Clear</button>
+          <button class="btn btn-danger" type="button" onclick="pnlClearData()">Clear</button>
           <span class="prf-last-sync" id="pnlLastSync"></span>
         </div>
       </div>
@@ -6516,9 +6463,9 @@ body::before {
 
         <!-- — Tab strip — -->
         <div class="mil-tabs" role="tablist">
-          <button class="mil-tab active" data-tab="log"     onclick="milTab('log')"     type="button" role="tab">Journey Log</button>
-          <button class="mil-tab"        data-tab="clients" onclick="milTab('clients')" type="button" role="tab">Client Distances</button>
-          <button class="mil-tab"        data-tab="month"   onclick="milTab('month')"   type="button" role="tab">Monthly Summary</button>
+          <button class="mil-tab active" data-tab="log"     onclick="milTab('log')"     type="button" role="tab">Journey log</button>
+          <button class="mil-tab"        data-tab="clients" onclick="milTab('clients')" type="button" role="tab">Client distances</button>
+          <button class="mil-tab"        data-tab="month"   onclick="milTab('month')"   type="button" role="tab">Monthly summary</button>
           <button class="mil-tab"        data-tab="export"  onclick="milTab('export')"  type="button" role="tab">Export / HMRC</button>
         </div>
 
@@ -6528,7 +6475,7 @@ body::before {
 
           <!-- Add Journey card -->
           <div class="mil-card" style="margin-bottom:16px;">
-            <div class="mil-card-head"><h3>Add Journey</h3></div>
+            <div class="mil-card-head"><h3>Add journey</h3></div>
 
             <div class="mil-hmrc-hint">
               <span><strong>HMRC Approved Rates:</strong></span>
@@ -6541,7 +6488,7 @@ body::before {
 
             <form class="mil-form" id="milForm" onsubmit="return milAddJourney(event)">
               <div class="mil-field">
-                <label for="milClient">Client / Destination</label>
+                <label for="milClient">Client / destination</label>
                 <select class="mil-select" id="milClient" required onchange="milClientPicked()">
                   <option value="">— Select client —</option>
                 </select>
@@ -6562,7 +6509,7 @@ body::before {
                 <input class="mil-input" id="milDate" type="date" required>
               </div>
               <div class="mil-field full">
-                <label for="milPurpose">Business Purpose</label>
+                <label for="milPurpose">Business purpose</label>
                 <select class="mil-select" id="milPurpose" required>
                   <option value="">— Select purpose —</option>
                   <option>Client site visit — IT support</option>
@@ -6579,7 +6526,7 @@ body::before {
               <div class="mil-form-actions">
                 <button type="submit" class="btn btn-primary" id="milAddBtn">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Add Journey
+                  Add journey
                 </button>
               </div>
             </form>
@@ -6588,7 +6535,7 @@ body::before {
           <!-- Journey list card -->
           <div class="mil-card">
             <div class="mil-card-head">
-              <h3>All Journeys</h3>
+              <h3>All journeys</h3>
               <span class="count" id="milLogCount">0 recorded</span>
               <!-- Claim-mode toolbar (Phase 5.5) — sits in the card head so it
                    doesn't shove the table down. Two visual states:
@@ -6597,7 +6544,7 @@ body::before {
               <div class="mil-claim-tools" id="milClaimTools">
                 <button class="btn btn-ghost mil-claim-enter" id="milClaimEnterBtn" type="button" onclick="milEnterClaimMode()" title="Bulk-claim multiple journeys at once">
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  Mark Claimed…
+                  Mark claimed…
                 </button>
                 <span class="mil-claim-counter" id="milClaimCounter" style="display:none;">0 selected</span>
                 <button class="mil-chip mil-claim-selectall" id="milClaimSelectAll" type="button" onclick="milSelectAllVisible()" style="display:none;">Select all visible</button>
@@ -6650,7 +6597,7 @@ body::before {
         <div class="mil-panel" id="milPanelClients" role="tabpanel">
           <div class="mil-card" style="margin-bottom:16px;">
             <div class="mil-card-head">
-              <h3>Pre-set Client Distances</h3>
+              <h3>Pre-set client distances</h3>
               <span class="count" id="milClientsCount">0 clients</span>
             </div>
             <p style="color:var(--muted);font-size:12px;margin-bottom:14px;">
@@ -6663,19 +6610,19 @@ body::before {
           </div>
 
           <div class="mil-card">
-            <div class="mil-card-head"><h3>Add New Client</h3></div>
+            <div class="mil-card-head"><h3>Add new client</h3></div>
             <form class="mil-add-client-form" id="milAddClientForm" onsubmit="return milAddClient(event)">
               <div class="mil-field">
                 <label for="milNewClientName">Client / Destination Name</label>
                 <input class="mil-input" id="milNewClientName" type="text" required placeholder="e.g. Daron Motors">
               </div>
               <div class="mil-field">
-                <label for="milNewClientMiles">Round-trip Miles</label>
+                <label for="milNewClientMiles">Round-trip miles</label>
                 <input class="mil-input" id="milNewClientMiles" type="number" min="0" step="0.1" required placeholder="0.0">
               </div>
               <button type="submit" class="btn btn-primary" id="milAddClientBtn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add Client
+                Add client
               </button>
             </form>
           </div>
@@ -6726,8 +6673,8 @@ body::before {
             <div class="mil-year-totals">
               <div class="yt-cell"><div class="l">Philip Miles</div><div class="v" id="milYtPhilipMiles">0</div></div>
               <div class="yt-cell"><div class="l">Jack Miles</div><div class="v" id="milYtJackMiles">0</div></div>
-              <div class="yt-cell acc"><div class="l">Combined Total</div><div class="v" id="milYtCombined">£0.00</div></div>
-              <div class="yt-cell tax"><div class="l" id="milYtTaxSaveLabel">Tax Saving (20%)</div><div class="v" id="milYtTaxSave">£0.00</div></div>
+              <div class="yt-cell acc"><div class="l">Combined total</div><div class="v" id="milYtCombined">£0.00</div></div>
+              <div class="yt-cell tax"><div class="l" id="milYtTaxSaveLabel">Tax saving (20%)</div><div class="v" id="milYtTaxSave">£0.00</div></div>
             </div>
           </div>
 
@@ -6742,7 +6689,7 @@ body::before {
       <!-- Confirm-delete modal (used for both journeys and clients) -->
       <div class="mil-modal-bg" id="milModalBg" role="dialog" aria-modal="true" onclick="if(event.target===this)milCloseModal()">
         <div class="mil-modal">
-          <h3 id="milModalTitle">Confirm Delete</h3>
+          <h3 id="milModalTitle">Confirm delete</h3>
           <p id="milModalBody">Are you sure?</p>
           <div class="mm-actions">
             <button class="btn btn-ghost" type="button" onclick="milCloseModal()">Cancel</button>
@@ -6789,9 +6736,9 @@ body::before {
         <h1>Client <span>Directory</span></h1>
         <p>Unified contact, contract &amp; SSA view — single source of truth for client metadata.</p>
         <div class="cli-head-actions">
-          <button class="cli-add-btn" type="button" onclick="cliOpenClientModal()">
+          <button class="btn btn-primary" type="button" onclick="cliOpenClientModal()">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Client
+            Add client
           </button>
           <div class="cli-view-toggle" role="tablist" aria-label="View mode">
             <button class="cli-vt-btn active" type="button" data-view="table" onclick="cliSetView('table')" title="Table view">
@@ -6854,8 +6801,8 @@ body::before {
         <h1>Project <span>Board</span></h1>
         <p>Where every live project is up to — quoted through to done.</p>
         <div class="prj-head-actions">
-          <button class="prj-add" id="prjAdd" type="button">+ New project</button>
-          <button class="prj-refresh" id="prjRefresh" type="button" title="Reload from SharePoint">
+          <button class="btn btn-primary" id="prjAdd" type="button">New project</button>
+          <button class="prj-refresh" id="prjRefresh" type="button" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
@@ -6892,27 +6839,38 @@ body::before {
 
     <!-- ═══ TEAM OVERVIEW ═══ src/sections/team.js: the first tab of the Team hub (Leave, Mileage). -->
     <section class="section" id="section-team">
-      <div class="tm-head">
-        <div><h1>The <span>Team</span></h1><p>Who’s in, holiday left, the next four weeks, hours and mileage.</p></div>
-        <button class="tm-btn ghost" id="teamRefresh" type="button">Refresh</button>
+      <div class="section-head">
+        <h1>The <span>Team</span></h1>
+        <p>Who’s in, holiday left, the next four weeks, hours and mileage.</p>
+        <div class="head-actions">
+          <button class="head-btn" id="teamRefresh" type="button" title="Reload">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="teamLastSync"></span>
+        </div>
       </div>
       <div id="teamWrap"><p class="tm-empty">Open this section to load the team.</p></div>
     </section>
 
     <section class="section" id="section-opportunities">
       <div class="section-head">
-        <h1>Opportunities</h1>
+        <h1>Sales <span>Opportunities</span></h1>
         <p>Where each client has a gap we can fill, and the pipeline that grows recurring revenue.</p>
-        <div class="opp-head-actions">
-          <div class="opp-tabs" role="tablist" aria-label="Opportunities views">
-            <button type="button" role="tab" data-opp-tab="gaps" aria-selected="true">Gaps</button>
-            <button type="button" role="tab" data-opp-tab="pipeline" aria-selected="false">Pipeline</button>
-            <button type="button" role="tab" data-opp-tab="prospects" aria-selected="false">Prospects</button>
-            <button type="button" role="tab" data-opp-tab="voip" aria-selected="false">VoIP Unlimited</button>
-            <button type="button" role="tab" data-opp-tab="products" aria-selected="false">Products</button>
-          </div>
-          <button class="opp-btn ghost" id="oppRefresh" type="button" title="Reload">Refresh</button>
+        <div class="head-actions">
+          <button class="head-btn" id="oppRefresh" type="button" title="Reload">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="oppLastSync"></span>
         </div>
+      </div>
+      <div class="opp-tabs" role="tablist" aria-label="Opportunities views">
+        <button type="button" role="tab" data-opp-tab="gaps" aria-selected="true">Gaps</button>
+        <button type="button" role="tab" data-opp-tab="pipeline" aria-selected="false">Pipeline</button>
+        <button type="button" role="tab" data-opp-tab="prospects" aria-selected="false">Prospects</button>
+        <button type="button" role="tab" data-opp-tab="voip" aria-selected="false">VoIP Unlimited</button>
+        <button type="button" role="tab" data-opp-tab="products" aria-selected="false">Products</button>
       </div>
       <div class="opp-kpis" id="oppKpis"></div>
       <div class="opp-wrap" id="oppWrap" role="tabpanel">
@@ -6928,14 +6886,18 @@ body::before {
          ═══════════════════════════════════════════════════════════════ -->
     <section class="section" id="section-jobs">
       <div class="section-head">
-        <h1>Jobs</h1>
+        <h1>Jobs <span>Board</span></h1>
         <p>Current work and its value, what’s ready to invoice, and how the month’s sales are tracking in Xero.</p>
-        <div class="job-head-actions">
-          <div class="job-tabs" role="tablist" aria-label="Jobs views">
-            <button type="button" role="tab" data-job-tab="jobs" aria-selected="true">Jobs</button>
-          </div>
-          <button class="job-btn ghost" id="jobRefresh" type="button" title="Reload">Refresh</button>
+        <div class="head-actions">
+          <button class="head-btn" id="jobRefresh" type="button" title="Reload">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="jobLastSync"></span>
         </div>
+      </div>
+      <div class="job-tabs" role="tablist" aria-label="Jobs views">
+        <button type="button" role="tab" data-job-tab="jobs" aria-selected="true">Jobs</button>
       </div>
       <div class="job-kpis" id="jobKpis"></div>
       <div class="job-wrap" id="jobWrap" role="tabpanel">
@@ -7044,7 +7006,7 @@ body::before {
         <h1>Time<span>sheets</span></h1>
         <p>Time tracking for SSA client work &amp; internal projects — Philip Morris &amp; Jack Morris</p>
         <div class="tsh-head-actions">
-          <button class="tsh-refresh" id="tshRefresh" type="button" onclick="tshRefreshData()" title="Reload from SharePoint">
+          <button class="tsh-refresh" id="tshRefresh" type="button" onclick="tshRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
@@ -7069,7 +7031,7 @@ body::before {
 
         <!-- Quick-log form -->
         <div class="tsh-card" style="margin-bottom:16px;">
-          <div class="tsh-card-head"><h3>Log Time</h3></div>
+          <div class="tsh-card-head"><h3>Log time</h3></div>
           <div class="tsh-quick" id="tshQuick" aria-label="Recent clients"></div>
           <form class="tsh-form" id="tshForm" novalidate onsubmit="tshAddEntry(event)">
             <div class="tsh-field">
@@ -7129,7 +7091,7 @@ body::before {
               <textarea class="tsh-textarea" id="tshNotes" placeholder="Optional longer description, follow-up actions…"></textarea>
             </div>
             <div class="tsh-field full" style="margin-top:-8px;">
-              <button type="button" class="tsh-notes-toggle" id="tshNotesBtn" onclick="tshToggleNotes()">+ Add detailed notes</button>
+              <button type="button" class="tsh-notes-toggle" id="tshNotesBtn" onclick="tshToggleNotes()">Add detailed notes</button>
             </div>
             <div class="tsh-checks" id="tshChecks" role="alert" hidden></div>
             <div class="tsh-form-actions">
@@ -7143,7 +7105,7 @@ body::before {
         <!-- Recent entries table -->
         <div class="tsh-card">
           <div class="tsh-card-head">
-            <h3>Recent Entries</h3>
+            <h3>Recent entries</h3>
             <span id="tshEntryCount" style="font-size:11px;color:var(--muted);font-family:var(--font-body);letter-spacing:.05em;text-transform:uppercase;"></span>
           </div>
           <div class="tsh-filters" id="tshFilters">
@@ -7197,10 +7159,6 @@ body::before {
         <h1>Annual <span>Leave</span></h1>
         <p>Shared leave planner · Tax Year <span id="levTaxYear">—</span> · hours stored, days shown where useful</p>
         <div class="lev-head-actions">
-          <button class="lev-refresh" id="levRefresh" type="button" onclick="levRefreshData()" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-            Refresh
-          </button>
           <div class="lev-month-sel" role="group" aria-label="Leave calendar month selector">
             <button class="lev-month-btn" type="button" onclick="levChangeMonth(-1)" aria-label="Previous month" title="Previous month">
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -7210,6 +7168,10 @@ body::before {
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
+          <button class="lev-refresh" id="levRefresh" type="button" onclick="levRefreshData()" title="Reload">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
           <span class="lev-last-sync" id="levLastSync"></span>
           <button class="lev-refresh" id="levCopy" type="button" hidden onclick="levCopyToSupabase()"
                   title="One-off, Philip only: copy Leave from SharePoint into the Gecko database and check every field">Copy to Supabase</button>
@@ -7223,7 +7185,7 @@ body::before {
         <div class="lev-main-grid">
           <div class="lev-card">
             <div class="lev-card-head">
-              <h3>Request / Book Leave</h3>
+              <h3>Request / book leave</h3>
               <span id="levModeHint">—</span>
             </div>
             <form class="lev-form" id="levForm" onsubmit="levSubmitRequest(event)">
@@ -7243,7 +7205,7 @@ body::before {
                 </select>
               </div>
               <div class="lev-field">
-                <label for="levStartDate">Start Date</label>
+                <label for="levStartDate">Start date</label>
                 <input class="lev-input" type="date" id="levStartDate" onchange="levUpdateEstimate()" required>
               </div>
               <div class="lev-field">
@@ -7274,7 +7236,7 @@ body::before {
               <div class="lev-form-actions">
                 <button class="btn btn-primary" type="submit" id="levSubmitBtn">
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Save Leave
+                  Save leave
                 </button>
               </div>
             </form>
@@ -7316,7 +7278,7 @@ body::before {
                 </tr>
               </thead>
               <tbody id="levTableBody">
-                <tr><td colspan="9" class="lev-empty">Loading leave records...</td></tr>
+                <tr><td colspan="9" class="lev-empty">Loading leave records…</td></tr>
               </tbody>
             </table>
           </div>
@@ -7325,7 +7287,7 @@ body::before {
 
       <div class="lev-modal-bg" id="levModalBg" role="dialog" aria-modal="true" onclick="if(event.target===this)levCloseModal()">
         <div class="lev-modal">
-          <h3 id="levModalTitle">Edit Leave</h3>
+          <h3 id="levModalTitle">Edit leave</h3>
           <div id="levModalBody"></div>
         </div>
       </div>
@@ -7347,9 +7309,9 @@ body::before {
         <div class="cmp-head-actions">
           <button class="btn btn-primary" type="button" onclick="cmpSwitchTab('manage')">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Item
+            Add item
           </button>
-          <button class="cmp-refresh" id="cmpRefresh" type="button" onclick="cmpRefreshData()" title="Reload from SharePoint">
+          <button class="cmp-refresh" id="cmpRefresh" type="button" onclick="cmpRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
@@ -7374,7 +7336,7 @@ body::before {
       <!-- ─── Manage panel ─────────────────────────────────────────── -->
       <div class="cmp-panel" id="cmpManage">
         <div class="cmp-card" style="margin-top:14px">
-          <div class="cmp-card-head"><h3>Add Compliance Item</h3></div>
+          <div class="cmp-card-head"><h3>Add compliance item</h3></div>
           <div class="cmp-form" id="cmpAddForm">
             <div class="cmp-field">
               <label>Title</label>
@@ -7392,7 +7354,7 @@ body::before {
               </select>
             </div>
             <div class="cmp-field">
-              <label>Due Date</label>
+              <label>Due date</label>
               <input class="cmp-input" type="date" id="cmpDueDate">
             </div>
             <div class="cmp-field">
@@ -7433,7 +7395,7 @@ body::before {
               <input class="cmp-input" type="number" id="cmpFrequency" value="12" min="1" step="1">
             </div>
             <div class="cmp-form-actions">
-              <button class="btn btn-primary" type="button" onclick="cmpAddItem()">Add Item</button>
+              <button class="btn btn-primary" type="button" onclick="cmpAddItem()">Add item</button>
             </div>
           </div>
         </div>
@@ -7449,7 +7411,7 @@ body::before {
                 <th onclick="cmpSort('title')">Title</th>
                 <th>Category</th>
                 <th>Status</th>
-                <th onclick="cmpSort('dueDate')">Due Date</th>
+                <th onclick="cmpSort('dueDate')">Due date</th>
                 <th class="col-owner">Owner</th>
                 <th class="col-client">Client</th>
                 <th>Actions</th>
@@ -7493,7 +7455,7 @@ body::before {
                 <span class="set-badge set-badge-role" id="setProfileRole">Engineer</span>
                 <span class="set-badge set-badge-status">
                   <span class="set-status-dot"></span>
-                  Signed In
+                  Signed in
                 </span>
               </div>
             </div>
@@ -7565,7 +7527,7 @@ body::before {
               <div class="set-row"><span class="set-label">Client ID</span><span class="set-value set-mono" id="setClientId">—</span></div>
               <div class="set-row"><span class="set-label">Tenant ID</span><span class="set-value set-mono" id="setTenantId">—</span></div>
               <div class="set-row"><span class="set-label">SharePoint Site</span><span class="set-value set-mono" id="setSpSite">—</span></div>
-              <div class="set-row"><span class="set-label">Auth Scopes</span><span class="set-value set-mono" id="setScopes">—</span></div>
+              <div class="set-row"><span class="set-label">Auth scopes</span><span class="set-value set-mono" id="setScopes">—</span></div>
             <div class="set-row"><span class="set-label">Redirect URI</span><span class="set-value set-mono" id="setRedirect">—</span></div>
             </div>
           </div>
@@ -7590,7 +7552,7 @@ body::before {
           <div class="set-card-body">
             <div class="set-row"><span class="set-label">Version</span><span class="set-value">Phase 11 — Annual Leave</span></div>
             <div class="set-row"><span class="set-label">Hosting</span><span class="set-value">GitHub Pages</span></div>
-            <div class="set-row"><span class="set-label">Auth Library</span><span class="set-value">MSAL.js v3 (jsDelivr CDN)</span></div>
+            <div class="set-row"><span class="set-label">Auth library</span><span class="set-value">MSAL.js v3 (jsDelivr CDN)</span></div>
             <div class="set-row"><span class="set-label">API</span><span class="set-value">Microsoft Graph v1.0</span></div>
             <div class="set-row"><span class="set-label">Portal URL</span><span class="set-value set-mono">gecko-it-services.github.io/gecko-intranet</span></div>
           </div>
@@ -7629,13 +7591,13 @@ body::before {
 
         <!-- ── Actions ── -->
         <div class="set-actions">
-          <button class="set-action-btn" type="button" onclick="setExportBackup()">
+          <button class="btn" type="button" onclick="setExportBackup()">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export Portal Backup
+            Export portal backup
           </button>
-          <button class="set-signout-btn" type="button" onclick="setClearAndSignOut()">
+          <button class="btn btn-danger" type="button" onclick="setClearAndSignOut()">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Clear Cache &amp; Sign Out
+            Clear cache &amp; sign out
           </button>
           <p class="set-actions-note">Backup exports SharePoint list data you can access. Clear Cache removes localStorage and signs out.</p>
         </div>
@@ -7946,6 +7908,12 @@ async function signIn() {
       onSignedIn();
     }
   } catch (err) {
+    // Pop-ups blocked (some browsers, embedded panes): the same sign-in as a full-page redirect.
+    if (/popup_window_error|empty_window_error/.test(err?.errorCode || err?.message || '')) {
+      if (label) label.textContent = 'Redirecting to Microsoft…';
+      try { await msalInstance.loginRedirect({ scopes: CONFIG.SCOPES, ...knownAccountHint() }); return; }
+      catch (e) { err = e; }
+    }
     console.error('Sign-in failed:', err);
     toast('Sign-in failed: ' + (err.message || 'unknown error'), 'error');
   } finally {
@@ -8035,10 +8003,11 @@ function sectionErrorHtml(err, retryFn, cls) {
   if (err?.code === 'DB_SIGNIN_REQUIRED') {
     return `<div class="${cls}"><h3>Connect to the Gecko database</h3>
       <p>This section now lives in the database. Connect once with your Microsoft account.<br>
-      <button type="button" onclick="dbConnectThen('${retryFn}')">Connect</button></p></div>`;
+      <button type="button" class="btn btn-sm btn-primary" onclick="dbConnectThen('${retryFn}')">Connect</button></p></div>`;
   }
   return `<div class="${cls}"><h3>Could not load data</h3>
-    <p>${escapeHtml(err?.message || 'Unknown error')}<br>Click Refresh to try again.</p></div>`;
+    <p>${escapeHtml(err?.message || 'Unknown error')}</p>
+    <button type="button" class="btn btn-sm" onclick="${retryFn}()">Try again</button></div>`;
 }
 
 /** Connect (a click: may open a Microsoft popup/redirect), then re-run a section's refresh. */
@@ -9430,23 +9399,23 @@ function ovwRenderAll() {
   const actionsHTML = `
     <div class="ovw-actions">
       <div class="ovw-actions-text">
-        <h4>Quick Actions</h4>
+        <h4>Quick actions</h4>
         <p>Jump straight to the most common tasks.</p>
       </div>
       <div class="ovw-actions-btns">
-        <button class="ovw-act-btn" type="button" onclick="ovwGoLogTime()">
+        <button class="btn btn-primary" type="button" onclick="ovwGoLogTime()">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Log Time
+          Log time
         </button>
-        <button class="ovw-act-btn" type="button" data-ovw-go="jobs:jobs">
+        <button class="btn" type="button" data-ovw-go="jobs:jobs">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Jobs
         </button>
-        <button class="ovw-act-btn ghost" type="button" onclick="ovwGoAddJourney()">
+        <button class="btn" type="button" onclick="ovwGoAddJourney()">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
-          Add Journey
+          Add journey
         </button>
-        <button class="ovw-act-btn ghost" type="button" onclick="ovwGoProfitability()">
+        <button class="btn" type="button" onclick="ovwGoProfitability()">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Profitability
         </button>
@@ -9753,13 +9722,14 @@ async function ovwRefreshData(silent = false) {
         <div class="ovw-error">
           <h3>Connect to the Gecko database</h3>
           <p>Overview now reads the database. Connect once with your Microsoft account.<br>
-          <button type="button" class="ovw-refresh" onclick="ovwConnect()">Connect</button></p>
+          <button type="button" class="btn btn-sm btn-primary" onclick="ovwConnect()">Connect</button></p>
         </div>`;
     } else if (wrap) {
       wrap.innerHTML = `
         <div class="ovw-error">
           <h3>Could not load data</h3>
-          <p>${escapeHtml(err.message || 'Unknown error')}<br>Click Refresh to try again.</p>
+          <p>${escapeHtml(err.message || 'Unknown error')}</p>
+          <button type="button" class="btn btn-sm" onclick="ovwRefreshData()">Try again</button>
         </div>`;
     }
   } finally {
@@ -9998,7 +9968,7 @@ async function prfRefreshData(silent = false) {
     toast('Could not load profitability data: ' + (err.message || 'unknown error'), 'error', 6000);
     // Render an error state inside the wrap so the section isn't blank
     const wrap = document.getElementById('prfWrap');
-    if (wrap) wrap.innerHTML = sectionErrorHtml(err, 'prfRefreshData', 'prf-empty');
+    if (wrap) wrap.innerHTML = sectionErrorHtml(err, 'prfRefreshData', 'state-error');
   } finally {
     if (refreshBtn) { refreshBtn.classList.remove('spinning'); refreshBtn.disabled = false; }
     showLoading(false);
@@ -10205,8 +10175,8 @@ function prfRenderSeedBanner() {
       </div>
       <div class="prf-seed-actions">
         <!-- Phase 5: "Add Manually" now navigates to the Directory, which owns client CRUD. -->
-        <button class="btn btn-ghost" type="button" onclick="navTo('clients')">Add Manually</button>
-        <button class="btn btn-primary" type="button" onclick="prfConfirmSeed()">Seed Sample Data</button>
+        <button class="btn btn-ghost" type="button" onclick="navTo('clients')">Add manually</button>
+        <button class="btn btn-primary" type="button" onclick="prfConfirmSeed()">Seed sample data</button>
       </div>
     </div>`;
 }
@@ -10325,8 +10295,8 @@ function prfRenderControls() {
         <span>Sort</span>
         <select onchange="prfSetSort(this.value)">${sortOptions}</select>
       </label>
-      <button class="prf-abtn" type="button" onclick="prfExpandAll()">Expand All</button>
-      <button class="prf-abtn" type="button" onclick="prfCollapseAll()">Collapse All</button>
+      <button class="prf-abtn" type="button" onclick="prfExpandAll()">Expand all</button>
+      <button class="prf-abtn" type="button" onclick="prfCollapseAll()">Collapse all</button>
       <div class="prf-srch">
         <span class="prf-srch-ic">🔍</span>
         <input type="text" id="prfSearch" placeholder="Search clients…" value="${escapeHtml(PRF.search)}" oninput="prfSetSearch(this.value)">
@@ -10353,11 +10323,11 @@ function prfRenderLegend() {
 function prfRenderCards() {
   const clients = prfRankedClients();
   if (PRF.clients.length === 0) {
-    return `<div class="prf-empty"><h3>No Clients</h3><p>Add a client to start tracking profitability.</p></div>`;
+    return `<div class="prf-empty"><h3>No clients</h3><p>Add a client to start tracking profitability.</p></div>`;
   }
   if (clients.length === 0) {
     const cat = PRF.filterCat === 'all' ? 'current filters' : (PRF_CATS.find(c => c.key === PRF.filterCat)?.label || PRF.filterCat);
-    return `<div class="prf-empty"><h3>No Clients Match</h3><p>No clients have services matching ${escapeHtml(cat)}.</p></div>`;
+    return `<div class="prf-empty"><h3>No clients match</h3><p>No clients have services matching ${escapeHtml(cat)}.</p></div>`;
   }
   return clients.map(prfRenderCard).join('');
 }
@@ -10440,7 +10410,7 @@ function prfRenderCard(client) {
   }
 
   // Add-service trigger row
-  const addRow = `<tr class="prf-arow"><td colspan="7"><button type="button" onclick="event.stopPropagation();prfAddServiceInline('${client.id}')">+ Add service</button></td></tr>`;
+  const addRow = `<tr class="prf-arow"><td colspan="7"><button type="button" onclick="event.stopPropagation();prfAddServiceInline('${client.id}')">Add service</button></td></tr>`;
 
   // Retainer notice banner if any retainer services
   const retNote = retainers.length > 0
@@ -12098,7 +12068,7 @@ function prfConfirmDeleteService(svcId) {
       <button class="btn btn-ghost" type="button" onclick="prfCloseModal()">Cancel</button>
       <button class="btn btn-danger" type="button" onclick="prfDoDeleteService('${svcId}')">Delete</button>
     </div>`;
-  prfOpenModal('Confirm Delete', body);
+  prfOpenModal('Confirm delete', body);
 }
 async function prfDoDeleteService(svcId) {
   showLoading(true);
@@ -12206,9 +12176,9 @@ function prfConfirmSeed() {
     <p style="color:var(--muted);font-size:12px">You can edit, add to, or delete any of this data afterwards. The seed runs once.</p>
     <div class="prf-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="prfCloseModal()">Cancel</button>
-      <button class="btn btn-primary" type="button" onclick="prfDoSeed()">Seed Data</button>
+      <button class="btn btn-primary" type="button" onclick="prfDoSeed()">Seed data</button>
     </div>`;
-  prfOpenModal('Seed Sample Data', body);
+  prfOpenModal('Seed sample data', body);
 }
 
 async function prfDoSeed() {
@@ -12621,7 +12591,7 @@ function pnlRenderImportCard() {
            ondragleave="this.classList.remove('drag-over')"
            ondrop="pnlHandleDrop(event)">
         <span>Drop P&amp;L CSV/XLSX here</span>
-        <button class="pnl-btn" type="button" onclick="document.getElementById('pnlCsvFile').click()">Browse</button>
+        <button class="btn btn-sm" type="button" onclick="document.getElementById('pnlCsvFile').click()">Browse</button>
       </div>
     </div>`;
 }
@@ -12702,7 +12672,7 @@ function pnlRenderDetailTable() {
 
   return `
     <div class="pnl-card">
-      <div class="pnl-card-head"><h3>Account Detail</h3><span class="pnl-month">${escapeHtml(report.monthLabel)}</span></div>
+      <div class="pnl-card-head"><h3>Account detail</h3><span class="pnl-month">${escapeHtml(report.monthLabel)}</span></div>
       <table class="pnl-table">
         <thead><tr><th>Account</th><th class="num">% Turnover</th><th class="num">Amount</th></tr></thead>
         <tbody>${rows.join('')}</tbody>
@@ -12718,13 +12688,13 @@ function pnlRenderTopMovements() {
   const row = a => `<tr><td>${escapeHtml(a.account)}<div class="pnl-muted" style="font-size:11px;margin-top:2px">${escapeHtml(a.section)}</div></td><td class="num ${a.type === 'revenue' ? 'pnl-pos' : a.amount < 0 ? 'pnl-neg' : ''}">${pnlFmt(a.amount)}</td></tr>`;
   return `
     <div class="pnl-card">
-      <div class="pnl-card-head"><h3>Largest Lines</h3></div>
+      <div class="pnl-card-head"><h3>Largest lines</h3></div>
       <table class="pnl-table">
-        <thead><tr><th>Top Revenue</th><th class="num">Amount</th></tr></thead>
+        <thead><tr><th>Top revenue</th><th class="num">Amount</th></tr></thead>
         <tbody>${income.map(row).join('')}</tbody>
       </table>
       <table class="pnl-table">
-        <thead><tr><th>Top Costs</th><th class="num">Amount</th></tr></thead>
+        <thead><tr><th>Top costs</th><th class="num">Amount</th></tr></thead>
         <tbody>${costs.map(row).join('')}</tbody>
       </table>
     </div>`;
@@ -13883,13 +13853,13 @@ function milOpenBulkClaimModal() {
 }
 
 function milShowClaimModal(bodyText, ids) {
-  document.getElementById('milClaimModalTitle').textContent = ids.length > 1 ? 'Mark Claimed' : 'Mark as Claimed';
+  document.getElementById('milClaimModalTitle').textContent = ids.length > 1 ? 'Mark claimed' : 'Mark as claimed';
   document.getElementById('milClaimModalBody').textContent  = bodyText;
   // Default the date picker to today, but the user can change it before confirming
   const dateEl = document.getElementById('milClaimDate');
   dateEl.value  = today();
   const btn = document.getElementById('milClaimModalConfirm');
-  btn.textContent = ids.length > 1 ? `Mark ${ids.length} Claimed` : 'Mark Claimed';
+  btn.textContent = ids.length > 1 ? `Mark ${ids.length} claimed` : 'Mark claimed';
   btn.onclick = () => {
     // Read the date AT CLICK TIME — whatever the user has changed it to.
     // The date input returns '' when the browser considers the value invalid
@@ -14663,7 +14633,7 @@ async function cliRefreshData(silent = false) {
     console.error('Directory refresh failed:', err);
     toast('Could not load directory: ' + (err.message || 'unknown error'), 'error', 6000);
     const wrap = document.getElementById('cliWrap');
-    if (wrap) wrap.innerHTML = sectionErrorHtml(err, 'cliRefreshData', 'cli-error');
+    if (wrap) wrap.innerHTML = sectionErrorHtml(err, 'cliRefreshData', 'state-error');
   } finally {
     if (refreshBtn) { refreshBtn.classList.remove('spinning'); refreshBtn.disabled = false; }
     showLoading(false);
@@ -15021,7 +14991,7 @@ function cliOpenClientModal(id = null) {
       </select>
     </div>
     <div class="cli-form-grp">
-      <label>Contract Start (optional)</label>
+      <label>Contract start (optional)</label>
       <input type="date" id="cliClStart" value="${escapeHtml(client.contractStart || '')}">
     </div>
     <div class="cli-form-grp">
@@ -15034,9 +15004,9 @@ function cliOpenClientModal(id = null) {
     </p>
     <div class="cli-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="cliCloseModal()">Cancel</button>
-      <button class="btn btn-primary" type="button" onclick="cliSaveClient(${isEdit ? `'${id}'` : 'null'})">${isEdit ? 'Save' : 'Add Client'}</button>
+      <button class="btn btn-primary" type="button" onclick="cliSaveClient(${isEdit ? `'${id}'` : 'null'})">${isEdit ? 'Save' : 'Add client'}</button>
     </div>`;
-  cliOpenModal(isEdit ? 'Edit Client' : 'Add Client', body);
+  cliOpenModal(isEdit ? 'Edit client' : 'Add client', body);
   setTimeout(() => document.getElementById('cliClName')?.focus(), 50);
 }
 
@@ -15122,7 +15092,7 @@ function cliConfirmDeleteClient(id) {
       <button class="btn btn-ghost" type="button" onclick="cliCloseModal()">Cancel</button>
       <button class="btn btn-danger" type="button" onclick="cliDoDeleteClient('${id}')">Delete</button>
     </div>`;
-  cliOpenModal('Confirm Delete', body);
+  cliOpenModal('Confirm delete', body);
 }
 
 async function cliDoDeleteClient(id) {
@@ -16499,7 +16469,7 @@ function tshRenderSsa() {
   if (!wrap) return;
   let board;
   try { board = tshSsaBoard(); }
-  catch (err) { wrap.innerHTML = `<div class="tsh-empty"><h3>Could not show the SSA dashboard</h3><p>${escapeHtml(err.message)}</p></div>`; return; }
+  catch (err) { wrap.innerHTML = `<div class="state-error"><h3>Could not show the SSA dashboard</h3><p>${escapeHtml(err.message)}</p></div>`; return; }
   TSH.ssaBoard = board;
   const t = board.totals;
   if (!TSH.ssaView) TSH.ssaView = t.attention + t.low ? 'attention' : 'all';
@@ -17178,7 +17148,7 @@ function tshRenderWeekly() {
   const wrap = document.getElementById('tshWeekWrap');
   if (!wrap) return;
   const W = window.GeckoWeekly;
-  if (!W) { wrap.innerHTML = '<div class="tsh-empty"><h3>Could not show the summary</h3><p>The page did not finish loading. Hard-refresh (Cmd+Shift+R).</p></div>'; return; }
+  if (!W) { wrap.innerHTML = '<div class="state-error"><h3>Could not show the summary</h3><p>The page did not finish loading. Hard-refresh (Cmd+Shift+R).</p></div>'; return; }
   const t = today();
   if (!TSH.week) TSH.week = W.monday(t);
   const w = W.weekSummary(TSH.entries, TSH.week, t);
@@ -17335,14 +17305,14 @@ function tshOpenEditModal(entryId) {
       <input type="text" id="tshEditDesc" value="${escapeHtml(editDescription)}">
     </div>
     <div class="tsh-form-grp">
-      <label>Detailed Notes</label>
+      <label>Detailed notes</label>
       <textarea id="tshEditWorkDesc">${escapeHtml(e.internalNotes || '')}</textarea>
     </div>
     <div class="tsh-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">Cancel</button>
-      <button class="btn btn-primary" type="button" onclick="tshSaveEdit('${entryId}', ${e.hours})">Save Changes</button>
+      <button class="btn btn-primary" type="button" onclick="tshSaveEdit('${entryId}', ${e.hours})">Save changes</button>
     </div>`;
-  tshOpenModal('Edit Entry', body);
+  tshOpenModal('Edit entry', body);
 }
 
 async function tshSaveEdit(entryId, oldHours) {
@@ -17428,9 +17398,9 @@ function tshConfirmDelete(entryId) {
     <p style="font-size:11px;">This will also adjust the client's SSA hours if applicable. This action cannot be undone.</p>
     <div class="tsh-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">Cancel</button>
-      <button class="btn" type="button" style="background:var(--red);border-color:var(--red);color:var(--white);" onclick="tshDeleteConfirmed('${entryId}')">Delete Entry</button>
+      <button class="btn" type="button" style="background:var(--red);border-color:var(--red);color:var(--white);" onclick="tshDeleteConfirmed('${entryId}')">Delete entry</button>
     </div>`;
-  tshOpenModal('Confirm Delete', body);
+  tshOpenModal('Confirm delete', body);
 }
 
 async function tshDeleteConfirmed(entryId) {
@@ -17826,7 +17796,7 @@ function levOpenEditModal(id) {
     .map(t => `<option value="${t}"${req.leaveType === t ? ' selected' : ''}>${t}</option>`)
     .join('');
 
-  document.getElementById('levModalTitle').textContent = 'Edit Leave';
+  document.getElementById('levModalTitle').textContent = 'Edit leave';
   document.getElementById('levModalBody').innerHTML = `
     <div class="lev-edit-grid">
       <div class="lev-field">
@@ -17842,7 +17812,7 @@ function levOpenEditModal(id) {
         <input class="lev-input" type="date" id="levEditStart" value="${escapeHtml(req.startDate)}" onchange="levUpdateEditEstimate()">
       </div>
       <div class="lev-field">
-        <label for="levEditEnd">End Date</label>
+        <label for="levEditEnd">End date</label>
         <input class="lev-input" type="date" id="levEditEnd" value="${escapeHtml(req.endDate || req.startDate)}" onchange="levUpdateEditEstimate()">
       </div>
       <div class="lev-field">
@@ -17863,7 +17833,7 @@ function levOpenEditModal(id) {
     </div>
     <div class="lev-edit-actions">
       <button class="btn btn-ghost" type="button" onclick="levCloseModal()">Cancel</button>
-      <button class="btn btn-primary" type="button" onclick="levSaveEdit('${req.id}')">Save Changes</button>
+      <button class="btn btn-primary" type="button" onclick="levSaveEdit('${req.id}')">Save changes</button>
     </div>
   `;
   document.getElementById('levModalBg').classList.add('show');
@@ -18356,7 +18326,7 @@ function levRenderError(err) {
     kpis.innerHTML = `<div class="lev-card" style="grid-column:1/-1"><div class="lev-empty">Leave now lives in the Gecko database. Connect once with your Microsoft account to load it. <button type="button" class="lev-refresh" onclick="levConnect()">Connect</button></div></div>`;
     return;
   }
-  kpis.innerHTML = `<div class="lev-card" style="grid-column:1/-1"><div class="lev-empty">Leave could not load: ${escapeHtml(err.message || err)}</div></div>`;
+  kpis.innerHTML = `<div class="state-error" style="grid-column:1/-1"><strong>Leave could not load</strong><span>${escapeHtml(err.message || err)}</span></div>`;
 }
 
 /** The click behind levRenderError's Connect button (may open a Microsoft popup). */
@@ -19125,11 +19095,11 @@ function cmpOpenEditModal(id) {
     </div>
     <div class="cmp-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="cmpCloseModal()">Cancel</button>
-      <button class="btn btn-primary" type="button" onclick="cmpSaveEdit('${item.id}')">Save Changes</button>
+      <button class="btn btn-primary" type="button" onclick="cmpSaveEdit('${item.id}')">Save changes</button>
     </div>
   `;
 
-  document.getElementById('cmpModalTitle').textContent = 'Edit Compliance Item';
+  document.getElementById('cmpModalTitle').textContent = 'Edit compliance item';
   document.getElementById('cmpModalBody').innerHTML = body;
   document.getElementById('cmpModalBg').classList.add('show');
   setTimeout(() => document.getElementById('cmpEditTitle')?.focus(), 50);
@@ -19198,7 +19168,7 @@ function cmpConfirmDelete(id) {
     </div>
   `;
 
-  document.getElementById('cmpModalTitle').textContent = 'Confirm Delete';
+  document.getElementById('cmpModalTitle').textContent = 'Confirm delete';
   document.getElementById('cmpModalBody').innerHTML = body;
   document.getElementById('cmpModalBg').classList.add('show');
 }

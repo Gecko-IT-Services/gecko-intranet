@@ -41,8 +41,10 @@ const fmtDate = d => (d ? new Date(String(d).slice(0, 10) + 'T00:00:00').toLocal
 const shortMonth = m => new Date(m + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short' });
 const longMonth = m => new Date(m + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 const initials = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+const STAGE_BADGE = { invoiced: 'badge-green', won: 'badge-green', lost: 'badge-red', to_invoice: 'badge-amber', proposed: 'badge-amber' };
+const REFRESH_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>';
 const XERO_VIEW = 'https://go.xero.com/AccountsReceivable/View.aspx?InvoiceID=';
-const go = (section, tab, label, cls = 'cl-btn ghost') => `<button type="button" class="${cls}" data-cl-go="${escapeHtml(section + (tab ? ':' + tab : ''))}">${escapeHtml(label)}</button>`;
+const go = (section, tab, label, cls = 'btn btn-sm btn-ghost') => `<button type="button" class="${cls}" data-cl-go="${escapeHtml(section + (tab ? ':' + tab : ''))}">${escapeHtml(label)}</button>`;
 
 /** The client open now ('' = none): the Clients hub shows it as a tab. */
 export const current = () => CL.name;
@@ -55,7 +57,7 @@ export function open(name, tab = 'summary') {
   CL.name = name;
   CL.dir = '';
   CL.tab = TABS.includes(tab) ? tab : 'summary';
-  if (!same) { CL.data = null; CL.adding = null; CL.contactEdit = null; CL.actDraft = null; CL.profileEdit = false; CL.mail = null; load(); }
+  if (!same) { CL.data = null; CL.adding = null; CL.contactEdit = null; CL.actDraft = null; CL.profileEdit = false; CL.mail = null; CL.synced = ''; load(); }
   render();
 }
 
@@ -122,6 +124,7 @@ async function load() {
         activity: activity.e ? (/client_activity/.test(activity.e.message || '') ? 'the activity table isn’t in the database yet (it arrives with this update)' : activity.e.message) : ''
       }
     };
+    CL.synced = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
     if (seq === CL.seq) CL.error = err;
   } finally {
@@ -145,8 +148,8 @@ function render() {
   if (strip) moveInk(strip);
   if (CL.error) {
     mount.innerHTML = CL.error.code === 'DB_SIGNIN_REQUIRED'
-      ? '<div class="cl-error"><strong>Connect to the Gecko database</strong>Client pages read the database. <button type="button" class="cl-btn" data-cl-act="connect">Connect</button></div>'
-      : `<div class="cl-error"><strong>Could not load ${escapeHtml(CL.name)}.</strong>${escapeHtml(CL.error.message || CL.error)} <button type="button" class="cl-btn" data-cl-act="reload">Retry</button></div>`;
+      ? '<div class="cl-error"><strong>Connect to the Gecko database</strong>Client pages read the database. <button type="button" class="btn btn-sm" data-cl-act="connect">Connect</button></div>'
+      : `<div class="cl-error"><strong>Could not load ${escapeHtml(CL.name)}.</strong>${escapeHtml(CL.error.message || CL.error)} <button type="button" class="btn btn-sm" data-cl-act="reload">Retry</button></div>`;
     return;
   }
   if (!p) { mount.innerHTML = `<p class="cl-empty">Loading ${escapeHtml(CL.name)}…</p>`; return; }
@@ -177,11 +180,12 @@ function headHtml(p) {
     { key: 'opportunities', label: 'Opportunities', badge: p?.openOpps?.length || '' }
   ];
   return `
-    <div class="cl-id">
+    <div class="section-head">
+     <div class="cl-id">
       <div class="cl-av" aria-hidden="true">${escapeHtml(initials(CL.name))}</div>
       <div class="cl-id-text">
         <h1>${escapeHtml(CL.name)}</h1>
-        <p>${[status && `<span class="cl-chip">${escapeHtml(status)}</span>`,
+        <p>${[status && `<span class="badge ${/active/i.test(status) ? 'badge-green' : 'badge-blue'}">${escapeHtml(status)}</span>`,
               contact && escapeHtml(contact),
               email && `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`,
               phone && `<a href="tel:${escapeHtml(telHref(phone))}" data-cl-call="main">${escapeHtml(phone)}</a>`,
@@ -191,11 +195,13 @@ function headHtml(p) {
               office ? `<a href="tel:${escapeHtml(office)}" data-cl-call="office" title="Call the office (VoxOne, or whatever handles phone links on this computer)">☎ ${escapeHtml(CL.data.details.office_phone)}</a>` : '',
               last ? `last in touch ${escapeHtml(fmtDate(last.at))} (${escapeHtml(last.kind)}${last.with ? ' with ' + escapeHtml(last.with) : ''})` : ''].filter(Boolean).join(' · ')}</p>
       </div>
-      <div class="cl-id-actions">
-        ${go('timesheets', 'log', 'Log time', 'cl-btn')}
-        <button type="button" class="cl-btn ghost" data-cl-act="new-opp">+ Opportunity</button>
-        <button type="button" class="cl-btn ghost" data-cl-act="reload" title="Reload this client">Refresh</button>
-      </div>
+     </div>
+     <div class="head-actions">
+        ${go('timesheets', 'log', 'Log time', 'btn btn-primary')}
+        <button type="button" class="btn" data-cl-act="new-opp">New opportunity</button>
+        <button type="button" class="head-btn${CL.loading ? ' spinning' : ''}" data-cl-act="reload" title="Reload"${CL.loading ? ' disabled aria-busy="true"' : ''}>${REFRESH_SVG} Refresh</button>
+        <span class="head-sync">${CL.synced ? 'Synced ' + escapeHtml(CL.synced) : ''}</span>
+     </div>
     </div>
     ${p ? `<div class="cl-kpis">
       ${kpi('Recurring', x ? whole(x.recurringMonthly) + '<em>/mo</em>' : '—', x ? `billed in ${escapeHtml(longMonth(x.lastMonth.month))}` : 'Xero not loaded')}
@@ -213,7 +219,7 @@ const failed = (what, err) => `<p class="cl-warn">${escapeHtml(what)} didn’t l
 
 function summaryHtml(p, errors) {
   const flags = p.flags.length
-    ? `<ul class="cl-flags">${p.flags.map(f => `<li class="${f.level}"><span class="dot" aria-hidden="true"></span><span>${escapeHtml(f.text)}</span><button type="button" class="cl-btn ghost" data-cl-tab="${f.tab}">View</button></li>`).join('')}</ul>`
+    ? `<ul class="cl-flags">${p.flags.map(f => `<li class="${f.level}"><span class="dot" aria-hidden="true"></span><span>${escapeHtml(f.text)}</span><button type="button" class="btn btn-sm" data-cl-tab="${f.tab}">View</button></li>`).join('')}</ul>`
     : '<p class="cl-ok">✓ Nothing needs doing for this client.</p>';
   const missing = Object.entries(errors).filter(([, e]) => e).map(([k]) => k);
   const jobs = p.openJobs?.length
@@ -222,13 +228,13 @@ function summaryHtml(p, errors) {
     ? `<ul class="cl-mini">${p.openOpps.slice(0, 4).map(o => `<li><span>${escapeHtml(o.title)}</span><span>${o.status === 'proposed' ? 'proposed' : 'idea'}${Number(o.mrr) ? ' · +' + escapeHtml(whole(o.mrr)) + '/mo' : ''}</span></li>`).join('')}</ul>` : note('No open opportunities.');
   return `<div class="cl-grid">
       ${panel('Needs attention', flags + (missing.length ? `<p class="cl-warn">Not checked: ${escapeHtml(missing.join(', '))}.</p>` : ''))}
-      ${panel('Billed, last 12 months', p.xero ? histHtml(p.xero.history) : failed('Xero', errors.xero || 'not connected'), go('client', 'invoices', 'Invoices →', 'cl-link'))}
+      ${panel('Billed, last 12 months', p.xero ? histHtml(p.xero.history) : failed('Xero', errors.xero || 'not connected'), go('client', 'invoices', 'Invoices →'))}
     </div>
     <div class="cl-grid even">
-      ${panel('Open jobs', jobs, go('client', 'jobs', 'All jobs →', 'cl-link'))}
-      ${panel('Opportunities', opps, go('client', 'opportunities', 'All →', 'cl-link'))}
+      ${panel('Open jobs', jobs, go('client', 'jobs', 'All jobs →'))}
+      ${panel('Opportunities', opps, go('client', 'opportunities', 'All →'))}
     </div>
-    ${p.dealer?.length ? panel('With VoIP Unlimited (dealer)', `<ul class="cl-mini">${p.dealer.map(d => `<li><span>${escapeHtml(`${d.quantity > 1 ? d.quantity + ' × ' : ''}${d.service.replace(/_/g, ' ')}`)}</span><span>${escapeHtml(d.contract.replace(/_/g, ' '))}${d.contract_end ? ' · ends ' + escapeHtml(fmtDate(d.contract_end)) : ''}</span></li>`).join('')}</ul>`, go('opportunities', 'voip', 'VoIP Unlimited →', 'cl-link')) : ''}`;
+    ${p.dealer?.length ? panel('With VoIP Unlimited (dealer)', `<ul class="cl-mini">${p.dealer.map(d => `<li><span>${escapeHtml(`${d.quantity > 1 ? d.quantity + ' × ' : ''}${d.service.replace(/_/g, ' ')}`)}</span><span>${escapeHtml(d.contract.replace(/_/g, ' '))}${d.contract_end ? ' · ends ' + escapeHtml(fmtDate(d.contract_end)) : ''}</span></li>`).join('')}</ul>`, go('opportunities', 'voip', 'VoIP Unlimited →')) : ''}`;
 }
 
 function histHtml(history) {
@@ -241,9 +247,9 @@ function histHtml(history) {
 }
 
 function badge(inv, t) {
-  if (inv.status === 'PAID' || Number(inv.amount_due) <= 0) return '<span class="cl-st paid">Paid</span>';
-  if (inv.status === 'DRAFT' || inv.status === 'SUBMITTED') return '<span class="cl-st draft">Draft</span>';
-  return inv.due_date && String(inv.due_date) < t ? '<span class="cl-st late">Overdue</span>' : '<span class="cl-st due">Due</span>';
+  if (inv.status === 'PAID' || Number(inv.amount_due) <= 0) return '<span class="badge badge-green">Paid</span>';
+  if (inv.status === 'DRAFT' || inv.status === 'SUBMITTED') return '<span class="badge badge-blue">Draft</span>';
+  return inv.due_date && String(inv.due_date) < t ? '<span class="badge badge-red">Overdue</span>' : '<span class="badge badge-amber">Due</span>';
 }
 
 function invoicesHtml(p, errors) {
@@ -254,7 +260,7 @@ function invoicesHtml(p, errors) {
       <td>${badge(i, t)}</td><td class="num">${escapeHtml(money(i.sub_total))}</td><td class="num">${Number(i.amount_due) > 0 ? escapeHtml(money(i.amount_due)) : '—'}</td></tr>`;
   const table = list => `<table class="cl-table"><thead><tr><th>Invoice</th><th>Date</th><th>Reference</th><th>Status</th><th class="num">Net</th><th class="num">Due (incl. VAT)</th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>`;
   return `${panel(`Unpaid: ${escapeHtml(money(p.xero.owed))}`, p.xero.unpaid.length ? table(p.xero.unpaid) : '<p class="cl-ok">✓ Nothing unpaid.</p>',
-      p.xero.unpaid.length ? go('jobs', 'owed', 'Nudge from Owed to us →', 'cl-link') : '')}
+      p.xero.unpaid.length ? go('jobs', 'owed', 'Nudge from Owed to us →') : '')}
     ${panel('Recent invoices', p.xero.recent.length ? table(p.xero.recent) : note('No invoices in Xero for this client in the last 12 months.'),
       `<span class="cl-muted">${escapeHtml(p.xero.contacts.length ? 'Xero contact: ' + p.xero.contacts.join(', ') : 'No Xero contact matched this name')}</span>`)}`;
 }
@@ -272,7 +278,7 @@ function servicesHtml(p, errors) {
       <tfoot><tr><td>Total</td><td></td><td class="num">${escapeHtml(money(s.sell))}</td><td class="num">${escapeHtml(money(s.cost))}</td><td class="num">${escapeHtml(money(s.margin))}</td></tr></tfoot></table>
       <p class="cl-muted">Typed service lines. Licence and hosting costs that come from supplier invoices are on Profitability, month by month.</p>`
     : note('No service lines for this client yet.');
-  return panel('What they buy from us', body, go('profitability', '', 'Edit on Profitability →', 'cl-link')) +
+  return panel('What they buy from us', body, go('profitability', '', 'Edit on Profitability →')) +
     (p.dealer?.length ? panel('With VoIP Unlimited (dealer, commission to Gecko)', `<table class="cl-table"><thead><tr><th>Service</th><th class="num">Qty</th><th>Contract</th><th>Ends</th></tr></thead><tbody>${p.dealer.map(d => `<tr><td>${escapeHtml(d.service.replace(/_/g, ' '))}${d.extras ? ` <span class="cl-muted">${escapeHtml(d.extras)}</span>` : ''}</td><td class="num">${d.quantity}</td><td>${escapeHtml(d.contract.replace(/_/g, ' '))}</td><td>${escapeHtml(fmtDate(d.contract_end)) || '—'}</td></tr>`).join('')}</tbody></table>`) : '');
 }
 
@@ -280,7 +286,7 @@ function supportHtml(p, errors) {
   const s = p.support;
   if (!s) {
     if (errors.ssa) return panel('Support hours', failed('SSA balances', errors.ssa));
-    return panel('Support hours', `${note('This client has no prepaid support (SSA) block.')}${p.openOpps?.some(o => /support|ssa|retainer/i.test(o.title)) ? '' : go('opportunities', '', 'Suggest one in Opportunities →', 'cl-link')}`);
+    return panel('Support hours', `${note('This client has no prepaid support (SSA) block.')}${p.openOpps?.some(o => /support|ssa|retainer/i.test(o.title)) ? '' : go('opportunities', '', 'Suggest one in Opportunities →')}`);
   }
   const used = Math.max(0, Math.min(1, s.purchased ? (s.purchased - Math.max(0, s.remaining)) / s.purchased : 1));
   const maxH = Math.max(1, ...s.perMonth.map(m => m.hours));
@@ -294,33 +300,33 @@ function supportHtml(p, errors) {
           <li><span>Used</span><span>${escapeHtml(hours(s.used))}</span></li>
           <li><span>Last 90 days</span><span>${escapeHtml(hours(s.last90))}</span></li>
           <li><span>At that rate</span><span>${s.monthsLeft != null ? `~${s.monthsLeft} months left` : s.remaining <= 0 ? 'renew now' : 'no recent work'}</span></li>
-        </ul></div>`, go('timesheets', 'ssa', 'Renew on SSA →', 'cl-link'))}
+        </ul></div>`, go('timesheets', 'ssa', 'Renew on SSA →'))}
       ${panel('Hours a month', months)}
     </div>
-    ${panel('Recent work', rows ? `<table class="cl-table"><thead><tr><th>Date</th><th>Who</th><th>Work</th><th class="num">Hours</th></tr></thead><tbody>${rows}</tbody></table>` : note('No time logged yet.'), go('timesheets', 'log', 'Log time →', 'cl-link'))}`;
+    ${panel('Recent work', rows ? `<table class="cl-table"><thead><tr><th>Date</th><th>Who</th><th>Work</th><th class="num">Hours</th></tr></thead><tbody>${rows}</tbody></table>` : note('No time logged yet.'), go('timesheets', 'log', 'Log time →'))}`;
 }
 
 function jobsHtml(p, errors) {
   if (!p.jobs) return panel('Jobs', failed('Jobs', errors.jobs || 'unknown error'));
-  if (!p.jobs.length) return panel('Jobs', note('No jobs for this client yet.'), go('jobs', 'jobs', 'Add one in Jobs →', 'cl-link'));
+  if (!p.jobs.length) return panel('Jobs', note('No jobs for this client yet.'), go('jobs', 'jobs', 'Add one in Jobs →'));
   const order = ['to_invoice', 'in_progress', 'agreed', 'quoted', 'invoiced', 'lost'];
   const list = [...p.jobs].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status) || String(b.modified_at || '').localeCompare(String(a.modified_at || '')));
   return panel(`Jobs (${p.openJobs.length} open)`, `<table class="cl-table"><thead><tr><th>Job</th><th>Stage</th><th>Target</th><th>Invoice</th><th class="num">Value</th></tr></thead>
-    <tbody>${list.map(j => `<tr><td>${escapeHtml(j.title)}${j.next_step ? `<div class="cl-muted">Next: ${escapeHtml(j.next_step)}</div>` : ''}</td><td><span class="cl-stage s-${escapeHtml(j.status)}">${escapeHtml(stageLabel(j.status))}</span></td>
+    <tbody>${list.map(j => `<tr><td>${escapeHtml(j.title)}${j.next_step ? `<div class="cl-muted">Next: ${escapeHtml(j.next_step)}</div>` : ''}</td><td><span class="badge ${STAGE_BADGE[j.status] || 'badge-blue'}">${escapeHtml(stageLabel(j.status))}</span></td>
       <td>${escapeHtml(fmtDate(j.target_date)) || '—'}</td><td>${escapeHtml(j.invoice_ref || '—')}</td><td class="num">${j.value != null ? escapeHtml(money(j.value)) : '—'}</td></tr>`).join('')}</tbody></table>`,
-    go('jobs', 'jobs', 'Open Jobs →', 'cl-link'));
+    go('jobs', 'jobs', 'Open Jobs →'));
 }
 
 function oppsHtml(p, errors) {
   if (!p.opps) return panel('Opportunities', failed('Opportunities', errors.opps || 'unknown error'));
-  const add = `<button type="button" class="cl-btn" data-cl-act="new-opp">+ New opportunity</button>`;
+  const add = `<button type="button" class="btn btn-sm" data-cl-act="new-opp">New opportunity</button>`;
   const form = CL.adding ? newOppHtml(p) : '';
-  if (!p.opps.length) return form + panel('Opportunities', note('Nothing in the pipeline for this client. Add one, or see what they don’t buy yet in Opportunities › Gaps.'), (CL.adding ? '' : add) + go('opportunities', 'gaps', 'Find gaps →', 'cl-link'));
+  if (!p.opps.length) return form + panel('Opportunities', note('Nothing in the pipeline for this client. Add one, or see what they don’t buy yet in Opportunities › Gaps.'), (CL.adding ? '' : add) + go('opportunities', 'gaps', 'Find gaps →'));
   const label = { idea: 'Idea', proposed: 'Proposed', won: 'Won', lost: 'Lost' };
   return form + panel('Opportunities', `<table class="cl-table"><thead><tr><th>Opportunity</th><th>Stage</th><th>Next step</th><th class="num">£/month</th><th class="num">One-off</th></tr></thead>
-    <tbody>${p.opps.map(o => `<tr><td>${escapeHtml(o.title)}</td><td><span class="cl-stage o-${escapeHtml(o.status)}">${escapeHtml(label[o.status] || o.status)}</span></td><td>${escapeHtml(o.next_step || '—')}</td>
+    <tbody>${p.opps.map(o => `<tr><td>${escapeHtml(o.title)}</td><td><span class="badge ${STAGE_BADGE[o.status] || 'badge-blue'}">${escapeHtml(label[o.status] || o.status)}</span></td><td>${escapeHtml(o.next_step || '—')}</td>
       <td class="num">${Number(o.mrr) ? escapeHtml(money(o.mrr)) : '—'}</td><td class="num">${Number(o.one_off) ? escapeHtml(money(o.one_off)) : '—'}</td></tr>`).join('')}</tbody></table>`,
-    (CL.adding ? '' : add) + go('opportunities', 'pipeline', 'Pipeline →', 'cl-link'));
+    (CL.adding ? '' : add) + go('opportunities', 'pipeline', 'Pipeline →'));
 }
 
 // ─── Activity & follow-ups (Philip, 9 Oct) ────────────────────────────
@@ -346,20 +352,20 @@ function activityHtml() {
         ${followUpChoices(t).map(([l, d]) => `<button type="button" class="cl-chip-btn${draft.follow === d ? ' on' : ''}" data-cl-follow="${d}" title="${escapeHtml(fmtDate(d))}">${l}</button>`).join('')}
         <input type="date" name="follow_up_on" min="${t}" value="${escapeHtml(draft.follow || '')}" aria-label="Follow-up date">
       </div>
-      <div class="cl-form-actions wide"><button type="submit" class="cl-btn"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : 'Save'}</button></div>
+      <div class="cl-form-actions wide"><button type="submit" class="btn btn-primary"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : 'Save'}</button></div>
     </form>`);
   const fu = a.open.length ? panel(`Follow-ups (${a.open.length})`, `<ul class="cl-fu">${a.open.map(x => {
     const late = String(x.follow_up_on) < t, now = String(x.follow_up_on) === t;
     return `<li class="${late ? 'late' : now ? 'now' : ''}">
       <span class="cl-due">${escapeHtml(dueText(x.follow_up_on, t))}<small>${escapeHtml(fmtDate(x.follow_up_on))}</small></span>
       <span class="cl-fu-body">${escapeHtml(x.body)}<small>${escapeHtml(KIND_LABEL[x.kind] || x.kind)}${x.contact_name ? ' with ' + escapeHtml(x.contact_name) : ''} · ${escapeHtml(x.created_by || '')} ${escapeHtml(fmtDate(x.created_at))}</small></span>
-      <span class="cl-fu-acts"><button type="button" class="cl-btn" data-cl-act="fu-done" data-id="${x.id}">Done</button><button type="button" class="cl-link" data-cl-act="fu-snooze" data-id="${x.id}">+1 week</button></span>
+      <span class="cl-fu-acts"><button type="button" class="btn btn-sm btn-success" data-cl-act="fu-done" data-id="${x.id}">Done</button><button type="button" class="btn btn-sm btn-ghost" data-cl-act="fu-snooze" data-id="${x.id}">+1 week</button></span>
     </li>`;
   }).join('')}</ul>`) : '';
   const items = a.items.length ? `<ol class="cl-tl">${a.items.map(x => `<li class="k-${escapeHtml(x.kind)}">
       <span class="cl-tl-kind">${escapeHtml(KIND_LABEL[x.kind] || x.kind)}</span>
       <div><p>${escapeHtml(x.body)}</p><small>${escapeHtml(stamp(x.happened_at || x.created_at))}${x.direction ? ' · ' + (x.direction === 'in' ? '↙ incoming' : '↗ outgoing') : ''}${x.duration_min ? ' · ' + escapeHtml(durationText(x.duration_min)) : ''}${x.created_by ? ' · ' + escapeHtml(x.created_by) : ''}${x.contact_name ? ' · with ' + escapeHtml(x.contact_name) : ''}${x.follow_up_on ? ` · follow up ${escapeHtml(fmtDate(x.follow_up_on))}${x.follow_up_done_at ? ' ✓ done' : ''}` : ''}</small></div>
-      <button type="button" class="cl-link muted" data-cl-act="act-del" data-id="${x.id}" aria-label="Remove this entry">Remove</button>
+      <button type="button" class="btn btn-sm btn-danger" data-cl-act="act-del" data-id="${x.id}" aria-label="Delete this entry">Delete</button>
     </li>`).join('')}</ol>` : note('Nothing logged yet. Log calls, emails, meetings and visits here so you both know where things stand.');
   return add + fu + panel(`Timeline (${a.items.length})`, items);
 }
@@ -416,7 +422,7 @@ function detailsHtml() {
   if (!CL.data.detailsLoaded) return panel('Address & office', failed('Client details', CL.data.errors.details || 'unknown error'));
   const p = CL.data.details;
   if (CL.profileEdit || !p) {
-    if (!CL.profileEdit) return panel('Address & office', note('No address or office number yet.'), '<button type="button" class="cl-btn" data-cl-act="profile-edit">+ Add address & office number</button>');
+    if (!CL.profileEdit) return panel('Address & office', note('No address or office number yet.'), '<button type="button" class="btn btn-sm" data-cl-act="profile-edit">Add address & office number</button>');
     const v = p || {};
     return panel('Address & office', `<form class="cl-form" data-cl-form="profile" novalidate>
         <label class="wide">Address <input name="address_line1" type="text" maxlength="120" autocomplete="off" value="${escapeHtml(v.address_line1 || '')}" placeholder="e.g. Unit 4, Riverside Business Park"></label>
@@ -428,8 +434,8 @@ function detailsHtml() {
         <label class="wide">Website <input name="website" type="text" maxlength="200" value="${escapeHtml(v.website || '')}" placeholder="e.g. acme.co.uk"></label>
         <label class="wide">Visiting <input name="visit_notes" type="text" maxlength="1000" value="${escapeHtml(v.visit_notes || '')}" placeholder="e.g. Park at the back, ask for Chris at reception. No passwords or alarm codes here."></label>
         <div class="cl-form-actions wide">
-          <button type="button" class="cl-btn ghost" data-cl-act="profile-cancel">Cancel</button>
-          <button type="submit" class="cl-btn"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" class="btn btn-ghost" data-cl-act="profile-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : 'Save'}</button>
         </div>
       </form>`);
   }
@@ -439,15 +445,15 @@ function detailsHtml() {
       <div class="cl-details-info">
         ${lines.length ? `<address>${lines.map(escapeHtml).join('<br>')}</address>` : note('No address yet.')}
         <div class="cl-details-acts">
-          ${tel ? `<a class="cl-btn" href="tel:${escapeHtml(tel)}" data-cl-call="office">☎ Call ${escapeHtml(p.office_phone)}</a>` : ''}
-          ${m ? `<a class="cl-btn ghost" href="${escapeHtml(m.directions)}" target="_blank" rel="noopener">Directions</a><a class="cl-btn ghost" href="${escapeHtml(m.search)}" target="_blank" rel="noopener">Google Maps</a>` : ''}
-          ${p.website ? `<a class="cl-btn ghost" href="${escapeHtml(p.website)}" target="_blank" rel="noopener">Website</a>` : ''}
+          ${tel ? `<a class="btn btn-sm" href="tel:${escapeHtml(tel)}" data-cl-call="office">☎ Call ${escapeHtml(p.office_phone)}</a>` : ''}
+          ${m ? `<a class="btn btn-sm" href="${escapeHtml(m.directions)}" target="_blank" rel="noopener">Directions</a><a class="btn btn-sm" href="${escapeHtml(m.search)}" target="_blank" rel="noopener">Google Maps</a>` : ''}
+          ${p.website ? `<a class="btn btn-sm" href="${escapeHtml(p.website)}" target="_blank" rel="noopener">Website</a>` : ''}
         </div>
         ${p.visit_notes ? `<p class="cl-visit"><strong>Visiting:</strong> ${escapeHtml(p.visit_notes)}</p>` : ''}
         ${addr && !m?.embed ? '<p class="cl-muted">No map: the postcode wasn’t found. Check it and save again.</p>' : ''}
       </div>
       ${m?.embed ? `<div class="cl-map"><iframe title="Map of ${escapeHtml(CL.name)}" src="${escapeHtml(m.embed)}" loading="lazy" referrerpolicy="no-referrer"></iframe></div>` : ''}
-    </div>`, '<button type="button" class="cl-link" data-cl-act="profile-edit">Edit</button>');
+    </div>`, '<button type="button" class="btn btn-sm btn-ghost" data-cl-act="profile-edit">Edit</button>');
 }
 
 /** The postcode's coordinates for the map (postcodes.io, free, no key). Null when it can't be found. */
@@ -525,7 +531,7 @@ function emailsHtml() {
   if (!m) { setTimeout(() => { if (!CL.mail && CL.tab === 'emails') loadMail(false); }, 0); return panel('Emails', note('Looking for emails…')); }
   if (m.state === 'loading') return panel('Emails', note(`Searching the team’s mailboxes and ${SUPPORT_MAILBOX} for ${m.terms.join(', ')}…`));
   if (m.state === 'none') return panel('Emails', note('Add a contact with an email address, or the website on Details & contacts, so emails can be found.'));
-  if (m.state === 'consent') return panel('Emails', `<p class="cl-muted">Reading emails needs your OK once (the same permission Backups and Alerts use).</p><button type="button" class="cl-btn" data-cl-act="mail-consent">Allow mail access</button>`);
+  if (m.state === 'consent') return panel('Emails', `<p class="cl-muted">Reading emails needs your OK once (the same permission Backups and Alerts use).</p><button type="button" class="btn btn-sm" data-cl-act="mail-consent">Allow mail access</button>`);
   const rows = m.list.length ? `<ul class="cl-mail">${m.list.map((x, i) => `<li>
       <span class="cl-mail-dir ${x.direction}" title="${x.direction === 'in' ? 'From them' : 'From us'}">${x.direction === 'in' ? '↙' : '↗'}</span>
       <div class="cl-mail-body">
@@ -533,8 +539,8 @@ function emailsHtml() {
         <small>${escapeHtml(stamp(x.received))} · ${x.direction === 'in' ? 'from ' + escapeHtml(x.fromName || x.from) : 'to ' + escapeHtml(x.to.filter(Boolean).slice(0, 2).join(', '))} · ${escapeHtml(x.mailboxLabel || '')}</small>
         ${x.preview ? `<p>${escapeHtml(x.preview.slice(0, 220))}${x.preview.length > 220 ? '…' : ''}</p>` : ''}
       </div>
-      <div class="cl-mail-acts">${x.webLink ? `<a class="cl-link" href="${escapeHtml(x.webLink)}" target="_blank" rel="noopener">Open in Outlook</a>` : ''}
-        <button type="button" class="cl-link" data-cl-act="mail-log" data-i="${i}">Log it</button></div>
+      <div class="cl-mail-acts">${x.webLink ? `<a class="btn btn-sm btn-ghost" href="${escapeHtml(x.webLink)}" target="_blank" rel="noopener">Open in Outlook</a>` : ''}
+        <button type="button" class="btn btn-sm btn-ghost" data-cl-act="mail-log" data-i="${i}">Log it</button></div>
     </li>`).join('')}</ul>` : note('No emails with this client in your mailbox or support@ recently.');
   const me = myAddress();
   const access = m.colleague.length
@@ -543,7 +549,7 @@ function emailsHtml() {
   const other = m.noAccess.filter(l => !m.colleague.some(a => l.toLowerCase().startsWith(a.split('@')[0])));
   return panel(`Recent emails (${m.list.length})`, rows + access + (other.length || m.errors.length ? `<p class="cl-warn">Not searched: ${escapeHtml([...other.map(l => l + ' (no access)'), ...m.errors].join('; '))}</p>` : '')
     + `<p class="cl-muted">Read-only. Searched ${escapeHtml(m.searched.join(', '))} for ${escapeHtml(m.terms.join(', '))}. Nothing is sent or changed.</p>`,
-    '<button type="button" class="cl-link" data-cl-act="mail-reload">Refresh</button>');
+    '<button type="button" class="btn btn-sm" data-cl-act="mail-reload">Refresh</button>');
 }
 
 async function logMail(i) {
@@ -566,13 +572,13 @@ async function logMail(i) {
 function contactsHtml() {
   const list = CL.data.contacts;
   if (!list) return panel('Contacts', failed('Contacts', CL.data.errors.contacts || 'unknown error'));
-  const add = '<button type="button" class="cl-btn" data-cl-act="contact-add">+ Add contact</button>';
+  const add = '<button type="button" class="btn btn-sm" data-cl-act="contact-add">Add contact</button>';
   const form = CL.contactEdit === 'new' ? contactFormHtml(null) : '';
   const cards = list.map(c => CL.contactEdit === c.id ? contactFormHtml(c) : `
     <div class="cl-contact${c.is_main ? ' main' : ''}">
       <div class="cl-contact-av" aria-hidden="true">${escapeHtml(initials(c.name || c.email))}</div>
       <div class="cl-contact-body">
-        <strong>${escapeHtml(c.name || c.email)}</strong>${c.is_main ? '<span class="cl-chip">Main contact</span>' : ''}
+        <strong>${escapeHtml(c.name || c.email)}</strong>${c.is_main ? '<span class="badge badge-green">Main contact</span>' : ''}
         ${c.role ? `<span class="cl-contact-role">${escapeHtml(c.role)}</span>` : ''}
         <span class="cl-contact-lines">
           ${c.email ? `<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>` : ''}
@@ -581,9 +587,9 @@ function contactsHtml() {
         ${c.notes ? `<span class="cl-muted">${escapeHtml(c.notes)}</span>` : ''}
       </div>
       <div class="cl-contact-acts">
-        ${c.is_main ? '' : `<button type="button" class="cl-link" data-cl-act="contact-main" data-id="${c.id}">Make main</button>`}
-        <button type="button" class="cl-link" data-cl-act="contact-edit" data-id="${c.id}">Edit</button>
-        <button type="button" class="cl-link muted" data-cl-act="contact-del" data-id="${c.id}">Remove</button>
+        ${c.is_main ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-cl-act="contact-main" data-id="${c.id}">Make main</button>`}
+        <button type="button" class="btn btn-sm btn-ghost" data-cl-act="contact-edit" data-id="${c.id}">Edit</button>
+        <button type="button" class="btn btn-sm btn-danger" data-cl-act="contact-del" data-id="${c.id}">Delete</button>
       </div>
     </div>`).join('');
   return detailsHtml() + form + panel(`Contacts (${list.length})`,
@@ -602,8 +608,8 @@ function contactFormHtml(c) {
       <label class="cl-check wide"><input name="is_main" type="checkbox"${v.is_main ? ' checked' : ''}> Main contact (shown at the top of the page)</label>
       <datalist id="clRoles">${ROLES.map(r => `<option value="${escapeHtml(r)}"></option>`).join('')}</datalist>
       <div class="cl-form-actions wide">
-        <button type="button" class="cl-btn ghost" data-cl-act="contact-cancel">Cancel</button>
-        <button type="submit" class="cl-btn"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : c ? 'Save' : 'Add contact'}</button>
+        <button type="button" class="btn btn-ghost" data-cl-act="contact-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : c ? 'Save' : 'Add contact'}</button>
       </div>
     </form>`);
 }
@@ -687,8 +693,8 @@ function newOppHtml(p) {
       ${open.has(a.product) ? '<p class="cl-form-warn wide">This client already has this one open in the pipeline.</p>' : ''}
       <div class="cl-form-actions wide">
         <span class="cl-muted">${preview.error ? '' : `Adds to the pipeline: ${escapeHtml(preview.title)}${preview.mrr ? ` · ${escapeHtml(money(preview.mrr))}/mo` : ''}${preview.one_off ? ` · ${escapeHtml(money(preview.one_off))} one-off` : ''}`}</span>
-        <button type="button" class="cl-btn ghost" data-cl-act="cancel-opp">Cancel</button>
-        <button type="submit" class="cl-btn"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Adding…' : 'Add opportunity'}</button>
+        <button type="button" class="btn btn-ghost" data-cl-act="cancel-opp">Cancel</button>
+        <button type="submit" class="btn btn-primary"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Adding…' : 'Add opportunity'}</button>
       </div>
     </form>`);
 }

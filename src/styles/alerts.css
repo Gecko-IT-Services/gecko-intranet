@@ -4,9 +4,6 @@
    lives here. Existing tokens only.
    ═══════════════════════════════════════════════════════════════════ */
 
-#section-alerts .alr-head-actions {
-  display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap;
-}
 #section-alerts .alr-toolbar {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   flex-wrap: wrap; margin-bottom: 10px;
@@ -15,27 +12,18 @@
   display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer;
 }
 #section-alerts .alr-kpi { cursor: default; }
-#section-alerts .alr-kpi:hover { background: transparent; }
+#section-alerts .bkp-kpi.alr-kpi:hover { background: var(--card); }
 #section-alerts .alr-h {
   margin: 18px 0 10px; font-size: 13px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .08em; color: var(--muted);
 }
 #section-alerts .alr-card { padding: 0; overflow: hidden; }
-#section-alerts .alr-row.alr-critical td:first-child { box-shadow: inset 4px 0 0 var(--red); }
-#section-alerts .alr-row.alr-important td:first-child { box-shadow: inset 4px 0 0 var(--amber); }
 #section-alerts .alr-row.alr-noise { opacity: .75; }
 
-/* — "Email client" action and its draft modal (modal shell from projects.css) — */
-#section-alerts .alr-email {
-  padding: 6px 12px; border: 1px solid var(--border-dim); border-radius: var(--radius-pill);
-  background: var(--card); color: var(--white); font: inherit; font-size: 12px; font-weight: 600;
-  white-space: nowrap; cursor: pointer; transition: border-color var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
-}
-#section-alerts .alr-email:hover { border-color: var(--green); color: var(--green); }
+/* — Row actions (.btn-sm) and the draft modal (modal shell from projects.css) — */
 #section-alerts .bkp-mono a.bkp-sub { color: var(--muted); text-decoration: underline; }
 .alr-modal { width: min(640px, 100%); }
 .alr-modal textarea { min-height: 260px; line-height: 1.5; }
 #section-alerts .alr-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-#section-alerts .alr-resolve:hover { border-color: var(--green); color: var(--green); }
 #section-alerts .alr-back { margin-top: 4px; display: inline-block; }
 #section-alerts .alr-toggles { display: inline-flex; gap: 16px; flex-wrap: wrap; }

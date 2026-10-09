@@ -45,6 +45,8 @@ async function load() {
       ents: ents.v || [], journeys: journeys.v || null, entries: entries.v || null,
       errors: { leave: requests.e?.message || '', mileage: journeys.e?.message || '', hours: entries.e?.message || '' }
     };
+    const sync = els('teamLastSync');
+    if (sync) sync.textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
     TM.error = err;
   } finally {
@@ -57,8 +59,8 @@ function render() {
   if (!mount) return;
   if (TM.error) {
     mount.innerHTML = TM.error.code === 'DB_SIGNIN_REQUIRED'
-      ? '<div class="tm-error"><strong>Connect to the Gecko database</strong><button type="button" class="tm-btn" data-tm-act="connect">Connect</button></div>'
-      : `<div class="tm-error"><strong>Could not load the team.</strong>${escapeHtml(TM.error.message || TM.error)}<button type="button" class="tm-btn" data-tm-act="reload">Retry</button></div>`;
+      ? '<div class="tm-error"><strong>Connect to the Gecko database</strong><button type="button" class="btn btn-sm" data-tm-act="connect">Connect</button></div>'
+      : `<div class="tm-error"><strong>Could not load the team.</strong>${escapeHtml(TM.error.message || TM.error)}<button type="button" class="btn btn-sm" data-tm-act="reload">Retry</button></div>`;
     return;
   }
   if (!TM.data) { mount.innerHTML = '<p class="tm-empty">Loading the team…</p>'; return; }
@@ -70,8 +72,8 @@ function render() {
     const hol = d.requests ? holiday(d.requests, d.ents, p, ty) : null;
     const pr = pres?.[p];
     const used = hol ? Math.max(0, Math.min(1, hol.booked / (hol.entitlement || 1))) : 0;
-    const status = !pr ? '<span class="tm-pill">—</span>'
-      : pr.off ? `<span class="tm-pill off">Off · back ${escapeHtml(short(pr.back))}</span>` : '<span class="tm-pill in">In today</span>';
+    const status = !pr ? '<span class="badge">—</span>'
+      : pr.off ? `<span class="badge badge-amber">Off · back ${escapeHtml(short(pr.back))}</span>` : '<span class="badge badge-green">In today</span>';
     const maxDay = Math.max(1, ...(hrs?.[p]?.byDay || [0]));
     return `<div class="tm-card">
       <div class="tm-card-head"><div class="tm-av" aria-hidden="true">${p[0]}</div><div><strong>${p} Morris</strong>${status}</div></div>
@@ -91,9 +93,9 @@ function render() {
         ${hrs ? `<div class="tm-days">${hrs[p].byDay.slice(0, 5).map((v, i) => `<div title="${escapeHtml(h(v))}"><i style="height:${(v / maxDay * 100).toFixed(1)}%"></i><span>${'MTWTF'[i]}</span></div>`).join('')}</div>` : `<p class="tm-muted">${escapeHtml(d.errors.hours || 'Timesheets didn’t load')}</p>`}
       </div>
       <div class="tm-actions">
-        <button type="button" class="tm-btn ghost" data-tm-go="leave">Book leave</button>
-        <button type="button" class="tm-btn ghost" data-tm-go="mileage">${mil?.[p]?.unclaimed ? 'Claim mileage' : 'Add journey'}</button>
-        <button type="button" class="tm-btn ghost" data-tm-go="timesheets:log">Log time</button>
+        <button type="button" class="btn btn-sm" data-tm-go="leave">Book leave</button>
+        <button type="button" class="btn btn-sm" data-tm-go="mileage">${mil?.[p]?.unclaimed ? 'Claim mileage' : 'Add journey'}</button>
+        <button type="button" class="btn btn-sm" data-tm-go="timesheets:log">Log time</button>
       </div>
     </div>`;
   }).join('');
@@ -110,7 +112,7 @@ function render() {
 
   mount.innerHTML = `<div class="app-pane">
     <div class="tm-cards">${cards}</div>
-    <div class="tm-panel"><div class="tm-panel-head"><strong>Next four weeks</strong><button type="button" class="tm-link" data-tm-go="leave">Leave calendar →</button></div>${cal}</div>
+    <div class="tm-panel"><div class="tm-panel-head"><strong>Next four weeks</strong><button type="button" class="btn btn-sm btn-ghost" data-tm-go="leave">Leave calendar →</button></div>${cal}</div>
   </div>`;
 }
 
@@ -126,9 +128,9 @@ export function init() {
   els('section-team')?.addEventListener('click', onClick);
   els('teamRefresh')?.addEventListener('click', async () => {
     const b = els('teamRefresh');
-    b.disabled = true; b.textContent = 'Refreshing…';
+    b.disabled = true; b.classList.add('spinning'); b.setAttribute('aria-busy', 'true');
     await load();
-    b.disabled = false; b.textContent = 'Refresh';
+    b.disabled = false; b.classList.remove('spinning'); b.removeAttribute('aria-busy');
     if (!TM.error) toast('Team refreshed', 'success', 2500);
   });
   load();
