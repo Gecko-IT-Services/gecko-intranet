@@ -235,15 +235,9 @@
   #app #section-clients .cli-view-toggle { display: none; }
 
   /* Figure strips: two across, an odd last figure takes the row (no empty grey cell). */
-  #app :is(.ovw-kpis.ovw-money, .mil-kpis, .prf-sum-strip) { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; overflow: visible; }
-  #app :is(.job-kpis, .opp-kpis, .bkp-kpis, .ovw-stats, .cl-kpis, .kpi-panel, .ovw-kpis.ovw-money, .mil-kpis, .prf-sum-strip) > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  #app :is(.ovw-kpis.ovw-money, .prf-sum-strip) { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; overflow: visible; }
+  #app :is(.job-kpis, .opp-kpis, .bkp-kpis, .ovw-stats, .cl-kpis, .kpi-panel, .ovw-kpis.ovw-money, .prf-sum-strip) > :last-child:nth-child(odd) { grid-column: 1 / -1; }
   #app :is(.job-kpi > strong, .opp-kpi > strong, .bkp-kpi-val, .prf-sum-v, .cl-kpi > strong, .kpi-value) { font-size: 20px; }
-  #app #section-mileage .mil-kpis { gap: 8px; }
-  /* Leave: the four figures per person sit in one row. */
-  
-  
-  
-  
 
   /* Overview lists: the Open button becomes a chevron at the row's end instead of a line of its own. */
   #app #section-overview li:has(> button[data-ovw-go]) { grid-template-columns: 10px minmax(0, 1fr) auto !important; align-items: center; }

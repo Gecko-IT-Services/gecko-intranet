@@ -78,6 +78,7 @@
 <link rel="stylesheet" href="src/styles/client.css">
 <link rel="stylesheet" href="src/styles/team.css">
 <link rel="stylesheet" href="src/styles/leave.css">
+<link rel="stylesheet" href="src/styles/mileage.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -1976,34 +1977,6 @@ body {
 #section-mileage .mil-last-sync { font-size: 11px; color: var(--muted); margin-left: 4px; }
 
 /* — Summary strip (4 KPI cards across the top) — */
-#section-mileage .mil-kpis {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-#section-mileage .mil-kpi {
-  background: var(--card);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  transition: border-color .2s ease;
-}
-#section-mileage .mil-kpi:hover { border-color: var(--border); }
-#section-mileage .mil-kpi .k-label {
-  font-size: 9px; color: var(--muted);
-  letter-spacing: .12em; text-transform: uppercase;
-  margin-bottom: 4px;
-}
-#section-mileage .mil-kpi .k-value {
-  font-family: var(--font-body);
-  font-weight: 800; font-size: 28px;
-  letter-spacing: .02em;
-  color: var(--green);
-  line-height: 1.1;
-}
-#section-mileage .mil-kpi.combined .k-value { color: var(--white); }
-#section-mileage .mil-kpi.tax .k-value { color: var(--amber); }
-#section-mileage .mil-kpi .k-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
 /* — Tabs — */
 #section-mileage .mil-tabs {
@@ -2110,18 +2083,6 @@ body {
 }
 
 /* — HMRC rate hint banner — */
-#section-mileage .mil-hmrc-hint {
-  background: var(--green-glow);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-size: 11px; color: var(--green);
-  margin-bottom: 16px;
-  display: flex; align-items: center; gap: 10px;
-  flex-wrap: wrap;
-}
-#section-mileage .mil-hmrc-hint strong { color: var(--white); }
-#section-mileage .mil-hmrc-hint .sep { color: var(--border); }
 
 /* — Driver filter chips (Journey Log) — */
 #section-mileage .mil-filter {
@@ -2288,46 +2249,8 @@ body {
 }
 
 /* Unclaimed KPI pill — spans the full row underneath the four KPIs */
-#section-mileage .mil-kpi.unclaimed {
-  grid-column: 1 / -1;
-  display: flex; align-items: center; gap: 16px;
-  background: var(--amber-dim);
-  border-color: rgba(224, 154, 46, 0.3);
-  padding: 12px 18px;
-}
-#section-mileage .mil-kpi.unclaimed .k-label {
-  font-size: 10px; color: var(--amber); margin: 0;
-  text-transform: uppercase; letter-spacing: .08em; font-weight: 700;
-}
-#section-mileage .mil-kpi.unclaimed .k-value {
-  font-size: 22px; color: var(--amber); margin: 0;
-  flex-shrink: 0;
-}
-#section-mileage .mil-kpi.unclaimed .k-sub {
-  font-size: 12px; color: var(--muted); margin: 0;
-  flex: 1; text-align: right;
-}
 
 /* Monthly Summary — claimed split */
-#section-mileage .mil-month-claim {
-  display: flex; gap: 14px; justify-content: flex-end;
-  padding: 10px 16px; border-top: 1px solid var(--border-dim);
-  font-size: 11px;
-}
-#section-mileage .mil-month-claim .mc-item {
-  display: inline-flex; align-items: center; gap: 6px;
-  color: var(--muted);
-}
-#section-mileage .mil-month-claim .mc-item .mc-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-}
-#section-mileage .mil-month-claim .mc-item.claimed .mc-dot { background: var(--green); }
-#section-mileage .mil-month-claim .mc-item.unclaimed .mc-dot { background: var(--amber); }
-#section-mileage .mil-month-claim .mc-item strong {
-  font-family: var(--font-body);
-  font-size: 13px; color: var(--white); font-weight: 700;
-  margin-left: 2px;
-}
 
 /* — Empty-state row — */
 #section-mileage .mil-empty {
@@ -2391,57 +2314,6 @@ body {
 #section-mileage .mil-month-grid {
   display: flex; flex-direction: column; gap: 10px;
 }
-#section-mileage .mil-month {
-  background: var(--card);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-#section-mileage .mil-month-head {
-  padding: 12px 18px;
-  display: flex; align-items: center; gap: 16px;
-  border-bottom: 1px solid var(--border-dim);
-  background: rgba(0,0,0,0.2);
-  flex-wrap: wrap;
-}
-#section-mileage .mil-month-head .mh-title {
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 15px;
-  letter-spacing: .08em; text-transform: uppercase;
-  color: var(--white);
-}
-#section-mileage .mil-month-head .mh-stat {
-  font-size: 11px; color: var(--muted);
-  letter-spacing: .04em;
-}
-#section-mileage .mil-month-head .mh-stat strong {
-  font-family: var(--font-body);
-  color: var(--white); font-size: 14px; margin-left: 4px;
-}
-#section-mileage .mil-month-head .mh-stat.amt strong { color: var(--green); }
-#section-mileage .mil-month-head .mh-spacer { flex: 1; }
-
-#section-mileage .mil-month-split {
-  padding: 12px 18px;
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-  font-size: 12px;
-}
-#section-mileage .mil-month-split .ms-driver {
-  font-family: var(--font-body);
-  font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-#section-mileage .mil-month-split .ms-val {
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 16px;
-  color: var(--white);
-}
-#section-mileage .mil-month-split .ms-val .miles {
-  color: var(--muted); font-size: 12px; font-weight: 500; margin-left: 6px;
-}
-#section-mileage .mil-month-split .ms-val.amt { color: var(--green); }
 
 /* — Export tab — */
 #section-mileage .mil-export-grid {
@@ -2556,14 +2428,14 @@ body {
 
 /* Responsive collapses */
 @media (max-width: 880px) {
-#section-mileage .mil-kpis { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
 #section-mileage .mil-form { grid-template-columns: minmax(0, 1fr); }
 #section-mileage .mil-export-grid { grid-template-columns: minmax(0, 1fr); }
-#section-mileage .mil-month-split { grid-template-columns: minmax(0, 1fr); }
+
 #section-mileage .mil-add-client-form { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
-#section-mileage .mil-kpis { grid-template-columns: minmax(0, 1fr); }
+
 #section-mileage .mil-tabs { width: 100%; overflow-x: auto; }
 #section-mileage .mil-tab { flex: 1; white-space: nowrap; }
 }
@@ -4043,7 +3915,6 @@ body::before {
 #section-profitability .prf-xero-import,
 #section-profitability .prf-gtot,
 #section-profitability .prf-empty,
-#section-mileage .mil-kpi,
 #section-mileage .mil-quick-card,
 #section-mileage .mil-claim-bar,
 #section-clients .cli-tbl-wrap,
@@ -4056,7 +3927,7 @@ body::before {
   #section-compliance .cmp-item,
   #section-compliance .cmp-form,
   #section-compliance .cmp-empty,
-  #section-overview .ovw-ops{
+  #section-overview .ovw-ops {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.028), rgba(255,255,255,0.006)),
     var(--card);
@@ -4230,9 +4101,8 @@ textarea:focus {
    (replaces the 6-separate-cards "hero-metric" template). Applied across
    every section's stat strip for a consistent precision-instrument read. */
 #section-overview .ovw-kpis,
-#section-mileage .mil-kpis,
 #section-timesheets .tsh-kpi-strip,
-#section-compliance .cmp-kpi-strip {
+#section-compliance .cmp-kpi-strip{
   gap: 1px;
   background: var(--hair);
   border: 1px solid var(--border-dim);
@@ -4242,9 +4112,8 @@ textarea:focus {
 }
 
 #section-overview .ovw-kpi,
-#section-mileage .mil-kpi,
 #section-timesheets .tsh-kpi,
-#section-compliance .cmp-kpi {
+#section-compliance .cmp-kpi{
   padding: 16px 18px 18px;
   background: var(--card);
   border: none !important;
@@ -4253,17 +4122,15 @@ textarea:focus {
   transition: background var(--dur-2) var(--ease);
 }
 #section-overview .ovw-kpi:hover,
-#section-mileage .mil-kpi:hover,
 #section-timesheets .tsh-kpi:hover,
-#section-compliance .cmp-kpi:hover {
+#section-compliance .cmp-kpi:hover{
   background: var(--card-hover);
   box-shadow: none !important;
 }
 
 #section-overview .ovw-kpi .k-value,
-#section-mileage .mil-kpi .k-value,
 #section-timesheets .tsh-kpi .k-value,
-#section-compliance .cmp-kpi .k-value{
+#section-compliance .cmp-kpi .k-value {
   font-family: var(--font-mono);
   font-weight: 500;
   letter-spacing: -0.03em;
@@ -4752,27 +4619,24 @@ body::before {
   #section-overview .ovw-kpis,
   #section-overview .ovw-row,
   #section-overview .ovw-ops-grid,
-  #section-mileage .mil-kpis,
   #section-timesheets .tsh-kpi-strip,
   #section-compliance .cmp-kpi-strip,
-  .demo-preview-grid {
+  .demo-preview-grid{
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 10px;
   }
 
   #section-overview .ovw-kpi,
-  #section-mileage .mil-kpi,
   #section-timesheets .tsh-kpi,
   #section-compliance .cmp-kpi,
-  .demo-preview-card {
+  .demo-preview-card{
     min-height: 96px;
     padding: 16px;
   }
 
   #section-overview .ovw-kpi .k-value,
-  #section-mileage .mil-kpi .k-value,
   #section-timesheets .tsh-kpi .k-value,
-  .demo-preview-value {
+  .demo-preview-value{
     font-size: 30px;
   }
 
@@ -5341,9 +5205,8 @@ body::before {
 :root[data-theme="light"] .ovw-op .op-label,
 :root[data-theme="light"] .ovw-op .op-note,
 :root[data-theme="light"] .prf-sum-sub,
-:root[data-theme="light"] .mil-kpi .k-sub,
 :root[data-theme="light"] .tsh-ssa-hint,
-:root[data-theme="light"] .cmp-meta {
+:root[data-theme="light"] .cmp-meta{
   color: #405247 !important;
 }
 
@@ -5783,27 +5646,23 @@ body::before {
      1,300px scroll before any content. Two-up restores glanceability;
      the mono figures step down to stay inside the narrower column. */
   #section-overview .ovw-kpis,
-  #section-mileage .mil-kpis,
-  #section-compliance .cmp-kpis{
+  #section-compliance .cmp-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   #section-overview .ovw-kpi .k-value,
-  #section-mileage .mil-kpi .k-value,
   #section-leave .lev-kpi .k-value,
-  #section-compliance .cmp-kpi .k-value {
+  #section-compliance .cmp-kpi .k-value{
     font-size: 21px;
     letter-spacing: -0.035em;
   }
-  #section-overview .ovw-kpi .k-sub,
-  #section-mileage .mil-kpi .k-sub { font-size: 10.5px; }
+  #section-overview .ovw-kpi .k-sub { font-size: 10.5px; }
 }
 
 /* Genuinely narrow hardware (iPhone SE and down) cannot hold two
    currency figures side by side. */
 @media (max-width: 379px) {
   #section-overview .ovw-kpis,
-  #section-mileage .mil-kpis,
-  #section-compliance .cmp-kpis{ grid-template-columns: minmax(0, 1fr); }
+  #section-compliance .cmp-kpis { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ─── 5 · Touch hit areas ─────────────────────────────────────────────
@@ -6261,34 +6120,8 @@ body::before {
 
       <div class="mil-wrap">
 
-        <!-- — KPI strip (4 summary cards) — -->
-        <div class="mil-kpis">
-          <div class="mil-kpi">
-            <div class="k-label">Philip — Total Due</div>
-            <div class="k-value" id="milKpiPhilipAmt">£0.00</div>
-            <div class="k-sub" id="milKpiPhilipMiles">0 miles recorded</div>
-          </div>
-          <div class="mil-kpi">
-            <div class="k-label">Jack — Total Due</div>
-            <div class="k-value" id="milKpiJackAmt">£0.00</div>
-            <div class="k-sub" id="milKpiJackMiles">0 miles recorded</div>
-          </div>
-          <div class="mil-kpi combined">
-            <div class="k-label">Combined Total</div>
-            <div class="k-value" id="milKpiCombined">£0.00</div>
-          </div>
-          <div class="mil-kpi tax">
-            <div class="k-label" id="milKpiTaxSaveLabel">Income Tax Saving (est. 20%)</div>
-            <div class="k-value" id="milKpiTaxSave">£0.00</div>
-          </div>
-          <!-- Unclaimed pill (Phase 5.5) — spans full width on its own row so
-               it sits under the four main KPI tiles without disturbing them. -->
-          <div class="mil-kpi unclaimed" id="milKpiUnclaimed" style="display:none;">
-            <div class="k-label">Unclaimed</div>
-            <div class="k-value" id="milKpiUnclaimedAmt">£0.00</div>
-            <div class="k-sub" id="milKpiUnclaimedSub">0 journeys awaiting claim</div>
-          </div>
-        </div>
+        <div class="mil-drivers" id="milDrivers"></div>
+        <div class="mil-figs" id="milFigs"></div>
 
         <!-- — Tab strip — -->
         <div class="mil-tabs" role="tablist">
@@ -6306,13 +6139,7 @@ body::before {
           <div class="mil-card" style="margin-bottom:16px;">
             <div class="mil-card-head"><h3>Add journey</h3></div>
 
-            <div class="mil-hmrc-hint">
-              <span><strong>HMRC rates:</strong></span>
-              <span>55p/mile for the first 10,000 miles (from 20 July 2026)</span>
-              <span class="sep">·</span>
-              <span>25p/mile above 10,000</span>
-            </div>
-
+            <div class="mil-quick" id="milQuick" aria-label="Frequent destinations"></div>
             <form class="mil-form" id="milForm" onsubmit="return milAddJourney(event)">
               <div class="mil-field">
                 <label for="milClient">Client / destination</label>
@@ -6351,6 +6178,7 @@ body::before {
                 </select>
               </div>
               <div class="mil-form-actions">
+                <span class="mil-rate-note">55p a mile up to 10,000 miles a tax year, then 25p</span>
                 <button type="submit" class="btn btn-primary" id="milAddBtn">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Add journey
@@ -13105,35 +12933,53 @@ function milRenderKpis() {
   // 25% (limited company, Corporation Tax main rate). See ENTITY_CONFIG.
   const taxSave  = combined * (milConfig('taxSaving').rate);
 
-  // Per-driver tiles show UNCLAIMED only — that's what's "due" (owed to you).
-  // The sub-line shows unclaimed miles; parenthetical notes total miles for context.
-  document.getElementById('milKpiPhilipAmt').textContent   = milFmt(pDue.amt);
-  document.getElementById('milKpiPhilipMiles').textContent =
-    pDue.miles === pAll.miles
-      ? `${milFmtMiles(pAll.miles)} miles recorded`
-      : `${milFmtMiles(pDue.miles)} mi unclaimed (${milFmtMiles(pAll.miles)} total)`;
-  document.getElementById('milKpiJackAmt').textContent     = milFmt(kDue.amt);
-  document.getElementById('milKpiJackMiles').textContent =
-    kDue.miles === kAll.miles
-      ? `${milFmtMiles(kAll.miles)} miles recorded`
-      : `${milFmtMiles(kDue.miles)} mi unclaimed (${milFmtMiles(kAll.miles)} total)`;
+  // Driver cards: what each is owed (all unclaimed), and this tax year's miles on the road to HMRC's
+  // 10,000-mile limit (claimed solid, unclaimed hatched). Then the three figures across the page.
+  const ty = MIL.taxYear || milComputeTaxYear();
+  const tyStart = localDateKey(ty.start), tyEnd = localDateKey(ty.end);
+  const me = milCurrentDriver();
+  const roles = milConfig('drivers');
+  const pct = v => Math.min(100, v / HMRC_THRESHOLD * 100).toFixed(2);
+  const drivers = document.getElementById('milDrivers');
+  if (drivers) drivers.innerHTML = MIL.drivers.map(d => {
+    const first = d.split(' ')[0];
+    const mine = MIL.journeys.filter(j => milNormaliseDriver(j.driver) === d);
+    const open = mine.filter(j => !j.claimedDate);
+    const oldest = open.map(j => j.date).filter(Boolean).sort()[0];
+    const inYear = mine.filter(j => j.date >= tyStart && j.date <= tyEnd);
+    const yrClaimed = inYear.filter(j => j.claimedDate).reduce((a, j) => a + (Number(j.miles) || 0), 0);
+    const yrOpen = inYear.filter(j => !j.claimedDate).reduce((a, j) => a + (Number(j.miles) || 0), 0);
+    const yrMiles = yrClaimed + yrOpen;
+    const owed = due[d]?.amt || 0;
+    const role = roles[d] ? `${roles[d].role} · ${roles[d].vehicle}` : '';
+    const left = Math.max(0, HMRC_THRESHOLD - yrMiles);
+    return `<div class="mil-driver lp-${first.toLowerCase()}">
+      <div class="mil-driver-head"><span class="mil-av" aria-hidden="true">${escapeHtml(first[0])}</span>
+        <div><strong>${escapeHtml(d)}</strong><span>${escapeHtml(role)}</span></div></div>
+      <div class="mil-owed">${owed > 0
+        ? `<span class="v warn">${escapeHtml(milFmt(owed))}</span><span class="u">to claim</span><small>${open.length} trip${open.length === 1 ? '' : 's'} since ${escapeHtml(milFmtDate(oldest))}${d === me ? ' · <button type="button" class="mil-link" onclick="milEmailClaim()">Email my claim</button>' : ''}</small>`
+        : '<span class="v ok">All claimed</span>'}</div>
+      <div class="mil-road" role="img" aria-label="${escapeHtml(`${milFmtMiles(yrMiles)} of ${milFmtMiles(HMRC_THRESHOLD)} miles this tax year, ${milFmtMiles(yrOpen)} not claimed yet`)}">
+        <span class="claimed" style="width:${pct(yrClaimed)}%"></span><span class="open" style="width:${Math.min(Number(pct(yrMiles)) - Number(pct(yrClaimed)), 100).toFixed(2)}%"></span>
+      </div>
+      <div class="mil-road-scale" aria-hidden="true"><span>0</span><span>2,500</span><span>5,000</span><span>7,500</span><span>10,000</span></div>
+      <div class="mil-road-sub"><span>${escapeHtml(milFmtMiles(yrMiles))} mi in ${escapeHtml(ty.label)}</span><span>${yrMiles >= HMRC_THRESHOLD ? '25p a mile from here' : `${escapeHtml(milFmtMiles(left))} mi left at the higher rate`}</span></div>
+    </div>`;
+  }).join('');
+  const figs = document.getElementById('milFigs');
+  if (figs) figs.innerHTML = `
+    <div class="mil-fig"><span>Total, paid and due</span><strong>${escapeHtml(milFmt(combined))}</strong><small>${escapeHtml(milFmtMiles(pAll.miles + kAll.miles))} miles · ${MIL.journeys.length} journeys</small></div>
+    <div class="mil-fig"><span>Still to claim</span><strong class="${unclaimedAmt ? 'warn' : ''}">${escapeHtml(milFmt(unclaimedAmt))}</strong><small>${unclaimedCount} journey${unclaimedCount === 1 ? '' : 's'}</small></div>
+    <div class="mil-fig"><span>${escapeHtml(milConfig('taxSaving').kpiTitle)}</span><strong>${escapeHtml(milFmt(taxSave))}</strong><small>on the total</small></div>`;
 
-  // Combined + Tax Saving stay all-time (HMRC cares about total, not claim status)
-  document.getElementById('milKpiCombined').textContent    = milFmt(combined);
-  document.getElementById('milKpiTaxSave').textContent     = milFmt(taxSave);
-
-  // Phase 5.5: Unclaimed pill — shown only when there's something unclaimed.
-  // Sits on its own row beneath the main KPI strip; gracefully hides at zero.
-  const unclaimedTile = document.getElementById('milKpiUnclaimed');
-  if (unclaimedTile) {
-    if (unclaimedCount > 0) {
-      unclaimedTile.style.display = '';
-      document.getElementById('milKpiUnclaimedAmt').textContent = milFmt(unclaimedAmt);
-      document.getElementById('milKpiUnclaimedSub').textContent =
-        `${unclaimedCount} journey${unclaimedCount === 1 ? '' : 's'} awaiting claim`;
-    } else {
-      unclaimedTile.style.display = 'none';
-    }
+  // Quick destinations for Add journey: the six places driven to most often.
+  const quick = document.getElementById('milQuick');
+  if (quick) {
+    const counts = new Map();
+    for (const j of MIL.journeys) if (j.destination) counts.set(j.destination, (counts.get(j.destination) || 0) + 1);
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
+      .map(([name]) => MIL.clients.find(c => c.name === name)).filter(Boolean);
+    quick.innerHTML = top.map(c => `<button type="button" class="mil-dest" data-name="${escapeHtml(c.name)}" onclick="milQuickPick(this.dataset.name)">${escapeHtml(c.name)}<small>${escapeHtml(milFmtMiles(c.miles))} mi</small></button>`).join('');
   }
 
   // Export tab mirrors — show ALL-TIME totals (HMRC view, not claim-filtered)
@@ -13281,61 +13127,58 @@ function milRenderMonth() {
   const groups = new Map();
   for (const j of MIL.journeys) {
     if (!j.date) continue;
-    const key = j.date.slice(0, 7); // YYYY-MM
+    const key = j.date.slice(0, 7);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(j);
   }
-  const keys = [...groups.keys()].sort().reverse(); // newest first
+  const sum = (items, f) => items.reduce((a, j) => a + (f(j) ? Number(j.miles) || 0 : 0), 0);
+  const money = (items, f) => items.reduce((a, j) => a + (f(j) ? Number(j.amount) || 0 : 0), 0);
+  const isP = j => milNormaliseDriver(j.driver) === 'Philip Morris';
+  const isJ = j => milNormaliseDriver(j.driver) === 'Jack Morris';
+  const monthName = (key, opt) => { const [y, m] = key.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('en-GB', opt); };
 
-  grid.innerHTML = keys.map(key => {
-    const items = groups.get(key);
-    const [yr, mo] = key.split('-').map(Number);
-    const label = new Date(yr, mo - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-
-    let pMi = 0, pAmt = 0, jMi = 0, jAmt = 0, count = items.length;
-    let claimedAmt = 0, unclaimedAmt = 0;
-    let claimedCt = 0, unclaimedCt = 0;
-    for (const j of items) {
-      const m = Number(j.miles) || 0, a = Number(j.amount) || 0;
-      if (j.driver === 'Philip Morris') { pMi += m; pAmt += a; }
-      else if (j.driver === 'Jack Morris') { jMi += m; jAmt += a; }
-      if (j.claimedDate) { claimedAmt += a; claimedCt++; }
-      else               { unclaimedAmt += a; unclaimedCt++; }
-    }
-    const total = pAmt + jAmt;
-    const totalMi = pMi + jMi;
-
-    // Claimed/unclaimed split footer — only render when there's actually
-    // something to split, otherwise it's just noise on a fully-unclaimed month.
-    const claimRow = (claimedCt > 0)
-      ? `<div class="mil-month-claim">
-           <span class="mc-item claimed"><span class="mc-dot"></span>Claimed <strong>${milFmt(claimedAmt)}</strong> · ${claimedCt}</span>
-           <span class="mc-item unclaimed"><span class="mc-dot"></span>Unclaimed <strong>${milFmt(unclaimedAmt)}</strong> · ${unclaimedCt}</span>
-         </div>`
-      : '';
-
-    return `
-      <div class="mil-month">
-        <div class="mil-month-head">
-          <div class="mh-title">${escapeHtml(label)}</div>
-          <div class="mh-stat">Journeys<strong>${count}</strong></div>
-          <div class="mh-stat">Total miles<strong>${milFmtMiles(totalMi)}</strong></div>
-          <div class="mh-spacer"></div>
-          <div class="mh-stat amt">Total<strong>${milFmt(total)}</strong></div>
-        </div>
-        <div class="mil-month-split">
-          <div>
-            <div class="ms-driver">Philip Morris</div>
-            <div class="ms-val amt">${milFmt(pAmt)} <span class="miles">· ${milFmtMiles(pMi)} mi</span></div>
-          </div>
-          <div>
-            <div class="ms-driver">Jack Morris</div>
-            <div class="ms-val amt">${milFmt(jAmt)} <span class="miles">· ${milFmtMiles(jMi)} mi</span></div>
-          </div>
-        </div>
-        ${claimRow}
-      </div>`;
+  // The tax year as twelve columns, April → March: miles, Philip and Jack stacked.
+  const ty = MIL.taxYear || milComputeTaxYear();
+  const y0 = ty.start.getFullYear();
+  const yearKeys = Array.from({ length: 12 }, (_, i) => { const d = new Date(y0, 3 + i, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; });
+  const maxMi = Math.max(1, ...yearKeys.map(k => sum(groups.get(k) || [], () => true)));
+  const nowKey = localDateKey(new Date()).slice(0, 7);
+  const strip = yearKeys.map(k => {
+    const items = groups.get(k) || [];
+    const p = sum(items, isP), jk = sum(items, isJ), amt = money(items, () => true);
+    const tip = `${monthName(k, { month: 'long', year: 'numeric' })}: Philip ${milFmtMiles(p)} mi, Jack ${milFmtMiles(jk)} mi, ${milFmt(amt)}`;
+    return `<div class="mil-ym${k === nowKey ? ' now' : ''}${k > nowKey ? ' future' : ''}" title="${escapeHtml(tip)}">
+      <div class="mil-ym-bar"><i class="lp-jack" style="height:${(jk / maxMi * 100).toFixed(1)}%"></i><i class="lp-philip" style="height:${(p / maxMi * 100).toFixed(1)}%"></i></div>
+      <strong>${escapeHtml(monthName(k, { month: 'short' }))}</strong><span>${amt ? escapeHtml(milFmt(amt)) : ''}</span>
+    </div>`;
   }).join('');
+
+  const rows = [...groups.keys()].sort().reverse().map(k => {
+    const items = groups.get(k);
+    const open = money(items, j => !j.claimedDate);
+    return `<tr>
+      <td><strong>${escapeHtml(monthName(k, { month: 'long', year: 'numeric' }))}</strong></td>
+      <td class="num">${items.length}</td>
+      <td class="num">${escapeHtml(milFmt(money(items, isP)))} <span class="mil-mi">${escapeHtml(milFmtMiles(sum(items, isP)))} mi</span></td>
+      <td class="num">${escapeHtml(milFmt(money(items, isJ)))} <span class="mil-mi">${escapeHtml(milFmtMiles(sum(items, isJ)))} mi</span></td>
+      <td class="num amt">${escapeHtml(milFmt(money(items, () => true)))}</td>
+      <td class="num">${open ? `<span class="mil-open">${escapeHtml(milFmt(open))}</span>` : '<span class="mil-mi">all claimed</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  grid.innerHTML = `
+    <div class="mil-card mil-year">
+      <div class="mil-card-head"><h3>Miles by month, ${escapeHtml(ty.label)}</h3>
+        <ul class="mil-legend"><li class="lp-philip"><b></b>Philip</li><li class="lp-jack"><b></b>Jack</li></ul></div>
+      <div class="mil-ym-strip">${strip}</div>
+    </div>
+    <div class="mil-card">
+      <div class="mil-tbl-wrap"><table class="mil-tbl mil-month-tbl">
+        <thead><tr><th scope="col">Month</th><th class="num" scope="col">Journeys</th><th class="num" scope="col">Philip</th><th class="num" scope="col">Jack</th><th class="num" scope="col">Total</th><th class="num" scope="col">To claim</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+  if (typeof syncTableLabels === 'function') syncTableLabels();
 }
 
 
@@ -13367,6 +13210,14 @@ function milFilter(driver, btn) {
   document.querySelectorAll('#section-mileage .mil-chip[data-filter]').forEach(c => c.classList.remove('active'));
   if (btn) btn.classList.add('active');
   milRenderLog();
+}
+
+function milQuickPick(name) {
+  const sel = document.getElementById('milClient');
+  if (!sel) return;
+  sel.value = name;
+  milClientPicked();
+  document.getElementById('milPurpose')?.focus();
 }
 
 function milClientPicked() {
@@ -14084,7 +13935,6 @@ async function initMileage() {
 
   // Tax-saving labels (entity-aware: 20% income tax for sole trader, 25% CT for ltd)
   const ts = milConfig('taxSaving');
-  document.getElementById('milKpiTaxSaveLabel').textContent = ts.kpiTitle;
   document.getElementById('milYtTaxSaveLabel').textContent  = ts.cellLabel;
 
   // Driver descriptions
