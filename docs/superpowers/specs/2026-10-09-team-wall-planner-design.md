@@ -43,8 +43,8 @@ Leave requests. The Team strip fits too, numbering Mondays only.
 - Add journey: the six most-driven-to destinations as one-tap chips (client + miles); fields in one row.
 - Monthly summary: the tax year as twelve columns (miles, Philip/Jack stacked, £ under each) and one table
   of months (journeys, each driver £ and miles, total, still to claim) replacing a card per month.
-- Not changed, for Philip: `milRecomputeAll` counts the 10,000 miles across all journeys, not per tax year.
-  Every journey so far is in 2026/27, so no amount is affected yet; from 6 April 2027 it would be.
+- Fixed 9 Oct (Jack: "it should be per tax year"): `milRecomputeAll` counts the 10,000 miles per driver per tax
+  year (it counted across all journeys). Checked against all 74 journeys: no amount or rate changed.
 
 ## Timesheets, the same way (9 Oct)
 - **Time card** at the top of Log time: the week Mon–Sun, a lane per engineer, each day's hours filling its
