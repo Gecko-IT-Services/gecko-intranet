@@ -18,7 +18,7 @@
 #app #section-leave .lev-allow-fig .u { font-size: 14px; font-weight: 600; color: var(--muted); }
 #app #section-leave .lev-allow-fig .h { margin-left: auto; font: 500 11px var(--font-mono); color: var(--muted); }
 #app #section-leave .lev-allow .hol-tokens { gap: 5px; }
-#app #section-leave .lev-allow .hol-tokens i { width: 14px; height: 30px; border-radius: 4px; }
+#app #section-leave .lev-allow .hol-tokens i { flex-basis: 14px; height: 30px; border-radius: 4px; }
 #app #section-leave .lev-allow-sub { font: 500 11px var(--font-mono); color: var(--muted); }
 
 /* — Year planner — */
@@ -44,6 +44,9 @@
   font: 600 10px/15px var(--font-body); color: var(--card); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: var(--who); transition: filter var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
 }
+/* Stickers are drawn to the planner's scale: the touch floor (#portalShell button, !important) would stretch them
+   across the next month. Each is also a row in Leave requests at full size. */
+#app #section-leave .lp-bar { min-height: 0 !important; }
 #app #section-leave .lp-bar:hover { filter: brightness(1.08); transform: translateY(-1px); }
 #app #section-leave .lp-bar:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
 #app #section-leave .lp-bar.pending { color: var(--who); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--who) 30%, transparent) 0 3px, transparent 3px 7px); box-shadow: inset 0 0 0 1.5px var(--who); }
@@ -64,7 +67,8 @@
 @media (max-width: 640px) {
   #app #section-leave .lev-allow-card, #app #section-leave .lev-planner { padding: 14px; }
   #app #section-leave .lev-allow-fig .v { font-size: 36px; }
-  #app #section-leave .lev-allow .hol-tokens i { width: 11px; height: 24px; }
+  #app #section-leave .lev-allow .hol-tokens { gap: 3px; }
+  #app #section-leave .lev-allow .hol-tokens i { height: 24px; }
   #app #section-leave .lp-row { grid-template-columns: 30px repeat(31, minmax(0, 1fr)); grid-template-rows: 11px 11px; }
   #app #section-leave .lp-head span { font-size: 0; }
   #app #section-leave .lp-head span:is(:nth-child(2), :nth-child(11), :nth-child(21), :nth-child(31)) { font-size: 9px; }

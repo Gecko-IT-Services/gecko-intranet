@@ -4,10 +4,10 @@
 :is(#section-team, #section-leave) .tm-jack, :is(#section-team, #section-leave) .lp-jack { --who: var(--purple); }
 
 /* Holiday tokens (tokensHtml in core/team.js): one pill per day; spent → requested → left, filled bottom-up. */
-:is(#section-team, #section-leave) .hol-tokens { display: flex; flex-wrap: wrap; gap: 4px; }
+:is(#section-team, #section-leave) .hol-tokens { display: flex; gap: 4px; }
 :is(#section-team, #section-leave) .hol-tokens i {
-  width: 11px; height: 24px; border-radius: 3px; flex: none;
-  background: linear-gradient(to top, var(--border) 0 var(--b), var(--amber) var(--b) var(--p), var(--green) var(--p));
+  flex: 0 1 11px; min-width: 4px; height: 24px; border-radius: 3px;
+  background: linear-gradient(to top, color-mix(in srgb, var(--muted) 28%, transparent) 0 var(--b), var(--amber) var(--b) var(--p), var(--green) var(--p));
   animation: tm-pop var(--dur-3) var(--ease) both;
 }
 :is(#section-team, #section-leave) .hol-tokens i.over { background: var(--red); }
@@ -79,6 +79,7 @@
   padding: 0 8px; font: 600 11px/22px var(--font-body); text-align: left; color: var(--card); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   background: var(--who); transition: transform var(--dur-1) var(--ease), filter var(--dur-1) var(--ease);
 }
+#section-team .tm-bar { min-height: 0 !important; }   /* drawn to the strip's scale; the touch floor would stretch it */
 #section-team .tm-bar:hover { filter: brightness(1.08); transform: translateY(-1px); }
 #section-team .tm-bar.pending { color: var(--who); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--who) 30%, transparent) 0 3px, transparent 3px 7px); box-shadow: inset 0 0 0 1.5px var(--who); }
 #section-team .tm-bar.cut-s { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }

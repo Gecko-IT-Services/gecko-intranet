@@ -17964,7 +17964,7 @@ function levRenderCalendar() {
         const title = `${p} · ${levDateRangeLabel(b.from, b.to)} · ${what}${b.status === 'Pending' ? ' · requested' : ''}`;
         return `<button type="button" class="lp-bar lp-${p.toLowerCase()}${b.status === 'Pending' ? ' pending' : ''}${b.cutStart ? ' cut-s' : ''}${b.cutEnd ? ' cut-e' : ''}"
           style="grid-row:${li + 1};grid-column:${c0} / ${c1}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"
-          onclick="levOpenEditModal('${escapeHtml(String(b.id))}')">${escapeHtml(what)}</button>`;
+          onclick="levOpenEditModal('${escapeHtml(String(b.id))}')">${c1 - c0 >= 3 ? escapeHtml(what) : ''}</button>`;
       }).join('');
       return `<span class="lp-who lp-${p.toLowerCase()}" style="grid-row:${li + 1}" aria-hidden="true">${p[0]}</span>${cells}${stickers}`;
     }).join('');
