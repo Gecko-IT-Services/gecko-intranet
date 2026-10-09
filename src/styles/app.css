@@ -176,7 +176,7 @@
 #section-timesheets .tsh-ssa-facts small { display: block; color: var(--muted); font-size: 11px; }
 #section-timesheets .tsh-ssa-spark { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; height: 46px; align-items: end; }
 #section-timesheets .tsh-ssa-spark div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; height: 100%; }
-#section-timesheets .tsh-ssa-spark i { display: block; width: 100%; max-width: 22px; min-height: 2px; border-radius: 3px 3px 0 0; background: var(--blue); opacity: .85; }
+#section-timesheets .tsh-ssa-spark i { display: block; width: 100%; max-width: 22px; min-height: 2px; border-radius: 3px 3px 0 0; background: color-mix(in srgb, var(--muted) 45%, transparent); }
 #section-timesheets .tsh-ssa-spark div:last-child i { opacity: 1; background: var(--green); }
 #section-timesheets .tsh-ssa-spark span { font-size: 10px; color: var(--muted); }
 #section-timesheets .tsh-ssa-actions { flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-dim); }
