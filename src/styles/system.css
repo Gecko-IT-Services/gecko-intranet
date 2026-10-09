@@ -129,7 +129,7 @@
   font-variant-numeric: tabular-nums;
 }
 #app :is(.job-kpi > strong, .opp-kpi > strong) { color: var(--white); }
-#app :is(.job-kpi > small, .opp-kpi > small, .prf-sum-sub, .cl-kpi > small, .kpi-sub) { font-size: 12px; color: var(--muted); }
+#app :is(.job-kpi > small, .opp-kpi > small, .cl-kpi > small, .kpi-sub) { font-size: 12px; color: var(--muted); }
 
 
 /* ── 4 · Error state: red-tinted, with its recovery button ─────────── */
@@ -252,8 +252,7 @@
   #app #section-jobs .job-stage { scroll-snap-align: start; }
 
   /* Profitability: no CSV drag-and-drop or expand-all on a phone; filters stay compact. */
-  #app #section-profitability :is(.prf-drop-zone, .prf-abtn, .prf-export-btn, .prf-manage-link) { display: none !important; }
-  #portalShell #section-profitability .prf-fbtn { min-height: 36px !important; padding: 0 12px; }
+  #app #section-profitability :is(.prf-drop-zone, .prf-export-btn, .prf-manage-link) { display: none !important; }
 
   /* Monitoring: search fills the row; an alert's badge sits above its text. */
   #app :is(#section-backups, #section-alerts) .bkp-toolbar { justify-content: stretch; }

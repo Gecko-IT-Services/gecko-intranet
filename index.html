@@ -79,6 +79,7 @@
 <link rel="stylesheet" href="src/styles/team.css">
 <link rel="stylesheet" href="src/styles/leave.css">
 <link rel="stylesheet" href="src/styles/mileage.css">
+<link rel="stylesheet" href="src/styles/profitability.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -359,7 +360,6 @@ body {
    as separated surfaces — critical in light theme where white-on-near-white
    otherwise blends into one mass. */
 #section-overview .ovw-card,
-#section-profitability .prf-cc,
 #section-profitability .prf-xero-import,
 #section-clients .cli-card,
 #section-clients .cli-tbl-wrap,
@@ -1117,28 +1117,6 @@ body {
 /* — Wrapper layout — */
 #section-profitability .prf-wrap { display: flex; flex-direction: column; gap: 14px; }
 
-/* — Empty / seed banner — */
-#section-profitability .prf-seed {
-  background: var(--card); border: 1px dashed var(--green);
-  border-radius: var(--radius); padding: 26px 24px;
-  display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
-}
-#section-profitability .prf-seed-ic {
-  width: 44px; height: 44px; border-radius: 10px;
-  background: var(--green-glow); border: 1px solid var(--border);
-  color: var(--green);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-#section-profitability .prf-seed-text { flex: 1; min-width: 220px; }
-#section-profitability .prf-seed-text h3 {
-  font-family: var(--font-body);
-  font-weight: 800; font-size: 17px; letter-spacing: .05em;
-  text-transform: uppercase; margin-bottom: 4px;
-}
-#section-profitability .prf-seed-text p { color: var(--muted); font-size: 13px; }
-#section-profitability .prf-seed-actions { display: flex; gap: 8px; flex-shrink: 0; }
-
 /* — Summary strip (KPI tiles across the top) — */
 #section-profitability .prf-sum-strip {
   background: var(--card); border: 1px solid var(--border-dim);
@@ -1160,43 +1138,8 @@ body {
   font-size: 9px; color: var(--muted);
   text-transform: uppercase; letter-spacing: .08em;
 }
-/* Phase 10: sub-value for variance/actual vs expected */
-#section-profitability .prf-sum-sub {
-  font-size: 11px; font-family: var(--font-body);
-  font-weight: 600; letter-spacing: .02em; margin-top: 1px;
-}
-#section-profitability .prf-sum-sub.pos { color: var(--green); }
-#section-profitability .prf-sum-sub.neg { color: var(--red); }
-#section-profitability .prf-sum-sub.neutral { color: var(--muted); }
-#section-profitability .prf-sum-sub.amber { color: var(--amber); }
 
-/* — Filter / search bar — */
-#section-profitability .prf-ctrl {
-  background: var(--card); border: 1px solid var(--border-dim);
-  border-radius: var(--radius);
-  padding: 10px 14px; display: flex; gap: 7px; align-items: center;
-  flex-wrap: wrap;
-}
-#section-profitability .prf-cl {
-  font-size: 9px; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .08em; margin-right: 3px;
-}
-#section-profitability .prf-fbtn {
-  padding: 4px 13px; border-radius: 999px; border: 1px solid var(--border);
-  background: transparent; cursor: pointer;
-  font-size: 11px; font-family: var(--font-body);
-  color: var(--muted); transition: all .15s;
-}
-#section-profitability .prf-fbtn:hover { border-color: var(--green); color: var(--green); }
-#section-profitability .prf-fbtn.on { background: var(--green-glow); color: var(--green); border-color: var(--green); }
-#section-profitability .prf-cg { flex: 1; }
-#section-profitability .prf-abtn {
-  padding: 4px 11px; border-radius: 6px; border: 1px solid var(--border-dim);
-  background: transparent; cursor: pointer;
-  font-size: 11px; font-family: var(--font-body);
-  color: var(--muted); transition: all .15s;
-}
-#section-profitability .prf-abtn:hover { color: var(--white); border-color: var(--border); }
+/* — Sort select (above the table) — */
 #section-profitability .prf-sort {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 9px; color: var(--muted);
@@ -1211,33 +1154,6 @@ body {
   padding: 0 28px 0 10px; outline: none;
 }
 #section-profitability .prf-sort select:focus { border-color: var(--green); }
-#section-profitability .prf-srch { position: relative; }
-#section-profitability .prf-srch input {
-  padding: 5px 11px 5px 28px; border-radius: 999px;
-  border: 1px solid var(--border); background: var(--dark);
-  color: var(--white); font-size: 11px;
-  font-family: var(--font-body);
-  width: 200px; outline: none; transition: border-color .15s;
-}
-#section-profitability .prf-srch input::placeholder { color: var(--muted); }
-#section-profitability .prf-srch input:focus { border-color: var(--green); }
-#section-profitability .prf-srch-ic {
-  position: absolute; left: 9px; top: 50%;
-  transform: translateY(-50%); color: var(--muted);
-  pointer-events: none; font-size: 11px;
-}
-
-/* — Legend (category pill key + margin colour key) — */
-#section-profitability .prf-leg {
-  padding: 8px 14px; display: flex; gap: 14px; align-items: center;
-  flex-wrap: wrap;
-  background: var(--card); border: 1px solid var(--border-dim);
-  border-radius: var(--radius);
-}
-#section-profitability .prf-leg-r { margin-left: auto; font-size: 10px; color: var(--muted); display: flex; gap: 10px; }
-#section-profitability .prf-m-hi { color: var(--green); font-weight: 700; }
-#section-profitability .prf-m-md { color: var(--amber); font-weight: 700; }
-#section-profitability .prf-m-lo { color: var(--red); font-weight: 700; }
 
 /* — Category pills — */
 #section-profitability .prf-ct {
@@ -1257,65 +1173,6 @@ body {
 #section-profitability .prf-irow td { color: var(--muted); font-size: 12px; }
 #section-profitability .prf-irow .prf-iname { color: var(--white); }
 #section-profitability .prf-irow .prf-isub { font-size: 10px; color: var(--muted); }
-
-/* — Client card — */
-#section-profitability .prf-cc {
-  background: var(--card); border: 1px solid var(--border-dim);
-  border-radius: var(--radius); overflow: hidden;
-  transition: border-color .2s;
-}
-#section-profitability .prf-cc:hover { border-color: var(--border); }
-#section-profitability .prf-cc.winding { box-shadow: inset 0 0 0 1px var(--amber-border); }
-#section-profitability .prf-cc.isnew { box-shadow: inset 0 0 0 1px var(--blue-border); }
-#section-profitability .prf-cc.open { border-color: var(--green-line); }
-
-/* — Card header (collapsed view, click to toggle) — */
-#section-profitability .prf-ch {
-  padding: 12px 18px; display: flex; align-items: center; gap: 12px;
-  cursor: pointer; user-select: none; transition: background .15s;
-}
-#section-profitability .prf-ch:hover { background: var(--card-hover); }
-#section-profitability .prf-cav {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: var(--green-glow); border: 1px solid var(--border);
-  color: var(--green);
-  font-family: var(--font-body);
-  font-weight: 800; font-size: 12px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-#section-profitability .prf-cn {
-  font-family: var(--font-body);
-  font-size: 15px; font-weight: 700; letter-spacing: .05em;
-  text-transform: uppercase; color: var(--white); flex: 1;
-  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-#section-profitability .prf-cbadge {
-  font-size: 9px; font-weight: 700; letter-spacing: .07em;
-  text-transform: uppercase; padding: 2px 8px; border-radius: 999px;
-  flex-shrink: 0;
-}
-#section-profitability .prf-b-act { background: var(--green-glow); color: var(--green); border: 1px solid var(--border); }
-#section-profitability .prf-b-win { background: var(--amber-dim);  color: var(--amber); border: 1px solid var(--amber-border); }
-#section-profitability .prf-b-new { background: var(--blue-dim);   color: var(--blue);  border: 1px solid var(--blue-border); }
-
-#section-profitability .prf-cnums { display: flex; gap: 18px; align-items: center; }
-#section-profitability .prf-cnum { text-align: right; }
-#section-profitability .prf-cnum .v {
-  font-family: var(--font-body);
-  font-size: 15px; font-weight: 700;
-}
-#section-profitability .prf-cnum .l {
-  font-size: 9px; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .05em;
-}
-#section-profitability .prf-vc { color: var(--red); }
-#section-profitability .prf-vs { color: var(--white); }
-#section-profitability .prf-vg { color: var(--green); }
-#section-profitability .prf-vo { color: var(--blue); }
-#section-profitability .prf-xsplit { display: flex; align-items: center; gap: 14px; justify-content: flex-end; flex-wrap: wrap; font-size: 10px; color: var(--muted); }
-#section-profitability .prf-xsplit strong { font-family: var(--font-body); color: var(--white); font-size: 13px; }
-#section-profitability .prf-xsplit .prf-vo strong { color: var(--blue); }
 
 /* — Margin pill — */
 #section-profitability .prf-mpill {
@@ -1339,17 +1196,7 @@ body {
 #section-profitability .prf-iconbtn:hover { color: var(--green); border-color: var(--green); background: var(--green-glow); }
 #section-profitability .prf-iconbtn.danger:hover { color: var(--red); border-color: var(--red); background: var(--red-dim); }
 
-#section-profitability .prf-chev {
-  font-size: 10px; color: var(--muted); transition: transform .2s;
-  flex-shrink: 0; margin-left: 4px;
-}
-#section-profitability .prf-cc.open .prf-chev { transform: rotate(180deg); }
-
-/* — Service body (revealed when card is open) — */
-#section-profitability .prf-sbody {
-  display: none; border-top: 1px solid var(--border-dim);
-}
-#section-profitability .prf-cc.open .prf-sbody { display: block; }
+/* — Retainer note (in a client's open panel) — */
 #section-profitability .prf-ret-notice {
   padding: 8px 18px; background: var(--purple-dim);
   border-bottom: 1px solid rgba(155,109,255,0.15);
@@ -1408,66 +1255,7 @@ body {
 #section-profitability .prf-erow .prf-eactions { display: flex; gap: 4px; justify-content: flex-end; }
 
 /* — Add-service inline trigger row (last row in service table when card open) — */
-#section-profitability .prf-arow td {
-  background: rgba(0,0,0,0.15);
-  text-align: center; padding: 8px 14px;
-}
-#section-profitability .prf-arow button {
-  background: transparent; border: 1px dashed var(--border);
-  color: var(--muted); padding: 5px 14px; border-radius: 999px;
-  font-size: 11px; font-family: var(--font-body);
-  cursor: pointer; transition: all .15s;
-  display: inline-flex; align-items: center; gap: 6px;
-}
-#section-profitability .prf-arow button:hover { color: var(--green); border-color: var(--green); }
-
-/* — Total row — */
-#section-profitability .prf-trow td {
-  background: rgba(82,176,46,0.07);
-  border-top: 1px solid var(--green-line) !important;
-  border-bottom: none !important;
-  padding: 10px 14px;
-  font-family: var(--font-body);
-  font-size: 13px; font-weight: 700;
-  letter-spacing: .04em; text-transform: uppercase;
-  color: var(--white);
-}
-#section-profitability .prf-trow td.prf-nr { font-size: 15px; }
-
-/* — Xero reconciliation row — */
-#section-profitability .prf-xrow td {
-  background: rgba(0,0,0,0.25);
-  border-top: 1px dashed var(--border) !important;
-  border-bottom: none !important;
-  padding: 8px 14px;
-}
-#section-profitability .prf-xlbl { font-size: 10px; color: var(--muted); }
-#section-profitability .prf-xctrl { display: flex; align-items: center; gap: 7px; justify-content: flex-end; flex-wrap: wrap; }
-#section-profitability .prf-xcalc { font-size: 10px; color: var(--muted); }
-#section-profitability .prf-xcalc strong {
-  font-family: var(--font-body);
-  color: var(--white); font-size: 13px;
-}
-#section-profitability .prf-xinput {
-  width: 105px; padding: 4px 7px;
-  background: var(--dark); border: 1px solid var(--border);
-  border-radius: 6px; color: var(--white);
-  font-family: var(--font-body);
-  font-size: 14px; font-weight: 700; text-align: right;
-  outline: none; transition: border-color .15s;
-}
-#section-profitability .prf-xinput:focus { border-color: var(--green); }
-#section-profitability .prf-xst {
-  font-size: 9px; font-weight: 700; padding: 3px 8px;
-  border-radius: 999px; letter-spacing: .04em; white-space: nowrap;
-}
-#section-profitability .prf-xsp { background: var(--border-dim); color: var(--muted); }
-#section-profitability .prf-xsm { background: var(--green-glow); color: var(--green); border: 1px solid var(--border); }
-#section-profitability .prf-xsc { background: var(--amber-dim);  color: var(--amber); }
-#section-profitability .prf-xsd { background: var(--red-dim);    color: var(--red); }
-#section-profitability .prf-xdelta { font-size: 11px; font-family: var(--font-body); font-weight: 700; }
-#section-profitability .prf-xdp { color: var(--amber); }
-#section-profitability .prf-xdn { color: var(--red); }
+#section-profitability .prf-arow td { padding: 8px 14px; }
 
 /* — Xero CSV Import card (Phase 10) — */
 #section-profitability .prf-xero-import {
@@ -1515,50 +1303,6 @@ body {
 #section-profitability .prf-drop-zone input[type="file"] {
   position: absolute; inset: 0; opacity: 0; cursor: pointer;
 }
-#section-profitability .prf-xero-stats {
-  min-width: 160px; font-size: 12px;
-}
-#section-profitability .prf-xero-stats .xs-month {
-  font-family: var(--font-body); font-size: 16px;
-  font-weight: 700; color: var(--green); letter-spacing: .04em;
-  text-transform: uppercase; margin-bottom: 4px;
-}
-#section-profitability .prf-xero-stats .xs-line {
-  color: var(--muted); font-size: 11px; margin-bottom: 2px;
-}
-#section-profitability .prf-xero-stats .xs-line strong { color: var(--white); }
-#section-profitability .prf-xero-actions {
-  display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px;
-}
-#section-profitability .prf-xero-actions label {
-  font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; cursor: pointer;
-}
-#section-profitability .prf-xero-actions label input[type="checkbox"] { accent-color: var(--green); }
-#section-profitability .prf-xero-unmatched {
-  width: 100%; margin-top: 6px; padding-top: 10px;
-  border-top: 1px solid var(--border-dim);
-}
-#section-profitability .prf-xero-unmatched .xu-title {
-  font-size: 11px; color: var(--amber); font-weight: 600; margin-bottom: 6px;
-  display: flex; align-items: center; gap: 5px;
-}
-#section-profitability .prf-xero-unmatched .xu-row {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
-  font-size: 12px; color: var(--white);
-}
-#section-profitability .prf-xero-unmatched .xu-row .xu-amt {
-  font-family: var(--font-body); font-weight: 700;
-  color: var(--muted); font-size: 13px; min-width: 70px;
-}
-#section-profitability .prf-xero-unmatched .xu-row { flex-wrap: wrap; row-gap: 6px; }
-#section-profitability .prf-xero-unmatched .xu-row select { max-width: 100%; min-width: 0; flex: 1 1 180px; }
-#section-profitability .prf-xero-unmatched .xu-row select {
-  padding: 3px 8px; border-radius: 6px;
-  background: var(--dark); border: 1px solid var(--border);
-  color: var(--white); font-size: 11px;
-  font-family: var(--font-body); outline: none;
-}
-#section-profitability .prf-xero-unmatched .xu-row select:focus { border-color: var(--green); }
 
 /* — CSP cost import card (2026-08-13) —
      Reuses .prf-xero-import for the card shell; only the preview table
@@ -1644,50 +1388,6 @@ body {
 }
 #section-profitability .prf-export-btn:hover { color: var(--green); border-color: var(--green); }
 
-/* — Xero month-mismatch notice in reconciliation row (Phase 10) — */
-#section-profitability .prf-xero-nodata {
-  font-size: 10px; color: var(--muted); font-style: italic;
-}
-
-/* — Grand total card (bottom of section) — */
-#section-profitability .prf-gtot {
-  background: var(--card); border: 1px solid var(--green-line);
-  border-radius: var(--radius);
-  padding: 18px 24px; display: flex; align-items: center; gap: 0;
-  overflow: hidden; flex-wrap: wrap;
-}
-#section-profitability .prf-gtlbl { flex: 1; padding-right: 24px; border-right: 1px solid var(--border); min-width: 220px; }
-#section-profitability .prf-gtlbl strong {
-  font-family: var(--font-body);
-  font-size: 18px; font-weight: 800;
-  letter-spacing: .06em; text-transform: uppercase; display: block;
-}
-#section-profitability .prf-gtlbl strong span { color: var(--green); }
-#section-profitability .prf-gtstats { display: flex; flex-wrap: wrap; }
-#section-profitability .prf-gtst { padding: 0 22px; border-right: 1px solid var(--border); text-align: center; }
-#section-profitability .prf-gtst:last-child { border-right: none; padding-right: 0; }
-#section-profitability .prf-gtst .v {
-  font-family: var(--font-body);
-  font-size: 24px; font-weight: 800; display: block;
-  letter-spacing: .02em;
-}
-#section-profitability .prf-gtst .l {
-  font-size: 9px; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .08em;
-}
-
-/* — Empty state (no clients yet, but lists exist with rows so seed banner won't show) — */
-#section-profitability .prf-empty {
-  background: var(--card); border: 1px dashed var(--border-dim);
-  border-radius: var(--radius); padding: 50px 30px; text-align: center;
-}
-#section-profitability .prf-empty h3 {
-  font-family: var(--font-body);
-  font-size: 18px; font-weight: 700;
-  letter-spacing: .05em; text-transform: uppercase;
-  color: var(--white); margin-bottom: 6px;
-}
-
 /* — Profitability modal (mirrors mil-modal pattern, slightly wider for forms) — */
 #section-profitability .prf-modal-bg {
   position: fixed; inset: 0; background: var(--overlay);
@@ -1729,14 +1429,6 @@ body {
 #section-profitability .prf-form-grp textarea:focus { border-color: var(--green); }
 #section-profitability .prf-form-grp textarea { resize: vertical; min-height: 70px; }
 #section-profitability .prf-mm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-
-/* — Mobile/tablet adjustments — */
-@media (max-width: 900px) {
-#section-profitability .prf-cnums .prf-cnum:not(.keep) { display: none; }
-#section-profitability .prf-srch input { width: 140px; }
-#section-profitability .prf-gtlbl { border-right: none; padding-right: 0; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
-#section-profitability .prf-gtst { padding: 0 14px; }
-}
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   PROFIT & LOSS SECTION                                           ║
@@ -3843,14 +3535,8 @@ body::before {
 #section-overview .ovw-kpi,
 #section-overview .ovw-card,
 #section-overview .ovw-actions,
-#section-profitability .prf-seed,
 #section-profitability .prf-sum-strip,
-#section-profitability .prf-ctrl,
-#section-profitability .prf-leg,
-#section-profitability .prf-cc,
 #section-profitability .prf-xero-import,
-#section-profitability .prf-gtot,
-#section-profitability .prf-empty,
 #section-mileage .mil-quick-card,
 #section-mileage .mil-claim-bar,
 #section-clients .cli-tbl-wrap,
@@ -3875,7 +3561,6 @@ body::before {
 .placeholder:hover,
 #section-overview .ovw-kpi:hover,
 #section-overview .ovw-card:hover,
-#section-profitability .prf-cc:hover,
 #section-clients .cli-card:hover,
 #section-leave .lev-card:hover,
 #section-compliance .cmp-item:hover{
@@ -3976,8 +3661,6 @@ body::before {
 #section-profitability .prf-manage-link,
 #section-profitability .prf-export-btn,
 #section-profitability .prf-add-btn,
-#section-profitability .prf-fbtn,
-#section-profitability .prf-abtn,
 #section-mileage .mil-refresh,
 #section-mileage .mil-tab,
 #section-mileage .mil-chip,
@@ -4005,8 +3688,6 @@ body::before {
 input,
 select,
 textarea,
-#section-profitability .prf-srch input,
-#section-profitability .prf-xinput,
 #section-mileage .mil-input,
 #section-mileage .mil-select,
 #section-mileage .mil-textarea,
@@ -4589,8 +4270,6 @@ body::before {
     padding: 13px 14px;
   }
 
-  #section-profitability .prf-ctrl,
-  #section-profitability .prf-leg,
   #section-mileage .mil-filter,
   #section-timesheets .tsh-filters,
   #section-leave .lev-toolbar,
@@ -4604,23 +4283,7 @@ body::before {
     scrollbar-width: none;
   }
 
-  #section-profitability .prf-ctrl {
-    flex-wrap: wrap;
-    overflow-x: visible;
-    align-items: stretch;
-  }
-
-  #section-profitability .prf-cg {
-    display: none;
-  }
-
-  #section-profitability .prf-fbtn,
-  #section-profitability .prf-abtn {
-    min-height: 38px;
-  }
-
   #section-profitability .prf-sort {
-    order: 2;
     flex: 1 1 100%;
   }
 
@@ -4628,11 +4291,6 @@ body::before {
     flex: 1;
     width: 100%;
     min-height: 40px;
-  }
-
-  #section-profitability .prf-srch {
-    order: 5;
-    flex: 1 1 100%;
   }
 
   #section-profit-loss .pnl-actions {
@@ -4661,8 +4319,6 @@ body::before {
     align-items: center;
   }
 
-  #section-profitability .prf-ctrl::-webkit-scrollbar,
-  #section-profitability .prf-leg::-webkit-scrollbar,
   #section-mileage .mil-filter::-webkit-scrollbar,
   #section-timesheets .tsh-filters::-webkit-scrollbar,
   #section-leave .lev-toolbar::-webkit-scrollbar,
@@ -4670,8 +4326,6 @@ body::before {
     display: none;
   }
 
-  #section-profitability .prf-srch,
-  #section-profitability .prf-srch input,
   #section-clients .cli-srch,
   #section-clients .cli-srch input {
     width: 100%;
@@ -4743,32 +4397,6 @@ body::before {
     flex-direction: column;
   }
 
-  #section-profitability .prf-ch {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 9px;
-    padding: 14px;
-  }
-
-  #section-profitability .prf-cn {
-    flex-basis: calc(100% - 46px);
-    white-space: normal;
-  }
-
-  #section-profitability .prf-cnums {
-    width: 100%;
-    justify-content: space-between;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  /* On the invoiced basis cost is the number that moves month to month,
-     so it earns its place on a phone alongside recurring and profit. */
-  #section-profitability .prf-cnums .prf-cnum:not(.keep) { display: block; }
-
-  #section-profitability .prf-mpill {
-    margin-left: auto;
-  }
-
   #section-clients .cli-grid,
   #section-timesheets .tsh-ssa-grid,
   #section-settings .set-grid,
@@ -4820,8 +4448,7 @@ body::before {
   #section-clients .cli-tbl-wrap,
   #section-timesheets .tsh-tbl-wrap,
   #section-leave .lev-tbl-wrap,
-  #section-compliance .cmp-tbl-wrap,
-  #section-profitability .prf-sbody {
+  #section-compliance .cmp-tbl-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -5109,8 +4736,6 @@ body::before {
 :root[data-theme="light"] input,
 :root[data-theme="light"] select,
 :root[data-theme="light"] textarea,
-:root[data-theme="light"] #section-profitability .prf-srch input,
-:root[data-theme="light"] #section-profitability .prf-xinput,
 :root[data-theme="light"] #section-mileage .mil-input,
 :root[data-theme="light"] #section-mileage .mil-select,
 :root[data-theme="light"] #section-mileage .mil-textarea,
@@ -5140,7 +4765,6 @@ body::before {
 :root[data-theme="light"] .ovw-ops-head p,
 :root[data-theme="light"] .ovw-op .op-label,
 :root[data-theme="light"] .ovw-op .op-note,
-:root[data-theme="light"] .prf-sum-sub,
 :root[data-theme="light"] .tsh-ssa-hint,
 :root[data-theme="light"] .cmp-meta{
   color: #405247 !important;
@@ -5149,7 +4773,6 @@ body::before {
 :root[data-theme="light"] .badge,
 :root[data-theme="light"] .set-badge,
 :root[data-theme="light"] .pnl-month,
-:root[data-theme="light"] .prf-leg-r,
 :root[data-theme="light"] .tsh-last-sync,
 :root[data-theme="light"] .cmp-last-sync {
   font-weight: 700;
@@ -5266,10 +4889,6 @@ body::before {
   row-gap: 4px;
 }
 #section-compliance .cmp-item-meta { min-width: 0; }
-#section-profitability .prf-leg {
-  flex-wrap: wrap;
-  row-gap: 6px;
-}
 
 /* Tab strips are an ordered, single-line control and must stay on one
    line, so they become a proper scroll rail: momentum scrolling, no
@@ -5455,19 +5074,7 @@ body::before {
     overflow-wrap: anywhere;
   }
   #portalShell table[data-rt] > tfoot > tr > td[colspan] { grid-column: 1 / -1; }
-  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr::before {
-    display: block;
-    font-family: var(--font-body);
-    font-size: 9.5px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 2px;
-  }
-  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr:nth-child(2)::before { content: 'Cost'; }
-  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr:nth-child(3)::before { content: 'Revenue'; }
-  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr:nth-child(4)::before { content: 'Profit'; }
-  #section-profitability .prf-stbl > tfoot .prf-trow td.prf-nr:nth-child(5)::before { content: 'Margin'; }
-  #section-profitability .prf-stbl > tfoot .prf-xsplit,
-  #section-profitability .prf-stbl > tfoot .prf-xctrl { justify-content: flex-start; }
-  #section-profitability .prf-stbl > tfoot .prf-xrow td { background: transparent !important; }
+
   /* Read-only supplier-invoice rows have no actions; drop the empty cell. */
   #section-profitability .prf-stbl > tbody > tr.prf-irow > td:last-child { display: none !important; }
 
@@ -9383,18 +8990,12 @@ const PRF = {
   listIds:     { clients: null, services: null },
   clients:     [],   // [{ id, name, status, contractStart, notes, xeroHistory }]
   services:    [],   // [{ id, clientName, name, category, cost, sell, notes }]
-  filterCat:   'all',
   sortBy:      'profitDesc',
   search:      '',
-  openCards:   new Set(),                        // client IDs of expanded cards (preserved across re-renders)
+  openCards:   new Set(),                        // client IDs whose service lines are open (kept across re-renders)
   modalCb:     null,                             // active modal confirm callback
-  // Phase 10: Xero CSV import state
   selectedMonth:  null,         // 'YYYY-MM' for the month selector (defaults to current month)
-  xeroImported:   false,        // true after a CSV has been processed this session
-  xeroMonth:      null,         // 'YYYY-MM' of the currently imported CSV month
-  xeroUnmatched:  [],           // [{ xeroName, total, assignedTo }] — contacts that didn't auto-match
-  xeroData:       {},           // { normalisedClientName: totalExVat } — parsed CSV data
-  includeDrafts:  false,        // whether to include Draft invoices in the import
+  xeroUnmatched:  {},           // { 'YYYY-MM': [{ xeroName, total }] } — Xero contacts on no client, from the feed
   // CSP cost import (2026-08-13)
   csp: {
     imported:  false,   // a file has been parsed this session
@@ -9444,10 +9045,6 @@ const prfFmtSigned = v => (Number(v) || 0) < 0 ? '−' + prfFmtForce(-v) : prfFm
 const prfFmtPct = v => {
   if (!isFinite(v) || v === 0) return '—';
   return (v * 100).toFixed(1) + '%';
-};
-const prfInitials = name => {
-  if (!name) return '?';
-  return name.split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
 };
 const round2 = n => Math.round(n * 100) / 100;
 const prfMpClass = pct => pct >= 0.7 ? 'prf-mp-hi' : pct >= 0.4 ? 'prf-mp-md' : 'prf-mp-lo';
@@ -9509,17 +9106,8 @@ async function prfLoadServices() {
 
 
 // ─── SharePoint helpers — CRUD ────────────────────────────────────────
-async function prfCreateClient(c) {
-  const fields = { Title: c.name, Status: c.status || 'Active' };
-  if (c.contractStart) fields.ContractStart = c.contractStart;
-  if (c.notes)         fields.Notes = c.notes;
-  return clientListCreate('gecko_clients', PRF.siteId, PRF.listIds.clients, fields);
-}
 async function prfPatchClient(id, patch) {
   return clientListPatch('gecko_clients', PRF.siteId, PRF.listIds.clients, id, patch);
-}
-async function prfDeleteClient(id) {
-  return clientListDelete('gecko_clients', PRF.siteId, PRF.listIds.clients, id);
 }
 
 async function prfCreateService(s) {
@@ -9632,9 +9220,6 @@ function prfClientTotals(clientName, category = 'all') {
   const margin  = sell > 0 ? gp / sell : 0;
   return { sell, cost, sellRet, sellSt, gp, margin, all };
 }
-function prfClientViewTotals(clientName) {
-  return prfClientTotals(clientName, PRF.filterCat || 'all');
-}
 
 /** True when the feed split this month's Xero billing into recurring and one-off. */
 function prfMonthHasSplit(month = PRF.selectedMonth || prfCurrentMonth()) {
@@ -9645,18 +9230,10 @@ function prfMonthHasSplit(month = PRF.selectedMonth || prfCurrentMonth()) {
 function prfMonthInvoiced(month = PRF.selectedMonth || prfCurrentMonth()) {
   return PRF.invoiced[month] || null;
 }
-/** This client's supplier-invoice lines for the month (all-services view only). */
+/** This client's supplier-invoice lines for the month. */
 function prfClientInvoiced(client, month = PRF.selectedMonth || prfCurrentMonth()) {
-  const cat = PRF.filterCat || 'all';
   const inv = prfMonthInvoiced(month);
-  const e = inv ? inv.byClient.get(client.id) : null;
-  if (!e) return null;
-  if (cat === 'all') return e;
-  if (cat !== 'hosting') return null;
-  // Hosting view: only the Clook lines, so the filter stays truthful.
-  const lines = e.lines.filter(l => l.supplier === 'Clook');
-  if (!lines.length) return null;
-  return { client: e.client, lines, total: round2(lines.reduce((a, l) => a + l.net, 0)) };
+  return (inv && inv.byClient.get(client.id)) || null;
 }
 
 /**
@@ -9667,13 +9244,12 @@ function prfClientInvoiced(client, month = PRF.selectedMonth || prfCurrentMonth(
  * service lines: Xero holds no per-client cost.
  */
 function prfClientHeadline(client) {
-  const view = prfClientViewTotals(client.name);
+  const view = prfClientTotals(client.name);
   const month = PRF.selectedMonth || prfCurrentMonth();
-  const all = (PRF.filterCat || 'all') === 'all';
   // Cost = monthly service lines + supplier invoices dated this month.
   const inv = prfClientInvoiced(client, month);
   const cost = round2(view.cost + (inv ? inv.total : 0));
-  if (!all || !prfMonthHasSplit(month)) {
+  if (!prfMonthHasSplit(month)) {
     const gp = round2(view.sell - cost);
     return { cost, sell: view.sell, gp, margin: view.sell > 0 ? gp / view.sell : 0, oneOff: 0, fromXero: false, billed: true, invoiced: inv ? inv.total : 0 };
   }
@@ -9689,21 +9265,10 @@ function prfClientHeadline(client) {
   };
 }
 function prfGrandTotals() {
-  let cost = 0, sell = 0, sellRet = 0, xero = 0, xeroCount = 0, activeClients = 0;
+  let cost = 0, sell = 0, sellRet = 0;
   const selMonth = PRF.selectedMonth || prfCurrentMonth();
-  const cat = PRF.filterCat || 'all';
   PRF.clients.forEach(c => {
-    const clientServices = PRF.services.filter(s => s.clientName === c.name && (cat === 'all' || s.category === cat));
-    if (c.status !== 'Winding' && (cat === 'all' || clientServices.length > 0)) activeClients++;
-    // Xero actuals are whole-client invoice figures, so only compare them
-    // against the all-services view. Category filters rank service lines only.
-    if (cat === 'all') {
-      const xVal = prfGetXero(c, selMonth);
-      if (xVal !== null && !isNaN(xVal)) {
-        xero += xVal; xeroCount++;
-      }
-    }
-    clientServices.forEach(s => {
+    PRF.services.filter(s => s.clientName === c.name).forEach(s => {
       cost += prfRowCost(s); sell += prfRowSell(s);
       if (s.category === 'retainer') sellRet += prfRowSell(s);
     });
@@ -9714,7 +9279,7 @@ function prfGrandTotals() {
   // Supplier invoices dated this month: per client, plus the shared
   // hosting plan and anything not tied to a client. All of it is cost.
   let invoiced = null;
-  if (cat === 'all' && prfMonthInvoiced(selMonth)) {
+  if (prfMonthInvoiced(selMonth)) {
     const inv = prfMonthInvoiced(selMonth);
     const sum = arr => round2(arr.reduce((a, l) => a + l.net, 0));
     invoiced = { total: inv.total, shared: sum(inv.shared), unassigned: sum(inv.unassigned), unassignedLines: inv.unassigned, sharedLines: inv.shared };
@@ -9722,273 +9287,151 @@ function prfGrandTotals() {
   }
   // Recurring vs one-off from Xero, when the feed split this month.
   let split = null;
-  if (cat === 'all' && prfMonthHasSplit(selMonth)) {
+  if (prfMonthHasSplit(selMonth)) {
     let recurring = 0, oneOff = 0;
     for (const e of PRF.xeroSplit[selMonth].values()) { recurring += e.recurring; oneOff += e.oneOff; }
     const stackGp = recurring - cost;
     split = { recurring, oneOff, stackGp, stackMargin: recurring > 0 ? stackGp / recurring : 0 };
   }
-  return { cost, sell, sellStack, sellRet, gp, margin, xero, xeroCount, activeClients, category: cat, split, invoiced };
+  return { cost, sell, sellStack, sellRet, gp, margin, split, invoiced };
 }
 
 
 // ─── Master render ────────────────────────────────────────────────────
+// Status line, one line of figures, one table: clients that need a look first, each opening onto
+// its service lines. Design: docs/superpowers/specs/2026-10-09-simpler-profitability-design.md
 function prfRenderAll() {
   const wrap = document.getElementById('prfWrap');
   if (!wrap) return;
-
-  // — Empty state: lists exist but both are empty → offer to seed —
-  if (PRF.clients.length === 0 && PRF.services.length === 0) {
-    wrap.innerHTML = prfRenderSeedBanner();
+  if (PRF.clients.length === 0) {
+    wrap.innerHTML = `<div class="state-empty"><h3>No clients yet</h3>
+      <p>Add them in the Directory.</p>
+      <button class="btn btn-sm" type="button" onclick="navTo('clients')">Open the Directory</button></div>`;
     return;
   }
-
-  // — Normal render: Xero import + KPIs + filter bar + legend + cards + grand total —
-  wrap.innerHTML =
-    prfRenderXeroImport() +
-    prfRenderSummary() +
-    prfRenderControls() +
-    prfRenderLegend() +
-    prfRenderCards() +
-    prfRenderGrandTotal();
-
-  // Apply current filter/search after re-render
+  wrap.innerHTML = prfRenderStatus() + prfRenderSummary() + prfRenderTable();
   prfApplyFilters();
-
-  // Phase 10: update month selector label
   prfUpdateMonthUI();
-
-  // The Apply button's enabled state depends on ticks and the warning, both
-  // of which live in state rather than in the markup.
-  cspSyncApplyState();
 }
 
-function prfRenderSeedBanner() {
-  return `
-    <div class="prf-seed">
-      <div class="prf-seed-ic">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      </div>
-      <div class="prf-seed-text">
-        <h3>No clients yet</h3>
-        <p>Seed 24 clients (~60 service lines) or add them in the Directory.</p>
-      </div>
-      <div class="prf-seed-actions">
-        <!-- Phase 5: "Add Manually" now navigates to the Directory, which owns client CRUD. -->
-        <button class="btn btn-ghost" type="button" onclick="navTo('clients')">Add manually</button>
-        <button class="btn btn-primary" type="button" onclick="prfConfirmSeed()">Seed sample data</button>
-      </div>
-    </div>`;
+function prfRenderStatus() {
+  return `<div class="prf-status">${prfRenderFeedStatus('xero')}</div>`;
 }
 
+/** One line of figures for the month: Xero's recurring split when the feed has it, else the typed lines. */
 function prfRenderSummary() {
   const t = prfGrandTotals();
-  const hasXero = t.xeroCount > 0;
-  const selMonth = PRF.selectedMonth || prfCurrentMonth();
-  const scoped = t.category && t.category !== 'all';
-  const scopeNote = scoped
-    ? `<div class="prf-sum-sub neutral">${escapeHtml(PRF_CATS.find(c => c.key === t.category)?.label || t.category)} view</div>`
-    : '';
-
-  // Variance: Xero actual revenue vs expected total revenue
-  const variance = hasXero ? t.xero - t.sell : 0;
-  const variancePct = hasXero && t.sell > 0 ? ((t.xero - t.sell) / t.sell * 100) : 0;
-  const varCls = variance >= 0 ? 'pos' : 'neg';
-  const varSign = variance >= 0 ? '+' : '';
-
-  // Xero-derived margin (Xero revenue minus expected costs)
-  const xeroGp = hasXero ? t.xero - t.cost : 0;
-  const xeroMargin = hasXero && t.xero > 0 ? xeroGp / t.xero : 0;
-
-  // Sub-text for each KPI (only shown when Xero data exists for this month)
-  const xeroSub = hasXero
-    ? `<div class="prf-sum-sub amber">Xero: ${prfFmt(t.xero)}</div>`
-    : `<div class="prf-sum-sub neutral">${scoped ? 'Whole-client actual only' : 'No Xero data'}</div>`;
-
-  const gpSub = hasXero
-    ? `<div class="prf-sum-sub ${xeroGp >= t.gp ? 'pos' : 'neg'}">Xero: ${prfFmt(xeroGp)}</div>`
-    : '';
-
-  const marginSub = hasXero
-    ? `<div class="prf-sum-sub ${xeroMargin >= t.margin ? 'pos' : 'neg'}">Xero: ${prfFmtPct(xeroMargin)}</div>`
-    : '';
-
-  const varianceSub = hasXero
-    ? `<div class="prf-sum-sub ${varCls}">${varSign}${prfFmt(variance)} (${varSign}${variancePct.toFixed(1)}%)</div>`
-    : '';
-
+  const fig = (label, value, cls = '') => `<div class="prf-sum-s"><div class="prf-sum-v${cls ? ' ' + cls : ''}">${value}</div><div class="prf-sum-l">${label}</div></div>`;
   if (t.split) {
     const sp = t.split;
-    return `
-    <div class="prf-sum-strip">
-      <div class="prf-sum-s"><div class="prf-sum-v">${t.activeClients}</div><div class="prf-sum-l">Active Clients</div></div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v">${prfFmt(sp.recurring)}</div><div class="prf-sum-l">Recurring Revenue</div>
-        <div class="prf-sum-sub amber">Monthly lines ${prfFmt(t.sell)}</div>
-      </div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v">${prfFmt(t.cost)}</div><div class="prf-sum-l">Total Cost</div>
-        ${t.invoiced ? `<div class="prf-sum-sub neutral">incl. ${prfFmtForce(t.invoiced.total)} supplier invoices</div>` : ''}
-      </div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v" style="color:${sp.stackGp < 0 ? 'var(--red)' : 'var(--green)'}">${prfFmtSigned(sp.stackGp)}</div><div class="prf-sum-l">Recurring Profit</div>
-      </div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v">${prfFmtPct(sp.stackMargin)}</div><div class="prf-sum-l">Recurring Margin</div>
-      </div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v" style="color:var(--blue)">${prfFmt(sp.oneOff)}</div>
-        <div class="prf-sum-l">One-off Work</div>
-        <div class="prf-sum-sub neutral">Xero total ${prfFmt(sp.recurring + sp.oneOff)}</div>
-      </div>
+    return `<div class="prf-sum-strip">
+      ${fig('Recurring', prfFmtForce(sp.recurring))}
+      ${fig('Cost', prfFmtForce(t.cost))}
+      ${fig('Profit', prfFmtSigned(sp.stackGp), sp.stackGp < 0 ? 'neg' : '')}
+      ${fig('Margin', prfFmtPct(sp.stackMargin))}
+      ${fig('One-off', prfFmtForce(sp.oneOff), 'oneoff')}
     </div>`;
   }
-
-  return `
-    <div class="prf-sum-strip">
-      <div class="prf-sum-s"><div class="prf-sum-v">${t.activeClients}</div><div class="prf-sum-l">Active Clients</div></div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v">${prfFmt(t.sell)}</div><div class="prf-sum-l">Expected Revenue</div>
-        ${scopeNote || xeroSub}
-      </div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v">${prfFmt(t.cost)}</div><div class="prf-sum-l">Total Cost</div>
-      </div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v" style="color:var(--green)">${prfFmt(t.gp)}</div><div class="prf-sum-l">Expected Profit</div>
-        ${gpSub}
-      </div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v">${prfFmtPct(t.margin)}</div><div class="prf-sum-l">Expected Margin</div>
-        ${marginSub}
-      </div>
-      <div class="prf-sum-s">
-        <div class="prf-sum-v" style="color:var(--amber)">${hasXero ? prfFmt(t.xero) : '—'}</div>
-        <div class="prf-sum-l">Xero Actual (${t.xeroCount})</div>
-        ${varianceSub}
-      </div>
-    </div>`;
+  return `<div class="prf-sum-strip">
+    ${fig('Revenue (service lines)', prfFmtForce(t.sell))}
+    ${fig('Cost', prfFmtForce(t.cost))}
+    ${fig('Profit', prfFmtSigned(t.gp), t.gp < 0 ? 'neg' : '')}
+    ${fig('Margin', prfFmtPct(t.margin))}
+  </div>`;
 }
 
-function prfRenderControls() {
-  const catBtns = ['all', ...PRF_CATS.map(c => c.key)].map(k => {
-    const label = k === 'all' ? 'All' : PRF_CATS.find(c => c.key === k).label + (k === 'retainer' ? 's' : '');
-    const cls = PRF.filterCat === k ? 'prf-fbtn on' : 'prf-fbtn';
-    return `<button class="${cls}" type="button" onclick="prfSetFilter('${k}')">${escapeHtml(label)}</button>`;
-  }).join('');
-  const sortOptions = [
-    ['profitDesc', 'Profit high to low'],
-    ['revenueDesc', 'Revenue high to low'],
-    ['marginDesc', 'Margin high to low'],
-    ['costDesc', 'Cost high to low'],
-    ['varianceAsc', 'Closest to Xero'],
-    ['nameAsc', 'Client A-Z']
-  ].map(([value, label]) =>
-    `<option value="${value}"${PRF.sortBy === value ? ' selected' : ''}>${escapeHtml(label)}</option>`
-  ).join('');
-  return `
-    <div class="prf-ctrl">
-      <span class="prf-cl">Filter:</span>
-      ${catBtns}
-      <div class="prf-cg"></div>
-      <label class="prf-sort">
-        <span>Sort</span>
-        <select onchange="prfSetSort(this.value)">${sortOptions}</select>
-      </label>
-      <button class="prf-abtn" type="button" onclick="prfExpandAll()">Expand all</button>
-      <button class="prf-abtn" type="button" onclick="prfCollapseAll()">Collapse all</button>
-      <div class="prf-srch">
-        <span class="prf-srch-ic">🔍</span>
-        <input type="text" id="prfSearch" placeholder="Search clients…" value="${escapeHtml(PRF.search)}" oninput="prfSetSearch(this.value)">
-      </div>
-    </div>`;
-}
+const PRF_SORTS = {
+  profitDesc:  { label: 'Profit',  cmp: (a, b) => b.h.gp - a.h.gp },
+  marginDesc:  { label: 'Margin',  cmp: (a, b) => (b.h.margin - a.h.margin) || (b.h.gp - a.h.gp) },
+  revenueDesc: { label: 'Revenue', cmp: (a, b) => b.h.sell - a.h.sell },
+  costDesc:    { label: 'Cost',    cmp: (a, b) => b.h.cost - a.h.cost },
+  nameAsc:     { label: 'A–Z',     cmp: () => 0 }
+};
 
-function prfRenderLegend() {
-  return `
-    <div class="prf-leg">
-      <div class="prf-leg-r">
-        <span>Margin:</span>
-        <span class="prf-m-hi">■ ≥70%</span>
-        <span class="prf-m-md">■ 40–70%</span>
-        <span class="prf-m-lo">■ &lt;40%</span>
-      </div>
-    </div>`;
-}
-
-function prfRenderCards() {
-  const clients = prfRankedClients();
-  if (PRF.clients.length === 0) {
-    return `<div class="prf-empty"><h3>No clients</h3></div>`;
-  }
-  if (clients.length === 0) {
-    return `<div class="prf-empty"><h3>No clients match</h3></div>`;
-  }
-  return clients.map(prfRenderCard).join('');
-}
-
-function prfRankedClients() {
-  const cat = PRF.filterCat || 'all';
+/** Every client with its month figures and what needs a look (src/core/profitability.js). */
+function prfRows() {
   const month = PRF.selectedMonth || prfCurrentMonth();
-  const q = PRF.search || '';
-  const rows = PRF.clients
-    .filter(c => !q || c.name.toLowerCase().includes(q))
-    .map(c => {
-      const totals = prfClientTotals(c.name, cat);
-      const fullTotals = prfClientTotals(c.name);
-      const xero = prfGetXero(c, month);
-      const head = prfClientHeadline(c);
-      return { client: c, totals, fullTotals, xero, head };
-    })
-    .filter(r => cat === 'all' || r.totals.all.length > 0);
-
-  const byName = (a, b) => a.client.name.localeCompare(b.client.name);
-  const sorters = {
-    profitDesc:  (a, b) => (b.head.gp - a.head.gp) || byName(a, b),
-    revenueDesc: (a, b) => (b.head.sell - a.head.sell) || byName(a, b),
-    marginDesc:  (a, b) => (b.head.margin - a.head.margin) || (b.head.gp - a.head.gp) || byName(a, b),
-    costDesc:    (a, b) => (b.totals.cost - a.totals.cost) || byName(a, b),
-    varianceAsc: (a, b) => {
-      const av = a.xero === null ? Number.POSITIVE_INFINITY : Math.abs(a.xero - a.fullTotals.sell);
-      const bv = b.xero === null ? Number.POSITIVE_INFINITY : Math.abs(b.xero - b.fullTotals.sell);
-      return (av - bv) || byName(a, b);
-    },
-    nameAsc: byName
-  };
-  return rows.sort(sorters[PRF.sortBy] || sorters.profitDesc).map(r => r.client);
+  const current = prfCurrentMonth();
+  const split = prfMonthHasSplit(month) ? PRF.xeroSplit[month] : null;
+  return PRF.clients.map(client => {
+    const h = prfClientHeadline(client);
+    const lines = prfClientTotals(client.name).sell;
+    const x = split ? (split.get(client.id) || null) : null;
+    const flags = window.GeckoProfit ? window.GeckoProfit.flags({
+      sell: h.sell, cost: h.cost, lines, fromXero: h.fromXero,
+      xeroTotal: x ? x.total : 0, xeroRecurring: x ? x.recurring : 0, month, current
+    }) : [];
+    // The current month before its invoice goes out: not a flag, just said.
+    const notYet = h.fromXero && !(x && x.total > 0) && lines > 0 && month >= current;
+    return { client, h, lines, x, flags, notYet };
+  });
 }
 
-function prfRenderCard(client) {
-  const t = prfClientViewTotals(client.name);
-  const h = prfClientHeadline(client);
-  const fullTotals = prfClientTotals(client.name);
-  const allServices = prfClientServices(client.name);
-  const cats = [...new Set(allServices.map(s => s.category))].join(',');
-  const scoped = PRF.filterCat && PRF.filterCat !== 'all';
-  const scopeName = scoped ? (PRF_CATS.find(c => c.key === PRF.filterCat)?.label || PRF.filterCat) : '';
-  const isOpen = PRF.openCards.has(client.id);
+function prfRenderTable() {
+  const fromXero = prfMonthHasSplit();
+  const cols = fromXero ? 7 : 6;
+  const sort = PRF_SORTS[PRF.sortBy] || PRF_SORTS.profitDesc;
+  const rows = prfRows().sort((a, b) => sort.cmp(a, b) || a.client.name.localeCompare(b.client.name));
+  const flagged = rows.filter(r => r.flags.length), rest = rows.filter(r => !r.flags.length);
+  const group = (key, label, list) => list.length
+    ? `<tr class="prf-grp" data-group="${key}"><td colspan="${cols}">${label} <span>(${list.length})</span></td></tr>`
+      + list.map(r => prfRenderRow(r, cols)).join('')
+    : '';
+  const opts = Object.entries(PRF_SORTS).map(([k, s]) =>
+    `<option value="${k}"${(PRF.sortBy in PRF_SORTS ? PRF.sortBy : 'profitDesc') === k ? ' selected' : ''}>${escapeHtml(k === 'revenueDesc' && fromXero ? 'Recurring' : s.label)}</option>`).join('');
+  return `
+    <div class="prf-bar">
+      <input type="search" class="prf-search" id="prfSearch" placeholder="Search clients…" aria-label="Search clients"
+             value="${escapeHtml(PRF.search)}" oninput="prfSetSearch(this.value)">
+      <label class="prf-sort"><span>Sort</span><select onchange="prfSetSort(this.value)">${opts}</select></label>
+    </div>
+    <div class="prf-tbl-wrap">
+      <table class="prf-tbl">
+        <thead><tr>
+          <th>Client</th><th class="num">${fromXero ? 'Recurring' : 'Revenue'}</th><th class="num">Cost</th>
+          <th class="num">Profit</th><th class="num">Margin</th>${fromXero ? '<th class="num">One-off</th>' : ''}<th>Needs a look</th>
+        </tr></thead>
+        <tbody>
+          ${group('flagged', 'Needs a look', flagged)}
+          ${group('rest', flagged.length ? 'All other clients' : 'All clients', rest)}
+          <tr class="prf-nomatch prf-gone"><td colspan="${cols}">No clients match</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
 
-  // Status badge
-  let badge;
-  if (client.status === 'Winding')      badge = '<span class="prf-cbadge prf-b-win">Winding Down</span>';
-  else if (client.status === 'New')     badge = '<span class="prf-cbadge prf-b-new">New</span>';
-  else                                  badge = '<span class="prf-cbadge prf-b-act">Active</span>';
+function prfRenderRow(r, cols) {
+  const { client: c, h, flags } = r;
+  const open = PRF.openCards.has(c.id);
+  const badge = c.status === 'Winding' ? ' <span class="badge badge-amber">Winding down</span>'
+    : c.status === 'New' ? ' <span class="badge badge-blue">New</span>' : '';
+  const why = flags.length
+    ? flags.map(f => `<span class="badge badge-${f.level === 'red' ? 'red' : 'amber'}">${escapeHtml(f.text)}</span>`).join(' ')
+    : r.notYet ? '<span class="prf-quiet">Not billed yet</span>' : '';
+  return `
+    <tr class="prf-row${open ? ' open' : ''}" data-client-id="${c.id}" data-client-name="${escapeHtml(c.name.toLowerCase())}"
+        onclick="if (!event.target.closest('button,a,input,select')) prfToggleCard('${c.id}')">
+      <td><div class="prf-namecell">
+        <button type="button" class="prf-toggle" aria-expanded="${open}" aria-label="Service lines for ${escapeHtml(c.name)}" onclick="prfToggleCard('${c.id}')">▸</button>
+        ${clientLink(c.name)}${badge}</div></td>
+      <td class="num">${prfFmtForce(h.sell)}</td>
+      <td class="num">${prfFmtForce(h.cost)}</td>
+      <td class="num${h.gp < 0 ? ' neg' : ''}">${h.gp < 0 ? '−' + prfFmtForce(-h.gp) : prfFmtForce(h.gp)}</td>
+      <td class="num">${h.sell > 0 ? `<span class="prf-mpill ${prfMpClass(h.margin)}">${prfFmtPct(h.margin)}</span>` : '—'}</td>
+      ${h.fromXero ? `<td class="num oneoff">${h.oneOff > 0 ? '+' + prfFmtForce(h.oneOff) : ''}</td>` : ''}
+      <td class="prf-why">${why}</td>
+    </tr>
+    <tr class="prf-detail${open ? ' open' : ''}" data-detail-for="${c.id}"><td colspan="${cols}">${prfRenderDetail(r)}</td></tr>`;
+}
 
-  const cls = ['prf-cc'];
-  if (client.status === 'Winding') cls.push('winding');
-  if (client.status === 'New')     cls.push('isnew');
-  if (isOpen)                      cls.push('open');
-
-  // Service rows
+/** What opens under a client: its service lines, this month's supplier invoices, the Xero line. */
+function prfRenderDetail(r) {
+  const { client: c, h } = r;
+  const t = prfClientTotals(c.name);
   const retainers = t.all.filter(s => s.category === 'retainer');
-  const stack     = t.all.filter(s => s.category !== 'retainer');
-  let rows = '';
-  retainers.forEach(s => { rows += prfRenderServiceRow(s); });
-  stack.forEach(s => { rows += prfRenderServiceRow(s); });
-  // Supplier invoices dated this month: read-only, from the feed. These
-  // land whole in their month (an annual renewal is not spread), so a
-  // client can rightly show a cost spike in the month it was invoiced.
-  const inv = prfClientInvoiced(client);
+  let rows = [...retainers, ...t.all.filter(s => s.category !== 'retainer')].map(prfRenderServiceRow).join('');
+  // Supplier invoices dated this month: read-only, from the feed, whole in their month.
+  const inv = prfClientInvoiced(c);
   (inv ? inv.lines : []).forEach(l => {
     rows += `<tr class="prf-irow">
       <td><span class="prf-ct prf-ct-inv">Invoiced</span></td>
@@ -9997,105 +9440,18 @@ function prfRenderCard(client) {
       <td class="prf-nr">—</td><td class="prf-nr">—</td><td class="prf-nr">—</td><td></td>
     </tr>`;
   });
-  const invTotal = inv ? inv.total : 0;
-
-  // Empty service prompt if no services yet
-  if (t.all.length === 0 && !invTotal) {
-    rows = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);font-size:12px;font-style:italic">No ${escapeHtml(scopeName || 'service')} lines.</td></tr>`;
-  }
-
-  // Add-service trigger row
-  const addRow = `<tr class="prf-arow"><td colspan="7"><button type="button" onclick="event.stopPropagation();prfAddServiceInline('${client.id}')">Add service</button></td></tr>`;
-
-  // Retainer notice banner if any retainer services
-  const retNote = retainers.length > 0
-    ? `<div class="prf-ret-notice">Retainers ${prfFmt(retainers.reduce((a, s) => a + s.sell, 0))}/mo: labour not costed.</div>`
-    : '';
-
-  // Xero reconciliation row — Phase 10: read from XeroHistory for selected month
-  const selMonth = PRF.selectedMonth || prfCurrentMonth();
-  const xeroVal = prfGetXero(client, selMonth);
-  const xeroValStr = xeroVal !== null ? xeroVal : '';
-  const xeroStatus = xeroVal !== null ? prfXeroStatus(fullTotals.sell, xeroVal) : { cls: 'prf-xsp', text: 'No data this month', delta: '' };
-  const split = (!scoped && prfMonthHasSplit(selMonth)) ? (PRF.xeroSplit[selMonth].get(client.id) || { total: 0, recurring: 0, oneOff: 0 }) : null;
-  // Monthly lines vs what Xero billed as recurring. Annual items (hosting)
-  // are on neither side of the lines, so Xero running ahead in a month is
-  // usually an annual renewal landing, not an error: shown, never red.
-  const splitStatus = split
-    ? (split.total === 0
-        ? { cls: 'prf-xsd', text: 'No Xero invoice this month', delta: '' }
-        : prfXeroDiff(fullTotals.sell, split.recurring))
-    : null;
-  const xeroRowHtml = split ? `
-            <tr class="prf-xrow">
-              <td colspan="2"><span class="prf-xlbl">Xero this month (ex VAT)</span></td>
-              <td colspan="4">
-                <div class="prf-xsplit">
-                  <span title="Service lines billed monthly; hosting is left out because it is billed annually">Monthly lines: <strong>${prfFmtForce(fullTotals.sell)}</strong></span>
-                  <span>Xero recurring: <strong>${prfFmtForce(split.recurring)}</strong></span>
-                  <span class="prf-xst ${splitStatus.cls}">${splitStatus.text}</span>
-                  <span class="prf-vo">One-off: <strong>${prfFmtForce(split.oneOff)}</strong></span>
-                  <span>Total: <strong>${prfFmtForce(split.total)}</strong></span>
-                </div>
-              </td>
-              <td class="prf-nr">${splitStatus.delta}</td>
-            </tr>` : null;
-
-  return `
-    <div class="${cls.join(' ')}" data-cats="${escapeHtml(cats)}" data-client-id="${client.id}" data-client-name="${escapeHtml(client.name).toLowerCase()}">
-
-      <!-- Header (collapsed view) -->
-      <div class="prf-ch" onclick="prfToggleCard('${client.id}')">
-        <div class="prf-cav">${escapeHtml(prfInitials(client.name))}</div>
-        <div class="prf-cn" title="${escapeHtml(client.name)}" onclick="const b = event.target.closest('[data-open-client]'); if (b) { event.stopPropagation(); openClient(b.dataset.openClient); }">${clientLink(client.name)}</div>
-        ${badge}
-        <div class="prf-cnums">
-          <div class="prf-cnum"><div class="v prf-vc">${prfFmt(h.cost)}</div><div class="l">Cost</div></div>
-          <div class="prf-cnum keep" ${h.fromXero ? 'title="Recurring billing in Xero this month"' : ''}><div class="v prf-vs">${h.fromXero && !h.billed ? '£0.00' : prfFmt(h.sell)}</div><div class="l">${h.fromXero ? 'Recurring' : 'Revenue'}</div></div>
-          <div class="prf-cnum keep"><div class="v prf-vg" ${h.gp < 0 ? 'style="color:var(--red)"' : ''}>${h.gp < 0 ? '−' + prfFmtForce(-h.gp) : prfFmt(h.gp)}</div><div class="l">Profit</div></div>
-          <span class="prf-mpill ${prfMpClass(h.margin)} keep">${prfFmtPct(h.margin)}</span>
-          ${h.oneOff > 0 ? `<div class="prf-cnum" title="One-off billing in Xero this month, not in profit"><div class="v prf-vo">+${prfFmt(h.oneOff)}</div><div class="l">One-off</div></div>` : ''}
-        </div>
-        <!-- Client metadata managed in Directory (Phase 5). Service CRUD unchanged. -->
-        <div class="prf-chev">▼</div>
-      </div>
-
-      <!-- Service body (expanded) -->
-      <div class="prf-sbody">
-        ${retNote}
-        <table class="prf-stbl">
-          <thead><tr>
-            <th>Category</th><th>Service</th><th>Cost/mo</th><th>Sell/mo</th><th>Margin £</th><th>Margin %</th><th>Actions</th>
-          </tr></thead>
-          <tbody data-svc-body="${client.id}">${rows}${addRow}</tbody>
-          <tfoot>
-            <tr class="prf-trow">
-              <td colspan="2">CLIENT TOTAL — ${escapeHtml(client.name)}${scoped ? ` (${escapeHtml(scopeName)})` : ''}${h.fromXero ? ` <span class="prf-isub" style="text-transform:none;font-weight:400">· this month</span>` : ''}</td>
-              <td class="prf-nr">${prfFmt(h.cost)}</td>
-              <td class="prf-nr">${h.fromXero && !h.billed ? '£0.00' : prfFmt(h.sell)}</td>
-              <td class="prf-nr" style="color:${h.gp < 0 ? 'var(--red)' : 'var(--green)'}">${h.gp < 0 ? '−' + prfFmtForce(-h.gp) : prfFmt(h.gp)}</td>
-              <td class="prf-nr"><span class="prf-mpill ${prfMpClass(h.margin)}">${prfFmtPct(h.margin)}</span></td>
-              <td></td>
-            </tr>
-            ${xeroRowHtml || `<tr class="prf-xrow">
-              <td colspan="2"><span class="prf-xlbl">Xero reconciliation (ex VAT)</span></td>
-              <td colspan="4">
-                <div class="prf-xctrl">
-                  <span class="prf-xcalc">Calculated ${scoped ? 'all-client' : ''}: <strong>${prfFmtForce(fullTotals.sell)}</strong></span>
-                  <span style="font-size:10px;color:var(--muted)">Xero actual:</span>
-                  <input class="prf-xinput" type="number" step="0.01" placeholder="0.00"
-                         value="${xeroValStr}"
-                         data-client-id="${client.id}"
-                         oninput="prfUpdateXeroPreview(this)"
-                         onblur="prfSaveXero('${client.id}',this.value)">
-                  <span class="prf-xst ${xeroStatus.cls}" data-xst="${client.id}">${xeroStatus.text}</span>
-                </div>
-              </td>
-              <td class="prf-nr" data-xdelta="${client.id}">${xeroStatus.delta}</td>
-            </tr>`}
-          </tfoot>
-        </table>
-      </div>
+  if (!rows) rows = `<tr><td colspan="7" class="prf-none">No service lines yet.</td></tr>`;
+  const addRow = `<tr class="prf-arow"><td colspan="7"><button type="button" class="btn btn-sm" onclick="prfAddServiceInline('${c.id}')">Add service</button></td></tr>`;
+  const ret = retainers.length
+    ? `<p class="prf-ret-notice">Retainers ${prfFmtForce(retainers.reduce((a, s) => a + s.sell, 0))}/mo: labour not costed.</p>` : '';
+  return `${ret}
+    <table class="prf-stbl">
+      <thead><tr><th>Category</th><th>Service</th><th>Cost/mo</th><th>Sell/mo</th><th>Margin £</th><th>Margin %</th><th>Actions</th></tr></thead>
+      <tbody data-svc-body="${c.id}">${rows}${addRow}</tbody>
+    </table>
+    <div class="prf-dfoot">
+      ${h.fromXero ? prfXeroLine(r) : '<p class="prf-xline">No Xero comparison for this month: the feed doesn’t cover it.</p>'}
+      <button type="button" class="btn btn-sm btn-ghost" onclick="openClient('${jsAttr(c.name)}')">Open client page →</button>
     </div>`;
 }
 
@@ -10141,117 +9497,14 @@ function prfRenderRowActions(svcId) {
   </div>`;
 }
 
-function prfRenderGrandTotal() {
-  const t = prfGrandTotals();
-  const hasXero = t.xeroCount > 0;
-  const selMonth = PRF.selectedMonth || prfCurrentMonth();
-  const scoped = t.category && t.category !== 'all';
-  const scopeName = scoped ? (PRF_CATS.find(c => c.key === t.category)?.label || t.category) : 'ALL CLIENTS';
-  const xeroGp = hasXero ? t.xero - t.cost : 0;
-  const xeroMargin = hasXero && t.xero > 0 ? xeroGp / t.xero : 0;
-  const variance = hasXero ? t.xero - t.sell : 0;
-  const varSign = variance >= 0 ? '+' : '';
-
-  if (t.split) {
-    const sp = t.split;
-    return `
-    <div class="prf-gtot">
-      <div class="prf-gtlbl">
-        <strong>GRAND TOTAL — <span>ALL CLIENTS</span></strong>
-      </div>
-      <div class="prf-gtstats">
-        <div class="prf-gtst"><span class="v" style="color:var(--red)">${prfFmt(t.cost)}</span><span class="l">Total Cost</span></div>
-        <div class="prf-gtst"><span class="v">${prfFmt(sp.recurring)}</span><span class="l">Recurring Rev.</span></div>
-        <div class="prf-gtst"><span class="v" style="color:${sp.stackGp < 0 ? 'var(--red)' : 'var(--green)'}">${prfFmtSigned(sp.stackGp)}</span><span class="l">Recurring Profit</span></div>
-        <div class="prf-gtst"><span class="v" style="color:var(--green)">${prfFmtPct(sp.stackMargin)}</span><span class="l">Recurring Margin</span></div>
-        <div class="prf-gtst"><span class="v" style="color:var(--blue)">${prfFmt(sp.oneOff)}</span><span class="l">One-off Work</span></div>
-        <div class="prf-gtst"><span class="v" style="color:var(--amber)">${prfFmt(sp.recurring + sp.oneOff)}</span><span class="l">Xero Total</span></div>
-      </div>
-    </div>`;
-  }
-
-  return `
-    <div class="prf-gtot">
-      <div class="prf-gtlbl">
-        <strong>GRAND TOTAL — <span>${escapeHtml(scopeName)}</span></strong>
-      </div>
-      <div class="prf-gtstats">
-        <div class="prf-gtst"><span class="v" style="color:var(--red)">${prfFmt(t.cost)}</span><span class="l">Total Cost</span></div>
-        <div class="prf-gtst"><span class="v">${prfFmt(t.sell)}</span><span class="l">Expected Rev.</span></div>
-        <div class="prf-gtst"><span class="v" style="color:var(--amber)">${hasXero ? prfFmt(t.xero) : '—'}</span><span class="l">Xero Actual</span></div>
-        <div class="prf-gtst"><span class="v" style="color:${variance >= 0 ? 'var(--green)' : 'var(--red)'}">${hasXero ? varSign + prfFmt(variance) : '—'}</span><span class="l">Variance</span></div>
-        <div class="prf-gtst"><span class="v" style="color:var(--green)">${prfFmt(t.gp)}</span><span class="l">Expected Profit</span></div>
-        <div class="prf-gtst"><span class="v" style="color:var(--green)">${prfFmtPct(t.margin)}</span><span class="l">Expected Margin</span></div>
-      </div>
-    </div>`;
-}
-
-
-// ─── Xero reconciliation ──────────────────────────────────────────────
-/** Like prfXeroStatus, but a gap is shown as a figure, not called a mismatch. */
-function prfXeroDiff(monthlyLines, xeroRecurring) {
-  const d = round2(xeroRecurring - monthlyLines);
-  const ad = Math.abs(d);
-  if (ad <= 0.5) return { cls: 'prf-xsm', text: '✓ Match', delta: '' };
-  const delta = `<span class="prf-xdelta ${d > 0 ? 'prf-xdp' : 'prf-xdn'}">${d > 0 ? '+' : ''}${prfFmtForce(d)}</span>`;
-  if (ad <= 5) return { cls: 'prf-xsc', text: '~ Close', delta };
-  return { cls: 'prf-xsp', text: d > 0 ? 'Xero billed more' : 'Xero billed less', delta };
-}
-
-function prfXeroStatus(calculated, actual) {
-  if (actual === null || actual === undefined || actual === '' || isNaN(actual)) {
-    return { cls: 'prf-xsp', text: 'Enter figure', delta: '' };
-  }
-  const a = Number(actual);
-  const d = a - calculated;
-  const ad = Math.abs(d);
-  if (ad <= 0.5)      return { cls: 'prf-xsm', text: '✓ Match',    delta: '' };
-  if (ad <= 5)        return { cls: 'prf-xsc', text: '~ Close',    delta: `<span class="prf-xdelta ${d > 0 ? 'prf-xdp' : 'prf-xdn'}">${d > 0 ? '+' : ''}${prfFmtForce(d)}</span>` };
-  return                     { cls: 'prf-xsd', text: '✕ Mismatch', delta: `<span class="prf-xdelta ${d > 0 ? 'prf-xdp' : 'prf-xdn'}">${d > 0 ? '+' : ''}${prfFmtForce(d)}</span>` };
-}
-
-// Live preview as user types — does NOT save to SharePoint until blur
-function prfUpdateXeroPreview(input) {
-  const id = input.dataset.clientId;
-  const client = PRF.clients.find(c => c.id === id);
-  if (!client) return;
-  const t = prfClientTotals(client.name);
-  const v = input.value === '' ? null : Number(input.value);
-  const status = prfXeroStatus(t.sell, v);
-  const stEl = document.querySelector(`[data-xst="${id}"]`);
-  const dlEl = document.querySelector(`[data-xdelta="${id}"]`);
-  if (stEl) { stEl.className = 'prf-xst ' + status.cls; stEl.textContent = status.text; }
-  if (dlEl) dlEl.innerHTML = status.delta;
-}
-
-// Persist on blur — only if changed
-async function prfSaveXero(id, raw) {
-  const client = PRF.clients.find(c => c.id === id);
-  if (!client) return;
-  let v;
-  if (raw === '' || raw === null) v = null;
-  else {
-    const n = Number(raw);
-    if (isNaN(n)) return;
-    v = n;
-  }
-  const monthStr = PRF.selectedMonth || prfCurrentMonth();
-  const current = prfGetXero(client, monthStr);
-  if (v === current) return; // no change
-  try {
-    prfSetXeroLocal(client, monthStr, v);
-    await prfSaveXeroHistory(id, client.xeroHistory);
-    // Re-render summary strip + grand total to reflect new Xero total
-    const sum = document.querySelector('.prf-sum-strip');
-    const gt  = document.querySelector('.prf-gtot');
-    if (sum) sum.outerHTML = prfRenderSummary();
-    if (gt)  gt.outerHTML  = prfRenderGrandTotal();
-    toast(v === null ? 'Xero figure cleared' : 'Xero figure saved', 'success', 1800);
-  } catch (err) {
-    prfSetXeroLocal(client, monthStr, current);
-    console.error('Save Xero failed:', err);
-    toast('Could not save Xero figure: ' + (err.message || 'unknown'), 'error', 5000);
-  }
+/** "Xero this month: recurring £x vs monthly lines £y (£z under) · one-off £a · total £b". */
+function prfXeroLine({ lines, x }) {
+  if (!x || !(x.total > 0)) return '<p class="prf-xline">No Xero invoice this month.</p>';
+  const d = round2(x.recurring - lines);
+  const gap = Math.abs(d) <= 0.5 ? 'matches' : `${prfFmtForce(Math.abs(d))} ${d < 0 ? 'under' : 'over'}`;
+  return `<p class="prf-xline">Xero this month: recurring <strong>${prfFmtForce(x.recurring)}</strong>
+    vs monthly lines <strong>${prfFmtForce(lines)}</strong> (${gap})${x.oneOff > 0 ? ` · one-off <strong>${prfFmtForce(x.oneOff)}</strong>` : ''}
+    · total <strong>${prfFmtForce(x.total)}</strong></p>`;
 }
 
 
@@ -10317,45 +9570,6 @@ function prfUpdateMonthUI() {
   const label = document.getElementById('prfMonthLabel');
   if (label) label.textContent = prfMonthLabel(PRF.selectedMonth || prfCurrentMonth());
 }
-
-/**
- * After month changes, update each client's Xero reconciliation row to show
- * data for the selected month from XeroHistory.
- * Does NOT re-render the full section — just updates the Xero input values
- * and status badges in-place for responsiveness.
- */
-function prfApplyXeroForMonth() {
-  const selMonth = PRF.selectedMonth || prfCurrentMonth();
-  PRF.clients.forEach(c => {
-    const input = document.querySelector(`.prf-xinput[data-client-id="${c.id}"]`);
-    if (!input) return;
-    const stEl  = document.querySelector(`[data-xst="${c.id}"]`);
-    const dlEl  = document.querySelector(`[data-xdelta="${c.id}"]`);
-    const t     = prfClientTotals(c.name);
-    const xVal  = prfGetXero(c, selMonth);
-
-    if (xVal !== null) {
-      input.value = xVal;
-      input.disabled = false;
-      const status = prfXeroStatus(t.sell, xVal);
-      if (stEl) { stEl.className = 'prf-xst ' + status.cls; stEl.textContent = status.text; }
-      if (dlEl) dlEl.innerHTML = status.delta;
-    } else {
-      input.value = '';
-      input.disabled = false;
-      if (stEl) { stEl.className = 'prf-xst prf-xsp'; stEl.textContent = 'No data this month'; }
-      if (dlEl) dlEl.innerHTML = '';
-    }
-  });
-  // Update summary strip + grand total + Xero import card
-  const sum = document.querySelector('.prf-sum-strip');
-  const gt  = document.querySelector('.prf-gtot');
-  const xic = document.getElementById('prfXeroImportCard');
-  if (sum) sum.outerHTML = prfRenderSummary();
-  if (gt)  gt.outerHTML  = prfRenderGrandTotal();
-  if (xic) xic.outerHTML = prfRenderXeroImport();
-}
-
 
 // ─── Phase 10: CSV parser ─────────────────────────────────────────────
 
@@ -10573,8 +9787,8 @@ async function prfLoadFeed() {
 /** Write Xero totals from the feed into XeroHistory, only where they changed. */
 async function prfApplyFeedXero(feed) {
   const F = window.ProfitFeed;
-  const shown = PRF.selectedMonth || prfCurrentMonth();
   PRF.xeroSplit = {};
+  PRF.xeroUnmatched = {};
   PRF.invoiced = {};
   PRF.appliedFeed = feed;
   const matcher = name => prfXeroMatchName(name, PRF.clients);
@@ -10586,11 +9800,7 @@ async function prfApplyFeedXero(feed) {
       PRF.xeroSplit[month] = F.splitByClient(feed, month, matcher);
     }
     const { matched, unmatched } = F.totalsByClient(perContact, name => prfXeroMatchName(name, PRF.clients));
-    // A CSV imported this session owns the unmatched list; don't replace it.
-    if (month === shown && !PRF.xeroImported) {
-      PRF.xeroUnmatched = unmatched;
-      PRF.xeroMonth = month;
-    }
+    PRF.xeroUnmatched[month] = unmatched;
     const saves = [];
     for (const { client, total } of matched) {
       if (prfGetXero(client, month) === total) continue;
@@ -10609,7 +9819,7 @@ function prfRenderFeedStatus(kind) {
   if (!F || f.state === 'idle' || f.state === 'loading') return '';
   const box = (cls, html) => `<div class="prf-feed ${cls}" role="status">${html}</div>`;
   if (f.state === 'missing') {
-    return box('warn', `No feed in <strong>${escapeHtml(feedLocation())}</strong>. Use the manual import below.`);
+    return box('warn', `No feed in <strong>${escapeHtml(feedLocation())}</strong>: ${PRF.appliedFeed ? 'showing the last good update' : 'the figures are the typed service lines until it is back'}.`);
   }
   if (f.state === 'error') {
     return box('bad', `Couldn’t read the feed (${escapeHtml(f.error)}). Showing the last good update. Refresh to try again.`);
@@ -10623,30 +9833,32 @@ function prfRenderFeedStatus(kind) {
   const staleNote = stale ? ' The nightly update looks stopped: may be out of date.' : '';
 
   if (kind === 'xero') {
-    let extra = '';
-    const inv = prfMonthInvoiced();
+    // One line: when Xero last came in and which supplier invoices are in this month's cost.
+    const month = PRF.selectedMonth || prfCurrentMonth();
+    const label = escapeHtml(prfMonthLabel(month));
+    const inv = prfMonthInvoiced(month);
+    let sup = '';
     if (inv) {
-      // Which supplier invoices were charged to clients this month.
       const seen = new Map();
       const all = [...inv.byClient.values()].flatMap(e => e.lines).concat(inv.shared, inv.unassigned);
       for (const l of all) {
-        const k = l.supplier;
-        const e = seen.get(k) || { n: 0, total: 0, refs: new Set() };
-        e.n++; e.total = round2(e.total + l.net); e.refs.add(String(l.ref || '')); seen.set(k, e);
+        const e = seen.get(l.supplier) || { total: 0, refs: new Set() };
+        e.total = round2(e.total + l.net); e.refs.add(String(l.ref || '')); seen.set(l.supplier, e);
       }
-      const parts = [...seen].map(([sup, e]) => `${escapeHtml(sup)} ${e.refs.size === 1 ? `invoice ${escapeHtml([...e.refs][0])}` : `${e.refs.size} invoices`}, ${prfFmtForce(e.total)}`);
-      const month = prfMonthLabel(PRF.selectedMonth || prfCurrentMonth());
-      extra += box('ok', parts.length
-        ? `Supplier invoices in ${escapeHtml(month)}: ${parts.join(' · ')}.`
-        : `No supplier invoices dated ${escapeHtml(month)} yet: licence cost is nil until TD SYNNEX bills (~16th).`);
+      const parts = [...seen].map(([sup, e]) => `${escapeHtml(sup)} ${e.refs.size === 1 ? `invoice ${escapeHtml([...e.refs][0])}` : `${e.refs.size} invoices`} ${prfFmtForce(e.total)}`);
+      sup = parts.length ? ` Supplier invoices in ${label}: ${parts.join(', ')}.`
+        : ` No supplier invoices for ${label} yet: licence cost is nil until TD SYNNEX bills (~16th).`;
+    } else if (!prfMonthHasSplit(month)) {
+      sup = ` The feed doesn’t cover ${label}: the figures are the typed service lines.`;
     }
-    if (inv && (inv.shared.length || inv.unassigned.length)) {
-      const li = l => `<li>${escapeHtml(l.supplier)}: ${escapeHtml(l.name ? l.name + ' — ' : '')}${escapeHtml(l.desc)} ${prfFmtForce(l.net)} (${escapeHtml(l.date)})</li>`;
-      const sharedHtml = inv.shared.length ? `<div>Shared, not charged to any client:</div><ul>${inv.shared.map(li).join('')}</ul>` : '';
-      const unHtml = inv.unassigned.length ? `<div>No client (tell Felix which):</div><ul>${inv.unassigned.map(li).join('')}</ul>` : '';
-      extra += box(inv.unassigned.length ? 'warn' : 'ok', `In the total but on no card: ${sharedHtml}${unHtml}`);
-    }
-    return box(stale ? 'warn' : 'ok', `Xero updated ${when}.${staleNote}`) + extra;
+    let html = box(stale ? 'warn' : 'ok', `Xero updated ${when}.${staleNote}${sup}`);
+    // What is in Xero or on a supplier invoice but on no client: named, never guessed.
+    const contacts = (PRF.xeroUnmatched[month] || []).map(u => `${escapeHtml(u.xeroName)} ${prfFmtForce(u.total)}`);
+    if (contacts.length) html += `<p class="prf-loose warn">In Xero but on no client, so not in the figures: ${contacts.join(' · ')}. Add them in the Directory if they are clients.</p>`;
+    const lines = (inv ? inv.unassigned : []).map(l => `${escapeHtml(l.supplier)}: ${escapeHtml(l.name || l.desc)} ${prfFmtForce(l.net)}`);
+    if (lines.length) html += `<p class="prf-loose warn">Supplier lines on no client (in the cost total): ${lines.join(' · ')}. Tell Felix which client each is.</p>`;
+    if (inv && inv.shared.length) html += `<p class="prf-loose">Gecko’s own, in the cost total: ${inv.shared.map(l => `${escapeHtml(l.supplier)} ${escapeHtml(l.desc)} ${prfFmtForce(l.net)}`).join(' · ')}.</p>`;
+    return html;
   }
 
   const c = data.csp;
@@ -10660,280 +9872,6 @@ function prfRenderFeedStatus(kind) {
   if (applied) return box(stale ? 'warn' : 'ok', `${label}. Already applied.${staleNote}`);
   return box('warn', `${label}. Not applied yet.${staleNote}
     <button type="button" class="prf-refresh" onclick="cspLoadFromFeed()">Review costs from this invoice</button>`);
-}
-
-async function prfImportXeroCsv(file) {
-  if (!file) return;
-  showLoading(true);
-
-  try {
-    const text = await file.text();
-    const rows = prfParseCsv(text);
-    if (rows.length === 0) {
-      toast('CSV appears to be empty — no data rows found.', 'error', 4000);
-      showLoading(false);
-      return;
-    }
-
-    // Verify required columns exist
-    const first = rows[0];
-    if (!('ContactName' in first) || !('LineAmount' in first) || !('InvoiceDate' in first) || !('Status' in first)) {
-      toast('CSV missing required columns (ContactName, LineAmount, InvoiceDate, Status). Is this a Xero invoice export?', 'error', 5000);
-      showLoading(false);
-      return;
-    }
-
-    // Auto-detect the most common month from InvoiceDate (DD/MM/YYYY)
-    const monthCounts = {};
-    rows.forEach(r => {
-      const d = r.InvoiceDate || '';
-      const parts = d.split('/');
-      if (parts.length === 3) {
-        const key = parts[2] + '-' + parts[1]; // YYYY-MM
-        monthCounts[key] = (monthCounts[key] || 0) + 1;
-      }
-    });
-    let detectedMonth = null;
-    let maxCount = 0;
-    for (const [m, c] of Object.entries(monthCounts)) {
-      if (c > maxCount) { maxCount = c; detectedMonth = m; }
-    }
-    if (!detectedMonth) {
-      toast('Could not detect invoice month from CSV dates.', 'error', 4000);
-      showLoading(false);
-      return;
-    }
-
-    // Set the selected month to the detected CSV month
-    PRF.selectedMonth = detectedMonth;
-    PRF.xeroMonth = detectedMonth;
-    prfUpdateMonthUI();
-
-    // Filter rows: by detected month + status (exclude Drafts unless toggled on)
-    const filteredRows = rows.filter(r => {
-      // Filter by month
-      const parts = (r.InvoiceDate || '').split('/');
-      if (parts.length !== 3) return false;
-      const rowMonth = parts[2] + '-' + parts[1];
-      if (rowMonth !== detectedMonth) return false;
-
-      // Filter by status
-      const status = (r.Status || '').trim();
-      if (status === 'Draft' && !PRF.includeDrafts) return false;
-
-      return true;
-    });
-
-    // Sum LineAmount per ContactName (handles credit notes with negative amounts)
-    const perContact = {};
-    filteredRows.forEach(r => {
-      const name = (r.ContactName || '').trim();
-      if (!name) return;
-      const amt = parseFloat(r.LineAmount) || 0;
-      perContact[name] = (perContact[name] || 0) + amt;
-    });
-
-    // Match against portal clients; two Xero contacts for one client are added together, as the feed does.
-    const { matched, unmatched } = window.ProfitFeed.totalsByClient(perContact, n => prfXeroMatchName(n, PRF.clients));
-
-    PRF.xeroImported = true;
-    PRF.xeroUnmatched = unmatched;
-    PRF.xeroData = perContact;
-
-    // Apply matched values to client objects + save to SharePoint
-    const savePromises = [];
-    for (const { client, total } of matched) {
-      prfSetXeroLocal(client, detectedMonth, total);
-      savePromises.push(prfSaveXeroHistory(client.id, client.xeroHistory));
-    }
-
-    // Wait for all saves (fire in parallel)
-    const failed = (await Promise.allSettled(savePromises)).filter(r => r.status === 'rejected');
-    failed.forEach(r => console.error('Failed to save Xero:', r.reason));
-
-    // Re-render to show updated values + unmatched contacts
-    prfRenderAll();
-
-    const matchCount = matched.length;
-    const unmatchCount = unmatched.length;
-    toast(`Xero import: ${matchCount} matched, ${unmatchCount} unmatched — ${prfMonthLabel(detectedMonth)}`, unmatchCount > 0 ? 'warning' : 'success', 4000);
-    if (failed.length) toast(`${failed.length} of ${matchCount} Xero figures could not be saved — Refresh and import again`, 'error', 8000);
-
-  } catch (err) {
-    console.error('Xero CSV import failed:', err);
-    toast('Xero CSV import failed: ' + (err.message || 'unknown error'), 'error', 5000);
-  }
-
-  showLoading(false);
-}
-
-/**
- * Manually assign an unmatched Xero contact to a portal client.
- */
-async function prfAssignUnmatched(xeroName, clientId) {
-  if (!clientId) return;
-  const entry = PRF.xeroUnmatched.find(u => u.xeroName === xeroName);
-  if (!entry) return;
-  const client = PRF.clients.find(c => c.id === clientId);
-  if (!client) return;
-
-  entry.assignedTo = clientId;
-  const month = PRF.xeroMonth || PRF.selectedMonth || prfCurrentMonth();
-  const before = prfGetXero(client, month);
-  // Added to what the client already has: its matched contacts are in there too.
-  prfSetXeroLocal(client, month, Math.round(((before || 0) + entry.total) * 100) / 100);
-
-  try {
-    await prfSaveXeroHistory(client.id, client.xeroHistory);
-
-    // Update the Xero row for this client in the DOM
-    const input = document.querySelector(`.prf-xinput[data-client-id="${client.id}"]`);
-    if (input) {
-      input.value = prfGetXero(client, month);
-      prfUpdateXeroPreview(input);
-    }
-
-    // Re-render summary + grand total
-    const sum = document.querySelector('.prf-sum-strip');
-    const gt  = document.querySelector('.prf-gtot');
-    if (sum) sum.outerHTML = prfRenderSummary();
-    if (gt)  gt.outerHTML  = prfRenderGrandTotal();
-
-    // Re-render unmatched list (remove assigned one)
-    const unmPanel = document.getElementById('prfXeroUnmatched');
-    if (unmPanel) {
-      const remaining = PRF.xeroUnmatched.filter(u => !u.assignedTo);
-      if (remaining.length === 0) {
-        unmPanel.remove();
-      } else {
-        unmPanel.innerHTML = prfRenderUnmatchedList();
-      }
-    }
-
-    toast(`Assigned ${xeroName} → ${client.name}`, 'success', 2000);
-  } catch (err) {
-    entry.assignedTo = null;
-    prfSetXeroLocal(client, month, before);
-    console.error('Assign unmatched failed:', err);
-    toast('Failed to assign: ' + (err.message || 'unknown'), 'error', 4000);
-  }
-}
-
-/**
- * Clear all Xero data for the selected month — removes that month's entry
- * from each client's XeroHistory JSON.
- */
-async function prfClearXeroData() {
-  const month = PRF.selectedMonth || prfCurrentMonth();
-  const affected = PRF.clients.filter(c => prfGetXero(c, month) !== null);
-  if (affected.length === 0) {
-    toast('No Xero data to clear for ' + prfMonthLabel(month), 'warning', 2500);
-    return;
-  }
-
-  showLoading(true);
-  try {
-    const saves = affected.map(c => {
-      prfSetXeroLocal(c, month, null);
-      return prfSaveXeroHistory(c.id, c.xeroHistory);
-    });
-    const failed = (await Promise.allSettled(saves)).filter(r => r.status === 'rejected').length;
-    if (failed) throw new Error(`${failed} of ${affected.length} clients could not be cleared — Refresh to see what was saved`);
-    PRF.xeroImported = false;
-    PRF.xeroUnmatched = [];
-    PRF.xeroData = {};
-    prfRenderAll();
-    toast(`Cleared Xero data for ${affected.length} clients — ${prfMonthLabel(month)}`, 'success', 3000);
-  } catch (err) {
-    toast('Failed to clear Xero data: ' + (err.message || 'unknown'), 'error', 4000);
-  }
-  showLoading(false);
-}
-
-
-// ─── Phase 10: Xero Import UI rendering ───────────────────────────────
-
-function prfRenderXeroImport() {
-  const month = PRF.selectedMonth || prfCurrentMonth();
-  const clientsWithData = PRF.clients.filter(c => prfGetXero(c, month) !== null);
-  const matchedCount = clientsWithData.length;
-  // The unmatched list belongs to the month it was read for; another month shows none of it.
-  const unmForMonth = PRF.xeroMonth === month ? PRF.xeroUnmatched.filter(u => !u.assignedTo) : [];
-  const unmatchedCount = unmForMonth.length;
-
-  // Always show stats for the selected month if there's any data
-  let statsHtml = '';
-  if (matchedCount > 0 || PRF.xeroImported) {
-    statsHtml = `
-      <div class="prf-xero-stats">
-        <div class="xs-month">${prfMonthLabel(month)}</div>
-        <div class="xs-line"><strong>${matchedCount}</strong> clients with Xero data</div>
-        <div class="xs-line">Total: <strong>${prfFmt(clientsWithData.reduce((a, c) => a + (prfGetXero(c, month) || 0), 0))}</strong></div>
-        ${unmatchedCount > 0 ? `<div class="xs-line" style="color:var(--amber)"><strong>${unmatchedCount}</strong> unmatched</div>` : ''}
-      </div>`;
-  }
-
-  let unmatchedHtml = '';
-  if (unmForMonth.length > 0) {
-    unmatchedHtml = `<div class="prf-xero-unmatched" id="prfXeroUnmatched">${prfRenderUnmatchedList()}</div>`;
-  }
-
-  return `
-    <div class="prf-xero-import" id="prfXeroImportCard">
-      <div style="flex:1;min-width:250px">
-        <h4>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          Xero reconciliation
-        </h4>
-        ${prfRenderFeedStatus('xero')}
-        <div class="prf-drop-zone" id="prfDropZone"
-             ondragover="event.preventDefault();this.classList.add('drag-over')"
-             ondragleave="this.classList.remove('drag-over')"
-             ondrop="event.preventDefault();this.classList.remove('drag-over');prfHandleDrop(event)">
-          <div class="dz-text"><strong>Drag &amp; drop</strong> a Xero CSV here, or</div>
-          <button type="button" class="dz-browse" onclick="document.getElementById('prfCsvFile').click()">Browse…</button>
-          <input type="file" id="prfCsvFile" accept=".csv" onchange="prfHandleFileInput(this)">
-        </div>
-        <div class="prf-xero-actions">
-          <label><input type="checkbox" ${PRF.includeDrafts ? 'checked' : ''} onchange="PRF.includeDrafts=this.checked"> Include drafts</label>
-          ${PRF.xeroImported ? `
-            <button class="prf-refresh" type="button" onclick="document.getElementById('prfCsvFile').value='';document.getElementById('prfCsvFile').click()" style="padding:4px 10px;font-size:11px">Re-import</button>
-            <button class="prf-refresh" type="button" onclick="prfClearXeroData()" style="padding:4px 10px;font-size:11px;color:var(--red)">Clear Xero data</button>
-          ` : ''}
-        </div>
-      </div>
-      ${statsHtml}
-      ${unmatchedHtml}
-    </div>`;
-}
-
-function prfRenderUnmatchedList() {
-  const unm = PRF.xeroUnmatched.filter(u => !u.assignedTo);
-  if (unm.length === 0) return '';
-
-  const clientOpts = PRF.clients
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`)
-    .join('');
-
-  const rows = unm.map(u => {
-    return `<div class="xu-row">
-      <span>${escapeHtml(u.xeroName)}</span>
-      <span class="xu-amt">${prfFmt(u.total)}</span>
-      <span>—</span>
-      <select onchange="prfAssignUnmatched('${jsAttr(u.xeroName)}',this.value)">
-        <option value="">Assign to client…</option>
-        ${clientOpts}
-      </select>
-    </div>`;
-  }).join('');
-
-  return `
-    <div class="xu-title">
-      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      ${unm.length} Xero contact${unm.length !== 1 ? 's' : ''} not matched:
-    </div>
-    ${rows}`;
 }
 
 // ─── CSP cost import (2026-08-13) ─────────────────────────────────────
@@ -11414,25 +10352,6 @@ async function cspApply() {
 
 // ─── Phase 10: Drop zone event handlers ───────────────────────────────
 
-function prfHandleDrop(e) {
-  const files = e.dataTransfer?.files;
-  if (files && files.length > 0) {
-    const file = files[0];
-    if (!file.name.endsWith('.csv')) {
-      toast('Please drop a .csv file', 'warning', 3000);
-      return;
-    }
-    prfImportXeroCsv(file);
-  }
-}
-
-function prfHandleFileInput(input) {
-  if (input.files && input.files.length > 0) {
-    prfImportXeroCsv(input.files[0]);
-  }
-}
-
-
 // ─── Phase 10: CSV Export ─────────────────────────────────────────────
 
 function prfExportCsv() {
@@ -11442,35 +10361,24 @@ function prfExportCsv() {
   }
 
   const month = PRF.selectedMonth || prfCurrentMonth();
-  const header = 'Client,Status,Cost/mo,Revenue/mo,Gross Profit,Margin %,Xero Actual,Xero Month,Variance';
-  const csvRows = [header];
-
-  PRF.clients.forEach(c => {
-    // Same figures as the card headline: Xero revenue and invoiced costs
-    // when the feed has them for this month, service lines otherwise.
-    const t = prfClientHeadline(c);
-    const xVal = prfGetXero(c, month);
-    const xAct = xVal !== null ? xVal : '';
-    const xMon = xVal !== null ? month : '';
-    const variance = (xAct !== '' && t.sell > 0) ? (xAct - t.sell).toFixed(2) : '';
-    const marginPct = t.sell > 0 ? (t.margin * 100).toFixed(1) + '%' : '0.0%';
-
-    // Escape fields that might contain commas
-    const escapeCsv = v => {
-      const s = String(v);
-      return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g, '""') + '"' : s;
-    };
-
+  // The table's figures: Xero recurring when the feed covers the month, typed lines otherwise.
+  const escapeCsv = v => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const csvRows = ['Client,Status,Month,Revenue from,Revenue,Cost,Profit,Margin %,One-off,Needs a look'];
+  prfRows().forEach(({ client: c, h, flags }) => {
     csvRows.push([
       escapeCsv(c.name),
       escapeCsv(c.status || 'Active'),
-      t.cost.toFixed(2),
-      t.sell.toFixed(2),
-      t.gp.toFixed(2),
-      marginPct,
-      xAct !== '' ? Number(xAct).toFixed(2) : '',
-      xMon,
-      variance
+      month,
+      h.fromXero ? 'Xero recurring' : 'Service lines',
+      h.sell.toFixed(2),
+      h.cost.toFixed(2),
+      h.gp.toFixed(2),
+      h.sell > 0 ? (h.margin * 100).toFixed(1) : '',
+      h.oneOff.toFixed(2),
+      escapeCsv(flags.map(f => f.text).join('; '))
     ].join(','));
   });
 
@@ -11486,53 +10394,42 @@ function prfExportCsv() {
 }
 
 
-// ─── Filtering / search ───────────────────────────────────────────────
-function prfSetFilter(cat) {
-  PRF.filterCat = cat;
-  prfRenderAll();
-}
+// ─── Search / sort / open a client ────────────────────────────────────
 function prfSetSort(sortBy) {
   PRF.sortBy = sortBy || 'profitDesc';
-  const cards = document.querySelectorAll('.prf-cc');
-  if (cards.length) {
-    const open = new Set(PRF.openCards);
-    prfRenderAll();
-    PRF.openCards = open;
-  } else {
-    prfRenderAll();
-  }
+  prfRenderAll();   // open clients stay open (PRF.openCards)
 }
 function prfSetSearch(q) {
   PRF.search = q.toLowerCase();
   prfApplyFilters();
 }
+/** Search in place (typing keeps focus): hide non-matching rows, and a group heading with none left. */
 function prfApplyFilters() {
-  document.querySelectorAll('.prf-cc').forEach(card => {
-    const cats = card.dataset.cats || '';
-    const name = card.dataset.clientName || '';
-    const matchCat = PRF.filterCat === 'all' || cats.split(',').includes(PRF.filterCat);
-    const matchSrch = !PRF.search || name.includes(PRF.search);
-    card.style.display = (matchCat && matchSrch) ? '' : 'none';
+  const tbody = document.querySelector('#prfWrap .prf-tbl > tbody');
+  if (!tbody) return;
+  let shown = 0;
+  tbody.querySelectorAll('tr.prf-row').forEach(row => {
+    const hit = !PRF.search || (row.dataset.clientName || '').includes(PRF.search);
+    row.classList.toggle('prf-gone', !hit);
+    row.nextElementSibling?.classList.toggle('prf-gone', !hit);   // its detail row
+    if (hit) shown++;
   });
+  tbody.querySelectorAll('tr.prf-grp').forEach(head => {
+    let any = false;
+    for (let r = head.nextElementSibling; r && !r.classList.contains('prf-grp'); r = r.nextElementSibling) {
+      if (r.classList.contains('prf-row') && !r.classList.contains('prf-gone')) { any = true; break; }
+    }
+    head.classList.toggle('prf-gone', !any);
+  });
+  tbody.querySelector('.prf-nomatch')?.classList.toggle('prf-gone', shown > 0);
 }
 
-
-// ─── Card expand/collapse ─────────────────────────────────────────────
-function prfToggleCard(id) {
-  if (PRF.openCards.has(id)) PRF.openCards.delete(id);
-  else                       PRF.openCards.add(id);
-  const card = document.querySelector(`.prf-cc[data-client-id="${id}"]`);
-  if (card) card.classList.toggle('open');
-}
-function prfExpandAll() {
-  PRF.clients.forEach(c => PRF.openCards.add(c.id));
-  document.querySelectorAll('.prf-cc').forEach(c => {
-    if (c.style.display !== 'none') c.classList.add('open');
-  });
-}
-function prfCollapseAll() {
-  PRF.openCards.clear();
-  document.querySelectorAll('.prf-cc').forEach(c => c.classList.remove('open'));
+function prfToggleCard(id, open = !PRF.openCards.has(id)) {
+  if (open) PRF.openCards.add(id); else PRF.openCards.delete(id);
+  const row = document.querySelector(`#prfWrap tr.prf-row[data-client-id="${id}"]`);
+  row?.classList.toggle('open', open);
+  row?.querySelector('.prf-toggle')?.setAttribute('aria-expanded', String(open));
+  document.querySelector(`#prfWrap tr.prf-detail[data-detail-for="${id}"]`)?.classList.toggle('open', open);
 }
 
 
@@ -11559,11 +10456,7 @@ function prfCloseModal() {
 function prfAddServiceInline(clientId) {
   const client = PRF.clients.find(c => c.id === clientId);
   if (!client) return;
-  // Make sure card is open so user can see the form
-  if (!PRF.openCards.has(clientId)) {
-    PRF.openCards.add(clientId);
-    document.querySelector(`.prf-cc[data-client-id="${clientId}"]`)?.classList.add('open');
-  }
+  prfToggleCard(clientId, true);   // the form is in the client's open panel
   const tbody = document.querySelector(`tbody[data-svc-body="${clientId}"]`);
   if (!tbody) return;
   // Replace add-row with edit-row, prepend before footer
@@ -11669,145 +10562,6 @@ async function prfDoDeleteService(svcId) {
   } catch (err) {
     console.error('Delete service failed:', err);
     toast('Could not delete service: ' + (err.message || 'unknown'), 'error', 5000);
-  } finally {
-    showLoading(false);
-  }
-}
-
-
-// ─── Seed sample data (one-time, on user confirm) ─────────────────────
-const PRF_SEED_DATA = [
-  { client: { name: 'ALS Locksmiths', status: 'Active' }, services: [
-    { name: 'Internet Security',          cat: 'stack',   sell: 46.98,  cost: 3.49,   note: '1 workstation' },
-    { name: 'M365 Reselling',             cat: 'm365',    sell: 184.95, cost: 109.63, note: '11× Std + 1× Additional Mailbox' },
-    { name: 'Wix Platform',               cat: 'stack',   sell: 17.00,  cost: 0.00,   note: 'Pass-through' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 16.58,  cost: 0.67,   note: 'alslocksmiths.co.uk — £199/yr' }]},
-  { client: { name: 'Brazier Interiors', status: 'Active' }, services: [
-    { name: 'Internet Security',          cat: 'stack',   sell: 14.25,  cost: 6.00,   note: 'IS only' },
-    { name: 'Web Hosting — RAMHLTD',      cat: 'hosting', sell: 10.42,  cost: 0.67,   note: 'ramhltd.co.uk — £125/yr' },
-    { name: 'Web Hosting — purdeypups',   cat: 'hosting', sell: 8.25,   cost: 1.08,   note: 'purdeypups.com — £99/yr' }]},
-  { client: { name: 'Can Can Services', status: 'Active' }, services: [
-    { name: 'Internet Security',          cat: 'stack',   sell: 9.00,   cost: 3.49,   note: '2 seats @ £4.50 each' },
-    { name: 'M365 Reselling',             cat: 'm365',    sell: 52.50,  cost: 28.75,  note: '3× Std + 2× EX1' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 16.58,  cost: 1.58,   note: 'cancanservices.co.uk — £199/yr' }]},
-  { client: { name: 'CDA Ltd', status: 'Active' }, services: [
-    { name: 'Internet Security',          cat: 'stack',   sell: 75.12,  cost: 3.49,   note: '1 WS + Webroot' },
-    { name: 'Cloud Backup',               cat: 'stack',   sell: 35.00,  cost: 3.49,   note: '1 workstation' },
-    { name: 'M365 Reselling',             cat: 'm365',    sell: 122.69, cost: 73.99,  note: '7× Std + 1× EX2' },
-    { name: 'Password Keeper',            cat: 'stack',   sell: 25.00,  cost: 10.30,  note: '5 seats' },
-    { name: 'Web Hosting / Domain',       cat: 'hosting', sell: 14.50,  cost: 0.00,   note: 'cdaluminium.uk.com — £174/yr' }]},
-  { client: { name: 'Clarke Lane Engineering', status: 'Active' }, services: [
-    { name: 'IS + Backup + WFH',          cat: 'stack',   sell: 263.97, cost: 30.52,  note: 'Bundled — 1 WS + Backup + 2× WFH' },
-    { name: 'M365 Reselling',             cat: 'm365',    sell: 84.00,  cost: 47.99,  note: '4× Std + 2× Basic' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 18.67,  cost: 0.00,   note: 'clarke-is.co.uk — £224/yr' }]},
-  { client: { name: 'Connect Data Services', status: 'Winding' }, services: [
-    { name: 'M365 Reselling',             cat: 'm365',    sell: 20.00,  cost: 9.68,   note: '1 seat — reducing' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 26.25,  cost: 0.67,   note: 'Annual hosting £216/yr + domain £99/yr' }]},
-  { client: { name: 'Cowan Consultancy', status: 'Active' }, services: [
-    { name: 'IS + Backup + WFH + VirtualBox', cat: 'stack',   sell: 428.05, cost: 58.82,  note: 'Bundled — 1 WS + 5× WFH + VirtualBox £105' },
-    { name: 'M365 + Exclaimer',           cat: 'm365',    sell: 273.70, cost: 165.18, note: '13× Std + 2× OneDrive + 13× Exclaimer + 1× Basic' },
-    { name: 'Web Hosting / Domain',       cat: 'hosting', sell: 15.33,  cost: 0.67,   note: 'cowanconsult.co.uk — £163.88/yr + domain £20/yr' }]},
-  { client: { name: 'Daron Motors', status: 'Active' }, services: [
-    { name: 'IT Support Retainer',        cat: 'retainer',sell: 1000.00,cost: 0.00,   note: 'Monthly retainer — time cost only' },
-    { name: 'IS + Backup + WFH',          cat: 'stack',   sell: 381.45, cost: 38.42,  note: 'Bundled — IS + Backup + 2× WFH' },
-    { name: 'M365 + Exclaimer',           cat: 'm365',    sell: 258.00, cost: 119.07, note: '12× Std incl Plan 2 + 12× Exclaimer' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 10.42,  cost: 1.08,   note: 'rogate.com — £125/yr' }]},
-  { client: { name: 'Freeston Water Treatment', status: 'Active' }, services: [
-    { name: 'IS + Backup + M365 SCC',     cat: 'stack',   sell: 338.52, cost: 34.88,  note: 'Bundled — 2 WS + M365 SCC. Google Workspace user' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 33.17,  cost: 0.67,   note: '2 sites freeston.co.uk — £398/yr' }]},
-  { client: { name: 'H2O Homes', status: 'Active' }, services: [
-    { name: 'IS + Exclaimer',             cat: 'stack',   sell: 56.08,  cost: 6.00,   note: 'IS + Exclaimer bundled. M365 confirmed — sell price TBC' }]},
-  { client: { name: 'Hillcrest Engineering', status: 'Active' }, services: [
-    { name: 'IS + Backup',                cat: 'stack',   sell: 69.35,  cost: 9.69,   note: '1 WS + Backup (Sage PC). Google Workspace' }]},
-  { client: { name: 'J&T Building Maintenance', status: 'Active' }, services: [
-    { name: 'M365 Reselling',             cat: 'm365',    sell: 29.55,  cost: 10.09,  note: 'Hosted Exchange + OneDrive' }]},
-  { client: { name: 'Kingdom Products', status: 'Active' }, services: [
-    { name: 'Web Hosting',                cat: 'hosting', sell: 16.58,  cost: 0.67,   note: 'kingdomproducts.co.uk — £199/yr' }]},
-  { client: { name: 'LS Commercials', status: 'Active' }, services: [
-    { name: 'Web Hosting / Email',        cat: 'hosting', sell: 3.75,   cost: 0.00,   note: '£45/yr — below standard rate. Review at renewal' },
-    { name: 'Domain Renewals',            cat: 'hosting', sell: 2.50,   cost: 0.00,   note: '2× domains £15/yr each' }]},
-  { client: { name: 'MSA Safety', status: 'Active' }, services: [
-    { name: 'IS + Backup + Exclaimer + Keeper + M365', cat: 'stack', sell: 320.25, cost: 101.72, note: 'Full service — bundled monthly' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 16.58,  cost: 0.00,   note: 'msasafety.co.uk — £199/yr' }]},
-  { client: { name: 'Onsite Commercial Services', status: 'Active' }, services: [
-    { name: 'Cloud Backup + WFH',         cat: 'stack',   sell: 70.00,  cost: 48.95,  note: 'O365 & SharePoint backup + 1× WFH (Pam)' },
-    { name: 'M365 + Exclaimer',           cat: 'm365',    sell: 356.45, cost: 131.77, note: '16× Hosted Exchange + 10× Apps + 15× Exclaimer' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 22.91,  cost: 0.67,   note: '2 sites £250/yr + domain £25/yr' },
-    { name: 'Starlink Resale',            cat: 'other',   sell: 96.00,  cost: 80.00,  note: 'Roam Unlimited — cost £80/mo, sell £96/mo' }]},
-  { client: { name: 'PM Packing', status: 'Active' }, services: [
-    { name: 'IS + Backup',                cat: 'stack',   sell: 129.33, cost: 16.62,  note: 'IS £111.33 + Backup Sage PC £18.00' },
-    { name: 'M365 + Exclaimer',           cat: 'm365',    sell: 211.40, cost: 115.87, note: '9× Std + 1× Basic + 2× EX2 + 1× EX1 + 9× Exclaimer' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 31.58,  cost: 1.33,   note: '£199/yr hosting + £180/yr group domains' }]},
-  { client: { name: 'Quality Mouldings', status: 'Active' }, services: [
-    { name: 'Web Hosting + Domain',       cat: 'hosting', sell: 21.08,  cost: 1.08,   note: 'wibco.com £199/yr + domain £54/yr' }]},
-  { client: { name: 'Regal Autosport', status: 'Active' }, services: [
-    { name: 'IS + Backup',                cat: 'stack',   sell: 104.42, cost: 9.69,   note: '1 WS + Webroot + Backup' }]},
-  { client: { name: 'Solent Rewinds', status: 'Active' }, services: [
-    { name: 'Web Hosting',                cat: 'hosting', sell: 16.58,  cost: 0.00,   note: '£199/yr — active customer' }]},
-  { client: { name: 'Southern Glass Services', status: 'Active' }, services: [
-    { name: 'IS + Backup + Exclaimer',    cat: 'stack',   sell: 112.18, cost: 25.75,  note: '10 WS + 7 Exclaimer. M365 paid direct' },
-    { name: 'Web Hosting',                cat: 'hosting', sell: 20.00,  cost: 0.67,   note: 'sykesglasscompany.co.uk — £240/yr' }]},
-  { client: { name: 'Taurus Contractors', status: 'Active' }, services: [
-    { name: 'Internet Security (Annual)', cat: 'stack',   sell: 4.08,   cost: 0.50,   note: '£49/yr annual billing. M365 sits with Can Can' }]},
-  { client: { name: 'Technix Rubber & Plastics', status: 'Active' }, services: [
-    { name: 'IT Support Retainer',        cat: 'retainer',sell: 210.90, cost: 0.00,   note: 'Fixed monthly retainer — basic IT support. M365 opportunity pending' }]},
-  { client: { name: 'West Country Fires', status: 'Active' }, services: [
-    { name: 'IS + Backup',                cat: 'stack',   sell: 133.50, cost: 23.26,  note: '2 VMs + 1 WS. ESXi/RDP for Sage. DR removed Apr 2026' }]},
-  { client: { name: 'Wired Services', status: 'New' }, services: [
-    { name: 'Web Hosting',                cat: 'hosting', sell: 16.58,  cost: 0.00,   note: '£199/yr — new customer' }]}
-];
-
-function prfConfirmSeed() {
-  const totalClients  = PRF_SEED_DATA.length;
-  const totalServices = PRF_SEED_DATA.reduce((a, c) => a + c.services.length, 0);
-  const body = `
-    <p>Creates <strong>${totalClients} clients</strong> and <strong>${totalServices} services</strong>.</p>
-    <div class="prf-mm-actions">
-      <button class="btn btn-ghost" type="button" onclick="prfCloseModal()">Cancel</button>
-      <button class="btn btn-primary" type="button" onclick="prfDoSeed()">Seed data</button>
-    </div>`;
-  prfOpenModal('Seed sample data', body);
-}
-
-async function prfDoSeed() {
-  prfCloseModal();
-  showLoading(true);
-  toast('Seeding clients and services — this may take a minute…', 'info', 4000);
-  let okClients = 0, okServices = 0, fails = 0;
-  try {
-    // Sequential by client to keep the SharePoint order stable + avoid throttling
-    for (const entry of PRF_SEED_DATA) {
-      try {
-        await prfCreateClient(entry.client);
-        okClients++;
-      } catch (err) { console.warn('Seed client failed:', entry.client.name, err);
-        fails++;
-        continue; // skip its services if the client itself failed
-      }
-      // Services for this client: parallel within the client (5–6 max each), is fine
-      try {
-        await Promise.all(entry.services.map(s =>
-          prfCreateService({
-            clientName: entry.client.name,
-            name:       s.name,
-            category:   s.cat,
-            cost:       s.cost,
-            sell:       s.sell,
-            notes:      s.note
-          }).then(() => okServices++).catch(e => { console.warn('Seed service failed:', s.name, e); fails++; })
-        ));
-      } catch (err) { console.warn('Seed services batch failed for', entry.client.name, err);
-      }
-    }
-    if (fails === 0) {
-      toast(`Seeded — ${okClients} clients, ${okServices} services`, 'success', 4000);
-    } else {
-      toast(`Seed completed with ${fails} failure${fails === 1 ? '' : 's'} — ${okClients} clients, ${okServices} services. Check console.`, 'warning', 6000);
-    }
-    await prfRefreshData(true);
-  } catch (err) {
-    console.error('Seed failed:', err);
-    toast('Seed failed: ' + (err.message || 'unknown'), 'error', 6000);
   } finally {
     showLoading(false);
   }

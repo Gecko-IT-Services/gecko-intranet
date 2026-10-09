@@ -1,0 +1,94 @@
+/* Profitability (simpler page, 9 Oct 2026): status line, figures, one table that opens onto each
+   client's service lines. Design: docs/superpowers/specs/2026-10-09-simpler-profitability-design.md
+   Older Profitability rules (service table, pills, modal, CSP card) stay in index.html. */
+
+/* — Status: one line, plus what is on no client — */
+#section-profitability .prf-status .prf-feed { margin: 0; }
+#section-profitability .prf-loose { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
+#section-profitability .prf-loose.warn { color: var(--amber); }
+
+/* — Figures: values in white, a loss in red, one-off in blue (never in profit) — */
+#section-profitability .prf-sum-strip .prf-sum-s { flex: 1 1 0; }
+#section-profitability .prf-sum-strip .prf-sum-v { color: var(--white); }
+#section-profitability .prf-sum-strip .prf-sum-v.neg { color: var(--red); }
+#section-profitability .prf-sum-strip .prf-sum-v.oneoff { color: var(--blue); }
+
+/* — Search and sort — */
+#section-profitability .prf-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#section-profitability .prf-search {
+  flex: 1 1 220px; max-width: 320px; min-height: 36px; padding: 6px 12px;
+  background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius-pill);
+  color: var(--white); font: inherit; font-size: 13px;
+}
+#section-profitability .prf-search:focus { outline: none; border-color: var(--green); }
+#section-profitability .prf-bar .prf-sort { margin-left: auto; }
+
+/* — The table — */
+#section-profitability .prf-tbl-wrap {
+  background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius);
+  overflow-x: auto;
+}
+#section-profitability .prf-tbl { width: 100%; border-collapse: collapse; }
+#section-profitability .prf-tbl > thead th {
+  padding: 10px; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); border-bottom: 1px solid var(--border-dim); text-align: left; white-space: nowrap;
+}
+#section-profitability .prf-tbl > thead th.num,
+#section-profitability .prf-tbl > tbody > tr > td.num { text-align: right; }
+#section-profitability .prf-tbl > tbody > tr > td {
+  padding: 10px; border-bottom: 1px solid var(--border-dim); font-size: 13px; vertical-align: middle;
+}
+#section-profitability .prf-tbl > thead th:first-child,
+#section-profitability .prf-tbl > tbody > tr > td:first-child { padding-left: 14px; }
+#section-profitability .prf-tbl > tbody > tr > td.num {
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--white);
+}
+#section-profitability .prf-tbl td.num.neg { color: var(--red); }
+#section-profitability .prf-tbl td.num.oneoff { color: var(--blue); }
+
+/* Group headings: Needs a look / All other clients. */
+#section-profitability .prf-tbl tr.prf-grp > td {
+  padding-top: 14px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); background: var(--card-hover);
+}
+#section-profitability .prf-tbl tr.prf-grp[data-group="flagged"] > td { color: var(--amber); }
+#section-profitability .prf-tbl tr.prf-grp span { font-family: var(--font-mono); letter-spacing: 0; }
+
+/* A client row: the whole row opens its service lines. */
+#section-profitability .prf-tbl tr.prf-row { cursor: pointer; }
+#section-profitability .prf-tbl tr.prf-row:hover > td { background: var(--row-hover); }
+#section-profitability .prf-namecell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#section-profitability .prf-toggle {
+  width: 22px; height: 22px; flex: none; display: inline-grid; place-items: center;
+  border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer;
+  font-size: 11px; transition: transform .15s ease, color .15s ease;
+}
+#section-profitability .prf-toggle:hover { color: var(--white); background: var(--card-hover); }
+#section-profitability tr.prf-row.open .prf-toggle { transform: rotate(90deg); color: var(--green); }
+#section-profitability .prf-namecell .client-link { font-weight: 600; }
+#section-profitability .prf-why .badge { display: inline-block; margin: 2px 4px 2px 0; }
+#section-profitability .prf-quiet { font-size: 12px; color: var(--muted); }
+
+/* The open panel under a client. Hidden rows beat the phone card layout's display: grid. */
+#portalShell #section-profitability .prf-tbl tr.prf-gone,
+#portalShell #section-profitability .prf-tbl tr.prf-detail:not(.open) { display: none !important; }
+#section-profitability .prf-tbl tr.prf-detail > td { padding: 4px 14px 16px; background: var(--card-hover); cursor: default; }
+#section-profitability .prf-tbl tr.prf-detail .prf-stbl { background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius); }
+#section-profitability .prf-dfoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+#section-profitability .prf-xline { margin: 0; font-size: 12px; color: var(--muted); }
+#section-profitability .prf-xline strong { font-family: var(--font-mono); color: var(--white); font-weight: 600; }
+#section-profitability .prf-none { text-align: center; padding: 16px; color: var(--muted); font-size: 12px; }
+#section-profitability .prf-tbl tr.prf-nomatch > td { text-align: center; padding: 18px; color: var(--muted); }
+
+/* Phone cards (the shared table→card layout): the name leads the card, left-aligned (it holds
+   buttons, so the layout would otherwise treat it as the right-aligned actions strip), and a
+   client with no one-off work doesn't show an empty One-off field. */
+@container rtable (max-width: 760px) {
+  #portalShell #section-profitability .prf-tbl > tbody > tr.prf-row > td:first-child {
+    order: -1; justify-content: flex-start; text-align: left !important;
+    padding-top: 8px !important; border-bottom: 1px solid var(--border-dim) !important;
+  }
+  #portalShell #section-profitability .prf-tbl > tbody > tr.prf-row > td.oneoff:empty,
+  #portalShell #section-profitability .prf-tbl > tbody > tr.prf-row > td.prf-why:empty { display: none !important; }
+  #portalShell #section-profitability .prf-tbl tr.prf-detail > td { padding: 4px 0 8px !important; background: none; }
+}

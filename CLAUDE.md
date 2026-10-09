@@ -82,6 +82,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   one release (ponytail) and can be deleted after November 2026 if the automatic
   path has held.
 - Months the feed does not cover fall back to the typed service lines.
+- The page (9 Oct, `2026-10-09-simpler-profitability-design.md`): one status line, one line of figures, one
+  table with **Needs a look** first (losing money, margin under 40%, Xero £1+ under the lines, not billed in a
+  finished month: `src/core/profitability.js`, tests `tests/profitability.mjs`); a row opens its service lines.
+  The Xero CSV import, manual Xero figures, category filters and grand total are gone: the feed is the only way in.
 
 ## Supabase (moving off SharePoint lists, from 7 Oct 2026)
 - Plan and state: `docs/superpowers/specs/2026-10-07-supabase-migration-design.md`.
