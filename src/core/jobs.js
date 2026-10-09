@@ -294,9 +294,6 @@ export function previousMonth(month) {
   return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
 }
 
-/** Old Projects board statuses → job stages. Finished projects aren't brought across. */
-export const PROJECT_STATUS = { Quoted: 'quoted', Agreed: 'agreed', 'In progress': 'in_progress' };
-
 // ─── Nudge: a friendly payment reminder (Philip, 8 Oct) ──────────────────
 
 const escHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

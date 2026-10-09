@@ -8,29 +8,29 @@
    ║                                                                   ║
    ║   Reads: Supabase jobs + gecko_clients, Xero (xero_invoices,      ║
    ║   xero_repeating_invoices, synced hourly; the profitability feed  ║
-   ║   until Xero is connected), and once, on request, the old         ║
-   ║   GeckoProjects SharePoint list. Writes: Supabase jobs only.      ║
+   ║   until Xero is connected). Writes: Supabase jobs, opportunities  ║
+   ║   (the board's ideas).                                            ║
    ║                                                                   ║
    ║   NOTE: no top-level `window` access (importable under Node).     ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
-import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
+import { graphFetch } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
-import { STAGES, OPEN_STAGES, stageLabel, stageTotals, monthSales, salesHistory, PROJECT_STATUS,
+import { STAGES, OPEN_STAGES, stageLabel, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
-  nudgeInvoices, nudgeEmail, BOARD_STAGES, boardLanes, ideaMove, tilt } from '../core/jobs.js';
+  nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt } from '../core/jobs.js';
 import { newOpportunity } from '../core/opportunities.js';
 
 const JOB = {
   tab: 'jobs',
-  stage: 'open',          // open | one of STAGES
+  stage: null,            // 'invoiced' | 'lost': listed under the board (See them)
   editing: new Set(),
   adding: false,
   loading: false,
   error: null,
-  jobs: [], clients: [], feed: null, feedNote: '', importing: false,
+  jobs: [], clients: [], feed: null, feedNote: '',
   xero: null, xeroBusy: false,  // public.xero_status: the direct Xero connection
   inv: [], rep: [],             // xero_invoices (recent, unpaid, jobs' own) and xero_repeating_invoices
   invoicing: null,              // "Invoice in Xero" form: { id, key, opts, busy, error }
@@ -38,7 +38,6 @@ const JOB = {
   nudges: new Map(),            // Owed to us: contact → last payment reminder drafted (public.payment_nudges)
   nudging: null,                // contact whose reminder is being drafted
   dir: 'from-right', animate: false,  // tab change: which way the new pane slides in
-  view: 'board',                // whiteboard | list (remembered in this browser, read in init)
   opps: [], oppsError: '',      // opportunities with one-off work: the board's Ideas column
   selected: null,               // the sticky whose full card shows under the board
   addStage: 'quoted', addingIdea: false, dragging: ''
@@ -199,41 +198,6 @@ async function moveJob(id, status, btn) {
   } catch (err) { btn.disabled = false; toast('Could not update: ' + (err.message || err), 'error', 7000); }
 }
 
-/** One-off: open projects from the old Projects board (SharePoint) become quoted/agreed/in-progress jobs. */
-async function importProjects() {
-  if (JOB.importing) return;
-  JOB.importing = true; render();
-  try {
-    const siteId = await resolveSiteId();
-    const lists = await fetchAllLists();
-    const list = lists.find(l => l.displayName === 'GeckoProjects' || l.name === 'GeckoProjects');
-    if (!list) { toast('There is no GeckoProjects list, so there is nothing to bring across', 'info', 6000); return; }
-    let items = [], next = `/sites/${siteId}/lists/${list.id}/items?$expand=fields&$top=999`;
-    while (next) { const res = await graphFetch(next); items = items.concat(res.value || []); next = res['@odata.nextLink'] || null; }
-    const rows = items
-      .map(it => ({ id: it.id, f: it.fields || {} }))
-      .filter(({ f }) => PROJECT_STATUS[f.Status] && String(f.Title || '').trim())
-      .map(({ id, f }) => ({
-        source_ref: `projects:${id}`,
-        client_name: String(f.ClientName || '').trim() || 'Gecko IT Services',
-        title: String(f.Title).trim(),
-        status: PROJECT_STATUS[f.Status],
-        owner: f.Owner || '',
-        next_step: [f.NextAction, f.WaitingOn ? `Waiting on: ${f.WaitingOn}` : ''].filter(Boolean).join(' · '),
-        notes: [f.Notes, f.AteraRef ? `Atera ${f.AteraRef}` : ''].filter(Boolean).join('\n')
-      }));
-    if (!rows.length) { toast('No open projects on the old board to bring across', 'info', 6000); return; }
-    const sb = await connectSupabase({ interactive: true });
-    const added = must(await sb.from('jobs').upsert(rows, { onConflict: 'source_ref', ignoreDuplicates: true }).select('*'));
-    toast(`Brought across ${added.length} of ${rows.length} open projects. Add a value to each.`, 'success', 7000);
-    await load();
-  } catch (err) {
-    toast('Could not bring the projects across: ' + (err.message || err), 'error', 8000);
-  } finally {
-    JOB.importing = false; render();
-  }
-}
-
 // ─── Rendering ────────────────────────────────────────────────────────
 
 function render() {
@@ -251,7 +215,7 @@ function render() {
     return;
   }
   mount.innerHTML = (JOB.feedNote && !onXero() && JOB.tab !== 'jobs' ? `<p class="job-note">${escapeHtml(JOB.feedNote)}</p>` : '') +
-    `<div class="job-pane">${JOB.tab === 'jobs' ? jobsHtml() : tabHtml(s)}</div>`;
+    `<div class="job-pane">${JOB.tab === 'jobs' ? boardHtml() : tabHtml(s)}</div>`;
   if (JOB.animate) {
     JOB.animate = false;
     mount.firstElementChild?.classList.add('job-enter', JOB.dir);
@@ -263,16 +227,13 @@ function renderKpis() {
   const k = els('jobKpis');
   if (!k) return;
   if (JOB.error) { k.innerHTML = ''; return; }
-  const t = stageTotals(JOB.jobs);
   const s = sales();
   const o = onXero() ? owed(JOB.inv, today()) : null;
+  const left = s ? s.projected - s.invoiced : 0;
   k.innerHTML = [
-    ['Invoiced this month', s ? money(s.invoiced) : '—', s ? '' : 'Xero not available'],
-    ['Projected for the month', s ? money(s.projected) : '—', ''],
-    ...(o ? [['Owed to us', money(o.total), `${o.overdue ? `${money(o.overdue)} overdue` : 'none overdue'} · incl. VAT`]] : []),
-    ['Ready to invoice', money(t.to_invoice.value), `${t.to_invoice.count} ${t.to_invoice.count === 1 ? 'job' : 'jobs'}`],
-    ['Work in hand', money(t.agreed.value + t.in_progress.value), `${t.agreed.count + t.in_progress.count} ${t.agreed.count + t.in_progress.count === 1 ? 'job' : 'jobs'}`],
-    ['Quoted', money(t.quoted.value), `${t.quoted.count} ${t.quoted.count === 1 ? 'job' : 'jobs'}`]
+    ['Invoiced this month', s ? money(s.invoiced) : '—', s ? 'net of VAT' : 'Xero not available'],
+    ['On course for', s ? money(s.projected) : '—', s ? `${money(left)} still to come` : ''],
+    ['Owed to us', o ? money(o.total) : '—', o ? `${o.overdue ? `${money(o.overdue)} overdue` : 'none overdue'} · incl. VAT` : 'Needs Xero']
   ].map(([l, v, sub]) => `<div class="job-kpi"><span>${escapeHtml(l)}</span><strong>${escapeHtml(v)}</strong>${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</div>`).join('');
 }
 
@@ -445,45 +406,16 @@ async function createInvoice(id, f) {
   }
 }
 
-const viewToggle = () => `<div class="job-view" role="group" aria-label="Show jobs as">${[['board', 'Whiteboard'], ['list', 'List']].map(([k, l]) =>
-  `<button type="button" data-job-act="view" data-view="${k}" aria-pressed="${JOB.view === k}">${l}</button>`).join('')}</div>`;
-
-function jobsHtml() {
-  if (JOB.view === 'board') return boardHtml();
-  JOB.byNumber = invoiceIndex(JOB.inv);
-  const t = stageTotals(JOB.jobs);
-  const total = Object.values(t).reduce((s, x) => s + x.value, 0) || 1;
-  const groups = onXero() ? invoicedGroups(JOB.jobs, JOB.byNumber, today()) : null;
-  const awaitingCount = groups ? groups.awaiting.length : 0;
-  const tiles = STAGES.map(([key, label]) => {
-    const on = JOB.stage === key || (JOB.stage === 'open' && OPEN_STAGES.has(key));
-    return `<button type="button" class="job-stage st-${key}${on ? ' on' : ''}" data-job-act="stage" data-stage="${key}" aria-pressed="${on}">
-        <span class="job-stage-label">${label}</span>
-        <span class="job-stage-value">${escapeHtml(whole(t[key].value))}</span>
-        <span class="job-stage-count">${key === 'invoiced' && awaitingCount ? `${awaitingCount} awaiting payment` : `${t[key].count} ${t[key].count === 1 ? 'job' : 'jobs'}`}</span>
-        <span class="job-stage-bar"><i style="width:${Math.round(t[key].value / total * 100)}%"></i></span>
-      </button>`;
-  }).join('');
-  const order = Object.fromEntries(STAGES.map(([k], i) => [k, i]));
-  const shown = JOB.jobs
-    .filter(j => (JOB.stage === 'open' ? OPEN_STAGES.has(j.status) : j.status === JOB.stage))
-    .sort((a, b) => (order[b.status] - order[a.status]) ||
-      String(a.target_date || '9999').localeCompare(String(b.target_date || '9999')) ||
-      (Number(b.value) || 0) - (Number(a.value) || 0));
-  const heading = JOB.stage === 'open' ? 'Current jobs' : `${stageLabel(JOB.stage)}`;
-  const imported = JOB.jobs.some(j => String(j.source_ref || '').startsWith('projects:'));
-  return `<div class="job-stages">${tiles}</div>
-    ${clientOptions()}
-    <div class="job-list-head">
-      <strong>${escapeHtml(heading)}</strong>
-      ${JOB.stage !== 'open' ? '<button type="button" class="job-link" data-job-act="stage" data-stage="open">Back to current jobs</button>' : ''}
-      ${viewToggle()}
-      ${JOB.adding ? '' : '<button type="button" class="btn btn-primary" data-job-act="add">Add a job</button>'}
-    </div>
-    ${JOB.adding ? jobForm(null) : ''}
-    ${JOB.stage === 'invoiced' && groups ? invoicedHtml(groups) : `<div class="job-list">${shown.map(jobCard).join('') ||
-      `<p class="job-empty">${JOB.jobs.length ? 'No jobs at this stage.' : 'No jobs yet.'}</p>`}</div>`}
-    ${imported ? '' : `<p class="job-note"><button type="button" class="job-link" data-job-act="import" ${JOB.importing ? 'disabled' : ''}>${JOB.importing ? 'Importing…' : 'Import open projects from the old board'}</button></p>`}`;
+/** Invoiced or Lost jobs, listed under the board from its drop zones (See them). */
+function stageListHtml() {
+  if (!JOB.stage) return '';
+  const groups = JOB.stage === 'invoiced' && onXero() ? invoicedGroups(JOB.jobs, JOB.byNumber, today()) : null;
+  const list = JOB.jobs.filter(j => j.status === JOB.stage)
+    .sort((a, b) => String(b.invoiced_at || b.modified_at || '').localeCompare(String(a.invoiced_at || a.modified_at || '')));
+  return `<div class="job-pinned job-stage-list">
+      <div class="job-list-sub"><strong>${escapeHtml(stageLabel(JOB.stage))}</strong><button type="button" class="job-link" data-job-act="liststage" data-stage="${JOB.stage}">Close</button></div>
+      ${groups ? invoicedHtml(groups) : `<div class="job-list">${list.map(jobCard).join('') || '<p class="job-empty">None yet.</p>'}</div>`}
+    </div>`;
 }
 
 const person = name => (/^philip/i.test(name || '') ? 'philip' : /^jack/i.test(name || '') ? 'jack' : '');
@@ -556,18 +488,15 @@ function boardHtml() {
   const lanes = b.lanes.map(l => col(l.key, stageLabel(l.key), l.value, count(l.items.length), l.items.map(jobSticky).join(''),
     `<button type="button" class="job-col-add" data-job-act="add" data-stage="${l.key}">+ Add</button>`)).join('');
   const sel = JOB.jobs.find(j => j.id === JOB.selected);
-  const imported = JOB.jobs.some(j => String(j.source_ref || '').startsWith('projects:'));
   return `${clientOptions()}
-    <div class="job-list-head"><strong>Whiteboard</strong>${viewToggle()}
-      ${JOB.adding || JOB.addingIdea ? '' : '<button type="button" class="btn btn-primary" data-job-act="add" data-stage="quoted">Add a job</button>'}</div>
     ${JOB.adding ? jobForm(null) : ''}${JOB.addingIdea ? ideaForm() : ''}
     <div class="job-board">${ideas}${lanes}</div>
     <div class="job-drops">
-      <div class="job-drop" data-drop="invoiced"><strong>Invoiced</strong><span>${escapeHtml(count(b.done.invoiced))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="invoiced">See them</button></div>
-      <div class="job-drop" data-drop="lost"><strong>Lost</strong><span>${escapeHtml(count(b.done.lost))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="lost">See them</button></div>
+      <div class="job-drop" data-drop="invoiced"><strong>Invoiced</strong><span>${escapeHtml(count(b.done.invoiced))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="invoiced" aria-expanded="${JOB.stage === 'invoiced'}">See them</button></div>
+      <div class="job-drop" data-drop="lost"><strong>Lost</strong><span>${escapeHtml(count(b.done.lost))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="lost" aria-expanded="${JOB.stage === 'lost'}">See them</button></div>
     </div>
-    ${sel ? `<div class="job-pinned"><div class="job-list-sub"><span class="job-muted">Picked from the board</span><button type="button" class="job-link" data-job-act="pick" data-id="${sel.id}">Close</button></div>${jobCard(sel)}</div>` : ''}
-    ${imported ? '' : `<p class="job-note"><button type="button" class="job-link" data-job-act="import" ${JOB.importing ? 'disabled' : ''}>${JOB.importing ? 'Importing…' : 'Import open projects from the old board'}</button></p>`}`;
+    ${stageListHtml()}
+    ${sel ? `<div class="job-pinned"><div class="job-list-sub"><span class="job-muted">Picked from the board</span><button type="button" class="job-link" data-job-act="pick" data-id="${sel.id}">Close</button></div>${jobCard(sel)}</div>` : ''}`;
 }
 
 /** A sticky dropped on a column (or a sticky's arrow): jobs move stage; ideas become jobs. */
@@ -667,21 +596,21 @@ function invoicedHtml(g) {
   return html || '<p class="job-empty">No invoiced jobs yet.</p>';
 }
 
-/** The direct Xero connection: connect once, then it syncs every hour on Supabase. */
+/** The direct Xero connection, one line on This month: connect once, then it syncs every hour on Supabase. */
 function xeroHtml() {
   const x = JOB.xero;
   if (!x) return '';
+  const mark = '<span class="xero-mark" role="img" aria-label="Xero"></span>';
   if (!x.connected) {
-    return `<div class="job-panel job-xero"><div class="job-panel-head"><strong><span class="xero-mark" role="img" aria-label="Xero"></span>Connect directly</strong></div>
+    return `<div class="job-panel job-xero" data-state="bad"><span>${mark}Not connected. Sales come from the daily feed until it is.</span>
       <button type="button" class="btn btn-primary btn-sm" data-job-act="xero-connect" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Opening Xero…' : 'Connect Xero'}</button></div>`;
   }
-  const state = x.last_sync_ok === false ? 'bad' : 'ok';
-  return `<div class="job-panel job-xero" data-state="${state}">
-      <div class="job-panel-head"><strong><span class="xero-mark" role="img" aria-label="Xero"></span>${escapeHtml(x.tenant_name || 'connected')}</strong>
-        <span class="job-muted">${x.last_sync_at ? `${x.last_sync_ok === false ? 'Last sync failed' : 'Synced'} ${escapeHtml(when(x.last_sync_at))} · ` : ''}${escapeHtml(String(x.invoices))} invoices, ${escapeHtml(String(x.repeating))} repeating</span></div>
-      ${x.last_sync_ok === false ? `<p class="job-note bad">${escapeHtml(x.last_error)}</p>` : ''}
-      <div class="job-actions"><button type="button" class="btn btn-sm" data-job-act="xero-sync" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Syncing…' : 'Sync now'}</button>
-        <button type="button" class="btn btn-sm" data-job-act="xero-connect">Reconnect</button></div>
+  const bad = x.last_sync_ok === false;
+  return `<div class="job-panel job-xero" data-state="${bad ? 'bad' : 'ok'}">
+      <span>${mark}${escapeHtml(x.tenant_name || 'connected')}<span class="job-muted">${x.last_sync_at ? ` · ${bad ? 'last sync failed' : 'synced'} ${escapeHtml(when(x.last_sync_at))}` : ''} · ${escapeHtml(String(x.invoices))} invoices, ${escapeHtml(String(x.repeating))} repeating</span></span>
+      <span class="job-actions"><button type="button" class="btn btn-sm" data-job-act="xero-sync" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Syncing…' : 'Sync now'}</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-job-act="xero-connect">Reconnect</button></span>
+      ${bad ? `<p class="job-note bad">${escapeHtml(x.last_error)}</p>` : ''}
     </div>`;
 }
 
@@ -751,26 +680,22 @@ function xeroReturn() {
   let r = null;
   try { r = JSON.parse(sessionStorage.getItem('gecko.xeroResult') || 'null'); sessionStorage.removeItem('gecko.xeroResult'); } catch { /* storage blocked */ }
   if (!r) return;
-  JOB.tab = 'xero';
+  JOB.tab = 'month';
   if (r.result === 'connected') toast(`Xero connected: ${r.detail || 'organisation'}. Invoices are synced.`, 'success', 7000);
   else if (r.result === 'connected-sync-failed') toast('Xero connected, but the first sync failed: ' + r.detail, 'warning', 10000);
   else toast('Xero was not connected: ' + (r.detail || 'cancelled'), 'error', 10000);
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────
-// One strip at the top: Jobs, then each part of the month's sales on its own tab.
+// One strip at the top: Jobs (the whiteboard), This month (sales), Owed to us.
 
-/** The tabs to show now: [key, label, badge]. Sales tabs need Xero (or the feed). */
+/** The tabs to show now: [key, label, badge]. Owed to us needs Xero. */
 function tabList(s) {
   const o = s && s.source === 'xero' ? owed(JOB.inv, today()) : null;
+  const xBad = JOB.xero && (!JOB.xero.connected || JOB.xero.last_sync_ok === false);
   const tabs = [['jobs', 'Jobs', String(JOB.jobs.filter(j => OPEN_STAGES.has(j.status)).length)]];
-  if (s) {
-    tabs.push(['overview', 'Month overview', '']);
-    tabs.push(['tocome', 'Still to come', s.recurringToCome.length ? String(s.recurringToCome.length) : '']);
-    tabs.push(['invoiced', `Invoiced in ${shortMonth(thisMonth())}`, s.rows.length ? String(s.rows.length) : '']);
-    if (o) tabs.push(['owed', 'Owed to us', o.overdue ? 'overdue' : '']);
-  }
-  if (JOB.xero) tabs.push(['xero', 'Xero', JOB.xero.last_sync_ok === false ? '!' : '']);
+  if (s || JOB.xero) tabs.push(['month', 'This month', xBad ? '!' : '']);
+  if (o) tabs.push(['owed', 'Owed to us', o.overdue ? 'overdue' : '']);
   return tabs;
 }
 
@@ -807,14 +732,15 @@ function switchTab(key) {
   render();
 }
 
+/** This month: the Xero line first when it needs attention, otherwise last. */
 function tabHtml(s) {
-  const month = thisMonth();
-  if (JOB.tab === 'xero') return xeroHtml() || '<p class="job-empty">Xero isn’t set up yet.</p>';
-  if (!s) return '<p class="job-empty">Xero sales come from the daily profitability feed until Xero is connected, and the feed isn’t available right now.</p>';
-  if (JOB.tab === 'tocome') return toComeHtml(s);
-  if (JOB.tab === 'invoiced') return monthInvoicedHtml(s, month);
   if (JOB.tab === 'owed') return owedHtml(owed(JOB.inv, today()));
-  return overviewHtml(s, month);
+  const month = thisMonth();
+  const x = xeroHtml();
+  const bad = JOB.xero && (!JOB.xero.connected || JOB.xero.last_sync_ok === false);
+  const body = s ? overviewHtml(s, month) + toComeHtml(s) + monthInvoicedHtml(s, month) + historyHtml(s, month)
+    : '<p class="job-empty">Xero sales come from the daily profitability feed until Xero is connected, and the feed isn’t available right now.</p>';
+  return bad ? x + body : body + x;
 }
 
 // ─── Sales tabs ───────────────────────────────────────────────────────
@@ -827,9 +753,6 @@ const asOfText = s => (s.source === 'xero'
   : `Xero feed, ${JOB.feed.generatedAt ? when(JOB.feed.generatedAt) : ''}`);
 
 function overviewHtml(s, month) {
-  const direct = s.source === 'xero';
-  const hist = direct ? xeroHistory(JOB.inv, { month, n: 6 }) : salesHistory(JOB.feed, { month, n: 6 });
-  const jobsToCome = s.toInvoice + s.dueThisMonth;
   const parts = [
     ['Recurring invoiced', s.recurring, 'rec'],
     ['One-off invoiced', s.oneOff, 'one'],
@@ -838,16 +761,9 @@ function overviewHtml(s, month) {
     ['Jobs due to finish this month', s.dueThisMonth, 'one-proj soft']
   ];
   const pTotal = s.projected || 1;
-  const max = Math.max(1, ...hist.map(h => h.total), s.projected);
-  const pct = v => (v / max * 100).toFixed(2);
   return `
-    <div class="job-panel job-hero">
-      <div class="job-hero-top">
-        <div><span class="job-hero-label">${escapeHtml(monthName(month))}: on course for</span>
-          <strong class="job-hero-value">${escapeHtml(money(s.projected))}</strong>
-          <span class="job-muted">${escapeHtml(money(s.invoiced))} invoiced so far · ${escapeHtml(money(s.projected - s.invoiced))} still to come · net of VAT</span></div>
-        <span class="job-muted">${escapeHtml(asOfText(s))}</span>
-      </div>
+    <div class="job-panel">
+      <div class="job-panel-head"><strong>How ${escapeHtml(monthName(month))} adds up</strong><span class="job-muted">${escapeHtml(asOfText(s))} · net of VAT</span></div>
       <div class="job-proj-bar" role="img" aria-label="${escapeHtml(parts.filter(([, v]) => v > 0).map(([l, v]) => `${l} ${money(v)}`).join(', '))}">
         ${parts.filter(([, v]) => v > 0).map(([l, v, c]) => `<i class="v-${c}" style="width:${(v / pTotal * 100).toFixed(2)}%"><span class="job-tip">${escapeHtml(l)}<b>${escapeHtml(money(v))}</b></span></i>`).join('')}
       </div>
@@ -857,9 +773,15 @@ function overviewHtml(s, month) {
       </ul>
       ${s.other ? `<p class="job-muted">Excludes VoIP Unlimited commission (${escapeHtml(money(s.other))}).</p>` : ''}
       ${s.source === 'xero' && s.drafts.length ? `<p class="job-muted">${s.drafts.length} draft ${s.drafts.length === 1 ? 'invoice' : 'invoices'} in Xero (${escapeHtml(money(s.draftValue))}), not counted until approved.</p>` : ''}
-    </div>
+    </div>`;
+}
 
-    <div class="job-panel">
+function historyHtml(s, month) {
+  const hist = s.source === 'xero' ? xeroHistory(JOB.inv, { month, n: 6 }) : salesHistory(JOB.feed, { month, n: 6 });
+  const jobsToCome = s.toInvoice + s.dueThisMonth;
+  const max = Math.max(1, ...hist.map(h => h.total), s.projected);
+  const pct = v => (v / max * 100).toFixed(2);
+  return `<div class="job-panel">
       <div class="job-panel-head"><strong>Last six months</strong><span class="job-muted">Net of VAT</span></div>
       <div class="job-hist" role="list">
         ${hist.map(h => {
@@ -884,13 +806,12 @@ function overviewHtml(s, month) {
 
 function toComeHtml(s) {
   const direct = s.source === 'xero';
-  if (!s.recurringToCome.length) return `<div class="job-panel"><div class="job-panel-head"><strong>Repeating invoices still to come</strong></div><p class="job-muted">All raised for ${escapeHtml(monthName(thisMonth()))}.</p></div>`;
-  return `<div class="job-panel">
+  return `${s.recurringToCome.length ? `<div class="job-panel">
       <div class="job-panel-head"><strong>Repeating invoices still to come: ${escapeHtml(money(s.toCome))}</strong>
         <span class="job-muted">${direct ? 'Net of VAT' : 'At last month’s amount'}</span></div>
       <table class="job-table"><thead><tr><th>Client</th>${direct ? '<th>Date</th>' : ''}<th class="num">${direct ? 'Net' : 'Last month'}</th></tr></thead>
       <tbody>${s.recurringToCome.map(r => `<tr><td>${clientLink(r.name)}</td>${direct ? `<td>${escapeHtml(fmtDate(r.date))}</td>` : ''}<td class="num">${escapeHtml(money(r.amount))}</td></tr>`).join('')}</tbody></table>
-    </div>
+    </div>` : ''}
     ${s.toInvoiceJobs.length || s.dueJobs.length ? `<div class="job-panel">
       <div class="job-panel-head"><strong>Jobs still to come: ${escapeHtml(money(s.toInvoice + s.dueThisMonth))}</strong></div>
       <table class="job-table"><thead><tr><th>Client</th><th>Job</th><th class="num">Value</th></tr></thead>
@@ -991,10 +912,12 @@ async function onClick(event) {
   const id = Number(btn.dataset.id);
   if (act === 'reload') { load(); return; }
   if (act === 'connect') { try { await connectSupabase({ interactive: true }); load(); } catch (err) { toast(err.message || 'Could not connect', 'error'); } return; }
-  if (act === 'stage') { JOB.stage = JOB.stage === btn.dataset.stage ? 'open' : btn.dataset.stage; render(); return; }
-  if (act === 'view') { JOB.view = btn.dataset.view; JOB.stage = 'open'; try { localStorage.setItem('gecko.jobs.view', JOB.view); } catch { /* private window */ } render(); return; }
   if (act === 'pick') { JOB.selected = JOB.selected === id ? null : id; render(); if (JOB.selected) els('jobWrap')?.querySelector('.job-pinned')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
-  if (act === 'liststage') { JOB.view = 'list'; JOB.stage = btn.dataset.stage; render(); return; }
+  if (act === 'liststage') {
+    JOB.stage = JOB.stage === btn.dataset.stage ? null : btn.dataset.stage; render();
+    if (JOB.stage) els('jobWrap')?.querySelector('.job-stage-list')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
   if (act === 'idea') { dropOn(`opp:${id}`, btn.dataset.stage); return; }
   if (act === 'addidea') { JOB.addingIdea = true; JOB.adding = false; render(); els('jobWrap')?.querySelector('[data-job-idea] [name="client_name"]')?.focus(); return; }
   if (act === 'cancelidea') { JOB.addingIdea = false; render(); return; }
@@ -1002,7 +925,6 @@ async function onClick(event) {
   if (act === 'canceladd') { JOB.adding = false; render(); return; }
   if (act === 'edit') { JOB.editing.has(id) ? JOB.editing.delete(id) : JOB.editing.add(id); render(); return; }
   if (act === 'move') { moveJob(id, btn.dataset.status, btn); return; }
-  if (act === 'import') { importProjects(); return; }
   if (act === 'xero-connect') { xeroConnect(); return; }
   if (act === 'xero-sync') { xeroSync(); return; }
   if (act === 'xero-invoice') { openInvoice(id); return; }
@@ -1021,6 +943,16 @@ async function onClick(event) {
   }
 }
 
+/** Add a job (header): the form on the whiteboard, stage Quoted. */
+function addFromHeader() {
+  if (JOB.error || JOB.loading) return;
+  JOB.addStage = 'quoted'; JOB.addingIdea = false; JOB.adding = true;
+  if (JOB.tab !== 'jobs') switchTab('jobs'); else render();
+  const f = els('jobWrap')?.querySelector('[data-job-form="new"] [name="client_name"]');
+  f?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  f?.focus({ preventScroll: true });
+}
+
 /** Arrow keys move along the tab strip (ARIA tabs pattern). */
 const onKey = event => {
   const st = event.target.closest?.('.job-sticky[data-job-act="pick"]');
@@ -1037,8 +969,9 @@ function onSubmit(event) {
   saveJob(form.dataset.jobForm, form.elements);
 }
 
-/** Open a tab (from Overview's tiles and list): 'jobs', 'overview', 'tocome', 'invoiced', 'owed', 'xero'. */
+/** Open a tab (from Overview's tiles and list): 'jobs', 'owed', or 'month' (also the old 'overview', 'tocome', 'invoiced', 'xero'). */
 export function show(tab) {
+  if (['overview', 'tocome', 'invoiced', 'xero'].includes(tab)) tab = 'month';
   if (!tab || tab === JOB.tab) return;
   JOB.tab = tab;
   JOB.animate = false;
@@ -1046,7 +979,6 @@ export function show(tab) {
 }
 
 export function init() {
-  try { JOB.view = localStorage.getItem('gecko.jobs.view') || 'board'; } catch { /* private window: the board */ }
   const section = els('section-jobs');
   section?.addEventListener('click', onClick);
   section?.addEventListener('submit', onSubmit);
@@ -1054,6 +986,7 @@ export function init() {
   for (const t of ['dragstart', 'dragend', 'dragover', 'drop']) section?.addEventListener(t, onDrag);
   window.addEventListener('resize', () => moveInk(tabStrip()));
   els('jobRefresh')?.addEventListener('click', refresh);
+  els('jobAdd')?.addEventListener('click', addFromHeader);
   xeroReturn();
   load();
 }
