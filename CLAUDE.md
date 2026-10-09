@@ -48,8 +48,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Sidebar (Philip, 9 Oct, 8 entries): Home (Overview) · Sales (Clients, Opportunities, Jobs) · Operations
   (Timesheets, Monitoring) · Admin (Team, Settings). **Hubs** group sections under one entry with the
   shared tab strip: Clients = Directory + Profitability + client page; Monitoring = Backups + Alerts;
-  Team = Overview (`src/sections/team.js`: who's in, holiday left, next four weeks, hours, mileage to claim)
-  + Leave + Mileage (`HUBS`/`renderHub` in index.html). Older tab strips get the shared look via `geckoInkify()`. Every section uses the same tabs
+  Team = Overview (`src/sections/team.js`: who's in, holiday left as day tokens, next four weeks, hours, mileage to claim)
+  + Leave (tax-year wall planner, click two days to book; `2026-10-09-team-wall-planner-design.md`) + Mileage (`HUBS`/`renderHub` in index.html). Older tab strips get the shared look via `geckoInkify()`. Every section uses the same tabs
   (`src/core/tabs.js`, `.app-tabs` in `src/styles/app.css`). Any client name → `clientLink(name)` →
   that client's page (`src/sections/client.js`). Navigate with `geckoGo(section, tab)`.
   Design: `2026-10-09-gecko-hq-structure-design.md` (workflow answers and the stage plan).

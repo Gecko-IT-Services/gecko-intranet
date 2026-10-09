@@ -103,4 +103,10 @@
   #section-team .tm-state { font-size: 18px; }
   #section-team .tm-figs { grid-template-columns: minmax(0, 1fr); }
   #section-team .tm-panel { padding: 14px; }
+  #section-team .tm-plan { overflow: visible; }
+  #section-team .tm-plan-row { grid-template-columns: 40px repeat(28, minmax(0, 1fr)); min-width: 0; }
+  #section-team .tm-plan-row.head span:not(.mon):not(.today) { font-size: 0; }
+  #section-team .tm-plan-row.head span em { font-size: 8px; }
+  #section-team .tm-plan-who { font-size: 11px; }
+  #section-team .tm-bar { margin: 4px 1px; padding: 0 4px; font-size: 10px; }
 }

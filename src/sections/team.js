@@ -111,7 +111,7 @@ function render() {
     const all = bars(d.requests, from, to);
     const cells = days.map(k => `<span class="tm-c${we(k) ? ' we' : ''}${k === t ? ' today' : ''}${k.endsWith('-01') || k === from ? ' m' : ''}" style="grid-column:${col(k)}"></span>`).join('');
     strip = `<div class="tm-plan" role="group" aria-label="Who’s off, next four weeks">
-      <div class="tm-plan-row head"><span></span>${days.map(k => `<span class="${k === t ? 'today' : ''}${we(k) ? ' we' : ''}" style="grid-column:${col(k)}" title="${escapeHtml(longDay(k))}">${k.endsWith('-01') || k === from ? `<em>${escapeHtml(new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short' }))}</em>` : ''}${Number(k.slice(8))}</span>`).join('')}</div>
+      <div class="tm-plan-row head"><span></span>${days.map((k, i) => `<span class="${k === t ? 'today' : ''}${we(k) ? ' we' : ''}${i % 7 ? '' : ' mon'}" style="grid-column:${col(k)}" title="${escapeHtml(longDay(k))}">${k.endsWith('-01') || k === from ? `<em>${escapeHtml(new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short' }))}</em>` : ''}${Number(k.slice(8))}</span>`).join('')}</div>
       ${PEOPLE.map(p => `<div class="tm-plan-row tm-${p.toLowerCase()}"><span class="tm-plan-who">${p}</span>${cells}${all.filter(x => x.person === p).map(x =>
         `<button type="button" class="tm-bar${x.status === 'Pending' ? ' pending' : ''}${x.cutStart ? ' cut-s' : ''}${x.cutEnd ? ' cut-e' : ''}" style="grid-column:${col(x.from)} / ${col(x.to) + 1}" data-tm-go="leave" title="${escapeHtml(`${p} · ${range(x.from, x.to)} · ${x.note || x.type}${x.status === 'Pending' ? ' · requested' : ''}`)}">${escapeHtml(x.note || x.type)}</button>`).join('')}</div>`).join('')}
     </div>
