@@ -29,12 +29,16 @@ can't say which invoice a job became, whether it's paid, or when a repeating inv
   - `xero-sync`: hourly from `pg_cron` (minute 17) with a secret from `private.cron_secret`, or on
     demand by staff ("Sync now"). Refreshes the token (Xero rotates refresh tokens: the new one is
     saved first), pulls sales invoices changed since the last good sync (all of them the first
-    time; 100 per call) and every repeating invoice (sales only).
+    time; 100 per call) and every repeating invoice (sales only). Then it re-reads by ID every
+    invoice the site still acts on (drafts, and approved ones with money owed; 9 Oct code review):
+    Xero doesn't document that If-Modified-Since returns deleted invoices, so a draft Xero no longer
+    returns is marked DELETED (else it would wait on Overview and count as raised on its job for
+    ever). An approved invoice can't be deleted in Xero, only voided, so a missing one is only logged.
 - **Storage**: tokens and OAuth state in schema `private` (not exposed by the API, no browser role
   can read it). `public.xero_status`, `public.xero_invoices` (every status, net/tax/total, amount
   due/paid, repeating-invoice link, line items) and `public.xero_repeating_invoices` (schedule,
   next date, amounts) are **read-only to staff** (select policy only); only the functions write.
-- **Calls**: about 3 per hourly run against Xero's Starter limit of 1,000 per organisation per day.
+- **Calls**: about 4 per hourly run (one more per 50 open invoices) against Xero's Starter limit of 1,000 per organisation per day.
   Xero's Starter developer tier is free for up to 5 connected organisations (we have one).
 
 ## In the dashboard (phase 1)

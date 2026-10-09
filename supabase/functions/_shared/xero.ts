@@ -218,6 +218,7 @@ export async function sync() {
       invoices += list.length;
       if (list.length < 100) break;
     }
+    invoices += await recheckOpen(auth);
     const rep = await xeroGet('/RepeatingInvoices', auth);
     const templates = ((rep?.RepeatingInvoices || []) as any[]).filter(r => r.Type === 'ACCREC');
     await sql.begin(async tx => {
@@ -243,6 +244,40 @@ export async function sync() {
     await sql`update public.xero_status set last_sync_at = now(), last_sync_ok = false, last_error = ${message}, modified_at = now() where id = 1`;
     return { ok: false, error: message };
   }
+}
+
+/**
+ * Re-read, by ID, every invoice the site still acts on: drafts (Jobs, Overview, month-end) and
+ * approved ones with money owed (Owed to us). Xero's docs don't say that If-Modified-Since returns
+ * a deleted invoice, so a draft deleted in Xero could otherwise stay "waiting" here for ever and
+ * count as raised on its job. A draft Xero no longer returns is gone: marked DELETED. An approved
+ * invoice can only be voided, never deleted, so a missing one is logged and left alone.
+ * Calls: one per 50 open invoices (a handful). Returns how many changed.
+ */
+async function recheckOpen(auth: { token: string; tenant: string }) {
+  const open = await sql`select invoice_id, status from public.xero_invoices
+                         where status in ('DRAFT','SUBMITTED') or (status = 'AUTHORISED' and amount_due > 0)`;
+  let changed = 0;
+  for (let i = 0; i < open.length; i += 50) {
+    const batch = open.slice(i, i + 50);
+    const body = await xeroGet(`/Invoices?IDs=${batch.map((r: any) => r.invoice_id).join(',')}&page=1`, auth);   // paged: Xero only includes line items then
+    // No list at all is an odd answer, not "every draft deleted": stop rather than mark them.
+    if (!Array.isArray(body?.Invoices)) throw new Error('Xero recheck: no invoice list in the answer');
+    const got = new Map((body.Invoices as any[]).map(inv => [inv.InvoiceID, inv]));
+    for (const r of batch) {
+      const inv = got.get(r.invoice_id);
+      if (inv) {
+        if (inv.Status !== r.status) changed++;
+        await saveInvoice(inv);
+      } else if (r.status === 'DRAFT' || r.status === 'SUBMITTED') {
+        await sql`update public.xero_invoices set status = 'DELETED', amount_due = 0, synced_at = now() where invoice_id = ${r.invoice_id}`;
+        changed++;
+      } else {
+        console.error(`recheck: Xero no longer returns approved invoice ${r.invoice_id}; left as it was`);
+      }
+    }
+  }
+  return changed;
 }
 
 /**
