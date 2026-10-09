@@ -8973,12 +8973,12 @@ function ovwWeekHtml(core, today) {
     return `<div class="ovw-pr lp-${p.toLowerCase()}"><span class="ovw-pw">${p}</span>${cells}<span class="ovw-pt">${OVW.tshLoaded ? escapeHtml(ovwHours(w.hours.byEng[p] || 0)) : '—'}</span></div>`;
   }).join('');
 
-  const jobsLane = !db.jobs ? '' : (() => {
+  const jobsLane = !db.jobs || !w.jobsDue.length ? '' : (() => {
     const on = k => w.jobsDue.filter(j => { const d = String(j.target_date).slice(0, 10); return k === (d < w.start ? (today >= w.start && today <= w.end ? today : w.start) : d); });
     return `<div class="ovw-pr ovw-pr-jobs"><span class="ovw-pw">Jobs</span>${days.map(k => { const js = on(k); const late = js.some(j => String(j.target_date).slice(0, 10) < today);
       return cell(k, js.length ? (late ? 'mark late' : 'mark') : '', js.length ? `<b>${js.length}</b>` : '', js.map(j => `${j.client_name}: ${j.title}`).join('\n')); }).join('')}<span class="ovw-pt">${w.jobsDue.length || ''}</span></div>`;
   })();
-  const invLane = !w.goingOut ? '' : (() => {
+  const invLane = !w.goingOut || !w.goingOut.list.some(r => r.date <= w.end) ? '' : (() => {
     const on = k => w.goingOut.list.filter(r => r.date === k);
     const inWeek = w.goingOut.list.filter(r => r.date <= w.end);
     return `<div class="ovw-pr ovw-pr-inv"><span class="ovw-pw">Invoices</span>${days.map(k => { const rs = on(k); const v = rs.reduce((a, r) => a + r.amount, 0);
@@ -8987,10 +8987,12 @@ function ovwWeekHtml(core, today) {
 
   const head = `<div class="ovw-pr ovw-ph" aria-hidden="true"><span></span>${days.map(k => `<span class="${k === today ? 'today' : ''}${we(k) ? ' we' : ''}">${escapeHtml(new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'narrow' }))}<em>${Number(k.slice(8))}</em></span>`).join('')}<span></span></div>`;
   const later = (db.leave ? w.away.filter(l => String(l.start).slice(0, 10) > w.end) : []);
+  const none = [db.jobs && !jobsLane ? 'jobs due' : '', w.goingOut && !invLane ? 'repeating invoices' : ''].filter(Boolean);
   const nextInv = w.goingOut ? w.goingOut.list.filter(r => r.date > w.end) : [];
   const notes = [
     !db.leave ? (db.errors.leave ? `Leave didn’t load: ${db.errors.leave}` : '') : later.length ? `Next: ${later.map(l => `${l.person} off ${core.shortRange(l.start, l.end)}${l.status === 'Pending' ? ' (requested)' : ''}`).join(', ')}` : '',
     !OVW.tshLoaded ? 'Timesheets didn’t load.' : '',
+    none.length ? `No ${none.join(' or ')} this week.` : '',
     nextInv.length ? `${nextInv.length} repeating invoice${nextInv.length === 1 ? '' : 's'} early next week · ${ovwWhole(nextInv.reduce((a, r) => a + r.amount, 0))}` : ''
   ].filter(Boolean);
   const jobsList = db.jobs && w.jobsDue.length ? `<ul>${w.jobsDue.map(j => { const late = String(j.target_date).slice(0, 10) < today; return `<li class="${late ? 'late' : ''}"><span>${escapeHtml(j.client_name)}: ${escapeHtml(j.title)}</span><span>${late ? 'late · ' : ''}${escapeHtml(core.shortRange(j.target_date))}</span></li>`; }).join('')}</ul>` : '';
