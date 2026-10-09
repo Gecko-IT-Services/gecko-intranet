@@ -95,10 +95,15 @@ async function load() {
   render();
   try {
     const sb = await connectSupabase();
-    const siteId = await resolveSiteId();
-    const lists = await fetchAllLists();
+    // SharePoint ids only matter for data still on SharePoint; on the database they cost two Graph round trips for nothing.
+    const onDb = window.dataBackend('clients') === 'supabase' && window.dataBackend('timesheets') === 'supabase';
+    const siteId = onDb ? null : await resolveSiteId();
+    const lists = onDb ? [] : await fetchAllLists();
     const listId = n => lists.find(l => l.displayName === n || l.name === n)?.id;
 
+    // Prospects load beside the rest but on their own: a missing table never stops the rest.
+    const prospects = sb.from('prospects').select('*').then(must);
+    prospects.catch(() => {});
     const [products, statuses, domains, signals, opps, dealer, gClients, gServices, feed, ssaItems, tsItems] = await Promise.all([
       sb.from('opportunity_products').select('*').order('sort').then(must),
       sb.from('client_product_status').select('*').then(must),
@@ -123,7 +128,7 @@ async function load() {
     OPP.dealer = dealer;
     OPP.clients = buildClients({ gClients, gServices, feed, ssaItems, tsItems, domains, dealer });
     // Prospects load on their own: a missing table (before the migration lands) never stops the rest.
-    try { OPP.prospects = must(await sb.from('prospects').select('*')); OPP.prospectsError = ''; }
+    try { OPP.prospects = await prospects; OPP.prospectsError = ''; }
     catch (e) { OPP.prospects = null; OPP.prospectsError = e.message || String(e); }
   } catch (err) {
     OPP.error = err;
