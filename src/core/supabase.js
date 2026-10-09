@@ -20,6 +20,8 @@ const NONCE_KEY = 'gecko.supabase.nonce';
 
 let clientPromise  = null;
 let connectPromise = null;
+// The user id already confirmed as staff, so each read is one round trip, not two.
+let staffUserId    = null;
 
 /** The site's CONFIG is a classic-script const: reachable by name, not on window. */
 function config() {
@@ -91,6 +93,8 @@ export async function completeRedirect(idToken) {
  * like "no data". Ask once, so that case is an error, never an empty state.
  */
 async function assertStaff(sb) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user?.id && session.user.id === staffUserId) return;
   const { data: isStaff, error } = await sb.rpc('is_gecko_staff');
   if (error) throw error;
   if (!isStaff) {
@@ -98,10 +102,12 @@ async function assertStaff(sb) {
     e.code = 'NOT_STAFF';
     throw e;
   }
+  staffUserId = session?.user?.id || null;
 }
 
 /** Called on Microsoft sign-out, so the database session never outlives it. */
 export function forgetSupabaseSession() {
   try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(NONCE_KEY); } catch { /* storage blocked: nothing kept */ }
   clientPromise = null;
+  staffUserId = null;
 }
