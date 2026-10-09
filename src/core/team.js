@@ -139,16 +139,17 @@ export function bars(requests, from, to) {
 export const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5);
 
 /**
- * Holiday as a row of day tokens, one per day of entitlement: booked days spent (left), then requested,
- * then what is left. Days booked beyond the entitlement show as extra tokens marked `over`.
- * Numbers only, so no escaping needed. Used by Team › Overview and Leave.
+ * A row of tokens, one per `unit` hours (default a day of holiday): spent (left), then requested, then
+ * what is left; beyond the allowance they are marked `over`. Numbers only, so no escaping needed.
+ * Holiday on Team › Overview and Leave; prepaid SSA hours on Timesheets (unit 1, noun 'hour').
  */
-export function tokensHtml({ entitlement, booked, pending }) {
-  const e = entitlement / DAY_HOURS, b = booked / DAY_HOURS, p = (booked + pending) / DAY_HOURS;
+export function tokensHtml({ entitlement, booked, pending = 0 }, { unit = DAY_HOURS, noun = 'day' } = {}) {
+  const e = entitlement / unit, b = booked / unit, p = (booked + pending) / unit;
   const n = Math.max(1, Math.ceil(e), Math.ceil(p));
   const part = (i, edge) => Math.round(Math.max(0, Math.min(1, edge - i)) * 100);
-  const left = round2(e - b);
-  return `<span class="hol-tokens" role="img" aria-label="${left} of ${round2(e)} days left${pending ? `, ${round2(pending / DAY_HOURS)} requested` : ''}">`
+  const left = round2((entitlement - booked) / unit), all = round2(e);
+  const label = left < 0 ? `${round2(-left)} ${noun}s over ${all}` : `${left} of ${all} ${noun}s left`;
+  return `<span class="hol-tokens" role="img" aria-label="${label}${pending ? `, ${round2(pending / unit)} requested` : ''}">`
     + Array.from({ length: n }, (_, i) => `<i${i >= e ? ' class="over"' : ''} style="--b:${part(i, b)}%;--p:${part(i, p)}%"></i>`).join('')
     + '</span>';
 }
