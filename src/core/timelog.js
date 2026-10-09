@@ -99,17 +99,6 @@ export function checkEntry(entry, { today, entries = [], client = null } = {}) {
   return { errors, warnings };
 }
 
-/** The engineer's clients from the last 45 days, most used first. */
-export function recentClients(entries, engineer, today, { days = 45, limit = 6 } = {}) {
-  const since = addDays(today, -days);
-  const counts = new Map();
-  for (const e of entries) {
-    if (e.engineer !== engineer || day(e.date) < since || !e.clientName) continue;
-    counts.set(e.clientName, (counts.get(e.clientName) || 0) + 1);
-  }
-  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, limit).map(([n]) => n);
-}
-
 /**
  * What was logged for this client before, newest first: descriptions to suggest (distinct) and the
  * work type last used, so a repeat job takes one tap.

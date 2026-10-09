@@ -2455,20 +2455,6 @@ body {
 #section-timesheets .tsh-ssa-hint .hrs.low { color: var(--amber); }
 #section-timesheets .tsh-ssa-hint .hrs.crit { color: var(--red); }
 
-/* — Notes expand link — */
-#section-timesheets .tsh-notes-toggle {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-height: 34px; padding: 7px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-dim);
-  background: rgba(255,255,255,0.02);
-  color: var(--muted); font-size: 12px;
-  font-family: var(--font-body); font-weight: 700;
-  cursor: pointer; text-decoration: none;
-  transition: color .15s, border-color .15s, background .15s;
-}
-#section-timesheets .tsh-notes-toggle:hover { color: var(--green); border-color: var(--green); background: var(--green-glow); }
-
 /* — Filter row — */
 #section-timesheets .tsh-filters {
   display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; align-items: center;
@@ -4128,12 +4114,6 @@ body::before {
   #section-leave .lev-form-actions,
   #section-compliance .cmp-form-actions {
     justify-content: stretch;
-  }
-
-  #section-timesheets .tsh-notes-toggle {
-    width: 100%;
-    min-height: 42px;
-    margin-top: 4px;
   }
 
   #section-mileage .mil-form-actions .btn,
@@ -5902,9 +5882,6 @@ body::before {
           <span class="tsh-last-sync" id="tshLastSync"></span>
           <button class="tsh-refresh" id="tshConnect" type="button" hidden onclick="tshConnect()"
                   title="Sign in to the Gecko database with your Microsoft account">Connect</button>
-          <button class="tsh-refresh" id="tshCopy" type="button" hidden onclick="tshCopyToSupabase()"
-                  title="One-off, Philip only: copy Timesheets and SSA balances from SharePoint into the Gecko database and check every entry and balance">Copy to Supabase</button>
-          <span class="tsh-copy-result" id="tshCopyResult" role="status"></span>
         </div>
       </div>
 
@@ -5918,13 +5895,10 @@ body::before {
       <!-- ═══ LOG TIME TAB ═══ -->
       <div class="tsh-panel active" id="tshPanelLog" role="tabpanel">
 
-        <!-- The week as a time card: a lane per engineer, a cell per day; a cell picks engineer + date below -->
-        <div class="tsh-card tsh-timecard" id="tshCard" style="margin-bottom:16px;"></div>
 
         <!-- Quick-log form -->
         <div class="tsh-card" style="margin-bottom:16px;">
           <div class="tsh-card-head"><h3>Log time</h3></div>
-          <div class="tsh-quick" id="tshQuick" aria-label="Recent clients"></div>
           <form class="tsh-form" id="tshForm" novalidate onsubmit="tshAddEntry(event)">
             <div class="tsh-field">
               <label for="tshClient">Client</label>
@@ -5938,17 +5912,11 @@ body::before {
               <select class="tsh-select" id="tshEngineer" required>
                 <option value="Philip">Philip</option>
                 <option value="Jack">Jack</option>
-                <option value="System">System</option>
               </select>
             </div>
             <div class="tsh-field">
               <label for="tshDate">Date <span class="tsh-label-aside" id="tshDateDay"></span></label>
               <input class="tsh-input" type="date" id="tshDate" required>
-              <div class="tsh-presets" role="group" aria-label="Date shortcuts">
-                <button type="button" class="tsh-preset" data-tsh-date="0">Today</button>
-                <button type="button" class="tsh-preset" data-tsh-date="-1">Yesterday</button>
-                <button type="button" class="tsh-preset" data-tsh-date="last-working">Last working day</button>
-              </div>
             </div>
             <div class="tsh-field">
               <label for="tshHours">Time spent <span class="tsh-label-aside" id="tshHoursRead" aria-live="polite"></span></label>
@@ -5975,22 +5943,14 @@ body::before {
             </div>
             <div class="tsh-field">
               <label for="tshDesc">Description</label>
-              <input class="tsh-input" type="text" id="tshDesc" list="tshDescList" autocomplete="off" maxlength="250" placeholder="Short summary of work done" required>
-              <datalist id="tshDescList"></datalist>
-            </div>
-            <div class="tsh-field full" id="tshNotesWrap" style="display:none;">
-              <label for="tshNotes">Detailed notes</label>
-              <textarea class="tsh-textarea" id="tshNotes" placeholder="Optional longer description, follow-up actions…"></textarea>
-            </div>
-            <div class="tsh-field full" style="margin-top:-8px;">
-              <button type="button" class="tsh-notes-toggle" id="tshNotesBtn" onclick="tshToggleNotes()">Add detailed notes</button>
+              <textarea class="tsh-textarea tsh-desc" id="tshDesc" rows="2" maxlength="250" placeholder="What was done" required></textarea>
             </div>
             <div class="tsh-checks" id="tshChecks" role="alert" hidden></div>
             <div class="tsh-form-actions">
               <div class="tsh-summary" id="tshSummary" aria-live="polite"></div>
               <button class="btn btn-primary" type="submit" id="tshAddBtn">Log time</button>
             </div>
-            <p class="tsh-form-foot"><span id="tshDraftNote"></span><span class="tsh-kbd">Ctrl/⌘ + Enter to log</span></p>
+            <p class="tsh-form-foot"><span id="tshDraftNote"></span></p>
           </form>
         </div>
 
@@ -13763,46 +13723,6 @@ async function tshConnect() {
   }
 }
 
-/**
- * One-off, Philip only, while SharePoint is still live for Timesheets: copy
- * every client and entry into the database with today's balances as the
- * opening balances, read back and check each balance and entry. SharePoint is
- * only read. Run it again right before switching, so nothing is missed.
- */
-async function tshCopyToSupabase() {
-  if (tshOnDb() || !levIsPhilip()) return;
-  if (!confirm('Copy every timesheet entry and SSA balance from SharePoint into the Gecko database?\n\n'
-    + 'This replaces what the database holds for Timesheets. SharePoint is not changed.')) return;
-  const btn = document.getElementById('tshCopy');
-  const out = document.getElementById('tshCopyResult');
-  const show = (text, state) => { if (out) { out.textContent = text; out.dataset.state = state || ''; } };
-  if (btn) btn.disabled = true;
-  show('Copying…');
-  try {
-    await geckoStore().connect({ interactive: true });
-    await tshResolveListIds();
-    const clients = await spFetchAllItems(TSH.listIds.clients, 500);
-    const entries = await spFetchAllItems(TSH.listIds.timesheets);
-    const r = await tshCore().copyFromSharePoint(clients, entries, spDateToLocalDateKey);
-    const summary = r.entries != null
-      ? `Clients ${r.clients}; entries SharePoint ${r.spEntries}, database ${r.entries}; hours ${r.hours[0]} / ${r.hours[1]}.` : '';
-    if (r.ok && !r.problems.length) {
-      show(summary + ' Every entry and every client balance matches.', 'ok');
-      toast('Timesheets copied and checked', 'success');
-    } else {
-      show(`${summary} Not matching (${r.problems.length}): ${r.problems.slice(0, 6).join('; ')}`, 'bad');
-      toast('Copy finished but does not match', 'error', 7000);
-    }
-  } catch (err) {
-    console.error('Timesheets copy failed:', err);
-    show('Copy failed: ' + (err.message || err), 'bad');
-    toast('Copy failed: ' + (err.message || err), 'error', 7000);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
-
 // ─── Refresh — main data load ─────────────────────────────────────────
 async function tshRefreshData(silent = false) {
   if (TSH.loading) { TSH.reloadAgain = true; return; }
@@ -13818,7 +13738,6 @@ async function tshRefreshData(silent = false) {
       await Promise.all([tshLoadEntries(), tshLoadSsaClients()]);
       tshResolveClientNames();  // Lookup IDs → display names (must run after both loads)
     }
-    await tshLoadLeave();
     TSH.lastSync = new Date();
     TSH.loadError = null;
     tshPopulateClientDropdown();
@@ -13898,8 +13817,8 @@ function tshPopulateClientDropdown() {
  * - Mistakes (missing fields) stop the save; things that look wrong (a duplicate, a future date, a long
  *   day, going over the SSA hours) are listed and need "Log anyway".
  * - One save at a time; the form is kept until the save is confirmed, and kept as a draft across reloads.
- * - Recent clients are one tap (from a client page's Log time too); picking a client offers its past
- *   descriptions and last work type.
+ * - Picking a client offers its last work type; a client page or SSA card can preselect the client.
+ *   Kept to one short form (Jack, 9 Oct: 2026-10-09-simpler-timesheets-design.md).
  */
 // restoring: no draft is written until init has offered the saved one back (a reload must not wipe it).
 const TSHF = { saving: false, confirmed: '', wtTouched: false, checksShown: false, restoring: true };
@@ -13923,21 +13842,6 @@ function tshPreselect(name) {
   setTimeout(() => tshEl('tshHours')?.focus(), 150);
 }
 
-function tshRenderQuick() {
-  const el = tshEl('tshQuick');
-  if (!el || !window.GeckoTimelog) return;
-  const TL = tshTL();
-  const eng = tshEl('tshEngineer')?.value || '';
-  const date = tshEl('tshDate')?.value || today();
-  const recent = TL.recentClients(TSH.entries, eng, today());
-  const dayH = TL.dayTotal(TSH.entries, eng, date);
-  const sel = tshEl('tshClient');
-  const chosen = sel?.options[sel.selectedIndex]?.dataset.name || '';
-  const when = date === today() ? 'today' : 'on ' + tshDayName(date, { weekday: 'short', day: 'numeric', month: 'short' });
-  el.innerHTML = `${recent.length ? `<span class="tsh-quick-l">Recent</span>${recent.map(n => `<button type="button" class="tsh-quick-c${n === chosen ? ' on' : ''}" data-tsh-quick="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')}` : ''}
-    <span class="tsh-quick-today">${escapeHtml(eng || 'You')}: <strong>${escapeHtml(dayH ? TL.fmtHours(dayH) : '0h')}</strong> logged ${escapeHtml(when)}</span>`;
-}
-
 function tshSelectedClient() {
   const sel = tshEl('tshClient');
   const opt = sel?.options[sel.selectedIndex];
@@ -13945,15 +13849,13 @@ function tshSelectedClient() {
   return { id: Number(opt.value), name: opt.dataset.name || '', ssa: tshFindSsaClient(opt.dataset.name || '') };
 }
 
-// ─── Client picked: balance, past descriptions, last work type ──────────
+// ─── Client picked: balance, last work type ─────────────────────────────
 function tshClientPicked() {
   const c = tshSelectedClient();
   const hint = tshEl('tshSsaHint');
-  const list = tshEl('tshDescList');
-  if (!c) { if (hint) hint.innerHTML = ''; if (list) list.innerHTML = ''; tshFormChanged(); return; }
+  if (!c) { if (hint) hint.innerHTML = ''; tshFormChanged(); return; }
   if (window.GeckoTimelog) {
     const hist = tshTL().clientHistory(TSH.entries, c.name);
-    if (list) list.innerHTML = hist.descriptions.map(d => `<option value="${escapeHtml(d)}"></option>`).join('');
     const wt = tshEl('tshWorkType');
     if (hist.workType && wt && !TSHF.wtTouched && [...wt.options].some(o => o.value === hist.workType)) wt.value = hist.workType;
   }
@@ -13978,21 +13880,13 @@ function tshFormValues() {
     hoursText: tshEl('tshHours').value,
     hours: tshTL().parseHours(tshEl('tshHours').value),
     workType: tshEl('tshWorkType').value,
-    description: tshEl('tshDesc').value.trim(),
-    notes: tshEl('tshNotes').value.trim()
+    // One line: the Lists backup's description column is single-line.
+    description: tshEl('tshDesc').value.replace(/\s*\n\s*/g, ' ').trim()
   };
 }
 const tshSig = v => JSON.stringify([v.clientId, v.engineer, v.date, v.hours.ok ? v.hours.hours : v.hoursText, v.description.toLowerCase()]);
 
-function tshLastWorkingDay() {
-  const d = new Date(); d.setHours(12);
-  do d.setDate(d.getDate() - 1); while (d.getDay() === 0 || d.getDay() === 6);
-  return localDateKey(d);
-}
-function tshShiftDays(n) { const d = new Date(); d.setHours(12); d.setDate(d.getDate() + n); return localDateKey(d); }
-const tshPresetDate = k => (k === 'last-working' ? tshLastWorkingDay() : tshShiftDays(Number(k)));
-
-/** Everything that follows an edit: what the time reads as, the date's weekday, presets, summary, draft. */
+/** Everything that follows an edit: what the time reads as, the date's weekday, time presets, summary, draft. */
 function tshFormChanged() {
   if (!window.GeckoTimelog || !tshEl('tshForm')) return;
   const TL = tshTL();
@@ -14008,7 +13902,6 @@ function tshFormChanged() {
   const dd = tshEl('tshDateDay');
   if (dd) dd.textContent = /^\d{4}-\d{2}-\d{2}$/.test(v.date) ? (v.date === today() ? 'today' : tshDayName(v.date, { weekday: 'long' })) : '';
   document.querySelectorAll('#tshForm [data-tsh-hours]').forEach(b => b.classList.toggle('on', v.hours.ok && Number(b.dataset.tshHours) === v.hours.hours));
-  document.querySelectorAll('#tshForm [data-tsh-date]').forEach(b => b.classList.toggle('on', tshPresetDate(b.dataset.tshDate) === v.date));
 
   const sum = tshEl('tshSummary');
   if (sum) {
@@ -14024,8 +13917,6 @@ function tshFormChanged() {
   if (TSHF.checksShown) tshShowChecks(TL.checkEntry(v, { today: today(), entries: TSH.entries, client: v.ssa }));
   tshSetButton();
   tshSaveDraft(v);
-  tshRenderQuick();
-  tshRenderCard();
 }
 
 function tshShowChecks(res) {
@@ -14056,9 +13947,9 @@ function tshSetButton(state) {
 function tshSaveDraft(v) {
   if (TSHF.restoring) return;
   try {
-    if (!v.hoursText.trim() && !v.description && !v.notes) { localStorage.removeItem(TSH_DRAFT_KEY); return; }
+    if (!v.hoursText.trim() && !v.description) { localStorage.removeItem(TSH_DRAFT_KEY); return; }
     localStorage.setItem(TSH_DRAFT_KEY, JSON.stringify({ client: v.clientName, engineer: v.engineer, date: v.date, hours: v.hoursText,
-      workType: v.workType, desc: v.description, notes: v.notes, at: Date.now() }));
+      workType: v.workType, desc: v.description, at: Date.now() }));
   } catch { /* storage blocked: no draft */ }
 }
 function tshClearDraft() { try { localStorage.removeItem(TSH_DRAFT_KEY); } catch { /* storage blocked */ } }
@@ -14076,7 +13967,6 @@ function tshRestoreDraft() {
     tshEl('tshHours').value = String(d.hours || '');
     tshEl('tshDesc').value = String(d.desc || '');
     if (d.workType && [...tshEl('tshWorkType').options].some(o => o.value === d.workType)) { tshEl('tshWorkType').value = d.workType; TSHF.wtTouched = true; }
-    if (d.notes) { tshEl('tshNotes').value = String(d.notes); tshEl('tshNotesWrap').style.display = ''; tshEl('tshNotesBtn').textContent = '− Hide notes'; }
     if (d.client) tshPreselect(d.client);
   } finally { TSHF.restoring = false; }
   const note = tshEl('tshDraftNote');
@@ -14086,9 +13976,6 @@ function tshRestoreDraft() {
 function tshResetForm({ keepClient = true } = {}) {
   tshEl('tshHours').value = '';
   tshEl('tshDesc').value = '';
-  tshEl('tshNotes').value = '';
-  tshEl('tshNotesWrap').style.display = 'none';
-  tshEl('tshNotesBtn').textContent = '+ Add detailed notes';
   if (!keepClient) { tshEl('tshClient').value = ''; TSHF.wtTouched = false; }
   TSHF.confirmed = '';
   tshShowChecks({ errors: [], warnings: [] });
@@ -14099,12 +13986,8 @@ function tshResetForm({ keepClient = true } = {}) {
 
 // ─── Form wiring (once) ──────────────────────────────────────────────
 document.addEventListener('click', e => {
-  const q = e.target.closest?.('#tshQuick [data-tsh-quick]');
-  if (q) { tshPreselect(q.dataset.tshQuick); return; }
   const hb = e.target.closest?.('#tshForm [data-tsh-hours]');
   if (hb) { tshEl('tshHours').value = tshTL().fmtHours(Number(hb.dataset.tshHours)); tshFormChanged(); tshEl('tshDesc')?.focus(); return; }
-  const db = e.target.closest?.('#tshForm [data-tsh-date]');
-  if (db) { tshEl('tshDate').value = tshPresetDate(db.dataset.tshDate); tshFormChanged(); return; }
   if (e.target.closest?.('#tshForm [data-tsh-act="discard"]')) tshResetForm({ keepClient: false });
 });
 document.addEventListener('input', e => { if (e.target?.closest?.('#tshForm')) tshFormChanged(); });
@@ -14114,23 +13997,13 @@ document.addEventListener('change', e => {
   if (e.target.id !== 'tshClient') tshFormChanged();   // the client has its own handler
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.target?.closest?.('#tshForm')) { e.preventDefault(); tshEl('tshForm').requestSubmit(); }
+  // Enter logs from the description box too (it is one line in the Lists backup); Ctrl/⌘ + Enter from anywhere.
+  const enter = e.key === 'Enter' && !e.shiftKey && !e.isComposing;
+  if (enter && e.target?.closest?.('#tshForm') && (e.metaKey || e.ctrlKey || e.target.id === 'tshDesc')) { e.preventDefault(); tshEl('tshForm').requestSubmit(); }
 });
 
 
-// ─── Notes expand/collapse ───────────────────────────────────────────
-function tshToggleNotes() {
-  const wrap = tshEl('tshNotesWrap');
-  const btn = tshEl('tshNotesBtn');
-  if (wrap.style.display === 'none') {
-    wrap.style.display = '';
-    btn.textContent = '− Hide notes';
-    tshEl('tshNotes').focus();
-  } else {
-    wrap.style.display = 'none';
-    btn.textContent = '+ Add detailed notes';
-  }
-}
+
 
 
 // ─── Add Entry handler ───────────────────────────────────────────────
@@ -14175,8 +14048,7 @@ async function tshAddEntry(ev) {
       date: v.date,
       hours: v.hours.hours,
       workType: v.workType,
-      description: v.description,
-      internalNotes: v.notes
+      description: v.description
     });
   } catch (err) {
     console.error('Failed to log entry:', err);
@@ -14190,7 +14062,7 @@ async function tshAddEntry(ev) {
 
   // Counted straight away (duplicate check, today's total) until the reload brings the saved row.
   TSH.entries.unshift({ id: created?.id ?? 'new', clientName: v.clientName, clientLookupId: v.clientId, engineer: v.engineer, date: v.date,
-    hours: v.hours.hours, workType: v.workType, description: v.description, workDescription: v.description, internalNotes: v.notes });
+    hours: v.hours.hours, workType: v.workType, description: v.description, workDescription: v.description, internalNotes: '' });
   const bal = tshTL().balancePreview(v.ssa, v.hours.hours);
   toast(`Logged ${tshTL().fmtHours(v.hours.hours)} for ${v.clientName}`
     + (bal ? ` · ${bal.after < 0 ? tshTL().fmtHours(-bal.after) + ' over SSA hours' : (bal.after ? tshTL().fmtHours(bal.after) : '0h') + ' SSA left'}` : ''),
@@ -14253,75 +14125,6 @@ function tshFilteredEntries() {
 
 
 // ─── Render — main entry point ───────────────────────────────────────
-/** Leave for the time card's "Off" days (best effort: a failure is named on the card, never hidden). */
-async function tshLoadLeave() {
-  TSH.leaveError = '';
-  try {
-    if (dataBackend('leave') !== 'supabase') { TSH.leave = null; TSH.leaveError = 'Leave is not on the database'; return; }
-    const items = await geckoStore().listItems('leave_requests');
-    TSH.leave = items.map(it => { const f = it.fields || {}; return {
-      person: f.Person || '', start: spDateToLocalDateKey(f.StartDate), end: spDateToLocalDateKey(f.EndDate) || spDateToLocalDateKey(f.StartDate),
-      status: levNormaliseStatus(f.Status), type: f.LeaveType || 'Annual Leave', note: f.Notes || '' }; });
-  } catch (err) {
-    TSH.leave = null; TSH.leaveError = err.message || String(err);
-  }
-}
-
-/**
- * The time card: the week (Mon–Sun) with a lane per engineer, each day's hours filling its cell towards a
- * 7-hour day, days off (from Leave) hatched, and weekdays already past with nothing logged outlined.
- * Clicking a cell sets the engineer and date of the form below. Logic: GeckoWeekly.weekSummary, GeckoTeam.bars.
- */
-const TSH_DAY_HOURS = 7;
-function tshRenderCard() {
-  const el = tshEl('tshCard');
-  const W = window.GeckoWeekly, T = window.GeckoTeam;
-  if (!el || !W || !T) return;
-  const t = today();
-  if (!TSH.cardWeek) TSH.cardWeek = W.monday(t);
-  const w = W.weekSummary(TSH.entries, TSH.cardWeek, t);
-  const off = TSH.leave ? T.bars(TSH.leave, w.start, w.end) : [];
-  const engSel = tshEl('tshEngineer')?.value || '';
-  const dateSel = tshEl('tshDate')?.value || '';
-  const label = w.isCurrent ? 'This week' : w.start === W.addDays(W.monday(t), -7) ? 'Last week' : 'Week of ' + tshDayLbl(w.start, { day: 'numeric', month: 'short' });
-  const head = w.days.map(d => `<span class="${d.date === t ? 'today' : ''}${d.weekend ? ' we' : ''}">${escapeHtml(tshDayLbl(d.date, { weekday: 'short' }))}<em>${escapeHtml(tshDayLbl(d.date, { day: 'numeric' }))}</em></span>`).join('');
-  const lanes = W.ENGINEERS.map(p => {
-    const cells = w.days.map(d => {
-      const h = d.byEng[p] || 0;
-      const lv = off.find(b => b.person === p && b.from <= d.date && b.to >= d.date);
-      const gap = !h && !lv && !d.weekend && d.date <= t;
-      const cls = ['tsh-tc-c', d.weekend ? 'we' : '', d.future ? 'future' : '', d.date === t ? 'today' : '', lv ? (lv.status === 'Pending' ? 'off pending' : 'off') : '', gap ? 'gap' : '', p === engSel && d.date === dateSel ? 'sel' : ''].filter(Boolean).join(' ');
-      const what = lv ? `${lv.note || lv.type}${lv.status === 'Pending' ? ' (requested)' : ''}` : '';
-      const title = `${p} · ${tshDayLbl(d.date, { weekday: 'long', day: 'numeric', month: 'short' })} · ${h ? tshH(h) + ' logged' : 'nothing logged'}${what ? ' · off: ' + what : ''}`;
-      return `<button type="button" class="${cls}" data-tc-eng="${escapeHtml(p)}" data-tc-date="${d.date}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
-        <i style="height:${(Math.min(1, h / TSH_DAY_HOURS) * 68).toFixed(1)}%"></i><b>${h ? escapeHtml(tshH(h)) : lv ? 'Off' : ''}</b>${h ? `<b class="s">${escapeHtml(String(Math.round(h * 100) / 100))}</b>` : ''}</button>`;
-    }).join('');
-    return `<div class="tsh-tc-row lp-${p.toLowerCase()}"><span class="tsh-tc-who">${escapeHtml(p)}</span>${cells}<strong class="tsh-tc-tot">${escapeHtml(tshH(w.byEng[p] || 0))}</strong></div>`;
-  }).join('');
-  el.innerHTML = `
-    <div class="tsh-card-head tsh-tc-head">
-      <h3>${escapeHtml(label)}</h3><span class="tsh-tc-range">${escapeHtml(W.weekLabel(w.start))}</span>
-      <span class="tsh-tc-nav"><button type="button" class="tsh-wk-arrow" data-tc-step="-1" aria-label="Previous week">‹</button><button type="button" class="tsh-wk-arrow" data-tc-step="1" aria-label="Next week" ${w.isCurrent || w.isFuture ? 'disabled' : ''}>›</button></span>
-      <span class="tsh-tc-hint">${TSH.leaveError ? `Days off not shown: ${escapeHtml(TSH.leaveError)}` : 'Pick a day to log time against it'}</span>
-    </div>
-    <div class="tsh-tc" role="group" aria-label="Hours logged, ${escapeHtml(label.toLowerCase())}">
-      <div class="tsh-tc-row head" aria-hidden="true"><span></span>${head}<span>Week</span></div>
-      ${lanes}
-    </div>`;
-}
-document.addEventListener('click', e => {
-  const c = e.target.closest?.('#tshCard [data-tc-date]');
-  if (c) {
-    const eng = tshEl('tshEngineer');
-    if (eng && [...eng.options].some(o => o.value === c.dataset.tcEng)) eng.value = c.dataset.tcEng;
-    tshEl('tshDate').value = c.dataset.tcDate;
-    tshFormChanged();
-    tshEl('tshClient')?.focus();
-    return;
-  }
-  const st = e.target.closest?.('#tshCard [data-tc-step]');
-  if (st && window.GeckoWeekly) { TSH.cardWeek = window.GeckoWeekly.addDays(TSH.cardWeek, 7 * Number(st.dataset.tcStep)); tshRenderCard(); }
-});
 
 /** The load error box while nothing has loaded yet, else ''. */
 function tshLoadErrorHtml() {
@@ -14340,9 +14143,7 @@ function tshRenderLog() {
   const wrap = document.getElementById('tshLogWrap');
   if (!wrap) return;
   const failed = tshLoadErrorHtml();
-  if (failed) { wrap.innerHTML = failed; const card = tshEl('tshCard'); if (card) card.innerHTML = ''; return; }
-  tshRenderQuick();
-  tshRenderCard();
+  if (failed) { wrap.innerHTML = failed; return; }
   const rows = tshFilteredEntries();
 
   // Update count
@@ -15458,8 +15259,6 @@ async function tshDeleteConfirmed(entryId) {
 async function initTimesheets() {
   if (TSH.initialised) return;
   TSH.initialised = true;
-  const copy = document.getElementById('tshCopy');
-  if (copy) copy.hidden = !(levIsPhilip() && !tshOnDb());
 
   // Set default date to today
   const dateInput = document.getElementById('tshDate');

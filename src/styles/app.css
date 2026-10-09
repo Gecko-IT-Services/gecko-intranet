@@ -70,17 +70,6 @@
 #section-opportunities .opp-tabs.app-tabs > button[aria-selected="true"] { background: transparent; box-shadow: none; color: var(--on-green); font-weight: 600; }
 
 /* Timesheets › Log Time: recent clients and today's total (stage 4) */
-#section-timesheets .tsh-quick { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: -6px 0 16px; }
-#section-timesheets .tsh-quick:empty { display: none; }
-#section-timesheets .tsh-quick-l { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
-#section-timesheets .tsh-quick-c {
-  font: inherit; font-size: 12px; cursor: pointer; padding: 5px 12px; border-radius: 999px;
-  border: 1px solid var(--border-dim); background: transparent; color: var(--white); transition: border-color .15s, color .15s, background .15s;
-}
-#section-timesheets .tsh-quick-c:hover, #section-timesheets .tsh-quick-c:focus-visible { border-color: var(--green); color: var(--green); }
-#section-timesheets .tsh-quick-c.on { background: var(--green); border-color: var(--green); color: var(--on-green); font-weight: 600; }
-#section-timesheets .tsh-quick-today { margin-left: auto; font-size: 12px; color: var(--muted); }
-#section-timesheets .tsh-quick-today strong { font-family: var(--font-mono); color: var(--blue); }
 
 /* Timesheets › Log Time: presets, what the time reads as, the checks and the summary (9 Oct) */
 #section-timesheets .tsh-label-aside { margin-left: 6px; font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 11px; color: var(--muted); }
@@ -118,10 +107,8 @@
 #section-timesheets #tshAddBtn.tsh-anyway { border-color: var(--amber); color: var(--amber); background: transparent; }
 #section-timesheets #tshAddBtn.tsh-done { opacity: 1; }
 #section-timesheets .tsh-form-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 10px; margin: -4px 0 0; font-size: 11px; color: var(--muted); }
-#section-timesheets .tsh-kbd { margin-left: auto; }
 #section-timesheets .tsh-linkbtn { font: inherit; color: var(--green); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
 @media (max-width: 600px) {
-  #section-timesheets .tsh-kbd { display: none; }
   #section-timesheets #tshAddBtn { width: 100%; }
 }
 
@@ -278,51 +265,3 @@
   #section-timesheets .tsh-wk-tr:nth-child(odd) span { visibility: hidden; }   /* every other date: they don't fit at 390px */
 }
 
-/* — The time card (Log time): a lane per engineer, a cell per day — */
-#section-timesheets .tsh-tc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-#section-timesheets .tsh-tc-head h3 { margin: 0; }
-#section-timesheets .tsh-tc-head > span { font: 500 12px var(--font-mono); color: var(--muted); }
-#section-timesheets .tsh-tc-head .tsh-tc-hint { flex-basis: 100%; order: 3; font: 400 12px var(--font-body); }
-#section-timesheets .tsh-tc-nav { margin-left: auto; display: inline-flex; gap: 6px; }
-#section-timesheets .tsh-tc { display: grid; gap: 6px; }
-#section-timesheets .tsh-tc-row { display: grid; grid-template-columns: 64px repeat(7, minmax(0, 1fr)) 64px; gap: 6px; align-items: stretch; }
-#section-timesheets .tsh-tc-row.head span { font: 600 10px/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: center; }
-#section-timesheets .tsh-tc-row.head span em { display: block; font: 500 13px var(--font-mono); letter-spacing: 0; color: var(--white); font-style: normal; }
-#section-timesheets .tsh-tc-row.head span.today, #section-timesheets .tsh-tc-row.head span.today em { color: var(--green); }
-#section-timesheets .tsh-tc-row.head span.we { opacity: .55; }
-#section-timesheets .tsh-tc-row.head span:last-child { text-align: right; align-self: end; }
-#section-timesheets .tsh-tc-who { align-self: center; font-size: 13px; font-weight: 700; color: var(--who); }
-#section-timesheets .tsh-tc-tot { align-self: center; text-align: right; font: 500 15px var(--font-mono); color: var(--white); }
-#section-timesheets .tsh-tc-c {
-  position: relative; height: 54px; min-height: 0 !important; padding: 7px 0 0; overflow: hidden; cursor: pointer;
-  display: flex; align-items: flex-start; justify-content: center;
-  border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--card);
-  transition: border-color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
-}
-#section-timesheets .tsh-tc-c i { position: absolute; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--who) 22%, transparent); box-shadow: inset 0 2px 0 var(--who);
-  transform-origin: bottom; animation: tsh-tc-fill var(--dur-3) var(--ease) both; }
-#section-timesheets .tsh-tc-c b { position: relative; font: 500 13px var(--font-mono); color: var(--white); }
-#section-timesheets .tsh-tc-c b.s { display: none; }
-#section-timesheets .tsh-tc-c:hover { border-color: var(--who); transform: translateY(-1px); }
-#section-timesheets .tsh-tc-c.we { background: color-mix(in srgb, var(--muted) 7%, transparent); }
-#section-timesheets .tsh-tc-c.future { opacity: .5; }
-#section-timesheets .tsh-tc-c.today { border-color: var(--green); }
-#section-timesheets .tsh-tc-c.gap { border-style: dashed; border-color: var(--amber-border); }
-#section-timesheets .tsh-tc-c.off { background: repeating-linear-gradient(135deg, var(--amber-dim) 0 4px, transparent 4px 9px); border-color: var(--amber-border); }
-#section-timesheets .tsh-tc-c.off b { font: 600 11px var(--font-body); color: var(--amber); }
-#section-timesheets .tsh-tc-c.off.pending { border-style: dashed; }
-#section-timesheets .tsh-tc-c.sel { border-color: var(--who); box-shadow: 0 0 0 2px color-mix(in srgb, var(--who) 35%, transparent); }
-#section-timesheets .tsh-tc-c:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
-@keyframes tsh-tc-fill { from { transform: scaleY(0); } to { transform: none; } }
-@media (prefers-reduced-motion: reduce) { #section-timesheets .tsh-tc-c i { animation: none; } }
-@media (max-width: 640px) {
-  #section-timesheets .tsh-tc-row { grid-template-columns: 44px repeat(7, minmax(0, 1fr)) 40px; gap: 3px; }
-  #section-timesheets .tsh-tc-c { height: 44px; padding-top: 5px; }
-  #section-timesheets .tsh-tc-range { display: none; }
-  #section-timesheets .tsh-tc-c b { font-size: 10px; letter-spacing: -.02em; }
-  #section-timesheets .tsh-tc-c:not(.off) b:not(.s) { display: none; }
-  #section-timesheets .tsh-tc-c b.s { display: inline; }
-  #section-timesheets .tsh-tc-c.off b { font-size: 9px; }
-  #section-timesheets .tsh-tc-who { font-size: 11px; }
-  #section-timesheets .tsh-tc-tot { font-size: 11px; letter-spacing: -.03em; }
-}
