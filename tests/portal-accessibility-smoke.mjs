@@ -36,13 +36,11 @@ assert.match(html, /event\.key === 'Tab'[\s\S]*?preventDefault\(/, 'keyboard foc
 assert.match(html, /function syncSidebarAccessibility\(\)[\s\S]*?toggleAttribute\('inert', !open\)/, 'mobile drawer accessibility state must follow its open state');
 assert.doesNotMatch(html, /heading\.focus\(\{ preventScroll: true \}\)/, 'focus should scroll a newly selected mobile destination into view');
 
-// tests/projects-board.mjs stubs escapeHtml to test the card renderers under
-// Node. Pin the production implementation so the stub cannot silently drift
-// into testing weaker escaping than the app actually performs.
+// Pin the production escapeHtml so it keeps escaping quotes.
 assert.match(
   html,
   /function escapeHtml[\s\S]{0,80}\[&<>"'\]/,
-  'escapeHtml must still escape quotes — tests/projects-board.mjs stubs this exact behaviour'
+  'escapeHtml must still escape quotes'
 );
 
 console.log('Portal accessibility and visual-system smoke checks passed.');

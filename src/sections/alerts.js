@@ -700,12 +700,12 @@ async function openEmail(key) {
     : `No contact found for ${escapeHtml(issue.client)}.`;
 
   body.innerHTML = `
-    <form class="prj-form" id="alrEmailForm">
+    <form class="alr-form" id="alrEmailForm">
       <p class="bkp-sub">${note}</p>
       <label>To<input id="alrEmailTo" type="email" value="${escapeHtml(draft.to)}" placeholder="name@client.co.uk"></label>
       <label>Subject<input id="alrEmailSubject" value="${escapeHtml(draft.subject)}"></label>
       <label>Message<textarea id="alrEmailBody" rows="14">${escapeHtml(draft.body)}</textarea></label>
-      <div class="prj-form-actions">
+      <div class="alr-form-actions">
         <button type="button" class="btn btn-ghost" id="alrEmailCancel">Cancel</button>
         <button type="button" class="btn" id="alrEmailCopy">Copy text</button>
         <button type="submit" class="btn btn-primary">Open in Outlook</button>
@@ -733,9 +733,9 @@ async function openEmail(key) {
 // ─── Resolve / undo ───────────────────────────────────────────────────
 
 const setupMessage = () => `
-  <div class="prj-form">
+  <div class="alr-form">
     <p><strong>Connect to the Gecko database</strong> to save resolved alerts.</p>
-    <div class="prj-form-actions">
+    <div class="alr-form-actions">
       <button type="button" class="btn btn-ghost" id="alrResolveCancel">Cancel</button>
       <button type="button" class="btn btn-primary" id="alrRetryList">Connect</button>
     </div>
@@ -766,11 +766,11 @@ function openResolve(key) {
     return;
   }
   openModal('Mark as resolved', `
-    <form class="prj-form" id="alrResolveForm">
+    <form class="alr-form" id="alrResolveForm">
       <p><strong>${escapeHtml(issue.client)}</strong> · ${escapeHtml(issue.device)}<br><span class="bkp-sub">${escapeHtml(issue.label)}</span></p>
       <label>What was done? (optional)<textarea id="alrResolveNote" rows="3" placeholder="e.g. Cleared 40 GB of temp files, D: now at 61%"></textarea></label>
       ${issue.resolveUrl ? `<p class="bkp-sub"><a href="${escapeHtml(issue.resolveUrl)}" target="_blank" rel="noopener noreferrer">Clear it in Atera too</a></p>` : ''}
-      <div class="prj-form-actions">
+      <div class="alr-form-actions">
         <button type="button" class="btn btn-ghost" id="alrResolveCancel">Cancel</button>
         <button type="submit" class="btn btn-primary">Mark resolved</button>
       </div>
@@ -839,12 +839,12 @@ export function init() {
     ALR.query = event.target.value.trim();
     render();
   });
-  // The draft-email modal, added once. Reuses the Projects modal styles.
+  // The draft-email modal, added once.
   const section = document.getElementById('section-alerts');
   if (section && !document.getElementById('alrBackdrop')) {
     section.insertAdjacentHTML('beforeend', `
-      <div class="prj-backdrop" id="alrBackdrop" hidden>
-        <div class="prj-modal alr-modal" role="dialog" aria-modal="true" aria-labelledby="alrModalTitle">
+      <div class="alr-backdrop" id="alrBackdrop" hidden>
+        <div class="alr-modal" role="dialog" aria-modal="true" aria-labelledby="alrModalTitle">
           <h3 id="alrModalTitle">Email the client</h3>
           <div id="alrModalBody"></div>
         </div>
