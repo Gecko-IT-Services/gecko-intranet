@@ -225,7 +225,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Clients list (Philip added it). Archived clients leave the cards, the picker and
   the Overview count; hours and entries are kept; "Restore" is one click.
 - Mileage: Driver picker defaults to the signed-in person (first-name match on
-  the MSAL account). "Email my claim" sends the signed-in driver's unclaimed
+  the MSAL account). "Email my claim" (on your own driver card since 9 Oct) sends the signed-in driver's unclaimed
   journeys since their last claim to `CONFIG.MILEAGE_CLAIM_EMAIL` via
   `/me/sendMail`. Sending does not mark anything claimed.
 

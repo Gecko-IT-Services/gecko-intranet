@@ -33,3 +33,15 @@ month use it. Leave reaches core/team.js through `window.GeckoTeam` (main.js). T
 Planner cells shrink to fit (no sideways scroll); stickers lose their labels; header shows 1/10/20/30.
 Stickers opt out of the 44px touch floor (they would cover the next month); each is a full-size row in
 Leave requests. The Team strip fits too, numbering Mondays only.
+
+## Mileage, the same way (9 Oct)
+- **Driver cards** (replacing the four figures + unclaimed band): what each driver is owed leads (amber, or
+  "All claimed"), with trips and the oldest unclaimed date; **Email my claim** sits on your own card (it left
+  the header). Below, **the road**: this tax year's miles on a 0 → 10,000 track (HMRC's limit for the higher
+  rate), claimed solid, unclaimed hatched, dashed centre line, and the miles left at the higher rate.
+- Figures: total paid and due, still to claim, Corp. tax saving (same all-time numbers as before).
+- Add journey: the six most-driven-to destinations as one-tap chips (client + miles); fields in one row.
+- Monthly summary: the tax year as twelve columns (miles, Philip/Jack stacked, £ under each) and one table
+  of months (journeys, each driver £ and miles, total, still to claim) replacing a card per month.
+- Not changed, for Philip: `milRecomputeAll` counts the 10,000 miles across all journeys, not per tax year.
+  Every journey so far is in 2026/27, so no amount is affected yet; from 6 April 2027 it would be.
