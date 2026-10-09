@@ -1006,22 +1006,6 @@ body {
 }
 
 /* — Quick actions card — */
-#section-overview .ovw-actions {
-  background: var(--card);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  display: flex; align-items: center; gap: 16px;
-  flex-wrap: wrap;
-}
-#section-overview .ovw-actions-text { flex: 1; min-width: 180px; }
-#section-overview .ovw-actions-text h4 {
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 14px;
-  letter-spacing: .07em; text-transform: uppercase;
-  margin-bottom: 3px;
-}
-#section-overview .ovw-actions-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* — Error / empty state for the whole section — */
 #section-overview .ovw-error {
@@ -3277,7 +3261,6 @@ body::before {
 .placeholder,
 #section-overview .ovw-kpi,
 #section-overview .ovw-card,
-#section-overview .ovw-actions,
 #section-profitability .prf-sum-strip,
 #section-profitability .prf-xero-import,
 #section-mileage .mil-quick-card,
@@ -4119,19 +4102,9 @@ body::before {
   #section-mileage .mil-form-actions .btn,
   #section-timesheets .tsh-form-actions .btn,
   #section-leave .lev-form-actions .btn,
-  #section-compliance .cmp-form-actions .btn,
-  #section-overview .ovw-actions-btns,
-  #section-overview .ovw-actions-btns .btn {
+  #section-compliance .cmp-form-actions .btn {
     width: 100%;
     justify-content: center;
-  }
-
-  #section-overview .ovw-actions {
-    align-items: stretch;
-  }
-
-  #section-overview .ovw-actions-btns {
-    flex-direction: column;
   }
 
   #section-clients .cli-grid,
@@ -5222,9 +5195,10 @@ body::before {
     <section class="section active" id="section-overview">
 
       <div class="section-head">
-        <h1>Overview <span>Dashboard</span></h1>
+        <h1 id="ovwHello">Overview</h1>
         <p><span id="ovwHeadMonth">—</span></p>
         <div class="ovw-head-actions">
+          <button class="btn btn-primary" type="button" onclick="ovwGoLogTime()">Log time</button>
           <button class="ovw-refresh" id="ovwRefresh" type="button" onclick="ovwRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
@@ -8041,14 +8015,20 @@ function ovwAttentionHtml(core, today) {
   if (!OVW.db) missing.push(OVW.dbError ? `the database (${OVW.dbError})` : 'the database');
   for (const [k, label] of [['jobs', 'jobs'], ['opps', 'opportunities'], ['leave', 'leave'], ['followUps', 'follow-ups'], ['prospects', 'prospects']]) if (db.errors[k]) missing.push(`${label} (${db.errors[k]})`);
   if (!OVW.ssaLoaded) missing.push('SSA balances');
-  const red = items.filter(i => i.level === 'red').length;
-  const act = items.filter(i => i.level !== 'info').length;
+  // One list: monitoring first within each colour, red → amber → info.
+  const rank = { red: 0, amber: 1, info: 2 };
+  const all = [...ovwMonitorItems(), ...items].sort((x, y) => rank[x.level] - rank[y.level]);
+  const red = all.filter(i => i.level === 'red').length;
+  const act = all.filter(i => i.level !== 'info').length;
   return `<div class="ovw-card">
     <div class="ovw-card-head"><h3>Needs attention</h3>
       <span class="ovw-count ${red ? 'red' : act || missing.length ? '' : 'good'}">${act ? act : missing.length ? '—' : 'All clear'}</span></div>
-    ${items.length ? `<ul class="ovw-attn">${items.map(i => `<li class="${i.level}"><span class="dot" aria-hidden="true"></span>
-        <div><strong>${escapeHtml(i.title)}</strong>${i.detail ? `<p>${escapeHtml(i.detail)}</p>` : ''}</div>
-        <button type="button" ${ovwGoAttr(i.go)} aria-label="${escapeHtml('Open: ' + i.title)}">Open →</button></li>`).join('')}</ul>`
+    ${all.length ? `<ul class="ovw-attn">${all.map(i => {
+        const detail = [i.who ? clientLink(i.who) : '', i.detail ? escapeHtml(i.detail) : ''].filter(Boolean).join(' · ');
+        const go = i.goKey ? `data-ovw-go="${i.goKey}"` : ovwGoAttr(i.go);
+        return `<li class="${i.level}"><span class="dot" aria-hidden="true"></span>
+        <div><strong>${escapeHtml(i.title)}</strong>${detail ? `<p>${detail}</p>` : ''}</div>
+        <button type="button" ${go} aria-label="${escapeHtml('Open: ' + i.title)}">Open →</button></li>`; }).join('')}</ul>`
       : missing.length ? `<div class="ovw-clear">Nothing found in what was checked.</div>`
       : `<div class="ovw-clear"><b>✓</b> Nothing needs you right now.</div>`}
     ${missing.length ? `<p class="ovw-warn-line">Not checked: ${escapeHtml(missing.join(', '))}.</p>` : ''}
@@ -8176,33 +8156,7 @@ function ovwRenderAll() {
   const core = window.GeckoOverview;
   if (!core) { wrap.innerHTML = '<div class="ovw-error"><h3>Could not load</h3><p>The page’s modules didn’t load. Hard-refresh (Cmd+Shift+R).</p></div>'; return; }
   const today = ovwTodayKey();
-  const headMonth = document.getElementById('ovwHeadMonth');
-  if (headMonth) headMonth.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-
-  const actionsHTML = `
-    <div class="ovw-actions">
-      <div class="ovw-actions-text">
-        <h4>Quick actions</h4>
-      </div>
-      <div class="ovw-actions-btns">
-        <button class="btn btn-primary" type="button" onclick="ovwGoLogTime()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Log time
-        </button>
-        <button class="btn" type="button" data-ovw-go="jobs:jobs">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Jobs
-        </button>
-        <button class="btn" type="button" onclick="ovwGoAddJourney()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
-          Add journey
-        </button>
-        <button class="btn" type="button" onclick="ovwGoProfitability()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          Profitability
-        </button>
-      </div>
-    </div>`;
+  ovwRenderHead();
 
   // Two tabs (9 Oct): Today is the morning check (what needs a person); Business is the money.
   const me = core.review ? core.review.monthEnd(ovwReviewData(), today) : null;
@@ -8214,11 +8168,11 @@ function ovwRenderAll() {
     { key: 'business', label: 'Business' }
   ], OVW.tab, { attr: 'data-ovw-tab', controls: 'ovwPane', label: 'Overview views' }) : '';
   const pane = OVW.tab === 'business'
-    ? ovwMoneyHtml(core, today) + `<div class="ovw-split">${ovwHistoryHtml(core, today) || '<div></div>'}${ovwGlanceHtml()}</div>` + actionsHTML
+    ? ovwMoneyHtml(core, today) + `<div class="ovw-split">${ovwHistoryHtml(core, today) || '<div></div>'}${ovwGlanceHtml()}</div>`
     : OVW.tab === 'monthend' ? ovwMonthEndHtml(me)
     : OVW.tab === 'week' ? ovwReviewHtml(core.review.weekReview(ovwReviewData(), today))
-    : ovwHelloHtml() + (me?.soon ? ovwMonthEndBanner(me) : '') + ovwStatusHtml(core, today) +
-      `<div class="ovw-split"><div class="ovw-col">${ovwMonitorHtml()}${ovwAttentionHtml(core, today)}</div>${ovwWeekHtml(core, today)}</div>`;
+    : (me?.soon ? ovwMonthEndBanner(me) : '') + ovwStatusHtml(core, today) +
+      `<div class="ovw-split"><div class="ovw-col">${ovwAttentionHtml(core, today)}</div>${ovwWeekHtml(core, today)}</div>`;
   wrap.innerHTML = `<div class="ovw-tabbar">${tabs}</div><div class="app-pane ovw-pane ${OVW.dir || ''}" id="ovwPane">${pane}</div>`;
   OVW.dir = '';
   window.GeckoTabs?.moveInk(wrap.querySelector('.app-tabs'));
@@ -8328,13 +8282,17 @@ async function ovwLoadMonitor({ interactive = false } = {}) {
   }
 }
 
-function ovwHelloHtml() {
+/** The header: "Good afternoon, Jack", then the date and when backups and alerts were last read. */
+function ovwRenderHead() {
   const h = new Date().getHours();
   const first = (document.getElementById('userName')?.textContent || '').trim().split(/\s+/)[0];
   const hello = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-  const at = OVW.mon?.at ? `Backups and alerts checked ${OVW.mon.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : '';
-  return `<div class="ovw-hello"><h2>${escapeHtml(hello)}${first && first !== 'Not' ? ', ' + escapeHtml(first) : ''}</h2>
-    ${at ? `<p>${escapeHtml(at)}</p>` : ''}</div>`;
+  const title = document.getElementById('ovwHello');
+  if (title) title.innerHTML = first && first !== 'Not' ? `${escapeHtml(hello)}, <span>${escapeHtml(first)}</span>` : escapeHtml(hello);
+  const sub = document.getElementById('ovwHeadMonth');
+  const date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const at = OVW.mon?.at ? `backups and alerts checked ${OVW.mon.at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : '';
+  if (sub) sub.textContent = at ? `${date} · ${at}` : date;
 }
 
 /** Red items on Today: failed backups, critical alerts, money overdue, SSA clients out of hours. */
@@ -8395,20 +8353,16 @@ function ovwStatusHtml(core, today) {
   return `<div class="ovw-stats">${backups}${alerts}${money}${support}${jobs}${team}</div>`;
 }
 
-function ovwMonitorHtml() {
+/** Monitoring's rows for Needs attention: failed backups, alerts that need a look, backups with warnings. */
+function ovwMonitorItems() {
   const b = OVW.mon?.backups, a = OVW.mon?.alerts;
   const rows = [];
-  if (b?.ok) for (const j of b.failing) rows.push({ level: 'red', who: j.client, what: `Backup failed: ${j.what}${j.plan ? ` (${j.plan})` : ''}`, why: j.reason, go: 'backups', link: j.link });
-  if (a?.ok) for (const i of a.needing) rows.push({ level: i.level === 'critical' ? 'red' : 'amber', who: i.client, what: `${i.device}: ${i.label}`, why: i.why, go: 'alerts', link: i.link });
-  if (b?.ok && b.warnings.length) rows.push({ level: 'amber', who: '', what: `${b.warnings.length} backup${b.warnings.length === 1 ? '' : 's'} finished with warnings`, why: [...new Set(b.warnings.map(w => w.client))].slice(0, 4).join(', '), go: 'backups' });
-  if (!rows.length) return '';
-  return `<div class="ovw-card">
-    <div class="ovw-card-head"><h3>Monitoring</h3><span class="ovw-count ${rows.some(r => r.level === 'red') ? 'red' : ''}">${rows.length}</span></div>
-    <ul class="ovw-attn">${rows.slice(0, 8).map(r => `<li class="${r.level}"><span class="dot" aria-hidden="true"></span>
-      <div><strong>${escapeHtml(r.what)}</strong><p>${[r.who ? clientLink(r.who) : '', escapeHtml(r.why || '')].filter(Boolean).join(' · ')}</p></div>
-      <button type="button" data-ovw-go="${r.go}">Open →</button></li>`).join('')}</ul>
-    ${rows.length > 8 ? `<p class="ovw-warn-line">+ ${rows.length - 8} more in Monitoring.</p>` : ''}
-  </div>`;
+  if (b?.ok) for (const j of b.failing) rows.push({ level: 'red', who: j.client, title: `Backup failed: ${j.what}${j.plan ? ` (${j.plan})` : ''}`, detail: j.reason, goKey: 'backups' });
+  if (a?.ok) for (const i of a.needing) rows.push({ level: i.level === 'critical' ? 'red' : 'amber', who: i.client, title: `${i.device}: ${i.label}`, detail: i.why, goKey: 'alerts' });
+  if (b?.ok && b.warnings.length) rows.push({ level: 'amber', who: '', title: `${b.warnings.length} backup${b.warnings.length === 1 ? '' : 's'} finished with warnings`, detail: [...new Set(b.warnings.map(w => w.client))].slice(0, 4).join(', '), goKey: 'backups' });
+  if (rows.length <= 8) return rows;
+  const more = rows.slice(8);
+  return [...rows.slice(0, 8), { level: more.some(r => r.level === 'red') ? 'red' : 'amber', who: '', title: `${more.length} more in Monitoring`, detail: '', goKey: 'backups' }];
 }
 
 document.addEventListener('click', e => {
@@ -8440,25 +8394,7 @@ document.addEventListener('click', e => {
 });
 
 
-// ─── Quick action navigators ──────────────────────────────────────────
-/**
- * Switch to Mileage section, scroll the journey form into view, and focus
- * the client dropdown so the user can start typing immediately.
- */
-function ovwGoAddJourney() {
-  navTo('mileage');
-  setTimeout(() => {
-    const form = document.getElementById('milForm');
-    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    const clientSelect = document.getElementById('milClient');
-    if (clientSelect) setTimeout(() => clientSelect.focus(), 350);
-  }, 80);
-}
-
-function ovwGoProfitability() {
-  navTo('profitability');
-}
-
+// ─── Log time (header) ────────────────────────────────────────────────
 function ovwGoLogTime() {
   navTo('timesheets');
 }
