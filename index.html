@@ -15995,7 +15995,7 @@ function tshRenderCard() {
       const what = lv ? `${lv.note || lv.type}${lv.status === 'Pending' ? ' (requested)' : ''}` : '';
       const title = `${p} · ${tshDayLbl(d.date, { weekday: 'long', day: 'numeric', month: 'short' })} · ${h ? tshH(h) + ' logged' : 'nothing logged'}${what ? ' · off: ' + what : ''}`;
       return `<button type="button" class="${cls}" data-tc-eng="${escapeHtml(p)}" data-tc-date="${d.date}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
-        <i style="height:${(Math.min(1, h / TSH_DAY_HOURS) * 100).toFixed(1)}%"></i><b>${h ? escapeHtml(tshH(h)) : lv ? 'Off' : ''}</b></button>`;
+        <i style="height:${(Math.min(1, h / TSH_DAY_HOURS) * 100).toFixed(1)}%"></i><b>${h ? escapeHtml(tshH(h)) : lv ? 'Off' : ''}</b>${h ? `<b class="s">${escapeHtml(String(Math.round(h * 100) / 100))}</b>` : ''}</button>`;
     }).join('');
     return `<div class="tsh-tc-row lp-${p.toLowerCase()}"><span class="tsh-tc-who">${escapeHtml(p)}</span>${cells}<strong class="tsh-tc-tot">${escapeHtml(tshH(w.byEng[p] || 0))}</strong></div>`;
   }).join('');

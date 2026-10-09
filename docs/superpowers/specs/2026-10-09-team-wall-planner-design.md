@@ -45,3 +45,17 @@ Leave requests. The Team strip fits too, numbering Mondays only.
   of months (journeys, each driver £ and miles, total, still to claim) replacing a card per month.
 - Not changed, for Philip: `milRecomputeAll` counts the 10,000 miles across all journeys, not per tax year.
   Every journey so far is in 2026/27, so no amount is affected yet; from 6 April 2027 it would be.
+
+## Timesheets, the same way (9 Oct)
+- **Time card** at the top of Log time: the week Mon–Sun, a lane per engineer, each day's hours filling its
+  cell towards a 7-hour day (Leave's standard day), days off from Leave hatched amber ("Off"), weekdays
+  already past with nothing logged outlined dashed amber, a week total per engineer, ‹ › for other weeks.
+  **Clicking a cell sets the form's engineer and date** and puts you in Client. Uses GeckoWeekly.weekSummary
+  (same numbers as Weekly summary; System credits excluded) and GeckoTeam.bars. Leave is read from the
+  database on Refresh; if it fails the card says "Days off not shown: …" rather than showing none.
+- **SSA cards**: the ring becomes the figure (hours left, green / amber / red by status) and a row of hour
+  tokens, one per prepaid hour (used → left; over-used hours red). `tokensHtml` takes `{ unit, noun }`.
+  Balances are shown exactly as held (Philip's rule); nothing is recalculated.
+- Person colours in Timesheets now match Team, Leave and Mileage: Philip blue, Jack purple (they were
+  green and blue in Weekly summary and the entry pills).
+- On a phone the card's cells show decimal hours ("1.5"); full text is in each cell's label.

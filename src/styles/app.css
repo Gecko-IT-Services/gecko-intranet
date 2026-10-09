@@ -300,6 +300,7 @@
 #section-timesheets .tsh-tc-c i { position: absolute; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--who) 22%, transparent); box-shadow: inset 0 2px 0 var(--who);
   transform-origin: bottom; animation: tsh-tc-fill var(--dur-3) var(--ease) both; }
 #section-timesheets .tsh-tc-c b { position: relative; font: 500 13px var(--font-mono); color: var(--white); }
+#section-timesheets .tsh-tc-c b.s { display: none; }
 #section-timesheets .tsh-tc-c:hover { border-color: var(--who); transform: translateY(-1px); }
 #section-timesheets .tsh-tc-c.we { background: color-mix(in srgb, var(--muted) 7%, transparent); }
 #section-timesheets .tsh-tc-c.future { opacity: .5; }
@@ -317,6 +318,9 @@
   #section-timesheets .tsh-tc-row { grid-template-columns: 44px repeat(7, minmax(0, 1fr)) 40px; gap: 3px; }
   #section-timesheets .tsh-tc-c { height: 44px; }
   #section-timesheets .tsh-tc-c b { font-size: 10px; letter-spacing: -.02em; }
+  #section-timesheets .tsh-tc-c:not(.off) b:not(.s) { display: none; }
+  #section-timesheets .tsh-tc-c b.s { display: inline; }
+  #section-timesheets .tsh-tc-c.off b { font-size: 9px; }
   #section-timesheets .tsh-tc-who { font-size: 11px; }
-  #section-timesheets .tsh-tc-tot { font-size: 12px; }
+  #section-timesheets .tsh-tc-tot { font-size: 11px; letter-spacing: -.03em; }
 }
