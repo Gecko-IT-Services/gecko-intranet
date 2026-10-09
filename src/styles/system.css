@@ -72,17 +72,17 @@
 
 
 /* Segmented choices (time window, table/cards) look like the tab strips: green = selected. */
-#app :is(.bkp-window, .cli-filter, .job-view) {
+#app :is(.bkp-window, .cli-filter) {
   display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border-dim);
   border-radius: var(--radius-pill); background: var(--card); box-shadow: none; overflow: visible;
 }
-#app :is(.bkp-window, .cli-filter, .job-view) button {
+#app :is(.bkp-window, .cli-filter) button {
   min-height: 28px; padding: 4px 12px; border: 0; border-radius: var(--radius-pill); background: transparent;
   color: var(--muted); font: 500 12px/1.2 var(--font-body); box-shadow: none; cursor: pointer;
   transition: background-color var(--dur-2) var(--ease), color var(--dur-2) var(--ease), transform var(--dur-1) var(--ease);
 }
-#app :is(.bkp-window, .cli-filter, .job-view) button:hover { color: var(--white); }
-#app :is(.bkp-window button[aria-pressed="true"], .job-view button[aria-pressed="true"], .cli-filter .cli-fbtn.active) {
+#app :is(.bkp-window, .cli-filter) button:hover { color: var(--white); }
+#app :is(.bkp-window button[aria-pressed="true"], .cli-filter .cli-fbtn.active) {
   background: var(--green); color: var(--on-green); font-weight: 600;
 }
 
@@ -246,11 +246,6 @@
     border-radius: var(--radius-pill);
   }
   #portalShell #section-overview li > button[data-ovw-go]::before { content: '›'; font-size: 22px; line-height: 1; }
-
-  /* Jobs: the stage totals swipe sideways rather than filling the first screen. */
-  #app #section-jobs .job-stages { display: grid; grid-auto-flow: column; grid-auto-columns: 42%; grid-template-columns: none; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }
-  #app #section-jobs .job-stages::-webkit-scrollbar { display: none; }
-  #app #section-jobs .job-stage { scroll-snap-align: start; }
 
   /* Profitability: no CSV drag-and-drop or expand-all on a phone; filters stay compact. */
   #app #section-profitability :is(.prf-drop-zone, .prf-export-btn, .prf-manage-link) { display: none !important; }

@@ -158,9 +158,12 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Opportunities + stage columns of stickies, drag or arrow to move, drop an idea to make the job). One-off client work with a value, Quoted → Agreed → In progress →
   To invoice → Invoiced (or Lost), in Supabase `jobs`. Invoiced jobs are kept (the record); the Invoiced view
   groups them Awaiting payment / Not matched / Paid (last 90 days, older on request).
-  Tabs at the top (Jobs, Month overview, Still to come, Invoiced in <month>, Owed to us, Xero);
-  chart colours Gecko Green (recurring) & Indigo (one-off), striped = still to come (`--viz-*`). Replaces the old Projects board (off the
-  menu since 6 Oct); its open projects can be brought across once (`source_ref`).
+  Tidied 9 Oct (`2026-10-09-tidier-jobs-design.md`): header Add a job; three figures (Invoiced this month, On course for,
+  Owed to us); tabs **Jobs** (the whiteboard only; Invoiced/Lost "See them" lists under it; no List view) · **This month**
+  (how it adds up, still to come, invoiced by client, six months, the Xero line) · **Owed to us**. Old tab keys passed to
+  `show()` (`overview`, `tocome`, `invoiced`, `xero`) open This month.
+  Chart colours Gecko Green (recurring) & Indigo (one-off), striped = still to come (`--viz-*`). Replaces the old Projects board
+  (off the menu since 6 Oct; its import link is gone).
 - "Sales this month" reads Xero from the feed: invoiced so far + repeating invoices not yet raised
   (last month's recurring contacts missing this month) + jobs to invoice + jobs due this month.
   VoIP Unlimited commission is excluded. Since Xero phase 2 this reads Xero directly (below); the
@@ -170,8 +173,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Edge Functions `xero-auth` / `xero-callback` / `xero-sync` / `xero-invoice` (Deno, `supabase/functions/`),
   scope `accounting.invoices` (reads; writes drafts only, phase 3). Hourly `pg_cron` sync into `xero_invoices` and
   `xero_repeating_invoices` (staff read-only); status in `xero_status`; Connect / Sync now on
-  Jobs › Sales. Functions are deployed from the repo after merge (not by the GitHub integration).
-- Phase 2 (8 Oct): once connected, Jobs › Sales reads those tables, not the feed: invoiced (net,
+  Jobs › This month. Functions are deployed from the repo after merge (not by the GitHub integration).
+- Phase 2 (8 Oct): once connected, Jobs › This month reads those tables, not the feed: invoiced (net,
   AUTHORISED + PAID, same rule as the feed), still to come from actual repeating-invoice dates,
   drafts listed not counted, jobs matched to their invoice by number (Paid / Awaiting / Overdue),
   and "Owed to us" (amount due incl. VAT). Profitability still reads the feed.
