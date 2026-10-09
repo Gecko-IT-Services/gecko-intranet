@@ -159,13 +159,16 @@
   content: ''; display: block; width: 112px; height: 112px; margin: 0 auto 10px;
   background: center / contain no-repeat;
 }
-#app .art-loading::before { background-image: url(../assets/retro/loading.png); animation: art-hop 1.2s steps(2, jump-none) infinite alternate; }
+/* Loading waits 0.3s then fades in, so a quick load shows only its text instead of a flash of gecko. */
+#app .art-loading::before { background-image: url(../assets/retro/loading.png); opacity: 0;
+  animation: art-in .2s ease .3s forwards, art-hop 1.2s steps(2, jump-none) .3s infinite alternate; }
 #app .art-empty::before   { background-image: url(../assets/retro/empty.png); }
 #app .art-none::before    { background-image: url(../assets/retro/no-results.png); }
 #app .art-offline::before { background-image: url(../assets/retro/offline.png); }
 #app .art-clear::before   { background-image: url(../assets/retro/all-clear.png); width: 84px; height: 84px; }
+@keyframes art-in { to { opacity: 1; } }
 @keyframes art-hop { to { transform: translateY(-4px); } }
-@media (prefers-reduced-motion: reduce) { #app .art-loading::before { animation: none; } }
+@media (prefers-reduced-motion: reduce) { #app .art-loading::before { animation: none; opacity: 1; } }
 
 
 /* ── 5 · Lists: no coloured side stripes ────────────────────────────── */
