@@ -15995,13 +15995,13 @@ function tshRenderCard() {
       const what = lv ? `${lv.note || lv.type}${lv.status === 'Pending' ? ' (requested)' : ''}` : '';
       const title = `${p} · ${tshDayLbl(d.date, { weekday: 'long', day: 'numeric', month: 'short' })} · ${h ? tshH(h) + ' logged' : 'nothing logged'}${what ? ' · off: ' + what : ''}`;
       return `<button type="button" class="${cls}" data-tc-eng="${escapeHtml(p)}" data-tc-date="${d.date}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
-        <i style="height:${(Math.min(1, h / TSH_DAY_HOURS) * 100).toFixed(1)}%"></i><b>${h ? escapeHtml(tshH(h)) : lv ? 'Off' : ''}</b>${h ? `<b class="s">${escapeHtml(String(Math.round(h * 100) / 100))}</b>` : ''}</button>`;
+        <i style="height:${(Math.min(1, h / TSH_DAY_HOURS) * 68).toFixed(1)}%"></i><b>${h ? escapeHtml(tshH(h)) : lv ? 'Off' : ''}</b>${h ? `<b class="s">${escapeHtml(String(Math.round(h * 100) / 100))}</b>` : ''}</button>`;
     }).join('');
     return `<div class="tsh-tc-row lp-${p.toLowerCase()}"><span class="tsh-tc-who">${escapeHtml(p)}</span>${cells}<strong class="tsh-tc-tot">${escapeHtml(tshH(w.byEng[p] || 0))}</strong></div>`;
   }).join('');
   el.innerHTML = `
     <div class="tsh-card-head tsh-tc-head">
-      <h3>${escapeHtml(label)}</h3><span>${escapeHtml(W.weekLabel(w.start))}</span>
+      <h3>${escapeHtml(label)}</h3><span class="tsh-tc-range">${escapeHtml(W.weekLabel(w.start))}</span>
       <span class="tsh-tc-nav"><button type="button" class="tsh-wk-arrow" data-tc-step="-1" aria-label="Previous week">‹</button><button type="button" class="tsh-wk-arrow" data-tc-step="1" aria-label="Next week" ${w.isCurrent || w.isFuture ? 'disabled' : ''}>›</button></span>
       <span class="tsh-tc-hint">${TSH.leaveError ? `Days off not shown: ${escapeHtml(TSH.leaveError)}` : 'Pick a day to log time against it'}</span>
     </div>
