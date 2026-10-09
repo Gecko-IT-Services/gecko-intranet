@@ -357,22 +357,33 @@
   }
 
   /* Mileage: destination · amount / purpose · miles / tick · date · driver · claimed · delete */
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr {
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr {
     grid-template-columns: auto auto auto minmax(0, 1fr) auto;
     grid-template-areas: "dest dest dest dest amount" "purpose purpose purpose purpose miles" "check date driver claimed act";
   }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(1) { grid-area: check; }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(2) { grid-area: date; font: 500 11px var(--font-mono); color: var(--muted); white-space: nowrap !important; }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(3) { grid-area: driver; }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(4) { grid-area: dest; font-weight: 600; font-size: 15px; color: var(--white); }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(5) { grid-area: purpose; overflow: hidden; text-overflow: ellipsis; white-space: nowrap !important; }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(6) { grid-area: miles; text-align: right !important; font: 500 12px var(--font-mono); color: var(--muted); }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(6)::after { content: ' mi'; }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(7) { display: none !important; }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(8) { grid-area: amount; text-align: right !important; font: 600 15px var(--font-mono); }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(9) { grid-area: claimed; justify-self: end; font-size: 12px; white-space: nowrap !important; }
-  #portalShell #section-mileage table.mil-tbl[data-rt] > tbody > tr > td:nth-child(10) { grid-area: act; padding: 0 !important; }
-  #portalShell #section-mileage table.mil-tbl[data-rt] input[type="checkbox"] { margin: 0 4px 0 0; }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(1) { grid-area: check; }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(2) { grid-area: date; font: 500 11px var(--font-mono); color: var(--muted); white-space: nowrap !important; }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(3) { grid-area: driver; }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(4) { grid-area: dest; font-weight: 600; font-size: 15px; color: var(--white); }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(5) { grid-area: purpose; overflow: hidden; text-overflow: ellipsis; white-space: nowrap !important; }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(6) { grid-area: miles; text-align: right !important; font: 500 12px var(--font-mono); color: var(--muted); }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(6)::after { content: ' mi'; }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(7) { display: none !important; }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(8) { grid-area: amount; text-align: right !important; font: 600 15px var(--font-mono); }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(9) { grid-area: claimed; justify-self: end; font-size: 12px; white-space: nowrap !important; }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] > tbody > tr > td:nth-child(10) { grid-area: act; padding: 0 !important; }
+  #portalShell #section-mileage table.mil-tbl:not(.mil-month-tbl)[data-rt] input[type="checkbox"] { margin: 0 4px 0 0; }
+  /* Mileage › Monthly summary: month · total / Philip · Jack · still to claim (journeys drop). */
+  #portalShell #section-mileage table.mil-month-tbl[data-rt] > tbody > tr {
+    grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: "month month total" "p j claim"; gap: 4px 14px;
+  }
+  #portalShell #section-mileage table.mil-month-tbl[data-rt] > tbody > tr > td:nth-child(1) { grid-area: month; }
+  #portalShell #section-mileage table.mil-month-tbl[data-rt] > tbody > tr > td:nth-child(2) { display: none !important; }
+  #portalShell #section-mileage table.mil-month-tbl[data-rt] > tbody > tr > td:nth-child(3) { grid-area: p; font-size: 12px; text-align: left !important; }
+  #portalShell #section-mileage table.mil-month-tbl[data-rt] > tbody > tr > td:nth-child(4) { grid-area: j; font-size: 12px; text-align: left !important; }
+  #portalShell #section-mileage table.mil-month-tbl[data-rt] > tbody > tr > td:is(:nth-child(3), :nth-child(4))::before { content: attr(data-label) ' '; font-size: 11px; color: var(--muted); }
+  #portalShell #section-mileage table.mil-month-tbl[data-rt] > tbody > tr > td:nth-child(5) { grid-area: total; text-align: right !important; font: 600 15px var(--font-mono); }
+  #portalShell #section-mileage table.mil-month-tbl[data-rt] > tbody > tr > td:nth-child(6) { grid-area: claim; text-align: right !important; font-size: 12px; }
 
   /* Leave: person (and type) · status / dates · hours / actions. Tapping the row opens it. */
   #portalShell #section-leave table.lev-tbl[data-rt] > tbody > tr {
