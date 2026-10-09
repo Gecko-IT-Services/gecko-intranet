@@ -23,7 +23,6 @@ import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
 import * as overviewCore from './core/overview.js';
 import * as review from './core/review.js';
-import * as cspCosts from './core/csp-costs.js';
 import * as profitFeed from './core/profit-feed.js';
 import * as ssaRenewal from './core/ssa-renewal.js';
 import * as supabase from './core/supabase.js';
@@ -53,7 +52,6 @@ window.GeckoTeam = teamCore;
 
 // Pure logic used by the Profitability section, which still lives in
 // index.html's classic script and therefore cannot import modules itself.
-window.CspCosts = cspCosts;
 window.ProfitFeed = profitFeed;
 // Profitability's "Needs a look" flags (classic script).
 window.GeckoProfit = profitability;

@@ -266,7 +266,7 @@
   #portalShell #section-overview li > button[data-ovw-go]::before { content: '›'; font-size: 22px; line-height: 1; }
 
   /* Profitability: no CSV drag-and-drop or expand-all on a phone; filters stay compact. */
-  #app #section-profitability :is(.prf-drop-zone, .prf-export-btn, .prf-manage-link) { display: none !important; }
+  #app #section-profitability :is(.prf-export-btn, .prf-manage-link) { display: none !important; }
 
   /* Monitoring: search fills the row; an alert's badge sits above its text. */
   #app :is(#section-backups, #section-alerts) .bkp-toolbar { justify-content: stretch; }

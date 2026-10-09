@@ -5,7 +5,7 @@
 // and Xero blocks browser calls), so a scheduled Claude task reads both and
 // writes one JSON file into the portal site's document library. This module
 // is the pure half: checking that file and turning it into the shapes the
-// existing Xero and CSP import paths already take.
+// Profitability page uses.
 
 export const FEED_FOLDER = 'Gecko Dashboard Data';
 export const FEED_FILE   = 'profitability-feed.json';
@@ -233,11 +233,6 @@ export function splitByClient(feed, month, match) {
     out.set(client.id, e);
   }
   return out;
-}
-
-/** Matches CspCosts.aggregateByCustomer: [{ customer, cost }]. */
-export function cspAggregated(feed) {
-  return (feed?.csp?.customers || []).map(r => ({ customer: r.customer, cost: round2(r.cost) }));
 }
 
 /** Plain-English "updated" text: "today 06:52", "yesterday 06:52", "3 Oct". */

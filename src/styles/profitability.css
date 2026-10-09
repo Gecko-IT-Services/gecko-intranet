@@ -1,6 +1,6 @@
 /* Profitability (simpler page, 9 Oct 2026): status line, figures, one table that opens onto each
    client's service lines. Design: docs/superpowers/specs/2026-10-09-simpler-profitability-design.md
-   Older Profitability rules (service table, pills, modal, CSP card) stay in index.html. */
+   Older Profitability rules (service table, pills, modal) stay in index.html. */
 
 /* — Status: one line, plus what is on no client — */
 #section-profitability .prf-status .prf-feed { margin: 0; }

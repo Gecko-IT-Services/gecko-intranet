@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {
-  validateFeed, xeroMonths, totalsByClient, cspAggregated,
+  validateFeed, xeroMonths, totalsByClient,
   isStale, feedAgeHours, describeWhen, FEED_PATH, hasSplit, splitByClient, invoicedCosts
 } from '../src/core/profit-feed.js';
 
@@ -48,9 +48,6 @@ assert.deepEqual(t.matched.map(m => [m.client.name, m.total]), [['Cowan Consulta
   'two contacts for one client are summed, not overwritten');
 assert.deepEqual(t.unmatched, [{ xeroName: 'Voip Unlimited', total: 638.36, assignedTo: null }]);
 
-// — cspAggregated: same shape as CspCosts.aggregateByCustomer —
-assert.deepEqual(cspAggregated(good()), [{ customer: 'ALS Locksmiths', cost: 47.51 }, { customer: 'CDA Ltd', cost: 12.84 }]);
-assert.deepEqual(cspAggregated({}), []);
 
 // — staleness —
 const f = good();
