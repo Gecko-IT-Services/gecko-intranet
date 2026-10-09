@@ -127,7 +127,8 @@ export async function fetchXero(sb, jobs) {
   const byId = new Map([...recent, ...unpaid].map(i => [i.invoice_id, i]));
   const have = new Set([...byId.values()].map(i => refKey(i.invoice_number)));
   const refs = [...new Set(jobs.flatMap(j => String(j.invoice_ref || '').split(/[,;]+/).map(r => r.trim())).filter(r => r && !have.has(refKey(r))))];
-  if (refs.length) for (const i of must(await sb.from('xero_invoices').select(XERO_COLS).in('invoice_number', refs))) byId.set(i.invoice_id, i);
+  // Typed refs as written and tidied ("inv-0131" → "INV-0131"), as recent invoices are matched.
+  if (refs.length) for (const i of must(await sb.from('xero_invoices').select(XERO_COLS).in('invoice_number', [...new Set([...refs, ...refs.map(refKey)])]))) byId.set(i.invoice_id, i);
   return { inv: [...byId.values()], rep };
 }
 
@@ -137,6 +138,8 @@ async function loadNudges(sb) {
   const r = await sb.from('payment_nudges').select('contact_name,created_at,created_by,recipient').gte('created_at', since).order('created_at', { ascending: false });
   const keep = new Map([...JOB.nudges].filter(([, n]) => n.webLink));   // this session's draft links
   JOB.nudges = new Map();
+  // Only a missing table (before its migration) is quiet: any other failure would look like "never nudged".
+  if (r.error && !/payment_nudges/.test(r.error.message || '')) toast('Could not read past payment reminders: ' + r.error.message, 'warning', 8000);
   for (const n of r.error ? [] : r.data) if (!JOB.nudges.has(n.contact_name)) JOB.nudges.set(n.contact_name, { ...n, webLink: keep.get(n.contact_name)?.webLink });
 }
 
@@ -157,10 +160,12 @@ async function saveJob(id, f) {
   if (f.invoice_ref) patch.invoice_ref = f.invoice_ref.value.trim();
   if (f.notes) patch.notes = f.notes.value.trim();
   if (!patch.client_name || !patch.title) { toast('Enter the client and what the job is', 'warning'); return; }
+  if (JOB.saving) return;   // a double click on Add job would insert it twice
   if (patch.status === 'invoiced') {
     const old = JOB.jobs.find(j => j.id === Number(id));
     if (!old || old.status !== 'invoiced') patch.invoiced_at = today();
   } else patch.invoiced_at = null;
+  JOB.saving = true;
   try {
     const sb = await connectSupabase({ interactive: true });
     if (id === 'new') {
@@ -177,6 +182,7 @@ async function saveJob(id, f) {
     if (!JOB.clients.includes(patch.client_name)) JOB.clients = [...JOB.clients, patch.client_name].sort((a, b) => a.localeCompare(b));
     render();
   } catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
+  finally { JOB.saving = false; }
 }
 
 async function moveJob(id, status, btn) {
@@ -577,6 +583,7 @@ async function dropOn(ref, stage) {
   const o = JOB.opps.find(x => x.id === id);
   const move = o && ideaMove(o, stage, myName());
   if (!move) { if (o && stage !== 'ideas') toast('An idea goes to Quoted or a later stage first', 'info'); return; }
+  if (!move.job && !Object.keys(move.opp).length) { toast('A won deal can’t be marked lost from here', 'info'); return; }
   try {
     const sb = await connectSupabase({ interactive: true });
     let jobId = null;
@@ -602,6 +609,8 @@ async function addIdea(f) {
   const row = newOpportunity({ client: f.client_name.value, title: f.title.value, oneOff: f.one_off.value, nextStep: f.next_step.value, owner: myName() });
   if (row.error) { toast(row.error, 'warning'); return; }
   if (!(row.one_off > 0)) { toast('Give it a rough one-off value', 'warning'); return; }
+  if (JOB.saving) return;
+  JOB.saving = true;
   try {
     const sb = await connectSupabase({ interactive: true });
     JOB.opps.unshift(must(await sb.from('opportunities').insert(row).select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step').single()));
@@ -609,6 +618,7 @@ async function addIdea(f) {
     toast('Idea added (also on the Opportunities pipeline)', 'success');
     render();
   } catch (err) { toast('Could not add the idea: ' + (err.message || err), 'error', 7000); }
+  finally { JOB.saving = false; }
 }
 
 /** Drag and drop between the board's columns (mouse and trackpad; on a phone the arrows do it). */
@@ -958,6 +968,7 @@ async function nudge(name) {
     const row = { contact_id: invoices[0].contact_id || '', contact_name: name, invoice_numbers: invoices.map(i => i.invoice_number),
       amount_due: mail.total, recipient: info.email || '', created_by: me };
     const saved = await sb.from('payment_nudges').insert(row).select('contact_name,created_at,created_by,recipient').single();
+    if (saved.error) toast('The draft is made, but the reminder wasn’t logged, so a colleague won’t see it: ' + saved.error.message, 'warning', 9000);
     JOB.nudges.set(name, { ...(saved.data || { ...row, created_at: new Date().toISOString() }), webLink: draft?.webLink });
     toast(info.email ? `Reminder to ${info.email} is in your Outlook Drafts. Check it and send.`
       : `Reminder is in your Outlook Drafts without a recipient: ${missing}. Add their email and send.`, info.email ? 'success' : 'warning', 9000);

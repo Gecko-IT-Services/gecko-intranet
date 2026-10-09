@@ -13,6 +13,7 @@
 
 import { toast, escapeHtml } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
+import { selectAllPages } from '../core/store.js';
 import { PEOPLE, DAY_HOURS, taxYear, holiday, bars, daysBetween, tokensHtml, presence, hours, mileage, monday, addDays } from '../core/team.js';
 
 const TM = { data: null, loading: false, error: null };
@@ -39,7 +40,8 @@ async function load() {
     const [requests, ents, journeys, entries] = await Promise.all([
       q('leave_requests', 'id,person,start_date,end_date,hours,status,leave_type,notes'),
       q('leave_entitlements', 'person,tax_year,entitlement_hours,carry_over_hours,adjustment_hours'),
-      q('mileage_journeys', 'driver,journey_date,miles,amount,claimed_date'),
+      // Every journey, in pages: Supabase answers 1000 rows at most, and "to claim" must not undercount.
+      settle(selectAllPages((from, to) => sb.from('mileage_journeys').select('id,driver,journey_date,miles,amount,claimed_date').order('id').range(from, to))),
       q('timesheet_entries', 'engineer,entry_date,hours,deleted_at', x => x.gte('entry_date', since))
     ]);
     const status = s => (/approved/i.test(s) ? 'Approved' : /rejected/i.test(s) ? 'Rejected' : /cancel/i.test(s) ? 'Cancelled' : 'Pending');

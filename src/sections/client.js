@@ -394,8 +394,13 @@ async function saveActivity(form) {
   } finally { CL.saving = false; render(); }
 }
 
+// Both reloads are a no-op once another client has been opened (CL.data is cleared and load() fetches
+// afresh): the row is saved, so the save must not then fail and invite a duplicate.
 async function reloadActivity(sb) {
-  CL.data.activity = timeline(must(await sb.from('client_activity').select('*')), CL.name);
+  if (!CL.data) return;
+  const rows = must(await sb.from('client_activity').select('*'));
+  if (!CL.data) return;
+  CL.data.activity = timeline(rows, CL.name);
 }
 
 async function activityAct(act, id) {
@@ -497,6 +502,7 @@ const myAddress = () => (els('userRole')?.textContent || '').trim().toLowerCase(
 const MAIL_SELECT = 'subject,from,toRecipients,ccRecipients,receivedDateTime,bodyPreview,webLink,internetMessageId';
 
 async function loadMail(interactive = false) {
+  const name = CL.name;
   const id = mailIdentity({ contacts: CL.data.contacts || [], domains: CL.data.domainList || [], website: CL.data.details?.website || '' });
   const terms = mailSearches(id);
   if (!terms.length) { CL.mail = { state: 'none' }; render(); return; }
@@ -520,6 +526,7 @@ async function loadMail(interactive = false) {
       } else errors.push(`${label}: ${err.message || err}`);
     }
   })));
+  if (CL.name !== name || !CL.data) return;   // another client was opened while searching: its own search runs
   CL.mail = consent && !messages.length ? { state: 'consent' }
     : { state: 'ok', list: clientMail(messages, id), errors: [...new Set(errors)], noAccess: [...noAccess], colleague: [...colleague],
         searched: boxes.filter(b => !noAccess.has(b.label)).map(b => b.label), terms, at: Date.now() };
@@ -554,16 +561,18 @@ function emailsHtml() {
 
 async function logMail(i) {
   const x = CL.mail?.list?.[i];
-  if (!x) return;
+  if (!x || CL.saving) return;   // a double click would log it twice
   const c = (CL.data.contacts || []).find(k => k.email && [x.from, ...x.to].map(a => String(a).toLowerCase()).includes(k.email));
   const { row, error } = cleanActivity({ kind: 'email', body: `Email: ${x.subject}`, happened_at: x.received, direction: x.direction, contact_id: c?.id || '', contact_name: c ? (c.name || c.email) : '' }, CL.name, today());
   if (error) { toast(error, 'warning'); return; }
+  CL.saving = true;
   try {
     const sb = await connectSupabase({ interactive: true });
     must(await sb.from('client_activity').insert({ ...row, created_by: (els('userName')?.textContent || '').trim() }));
     await reloadActivity(sb);
     toast('Logged in Activity', 'success');
   } catch (err) { toast('Could not log it: ' + (err.message || err), 'error', 7000); }
+  finally { CL.saving = false; }
   render();
 }
 
@@ -644,7 +653,10 @@ async function saveContact(form) {
 }
 
 async function reloadContacts(sb) {
-  CL.data.contacts = contactsFor(must(await sb.from('client_contacts').select('*')), CL.name);
+  if (!CL.data) return;
+  const rows = must(await sb.from('client_contacts').select('*'));
+  if (!CL.data) return;
+  CL.data.contacts = contactsFor(rows, CL.name);
 }
 
 async function contactAct(act, id) {
@@ -718,8 +730,10 @@ async function saveOpp(form) {
     const sb = await connectSupabase({ interactive: true });
     const saved = must(await sb.from('opportunities').insert(row).select('*').single());
     CL.adding = null;
-    CL.data.profile.opps = [saved, ...(CL.data.profile.opps || [])];
-    CL.data.profile.openOpps = [saved, ...(CL.data.profile.openOpps || [])];
+    if (CL.data && CL.name === row.client_name) {   // still on this client's page
+      CL.data.profile.opps = [saved, ...(CL.data.profile.opps || [])];
+      CL.data.profile.openOpps = [saved, ...(CL.data.profile.openOpps || [])];
+    }
     window.GeckoSections?.opportunities?.reload?.();
     toast(`Added to the pipeline: ${saved.title}`, 'success');
   } catch (err) {

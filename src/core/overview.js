@@ -11,7 +11,6 @@ export { xeroHistory };
 
 export const LOW_SSA_HOURS = 2;       // the Timesheets "at risk" line
 export const STALE_SYNC_HOURS = 3;    // the sync runs hourly; three missed runs is worth saying
-export const QUIET_PROPOSAL_DAYS = 14;
 const DRAFTS = new Set(['DRAFT', 'SUBMITTED']);
 
 import { dueFollowUps, dueText } from './activity.js';
@@ -176,12 +175,7 @@ export function attention(d, today, now = new Date()) {
       `${plural(old.length, 'journey')} before this month`, { section: 'mileage' });
   }
 
-  if (d.opps) {
-    const since = addDays(today, -QUIET_PROPOSAL_DAYS);
-    const quiet = d.opps.filter(o => o.status === 'proposed' && day(o.modified_at || o.created_at) < since);
-    if (quiet.length) add('proposals', 'info', `${plural(quiet.length, 'proposal')} with no update for ${QUIET_PROPOSAL_DAYS} days`,
-      names(quiet.map(o => `${o.client_name}: ${o.title}`)), { section: 'opportunities' });
-  }
+  // Quiet proposals are in deal_quiet above (which also respects a follow-up date still to come).
 
   const rank = { red: 0, amber: 1, info: 2 };
   return out.sort((a, b) => rank[a.level] - rank[b.level]);

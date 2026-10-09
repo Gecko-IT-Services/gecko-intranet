@@ -8371,8 +8371,12 @@ function initialsFor(name) {
  * Phase 9: consolidated from cliJsAttr, tshJsAttr, cmpJsAttr.
  */
 function jsAttr(s) {
+  // & first: the attribute is HTML-decoded before the JS runs, so a literal "&#39;" would otherwise
+  // become a quote and end the string. Line breaks would end the JS string literal too.
   return String(s)
+    .replace(/&/g, '&amp;')
     .replace(/\\/g, '\\\\')
+    .replace(/\r?\n|\r/g, ' ')
     .replace(/'/g, "\\'")
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
@@ -8800,7 +8804,7 @@ function ovwMoneyHtml(core, today) {
       ${tile(go('jobs', 'xero'), 'Sales this month', ICON.sales, `<div class="k-value white">—</div><div class="k-note">${escapeHtml(why)}</div>`)}
       ${tile(go('jobs', 'xero'), 'Recurring', ICON.rec, `<div class="k-value white">—</div><div class="k-note">Needs Xero.</div>`)}
       ${tile(go('jobs', 'xero'), 'Owed to us', ICON.owed, `<div class="k-value white">—</div><div class="k-note">Needs Xero.</div>`)}
-      ${pipe ? ovwPipelineTile(tile, go, ICON.pipe, pipe) : tile(go('jobs', 'jobs'), 'Pipeline', ICON.pipe, `<div class="k-value white">—</div><div class="k-note">${escapeHtml(db?.errors.jobs ? 'Jobs didn’t load: ' + db.errors.jobs : 'Loading…')}</div>`)}
+      ${pipe ? ovwPipelineTile(tile, go, ICON.pipe, pipe) : tile(go('jobs', 'jobs'), 'Pipeline', ICON.pipe, `<div class="k-value white">—</div><div class="k-note">${escapeHtml(db?.errors.jobs ? 'Jobs didn’t load: ' + db.errors.jobs : !db && OVW.dbError ? 'The database didn’t load.' : 'Loading…')}</div>`)}
     </div>`;
   }
 
@@ -8856,10 +8860,11 @@ function ovwAttentionHtml(core, today) {
   const act = items.filter(i => i.level !== 'info').length;
   return `<div class="ovw-card">
     <div class="ovw-card-head"><h3>Needs attention</h3>
-      <span class="ovw-count ${red ? 'red' : act ? '' : 'good'}">${act ? act : 'All clear'}</span></div>
+      <span class="ovw-count ${red ? 'red' : act || missing.length ? '' : 'good'}">${act ? act : missing.length ? '—' : 'All clear'}</span></div>
     ${items.length ? `<ul class="ovw-attn">${items.map(i => `<li class="${i.level}"><span class="dot" aria-hidden="true"></span>
         <div><strong>${escapeHtml(i.title)}</strong>${i.detail ? `<p>${escapeHtml(i.detail)}</p>` : ''}</div>
         <button type="button" ${ovwGoAttr(i.go)} aria-label="${escapeHtml('Open: ' + i.title)}">Open →</button></li>`).join('')}</ul>`
+      : missing.length ? `<div class="ovw-clear">Nothing found in what was checked.</div>`
       : `<div class="ovw-clear"><b>✓</b> Nothing needs you right now.</div>`}
     ${missing.length ? `<p class="ovw-warn-line">Not checked: ${escapeHtml(missing.join(', '))}.</p>` : ''}
   </div>`;
@@ -8968,7 +8973,7 @@ function ovwGlanceHtml() {
     <div class="ovw-card-head"><h3>At a glance</h3></div>
     <ul class="ovw-glance">
       <li><span>Active clients<small>${clients.isNew ? `${clients.isNew} new · ` : ''}${clients.winding ? `${clients.winding} winding down` : 'none winding down'}</small></span><strong>${clients.headline}</strong></li>
-      <li><span>SSA clients<small>${escapeHtml(ovwHours(ssaHours))} prepaid hours left in all</small></span><strong>${OVW.ssaLoaded ? ssa.length : '—'}</strong></li>
+      <li><span>SSA clients<small>${OVW.ssaLoaded ? `${escapeHtml(ovwHours(ssaHours))} prepaid hours left in all` : 'didn’t load'}</small></span><strong>${OVW.ssaLoaded ? ssa.length : '—'}</strong></li>
       <li><span>Opportunity ideas<small>${won ? `${won} won this month` : ''}</small></span><strong>${ideas == null ? '—' : ideas}</strong></li>
       <li><span>Mileage this month<small>${mileage.count} journey${mileage.count === 1 ? '' : 's'} · ${escapeHtml(ovwFmt(mileage.amount))}</small></span><strong>${escapeHtml(ovwFmtMiles(mileage.miles))}</strong></li>
     </ul>
@@ -9580,8 +9585,11 @@ function prfClientServices(clientName) {
  * rather than counted a second time. Philip, 7 Oct 2026: "I want that
  * cost to sit in the month it was invoiced."
  */
-function prfHostingCostFromInvoices() {
-  return !!(PRF.feed && PRF.feed.state === 'ok' && PRF.feed.data && PRF.feed.data.clook);
+// Both gates follow the feed that was actually applied (PRF.appliedFeed), month by month: a refresh
+// that fails keeps the last good invoices on the cards, so it must keep the typed costs off them too,
+// and a month the feed doesn't cover falls back to the typed service lines.
+function prfHostingCostFromInvoices(month = PRF.selectedMonth || prfCurrentMonth()) {
+  return !!(PRF.invoiced[month] && PRF.appliedFeed?.clook);
 }
 /**
  * True while the feed carries TD SYNNEX invoices. Then M365 cost (and the
@@ -9590,8 +9598,8 @@ function prfHostingCostFromInvoices() {
  * counted. Philip, 7 Oct 2026: the TD SYNNEX invoice must populate on its
  * own, with nothing to apply by hand.
  */
-function prfM365CostFromInvoices() {
-  return !!(PRF.feed && PRF.feed.state === 'ok' && PRF.feed.data && Array.isArray(PRF.feed.data.cspInvoices));
+function prfM365CostFromInvoices(month = PRF.selectedMonth || prfCurrentMonth()) {
+  return !!(PRF.invoiced[month] && Array.isArray(PRF.appliedFeed?.cspInvoices));
 }
 function prfCostFromInvoices(s) {
   return (s.category === 'hosting' && prfHostingCostFromInvoices())
@@ -10034,7 +10042,7 @@ function prfRenderCard(client) {
             </tr>` : null;
 
   return `
-    <div class="${cls.join(' ')}" data-cats="${cats}" data-client-id="${client.id}" data-client-name="${escapeHtml(client.name).toLowerCase()}">
+    <div class="${cls.join(' ')}" data-cats="${escapeHtml(cats)}" data-client-id="${client.id}" data-client-name="${escapeHtml(client.name).toLowerCase()}">
 
       <!-- Header (collapsed view) -->
       <div class="prf-ch" onclick="prfToggleCard('${client.id}')">
@@ -10240,6 +10248,7 @@ async function prfSaveXero(id, raw) {
     if (gt)  gt.outerHTML  = prfRenderGrandTotal();
     toast(v === null ? 'Xero figure cleared' : 'Xero figure saved', 'success', 1800);
   } catch (err) {
+    prfSetXeroLocal(client, monthStr, current);
     console.error('Save Xero failed:', err);
     toast('Could not save Xero figure: ' + (err.message || 'unknown'), 'error', 5000);
   }
@@ -10567,9 +10576,10 @@ async function prfApplyFeedXero(feed) {
   const shown = PRF.selectedMonth || prfCurrentMonth();
   PRF.xeroSplit = {};
   PRF.invoiced = {};
+  PRF.appliedFeed = feed;
   const matcher = name => prfXeroMatchName(name, PRF.clients);
   for (const [month] of F.xeroMonths(feed)) {
-    if (feed.exclaimer != null || feed.clook != null) PRF.invoiced[month] = F.invoicedCosts(feed, month, matcher);
+    if (feed.cspInvoices != null || feed.exclaimer != null || feed.clook != null) PRF.invoiced[month] = F.invoicedCosts(feed, month, matcher);
   }
   for (const [month, perContact] of F.xeroMonths(feed)) {
     if (F.hasSplit(feed, month)) {
@@ -10723,18 +10733,8 @@ async function prfImportXeroCsv(file) {
       perContact[name] = (perContact[name] || 0) + amt;
     });
 
-    // Match against portal clients
-    const matched = [];
-    const unmatched = [];
-
-    for (const [xeroName, total] of Object.entries(perContact)) {
-      const client = prfXeroMatchName(xeroName, PRF.clients);
-      if (client) {
-        matched.push({ client, total: Math.round(total * 100) / 100 });
-      } else {
-        unmatched.push({ xeroName, total: Math.round(total * 100) / 100, assignedTo: null });
-      }
-    }
+    // Match against portal clients; two Xero contacts for one client are added together, as the feed does.
+    const { matched, unmatched } = window.ProfitFeed.totalsByClient(perContact, n => prfXeroMatchName(n, PRF.clients));
 
     PRF.xeroImported = true;
     PRF.xeroUnmatched = unmatched;
@@ -10744,14 +10744,12 @@ async function prfImportXeroCsv(file) {
     const savePromises = [];
     for (const { client, total } of matched) {
       prfSetXeroLocal(client, detectedMonth, total);
-      savePromises.push(
-        prfSaveXeroHistory(client.id, client.xeroHistory)
-          .catch(err => console.error(`Failed to save Xero for ${client.name}:`, err))
-      );
+      savePromises.push(prfSaveXeroHistory(client.id, client.xeroHistory));
     }
 
     // Wait for all saves (fire in parallel)
-    await Promise.all(savePromises);
+    const failed = (await Promise.allSettled(savePromises)).filter(r => r.status === 'rejected');
+    failed.forEach(r => console.error('Failed to save Xero:', r.reason));
 
     // Re-render to show updated values + unmatched contacts
     prfRenderAll();
@@ -10759,6 +10757,7 @@ async function prfImportXeroCsv(file) {
     const matchCount = matched.length;
     const unmatchCount = unmatched.length;
     toast(`Xero import: ${matchCount} matched, ${unmatchCount} unmatched — ${prfMonthLabel(detectedMonth)}`, unmatchCount > 0 ? 'warning' : 'success', 4000);
+    if (failed.length) toast(`${failed.length} of ${matchCount} Xero figures could not be saved — Refresh and import again`, 'error', 8000);
 
   } catch (err) {
     console.error('Xero CSV import failed:', err);
@@ -10780,7 +10779,9 @@ async function prfAssignUnmatched(xeroName, clientId) {
 
   entry.assignedTo = clientId;
   const month = PRF.xeroMonth || PRF.selectedMonth || prfCurrentMonth();
-  prfSetXeroLocal(client, month, entry.total);
+  const before = prfGetXero(client, month);
+  // Added to what the client already has: its matched contacts are in there too.
+  prfSetXeroLocal(client, month, Math.round(((before || 0) + entry.total) * 100) / 100);
 
   try {
     await prfSaveXeroHistory(client.id, client.xeroHistory);
@@ -10788,7 +10789,7 @@ async function prfAssignUnmatched(xeroName, clientId) {
     // Update the Xero row for this client in the DOM
     const input = document.querySelector(`.prf-xinput[data-client-id="${client.id}"]`);
     if (input) {
-      input.value = entry.total;
+      input.value = prfGetXero(client, month);
       prfUpdateXeroPreview(input);
     }
 
@@ -10811,6 +10812,8 @@ async function prfAssignUnmatched(xeroName, clientId) {
 
     toast(`Assigned ${xeroName} → ${client.name}`, 'success', 2000);
   } catch (err) {
+    entry.assignedTo = null;
+    prfSetXeroLocal(client, month, before);
     console.error('Assign unmatched failed:', err);
     toast('Failed to assign: ' + (err.message || 'unknown'), 'error', 4000);
   }
@@ -10832,10 +10835,10 @@ async function prfClearXeroData() {
   try {
     const saves = affected.map(c => {
       prfSetXeroLocal(c, month, null);
-      return prfSaveXeroHistory(c.id, c.xeroHistory)
-        .catch(err => console.error(`Clear Xero for ${c.name} failed:`, err));
+      return prfSaveXeroHistory(c.id, c.xeroHistory);
     });
-    await Promise.all(saves);
+    const failed = (await Promise.allSettled(saves)).filter(r => r.status === 'rejected').length;
+    if (failed) throw new Error(`${failed} of ${affected.length} clients could not be cleared — Refresh to see what was saved`);
     PRF.xeroImported = false;
     PRF.xeroUnmatched = [];
     PRF.xeroData = {};
@@ -10854,7 +10857,9 @@ function prfRenderXeroImport() {
   const month = PRF.selectedMonth || prfCurrentMonth();
   const clientsWithData = PRF.clients.filter(c => prfGetXero(c, month) !== null);
   const matchedCount = clientsWithData.length;
-  const unmatchedCount = PRF.xeroUnmatched.filter(u => !u.assignedTo).length;
+  // The unmatched list belongs to the month it was read for; another month shows none of it.
+  const unmForMonth = PRF.xeroMonth === month ? PRF.xeroUnmatched.filter(u => !u.assignedTo) : [];
+  const unmatchedCount = unmForMonth.length;
 
   // Always show stats for the selected month if there's any data
   let statsHtml = '';
@@ -10869,8 +10874,7 @@ function prfRenderXeroImport() {
   }
 
   let unmatchedHtml = '';
-  const unm = PRF.xeroUnmatched.filter(u => !u.assignedTo);
-  if (unm.length > 0) {
+  if (unmForMonth.length > 0) {
     unmatchedHtml = `<div class="prf-xero-unmatched" id="prfXeroUnmatched">${prfRenderUnmatchedList()}</div>`;
   }
 
@@ -10917,7 +10921,7 @@ function prfRenderUnmatchedList() {
       <span>${escapeHtml(u.xeroName)}</span>
       <span class="xu-amt">${prfFmt(u.total)}</span>
       <span>—</span>
-      <select onchange="prfAssignUnmatched(${jsAttr(u.xeroName)},this.value)">
+      <select onchange="prfAssignUnmatched('${jsAttr(u.xeroName)}',this.value)">
         <option value="">Assign to client…</option>
         ${clientOpts}
       </select>
@@ -12291,13 +12295,10 @@ function pnlIsXlsxFile(file) {
 
 function pnlLoadScript(src) {
   return new Promise((resolve, reject) => {
-    if ([...document.scripts].some(s => s.src === src)) {
-      const existing = [...document.scripts].find(s => s.src === src);
-      if (window.XLSX) resolve();
-      else existing.addEventListener('load', resolve, { once: true });
-      existing.addEventListener('error', reject, { once: true });
-      return;
-    }
+    const existing = [...document.scripts].find(s => s.src === src);
+    if (existing && window.XLSX) { resolve(); return; }
+    // A tag that already failed never fires load again: drop it and try afresh.
+    if (existing) existing.remove();
     const script = document.createElement('script');
     script.src = src;
     script.async = true;
@@ -12416,6 +12417,7 @@ function pnlExportCsv() {
 
 async function pnlClearData() {
   const month = PNL.selectedMonth;
+  if (!month || !confirm(`Delete the ${pnlMonthLabel(month)} P&L for everyone? This cannot be undone.`)) return;
   const itemId = PNL.itemIds[month] || PNL.reports[month]?._spItemId;
   if (month) delete PNL.reports[month];
   if (month) delete PNL.itemIds[month];
@@ -13208,8 +13210,11 @@ async function milAddJourney(ev) {
   }
 
   // Compute amount based on this driver's miles already in the tax year up to this journey's date
+  // (same rule as milRecomputeAll: the 10,000 miles reset each 6 April).
+  const taxYear = d => milComputeTaxYear(new Date(String(d || '').slice(0, 10) + 'T00:00:00')).label;
   const before = MIL.journeys
-    .filter(j => j.driver === data.driver && new Date(j.date).getTime() <= new Date(data.date).getTime())
+    .filter(j => j.driver === data.driver && taxYear(j.date) === taxYear(data.date) &&
+      new Date(j.date).getTime() <= new Date(data.date).getTime())
     .reduce((s, j) => s + (Number(j.miles) || 0), 0);
   const calc = milCalcReimbursement(data.miles, before, data.date);
   data.amount = calc.amount;
@@ -13237,9 +13242,7 @@ async function milAddJourney(ev) {
     // Push patches in parallel
     if (changes.length > 0) {
       try {
-        await Promise.all(changes
-          .filter(c => c.id !== res.id) // server already has the right value for the new one
-          .map(c => milPatchJourneyAmount(c.id, c.newAmount, c.newRate)));
+        await Promise.all(changes.map(c => milPatchJourneyAmount(c.id, c.newAmount, c.newRate)));
       } catch (err) { console.warn('Recompute patch failed (non-fatal):', err);
         toast('Journey saved, but rate recalc could not sync — refresh to retry', 'warning', 5000);
       }
@@ -13249,7 +13252,7 @@ async function milAddJourney(ev) {
     document.getElementById('milForm').reset();
     milSetDefaultDate();
     milSetDefaultDriver();
-    toast(`Journey added — ${milFmt(data.amount)} reimbursement`, 'success');
+    toast(`Journey added — ${milFmt(MIL.journeys.find(j => j.id === res.id)?.amount ?? data.amount)} reimbursement`, 'success');
   } catch (err) {
     console.error('Add journey failed:', err);
     toast('Could not save journey: ' + (err.message || 'unknown error'), 'error', 5000);
@@ -13816,6 +13819,11 @@ async function milRefreshData(silent = false) {
     } else {
       toast('Could not load mileage data: ' + (err.message || 'unknown error'), 'error', 6000);
     }
+    // Nothing loaded yet: say so in the table instead of leaving "Loading journeys…" up forever.
+    if (!MIL.journeys.length) {
+      const body = document.getElementById('milLogBody');
+      if (body) body.innerHTML = `<tr><td colspan="10">${sectionErrorHtml(err, 'milRefreshData', 'state-error')}</td></tr>`;
+    }
   } finally {
     refreshBtn.classList.remove('spinning');
     refreshBtn.disabled = false;
@@ -14155,11 +14163,24 @@ async function cliCascadeServiceRename(oldName, newName) {
   // We need actual service IDs, which we have on PRF.services if loaded;
   // otherwise re-fetch fresh. Safer to always re-fetch here — small list.
   const items = await clientListItems('gecko_services', CLI.siteId, CLI.listIds.services, 2000);
-  const linked = items.filter(it => (it.fields?.ClientName || '') === oldName);
+  const linked = items.filter(it => cliKey(it.fields?.ClientName) === cliKey(oldName));
   await Promise.all(linked.map(it =>
     clientListPatch('gecko_services', CLI.siteId, CLI.listIds.services, it.id, { ClientName: newName })
   ));
   return linked.length;
+}
+
+// Everything else on the database is filed under the client's name too (client page, Jobs,
+// Opportunities); a rename moves those rows with it, or the client page comes up empty.
+// Returns the tables that could not be updated (named in the toast), never throws.
+const CLI_NAMED_TABLES = ['client_contacts', 'client_activity', 'client_profiles', 'jobs', 'opportunities',
+  'voip_dealer_services', 'client_domains', 'client_product_status', 'client_signals'];
+async function cliCascadeDbRename(oldName, newName) {
+  let sb;
+  try { sb = await window.GeckoStore.connect({ interactive: true }); } catch { return CLI_NAMED_TABLES; }
+  const results = await Promise.all(CLI_NAMED_TABLES.map(t =>
+    sb.from(t).update({ client_name: newName }).eq('client_name', oldName).then(r => r.error ? t : null, () => t)));
+  return results.filter(Boolean);
 }
 
 
@@ -14613,6 +14634,10 @@ async function cliSaveClient(id) {
         if (cnt > 0) {
           toast(`Renamed — ${cnt} service${cnt === 1 ? '' : 's'} re-linked`, 'info', 3500);
         }
+        const failed = await cliCascadeDbRename(oldName, name);
+        if (failed.length) {
+          toast(`Renamed, but these still use "${oldName}": ${failed.join(', ')}. Rename back and try again.`, 'error', 9000);
+        }
       }
       toast(`Updated "${name}"`, 'success');
     } else {
@@ -14662,15 +14687,17 @@ async function cliDoDeleteClient(id) {
   showLoading(true);
   try {
     const items = await clientListItems('gecko_services', CLI.siteId, CLI.listIds.services, 2000);
-    const linked = items.filter(it => (it.fields?.ClientName || '') === client.name);
+    const linked = items.filter(it => cliKey(it.fields?.ClientName) === cliKey(client.name));
 
     // Delete services first so an interrupted delete doesn't leave orphans
+    let failed = 0;
     for (const it of linked) {
       try {
         await clientListDelete('gecko_services', CLI.siteId, CLI.listIds.services, it.id);
-      } catch (err) { console.warn('Delete service failed (continuing):', err);
+      } catch (err) { console.warn('Delete service failed (continuing):', err); failed++;
       }
     }
+    if (failed) throw new Error(`${failed} service line${failed === 1 ? '' : 's'} could not be deleted; the client was kept`);
     await cliDeleteClientApi(id);
     toast(`Deleted "${client.name}"`, 'success');
     cliCloseModal();
@@ -15274,7 +15301,10 @@ async function tshResolveGone(how) {
   if (!ids.length) return;
   const rows = ids.map(id => TSH.db.entries.find(e => e.id === id)).filter(Boolean);
   const hours = rows.reduce((t, r) => t + Number(r.hours), 0);
+  if (TSH.resolvingGone) return;   // a second click would apply every row's hours twice
   if (how === 'remove' && !confirm(`Remove ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'} (${tshFmtHours(hours)}) here too? The client balances move by the same hours.`)) return;
+  TSH.resolvingGone = true;
+  TSH.sync.gone = [];
   try {
     for (const r of rows) {
       if (how === 'remove') {
@@ -15282,16 +15312,19 @@ async function tshResolveGone(how) {
         await tshPush(await T.updateEntry(r.id, { deleted_at: new Date().toISOString(), sp_state: 'pending', sp_delta: Number(r.sp_delta || 0) - Number(r.hours) }));
       } else {
         // Re-created in Lists; its flow will add the hours again, which Hours Used there already has.
+        // Take them off first: if the copy then fails, the next load creates the item (and the flow
+        // adds the hours) without anyone needing to remember the compensation.
+        const client = TSH.db.clients.find(c => String(c.id) === String(r.client_id));
+        if (!client?.sharepoint_id) throw new Error(`no Lists client for entry ${r.id}`);
+        await tshSpUsedDelta(client.sharepoint_id, -Number(r.hours));
         await tshPush(await T.updateEntry(r.id, { sharepoint_id: null, sp_state: 'pending' }));
-        const back = await T.loadAll();
-        const now = back.entries.find(e => e.id === r.id);
-        const client = back.clients.find(c => String(c.id) === String(r.client_id));
-        if (now?.sharepoint_id && client) await tshSpUsedDelta(client.sharepoint_id, -Number(r.hours));
       }
     }
     toast(how === 'remove' ? 'Removed' : 'Put back in Lists', 'success');
   } catch (err) {
     toast('Could not finish: ' + (err.message || err), 'error', 7000);
+  } finally {
+    TSH.resolvingGone = false;
   }
   tshRefreshData(true);
 }
@@ -15415,6 +15448,7 @@ async function tshRefreshData(silent = false) {
     }
     await tshLoadLeave();
     TSH.lastSync = new Date();
+    TSH.loadError = null;
     tshPopulateClientDropdown();
     tshRenderAll();
     const last = document.getElementById('tshLastSync');
@@ -15433,6 +15467,8 @@ async function tshRefreshData(silent = false) {
     } else {
       toast('Could not load timesheets: ' + (err.message || 'unknown error'), 'error', 6000);
     }
+    // Never loaded: every tab says so, instead of "No entries" and a week of gaps.
+    if (!TSH.lastSync) { TSH.loadError = err; tshRenderAll(); }
   } finally {
     if (refreshBtn) { refreshBtn.classList.remove('spinning'); refreshBtn.disabled = false; }
     showLoading(false);
@@ -15915,6 +15951,11 @@ document.addEventListener('click', e => {
   if (st && window.GeckoWeekly) { TSH.cardWeek = window.GeckoWeekly.addDays(TSH.cardWeek, 7 * Number(st.dataset.tcStep)); tshRenderCard(); }
 });
 
+/** The load error box while nothing has loaded yet, else ''. */
+function tshLoadErrorHtml() {
+  return TSH.loadError && !TSH.lastSync ? sectionErrorHtml(TSH.loadError, 'tshRefreshData', 'state-error') : '';
+}
+
 function tshRenderAll() {
   if (TSH.activeTab === 'log') tshRenderLog();
   else if (TSH.activeTab === 'ssa') tshRenderSsa();
@@ -15926,6 +15967,8 @@ function tshRenderAll() {
 function tshRenderLog() {
   const wrap = document.getElementById('tshLogWrap');
   if (!wrap) return;
+  const failed = tshLoadErrorHtml();
+  if (failed) { wrap.innerHTML = failed; const card = tshEl('tshCard'); if (card) card.innerHTML = ''; return; }
   tshRenderQuick();
   tshRenderCard();
   const rows = tshFilteredEntries();
@@ -16054,6 +16097,8 @@ function tshRenderSsaGrid() {
 function tshRenderSsa() {
   const wrap = document.getElementById('tshSsaWrap');
   if (!wrap) return;
+  const failed = tshLoadErrorHtml();
+  if (failed) { wrap.innerHTML = failed; return; }
   let board;
   try { board = tshSsaBoard(); }
   catch (err) { wrap.innerHTML = `<div class="state-error"><h3>Could not show the SSA dashboard</h3><p>${escapeHtml(err.message)}</p></div>`; return; }
@@ -16221,6 +16266,12 @@ function tshOpenRenew(clientId, fresh = false) {
     tshRenewRender();   // in progress, or done with Undo still on offer: show it, never start a second silently
     return;
   }
+  // One renewal at a time: its steps and email read TSH.renew, so a second client would take them over.
+  if (TSH.renew?.running && TSH.renew.clientId !== String(clientId)) {
+    toast(`Finish the ${TSH.renew.name} renewal first`, 'warning');
+    tshRenewRender();
+    return;
+  }
   const c = TSH.ssaClients.find(x => String(x.id) === String(clientId));
   if (!c) { toast('Client not found — click Refresh', 'error'); return; }
   TSH.renew = { clientId: String(clientId), dbId: c.dbId ?? null, name: c.name, blocks: 1, started: false, finished: false, steps: {},
@@ -16354,21 +16405,26 @@ async function tshRenewMailPermission() {
 async function tshRenewGo() {
   const R = window.SsaRenewal;
   const r = TSH.renew;
-  if (!r || r.started) return;
-  if (!(await tshRenewMailPermission())) return;   // before anything is written
+  // r.checking is set before the first await: a double click must not get past here twice.
+  if (!r || r.started || r.checking) return;
   const blocks = R.validBlocks(r.blocks);
   if (!blocks) return;
   const credit = R.creditEntry(blocks);
   const creditHours = -credit.hours;
-
-  // Guard against a double click or a second person renewing at the same time.
+  r.checking = true;
   try {
-    const recent = (await tshFetchClientEntries(r.clientId))
-      .filter(e => e.hours < 0 && e.created && Date.now() - Date.parse(e.created) < 15 * 60000);
-    if (recent.length && !confirm(`${r.name} already had a credit added ${Math.round((Date.now() - Date.parse(recent[0].created)) / 60000)} minutes ago. Add another +${creditHours} hours anyway?`)) return;
-  } catch (err) {
-    toast('Could not check recent credits: ' + (err.message || 'unknown error') + '. Nothing was added.', 'error', 6000);
-    return;
+    if (!(await tshRenewMailPermission())) return;   // before anything is written
+    // Guard against a second person renewing at the same time.
+    try {
+      const recent = (await tshFetchClientEntries(r.clientId))
+        .filter(e => R.isCredit(e) && e.created && Date.now() - Date.parse(e.created) < 15 * 60000);
+      if (recent.length && !confirm(`${r.name} already had a credit added ${Math.round((Date.now() - Date.parse(recent[0].created)) / 60000)} minutes ago. Add another +${creditHours} hours anyway?`)) return;
+    } catch (err) {
+      toast('Could not check recent credits: ' + (err.message || 'unknown error') + '. Nothing was added.', 'error', 6000);
+      return;
+    }
+  } finally {
+    r.checking = false;
   }
 
   r.started = true; r.running = true;
@@ -16417,8 +16473,8 @@ async function tshRenewSend(fromGo = false) {
   const R = window.SsaRenewal;
   const r = TSH.renew;
   if (!r || r.emailed || (r.running && !fromGo)) return;
-  if (!fromGo && !(await tshRenewMailPermission())) return;   // "Try again" is a click: ask here
-  r.running = true;
+  r.running = true;   // before the permission await, so a double click on "Try again" can't send twice
+  if (!fromGo && !(await tshRenewMailPermission())) { r.running = false; tshRenewRender(); return; }   // "Try again" is a click: ask here
   try {
     const client = await tshFetchClientRow(r.clientId);
     if (r.steps.applied?.state !== 'done') {
@@ -16729,6 +16785,8 @@ const tshDayLbl = (k, o) => new Date(k + 'T00:00:00').toLocaleDateString('en-GB'
 function tshRenderWeekly() {
   const wrap = document.getElementById('tshWeekWrap');
   if (!wrap) return;
+  const failed = tshLoadErrorHtml();
+  if (failed) { wrap.innerHTML = failed; return; }
   const W = window.GeckoWeekly;
   if (!W) { wrap.innerHTML = '<div class="state-error"><h3>Could not show the summary</h3><p>The page did not finish loading. Hard-refresh (Cmd+Shift+R).</p></div>'; return; }
   const t = today();
@@ -17448,8 +17506,12 @@ async function levSaveEdit(id) {
   const startDate = document.getElementById('levEditStart')?.value || '';
   const endDate = document.getElementById('levEditEnd')?.value || startDate;
   const hours = Number(document.getElementById('levEditHours')?.value) || 0;
-  const status = levIsPhilip() ? (document.getElementById('levEditStatus')?.value || existing.status) : existing.status;
   const notes = document.getElementById('levEditNotes')?.value.trim() || '';
+  // Changing who, when or how long on approved leave sends it back to Philip; notes and type don't.
+  const changed = person !== existing.person || startDate !== existing.startDate || endDate !== existing.endDate || hours !== Number(existing.hours);
+  const reapprove = !levIsPhilip() && existing.status === 'Approved' && changed;
+  const status = levIsPhilip() ? (document.getElementById('levEditStatus')?.value || existing.status)
+    : reapprove ? 'Pending' : existing.status;
 
   if (!startDate || !endDate) { toast('Start and end dates are required', 'warning'); return; }
   if (endDate < startDate) { toast('End date cannot be before start date', 'warning'); return; }
@@ -17475,7 +17537,13 @@ async function levSaveEdit(id) {
   try {
     await levPatchRequest(id, patch);
     levCloseModal();
-    toast('Leave request updated', 'success');
+    if (reapprove) {
+      let emailSent = false;
+      try { await levSendApprovalEmail({ ...existing, person, startDate, endDate, hours, notes, requestedBy: levUserLabel() }); emailSent = true; }
+      catch (mailErr) { console.warn('Leave approval email failed:', mailErr); }
+      toast(emailSent ? 'Dates changed, so it is back with Philip to approve (he has been emailed)'
+        : 'Dates changed, so it is back with Philip to approve. The email to him could not be sent.', emailSent ? 'success' : 'warning', 6500);
+    } else toast('Leave request updated', 'success');
     await levRefreshData(true);
   } catch (err) {
     console.error('Edit leave failed:', err);
@@ -17636,6 +17704,7 @@ async function levApprove(id) {
 async function levReject(id) {
   if (!levIsPhilip()) { toast('Only Philip can reject leave', 'warning'); return; }
   const reason = prompt('Optional rejection note');
+  if (reason === null) return;   // Cancel backs out; OK with nothing typed still rejects
   const req = LEV.requests.find(r => String(r.id) === String(id));
   showLoading(true);
   try {
@@ -17691,7 +17760,9 @@ function levSetFilter(filter, btn) {
 function levSummaryFor(person) {
   const taxYear = LEV.selectedTaxYear;
   const entitlement = levEntitlementFor(person, taxYear);
-  const rows = LEV.requests.filter(r => r.person === person && levRequestOverlapsTaxYear(r, taxYear) && r.leaveType === 'Annual Leave');
+  // Counted once, in the tax year it starts (as TaxYear is saved); a booking across 5/6 April would
+  // otherwise come off both years' allowance.
+  const rows = LEV.requests.filter(r => r.person === person && levTaxYearForDate(r.startDate) === taxYear && r.leaveType === 'Annual Leave');
   const approved = rows.filter(r => r.status === 'Approved').reduce((a, r) => a + r.hours, 0);
   const pending = rows.filter(r => r.status === 'Pending').reduce((a, r) => a + r.hours, 0);
   return { entitlement, approved, pending, remaining: entitlement - approved };
@@ -18016,7 +18087,9 @@ const CMP_ICONS = {
  * Compute status from DueDate and CompletedDate.
  * Returns: 'Overdue' | 'Due Soon' | 'Current' | 'Not Started'
  */
-function cmpComputeStatus(dueDate, completedDate) {
+function cmpComputeStatus(dueDate, completedDate, recurring = true) {
+  // A one-off item that has been done is done, whatever its due date.
+  if (completedDate && !recurring) return 'Current';
   if (!dueDate) return 'Not Started';
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -18141,7 +18214,7 @@ async function cmpLoadItems() {
       id:              it.id,
       title:           f.Title || '',
       category:        category || 'Other',
-      status:          cmpComputeStatus(dueDate, completedDate), // always recompute
+      status:          cmpComputeStatus(dueDate, completedDate, recurring), // always recompute
       dueDate,
       completedDate,
       clientName:      f.ClientName || '',
@@ -18662,7 +18735,7 @@ async function cmpSaveEdit(id) {
 
   // Find existing item to get completedDate for status computation
   const existing = CMP.items.find(i => i.id === id);
-  const computedStatus = cmpComputeStatus(dueDate, existing?.completedDate || '');
+  const computedStatus = cmpComputeStatus(dueDate, existing?.completedDate || '', recurring);
 
   showLoading(true);
   try {
@@ -18740,15 +18813,18 @@ async function cmpMarkComplete(id) {
   const item = CMP.items.find(i => i.id === id);
   if (!item) { toast('Item not found', 'error'); return; }
 
-  const today = today();
   const fields = {
-    CompletedDate: today
+    CompletedDate: today()
   };
 
   if (item.recurring && item.dueDate) {
     // Calculate new due date: old due date + frequency months
     const oldDue = new Date(item.dueDate + 'T00:00:00');
+    const dayOfMonth = oldDue.getDate();
+    oldDue.setDate(1);
     oldDue.setMonth(oldDue.getMonth() + item.frequencyMonths);
+    // 31 Aug + 6 months is 28/29 Feb, not 3 March.
+    oldDue.setDate(Math.min(dayOfMonth, new Date(oldDue.getFullYear(), oldDue.getMonth() + 1, 0).getDate()));
     const newDue = oldDue.getFullYear() + '-' + String(oldDue.getMonth() + 1).padStart(2, '0') + '-' + String(oldDue.getDate()).padStart(2, '0');
     fields.DueDate = newDue;
     fields.Status = 'Current';
@@ -19046,9 +19122,29 @@ async function setExportBackup() {
         items: await setFetchListItemsForBackup(siteId, list.id)
       };
     }
+    // Most sections live in the database now (their Lists above stop at the switch-over), so the
+    // backup carries every database table too. Xero's invoice copies are left out: Xero has them.
+    backup.database = {};
+    let dbError = '';
+    try {
+      const sb = await geckoStore().connect({ interactive: true });
+      const tables = { staff: 'email', gecko_clients: 'id', gecko_services: 'id', leave_requests: 'id', leave_entitlements: 'id',
+        mileage_journeys: 'id', mileage_clients: 'id', voip_dealer_services: 'id', profit_feed: 'id', opportunity_products: 'key',
+        client_product_status: 'client_name', client_domains: 'id', client_signals: 'domain', opportunities: 'id', xero_pushes: 'id',
+        xero_status: 'id', ssa_clients: 'id', timesheet_entries: 'id', alert_resolutions: 'id', jobs: 'id', client_contacts: 'id',
+        payment_nudges: 'id', month_end_checks: 'id', client_profiles: 'id', prospects: 'id', client_activity: 'id' };
+      for (const [table, key] of Object.entries(tables)) {
+        backup.database[table] = await geckoStore().selectAllPages((from, to) => sb.from(table).select('*').order(key).range(from, to));
+      }
+    } catch (err) {
+      console.error('Backup: database tables failed:', err);
+      dbError = err.message || String(err);
+      backup.databaseError = dbError;
+    }
     const date = today();
     setDownloadJson(`gecko-portal-backup-${date}.json`, backup);
-    toast('Portal backup exported', 'success', 3000);
+    if (dbError) toast('Backup exported, but it is incomplete: not every database table could be read (' + dbError + ')', 'error', 9000);
+    else toast('Portal backup exported (SharePoint lists and database)', 'success', 3000);
     setRenderHealth();
   } catch (err) {
     console.error('Portal backup failed:', err);

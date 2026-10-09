@@ -21,6 +21,10 @@ const requests = [
 const ents = [{ person: 'Jack', tax_year: '2026/27', entitlement_hours: 140, carry_over_hours: 7, adjustment_hours: -3.5 }];
 assert.deepEqual(holiday(requests, ents, 'Jack', '2026/27'), { entitlement: 143.5, booked: 35, pending: 14, remaining: 108.5, days: 15.5 });
 assert.deepEqual(holiday(requests, ents, 'Philip', '2026/27'), { entitlement: 140, booked: 14, pending: 0, remaining: 126, days: 18 }, 'default entitlement');
+// A booking across 5/6 April comes off the year it starts in, once.
+const across = [{ person: 'Philip', start: '2027-04-01', end: '2027-04-09', hours: 35, status: 'Approved', type: 'Annual Leave' }];
+assert.equal(holiday(across, [], 'Philip', '2026/27').booked, 35);
+assert.equal(holiday(across, [], 'Philip', '2027/28').booked, 0);
 
 const cal = calendar(requests, today, { weeks: 2 });
 assert.equal(cal.days.length, 14);

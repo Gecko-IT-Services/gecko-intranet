@@ -51,7 +51,11 @@ export function keyNav(event, attr, pick) {
   event.preventDefault();
   const key = next.getAttribute(attr);
   pick(key);
-  tab.parentElement.parentElement?.querySelector(`[${attr}="${CSS.escape(key)}"]`)?.focus();
+  // pick() may have redrawn the strip, leaving `tab` detached: find the new tab in the page (the visible one).
+  const sel = `.app-tabs [${attr}="${CSS.escape(key)}"]`;
+  const target = tab.isConnected ? tab.parentElement.parentElement?.querySelector(`[${attr}="${CSS.escape(key)}"]`)
+    : [...document.querySelectorAll(sel)].find(el => el.offsetParent) || document.querySelector(sel);
+  target?.focus();
   return true;
 }
 

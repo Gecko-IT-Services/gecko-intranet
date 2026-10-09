@@ -310,7 +310,9 @@ const stale = row => !row || (Date.now() - Date.parse(row.checked_at)) / 8640000
 /** Check email (DNS) and website (PageSpeed) for the given clients. `force` re-checks fresh results too. */
 async function runChecks(clients, { force = false } = {}) {
   if (OPP.checking) return;
-  const sb = await connectSupabase({ interactive: true });
+  let sb;
+  try { sb = await connectSupabase({ interactive: true }); }
+  catch (err) { toast('Could not connect: ' + (err.message || err), 'error', 7000); return; }
   const jobs = [];
   for (const c of clients) {
     if (c.emailDomain && (force || stale(OPP.signals.get(`dns:${c.emailDomain}`)))) jobs.push(['dns', c.emailDomain]);
@@ -371,6 +373,7 @@ async function addOpportunity(clientName, productKey, { draft = false } = {}) {
     else render();
   } catch (err) {
     toast('Could not add: ' + (err.message || err), 'error', 7000);
+    render();   // gives the disabled button back
   }
 }
 
@@ -386,7 +389,9 @@ async function setStatus(clientName, productKey, status) {
 
 async function patchOpp(id, patch) {
   const sb = await connectSupabase({ interactive: true });
-  if (patch.status === 'won' || patch.status === 'lost') patch.closed_at = new Date().toISOString();
+  // Only a change of status moves closed_at: editing a deal won in August must not make it "won today".
+  const prev = OPP.opps.find(o => o.id === id);
+  if ((patch.status === 'won' || patch.status === 'lost') && prev?.status !== patch.status) patch.closed_at = new Date().toISOString();
   if (patch.status === 'idea' || patch.status === 'proposed') patch.closed_at = null;
   const row = must(await sb.from('opportunities').update(patch).eq('id', id).select('*').single());
   OPP.opps = OPP.opps.map(o => (o.id === id ? row : o));
@@ -405,11 +410,15 @@ async function draftEmail(id) {
   const c = findClient(o.client_name) || {};
   // Client-facing findings, worked out afresh; o.evidence is our own notes and never goes out.
   const found = c.name && findProduct(o.product_key) ? evaluate(analyse(c).client, findProduct(o.product_key)) : null;
+  // default_mrr is the pipeline value (commission for dealer products), never a price to quote: when the
+  // product has no client price and the deal still carries that default, the email says no figure.
+  const prod = findProduct(o.product_key);
+  const mrr = prod && (prod.unit_price == null || prod.unit_price === '') && Number(o.mrr) === Number(prod.default_mrr) ? 0 : o.mrr;
   const mail = fillTemplate(p, {
     client: o.client_name,
     firstName: String(c.contactName || '').split(/\s+/)[0],
     findings: found?.findings || [],
-    mrr: o.mrr, oneOff: o.one_off, quantity: o.quantity,
+    mrr, oneOff: o.one_off, quantity: o.quantity,
     sender: myName() ? `Kind regards,\n${myName()}\nGecko IT Services` : 'Kind regards,\nGecko IT Services'
   });
   try {
@@ -421,10 +430,17 @@ async function draftEmail(id) {
         toRecipients: c.contact ? [{ emailAddress: { address: c.contact } }] : []
       })
     });
+  } catch (err) {
+    toast('Could not create the draft: ' + (err.message || err), 'error', 8000);
+    render();
+    return;
+  }
+  // The draft exists now: a failure below must not read as "no draft" (a second click would make another).
+  try {
     await patchOpp(id, { status: o.status === 'idea' ? 'proposed' : o.status, next_step: 'Draft in Outlook: check, then send' });
     toast(c.contact ? `Draft to ${c.contact} saved in your Outlook Drafts` : 'Draft saved in your Outlook Drafts (no contact email on file: add the recipient)', 'success', 6000);
   } catch (err) {
-    toast('Could not create the draft: ' + (err.message || err), 'error', 8000);
+    toast('Draft saved in your Outlook Drafts, but the deal wasn’t moved to Proposed: ' + (err.message || err), 'warning', 9000);
   } finally {
     render();
   }
@@ -905,9 +921,11 @@ async function patchProspect(id, patch) {
 async function convertProspect(id) {
   const p = OPP.prospects.find(x => x.id === id);
   if (!p) return;
-  const sb = await connectSupabase({ interactive: true });
-  let names;
-  try { names = must(await sb.from('gecko_clients').select('title')).map(c => c.title); }
+  let sb, names;
+  try {
+    sb = await connectSupabase({ interactive: true });
+    names = must(await sb.from('gecko_clients').select('title')).map(c => c.title);
+  }
   catch (err) { toast('Could not check the client list: ' + (err.message || err), 'error', 7000); return; }
   const plan = conversion(p, [...names, ...OPP.clients.map(c => c.name)], todayKey(), myName());
   if (plan.error) { toast(plan.error, 'warning', 8000); return; }
@@ -955,6 +973,7 @@ function dealerHtml() {
 }
 
 async function saveDealer(id, f) {
+  if (OPP.savingDealer) return;   // a double click on Add would insert the line twice
   const patch = {
     service: f.service.value, quantity: Math.max(0, parseInt(f.quantity.value, 10) || 0), contract: f.contract.value
   };
@@ -967,6 +986,7 @@ async function saveDealer(id, f) {
     patch.extras = f.extras.value.trim();
     patch.notes = f.notes.value.trim();
   }
+  OPP.savingDealer = true;
   try {
     const sb = await connectSupabase({ interactive: true });
     if (id === 'new') OPP.dealer.push(must(await sb.from('voip_dealer_services').insert(patch).select('*').single()));
@@ -977,6 +997,7 @@ async function saveDealer(id, f) {
     toast('Saved', 'success');
     load();   // gaps depend on the dealer list
   } catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
+  finally { OPP.savingDealer = false; }
 }
 
 function dealUnits(o) {
@@ -1022,7 +1043,7 @@ async function onClick(event) {
   if (act === 'checkall') { runChecks(OPP.clients); return; }
   if (act === 'checkone') { runChecks([findClient(client)], { force: true }); return; }
   if (act === 'adddomain') { addDomain(client, document.querySelector(`[data-opp-domain="${CSS.escape(client)}"]`)?.value); return; }
-  if (act === 'add') { addOpportunity(client, product); return; }
+  if (act === 'add') { btn.disabled = true; addOpportunity(client, product); return; }   // a double click would add it twice
   if (act === 'draft') { btn.disabled = true; addOpportunity(client, product, { draft: true }); return; }
   if (act === 'has') { setStatus(client, product, 'has'); return; }
   if (act === 'notint') { setStatus(client, product, 'not_interested'); return; }

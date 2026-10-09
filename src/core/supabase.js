@@ -48,7 +48,12 @@ export async function sha256Hex(text) {
  * `interactive` must only be true inside a click handler (it may open a popup).
  */
 export function connectSupabase({ interactive = false } = {}) {
-  connectPromise ??= connect(interactive).finally(() => { connectPromise = null; });
+  // A click never joins a background (silent) attempt: that one can only end in "needs a click",
+  // and the popup has to open from this click. Later callers join the click's attempt instead.
+  if (interactive || !connectPromise) {
+    const p = connect(interactive).finally(() => { if (connectPromise === p) connectPromise = null; });
+    connectPromise = p;
+  }
   return connectPromise;
 }
 

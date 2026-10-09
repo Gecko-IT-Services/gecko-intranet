@@ -47,8 +47,14 @@ export async function staffEmail(req: Request): Promise<string | null> {
   for (const apikey of keys) {
     const user = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`, { headers: { authorization: auth, apikey } });
     if (!user.ok) { console.error(`staff check: auth/v1/user ${user.status} with key ${apikey.slice(0, 14)}…`); continue; }
-    const email = String((await user.json())?.email || '').toLowerCase();
+    const u = await user.json();
+    const email = String(u?.email || '').toLowerCase();
     if (!email) return null;
+    // Same rule as is_gecko_staff(): only a Microsoft (azure) sign-in counts, never an email sign-up.
+    if (!(u?.identities || []).some((i: { provider?: string }) => i.provider === 'azure')) {
+      console.error(`staff check: ${email} has no Microsoft sign-in`);
+      return null;
+    }
     const [row] = await sql`select 1 from public.staff where email = ${email}`;
     if (!row) console.error(`staff check: ${email} is not in public.staff`);
     return row ? email : null;
@@ -114,16 +120,23 @@ export async function connect(code: string, email: string) {
 
 /** A valid access token. Xero refresh tokens rotate: the new one is saved before anything else. */
 async function accessToken() {
+  const fresh = (row: Record<string, unknown>) => row.access_token && row.access_expires &&
+    new Date(row.access_expires as string) > new Date(Date.now() + 60000);
   const [row] = await sql`select * from private.xero_tokens where id = 1`;
   if (!row) throw new Error('Xero is not connected');
-  if (row.access_token && row.access_expires && new Date(row.access_expires) > new Date(Date.now() + 60000)) {
-    return { token: row.access_token as string, tenant: row.tenant_id as string };
-  }
-  const t = await tokenRequest({ grant_type: 'refresh_token', refresh_token: row.refresh_token });
-  const expires = new Date(Date.now() + (t.expires_in - 60) * 1000);
-  await sql`update private.xero_tokens set refresh_token = ${t.refresh_token}, access_token = ${t.access_token},
-            access_expires = ${expires} where id = 1`;
-  return { token: t.access_token, tenant: row.tenant_id as string };
+  if (fresh(row)) return { token: row.access_token as string, tenant: row.tenant_id as string };
+  // Refresh under a row lock: two calls refreshing with the same (rotating) refresh token at once
+  // would leave the loser's token stored and every later sync failing until Xero is reconnected.
+  return await sql.begin(async tx => {
+    const [locked] = await tx`select * from private.xero_tokens where id = 1 for update`;
+    if (!locked) throw new Error('Xero is not connected');
+    if (fresh(locked)) return { token: locked.access_token as string, tenant: locked.tenant_id as string };
+    const t = await tokenRequest({ grant_type: 'refresh_token', refresh_token: locked.refresh_token });
+    const expires = new Date(Date.now() + (t.expires_in - 60) * 1000);
+    await tx`update private.xero_tokens set refresh_token = ${t.refresh_token}, access_token = ${t.access_token},
+             access_expires = ${expires} where id = 1`;
+    return { token: t.access_token, tenant: locked.tenant_id as string };
+  });
 }
 
 /** POST to Xero; its validation messages are returned as the error. */
@@ -367,11 +380,14 @@ export async function createDraft(r: DraftRequest, email: string) {
   if (!claimed.length) {
     const [prev] = await sql`select state, invoice_id, invoice_number, error from public.xero_pushes where request_key = ${r.request_key}`;
     if (prev?.state === 'done') return { invoice_id: prev.invoice_id, invoice_number: prev.invoice_number, repeat: true };
-    if (prev?.state === 'pending') throw new Error('This invoice is already being created; refresh in a moment');
-    // A failed attempt may be retried with the same key (Xero's idempotency covers a half-done call).
-    await sql`update public.xero_pushes set state = 'pending', error = '', contact_id = ${contact.id}, contact_name = ${contact.name},
+    // A failed attempt, or one that died mid-way (pending for over 5 minutes), may be retried with the
+    // same key: Xero's idempotency returns the original invoice if the first call got through.
+    // Conditional, so two retries at once can't both go ahead.
+    const retry = await sql`update public.xero_pushes set state = 'pending', error = '', created_at = now(), contact_id = ${contact.id}, contact_name = ${contact.name},
               item_code = ${item.code}, account_code = ${item.account}, description = ${description}, quantity = ${quantity}, amount = ${amount}
-              where request_key = ${r.request_key}`;
+              where request_key = ${r.request_key}
+                and (state = 'failed' or (state = 'pending' and created_at < now() - interval '5 minutes')) returning id`;
+    if (!retry.length) throw new Error('This invoice is already being created; refresh in a moment');
   }
   try {
     const [terms] = await sql`select (due_date - invoice_date) as days from public.xero_invoices
@@ -387,12 +403,18 @@ export async function createDraft(r: DraftRequest, email: string) {
     }] }, r.request_key);
     const inv = body?.Invoices?.[0];
     if (!inv?.InvoiceID) throw new Error('Xero did not return the invoice');
-    await saveInvoice(inv);
+    // The draft exists in Xero now: record that first, so a failure below never marks it 'failed'
+    // (which would invite a second draft from a fresh dialog).
     await sql`update public.xero_pushes set state = 'done', invoice_id = ${inv.InvoiceID}, invoice_number = ${inv.InvoiceNumber || ''},
               done_at = now() where request_key = ${r.request_key}`;
-    if (inv.InvoiceNumber && jobId != null) {
-      await sql`update public.jobs set invoice_ref = case when invoice_ref = '' then ${inv.InvoiceNumber}
-                  else invoice_ref || ', ' || ${inv.InvoiceNumber} end where id = ${jobId}`;
+    try {
+      await saveInvoice(inv);
+      if (inv.InvoiceNumber && jobId != null) {
+        await sql`update public.jobs set invoice_ref = case when invoice_ref = '' then ${inv.InvoiceNumber}
+                    else invoice_ref || ', ' || ${inv.InvoiceNumber} end where id = ${jobId}`;
+      }
+    } catch (err) {
+      console.error('draft created but not filed locally (the hourly sync brings it in):', err);
     }
     return { invoice_id: inv.InvoiceID as string, invoice_number: (inv.InvoiceNumber || '') as string, due, total: amount, repeat: false };
   } catch (err) {

@@ -77,9 +77,16 @@ function ukDisplayDate(key) {
  *
  * entries: [{ id, date, hours, ... }] for ONE client; date as SharePoint gives it.
  */
+/**
+ * A renewal credit: negative hours that aren't a hand "Adjust…" give-back (System entries
+ * described "Adjustment – …"), which must neither end the timesheet nor print as a renewal.
+ */
+export const isAdjustment = e => /^Adjustment\b/i.test(e.description || '') || /^Adjustment\b/i.test(e.workDescription || '');
+export const isCredit = e => e.hours < 0 && !isAdjustment(e);
+
 export function timesheetEntries(entries) {
   const withKey = entries.map(e => ({ ...e, dateKey: ukDateKey(e.date), idNum: Number(e.id) }));
-  const credits = withKey.filter(e => e.hours < 0)
+  const credits = withKey.filter(isCredit)
     .sort((a, b) => (b.dateKey.localeCompare(a.dateKey)) || (b.idNum - a.idNum));
   const prev = credits.length >= 2 ? credits[1] : null;
   const picked = prev
@@ -92,7 +99,7 @@ function fmtHours(h) { return (Math.round(h * 100) / 100).toFixed(2); }
 
 /** One email row, worded as the flow words it. */
 export function emailRow(e) {
-  const credit = e.hours < 0;
+  const credit = isCredit(e);
   const credited = -e.hours;
   return {
     date: ukDisplayDate(e.dateKey || ukDateKey(e.date)),

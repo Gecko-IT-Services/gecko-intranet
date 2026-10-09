@@ -51,6 +51,7 @@ const clean = monthEnd({ inv: [], rep: [], jobs: [], journeys: [], ssa: [], leav
 assert.equal(clean.done, clean.total, 'nothing to do: everything ticks itself (no gaps before the 1st)');
 const none = monthEnd({}, today);
 assert.ok(none.items.filter(i => !i.manual).every(i => i.state === 'check'), 'sources that did not load are never ticked');
+assert.equal(none.total, clean.total, 'a source that did not load still has its items, as "check"');
 
 const gaps = timesheetGaps([{ engineer: 'Philip', date: '2026-10-01' }, { engineer: 'Jack', date: '2026-10-01' }], data.leave, '2026-10-12');
 assert.deepEqual(gaps.Philip, ['2026-10-02', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09']);

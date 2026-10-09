@@ -96,7 +96,8 @@ assert.equal(by.leave.title, '1 leave request to approve', 'past pending request
 assert.match(by.leave.detail, /Jack 12–13 Oct/);
 assert.equal(by.mileage.title, '£22.50 mileage not yet claimed', 'claimed and this month left out');
 assert.equal(by.mileage.level, 'info');
-assert.equal(by.proposals.title, '1 proposal with no update for 14 days');
+assert.equal(by.proposals, undefined, 'a quiet proposal is listed once, as a quiet deal');
+assert.match(by.deal_quiet.title, /quiet for 2\+ weeks/);
 
 assert.equal(attention({ xero: { connected: false } }, today, now)[0].title, 'Xero isn’t connected');
 assert.equal(attention({ xero: { connected: true, last_sync_ok: false, last_error: 'Token expired' } }, today, now)[0].detail, 'Token expired');
