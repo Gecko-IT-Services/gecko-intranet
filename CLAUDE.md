@@ -53,6 +53,11 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   (`src/core/tabs.js`, `.app-tabs` in `src/styles/app.css`). Any client name → `clientLink(name)` →
   that client's page (`src/sections/client.js`). Navigate with `geckoGo(section, tab)`.
   Design: `2026-10-09-gecko-hq-structure-design.md` (workflow answers and the stage plan).
+- Design system (10 Oct 2026, `2026-10-10-design-consistency-design.md`): `src/styles/system.css`
+  loads last and is anchored on `#app`; it defines the header actions row (Refresh + "Synced HH:MM"),
+  `.btn` family (`btn-primary` ink, `btn-ghost`, `btn-danger`, `btn-success`, `btn-sm`), hairline figure
+  panels, error vs empty boxes and `.badge`. New UI uses these classes; never add a bespoke button,
+  pill or KPI card. Sentence case for all labels.
 - Mobile: tables with ≥4 columns are turned into stacked cards by a container
   query (`syncTableLabels()` marks them `data-rt`); tab strips are scroll rails.
   Anything new inside a card-mode table must be covered too (see the `tfoot`
