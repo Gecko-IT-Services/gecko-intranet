@@ -20,10 +20,46 @@
 #section-alerts .alr-card { padding: 0; overflow: hidden; }
 #section-alerts .alr-row.alr-noise { opacity: .75; }
 
-/* — Row actions (.btn-sm) and the draft modal (modal shell from projects.css) — */
+/* — Row actions (.btn-sm) and the draft modal — */
 #section-alerts .bkp-mono a.bkp-sub { color: var(--muted); text-decoration: underline; }
-.alr-modal { width: min(640px, 100%); }
+.alr-backdrop {
+  position: fixed; inset: 0;
+  z-index: var(--z-modal);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background: var(--overlay);
+  overflow-y: auto;
+}
+.alr-backdrop[hidden] { display: none; }
+.alr-modal {
+  width: min(640px, 100%);
+  padding: 22px;
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+}
+.alr-modal h3 { margin: 0 0 16px; font-size: 16px; color: var(--white); }
 .alr-modal textarea { min-height: 260px; line-height: 1.5; }
+.alr-form { display: flex; flex-direction: column; gap: 12px; }
+.alr-form label {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: 11px; color: var(--faint);
+}
+.alr-form input,
+.alr-form select,
+.alr-form textarea {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-sm);
+  background: var(--inset);
+  color: var(--white);
+  font: inherit; font-size: 14px;
+}
+.alr-form textarea { resize: vertical; }
+.alr-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+.alr-form-actions .btn-danger { margin-right: auto; }
 #section-alerts .alr-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 #section-alerts .alr-back { margin-top: 4px; display: inline-block; }
 #section-alerts .alr-toggles { display: inline-flex; gap: 16px; flex-wrap: wrap; }

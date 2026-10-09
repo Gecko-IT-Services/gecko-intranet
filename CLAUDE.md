@@ -167,7 +167,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   (how it adds up, still to come, invoiced by client, six months, the Xero line) · **Owed to us**. Old tab keys passed to
   `show()` (`overview`, `tocome`, `invoiced`, `xero`) open This month.
   Chart colours Gecko Green (recurring) & Indigo (one-off), striped = still to come (`--viz-*`). Replaces the old Projects board
-  (off the menu since 6 Oct; its import link is gone).
+  (off the menu since 6 Oct; its code was removed 9 Oct).
 - "Sales this month" reads Xero from the feed: invoiced so far + repeating invoices not yet raised
   (last month's recurring contacts missing this month) + jobs to invoice + jobs due this month.
   VoIP Unlimited commission is excluded. Since Xero phase 2 this reads Xero directly (below); the

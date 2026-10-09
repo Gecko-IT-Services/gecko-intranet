@@ -19,7 +19,7 @@
 
 /* ── 1 · Header actions ─────────────────────────────────────────────── */
 #app :is(.ovw-head-actions, .prf-head-actions, .mil-head-actions, .cli-head-actions, .tsh-head-actions,
-         .lev-head-actions, .cmp-head-actions, .prj-head-actions, .bkp-head-actions, .alr-head-actions,
+         .lev-head-actions, .cmp-head-actions, .bkp-head-actions, .alr-head-actions,
          .pnl-actions, .head-actions) {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px;
 }
@@ -27,7 +27,7 @@
 /* Every Refresh (and the plain controls beside it) is the default .btn. */
 #app .section-head :is(.ovw-refresh, .prf-refresh, .prf-manage-link, .prf-export-btn, .mil-refresh,
                        .cli-refresh, .tsh-refresh, .lev-refresh, .cmp-refresh,
-                       .prj-refresh, .bkp-refresh, .head-btn) {
+                       .bkp-refresh, .head-btn) {
   display: inline-flex; align-items: center; gap: 7px;
   min-height: 34px; padding: 7px 14px; border-radius: var(--radius-pill);
   border: 1px solid var(--border-dim); background: var(--panel); color: var(--muted);
@@ -36,11 +36,11 @@
               transform var(--dur-1) var(--ease);
 }
 #app .section-head :is(.ovw-refresh, .prf-refresh, .prf-manage-link, .prf-export-btn, .mil-refresh,
-                       .cli-refresh, .tsh-refresh, .lev-refresh, .cmp-refresh, .prj-refresh, .bkp-refresh, .head-btn):hover {
+                       .cli-refresh, .tsh-refresh, .lev-refresh, .cmp-refresh, .bkp-refresh, .head-btn):hover {
   background: var(--card-hover); border-color: var(--border); color: var(--white);
 }
 #app .section-head :is(.ovw-refresh, .prf-refresh, .mil-refresh, .cli-refresh, .tsh-refresh, .lev-refresh,
-                       .cmp-refresh, .prj-refresh, .bkp-refresh, .head-btn) svg { width: 13px; height: 13px; flex: none; }
+                       .cmp-refresh, .bkp-refresh, .head-btn) svg { width: 13px; height: 13px; flex: none; }
 
 /* These rules set display, which would beat the hidden attribute (Connect, Copy to Supabase…). */
 #app [hidden] { display: none !important; }
@@ -66,7 +66,7 @@
 
 /* "Synced 09:00" sits straight after Refresh, quiet and mono, everywhere. */
 #app .section-head :is(.ovw-last-sync, .prf-last-sync, .mil-last-sync, .cli-last-sync, .tsh-last-sync,
-                       .lev-last-sync, .cmp-last-sync, .prj-last-sync, .bkp-last-sync, .head-sync) {
+                       .lev-last-sync, .cmp-last-sync, .bkp-last-sync, .head-sync) {
   margin-left: 2px; font: 500 11px var(--font-mono); color: var(--muted); letter-spacing: 0;
 }
 
@@ -134,19 +134,19 @@
 
 
 /* ── 4 · Error state: red-tinted, with its recovery button ─────────── */
-#app :is(.job-error, .opp-error, .prj-error, .bkp-error, .tm-error, .cl-error, .cli-error, .ovw-error, .state-error) {
+#app :is(.job-error, .opp-error, .bkp-error, .tm-error, .cl-error, .cli-error, .ovw-error, .state-error) {
   display: grid; justify-items: center; gap: 6px; text-align: center;
   padding: 24px 22px; border: 1px solid var(--red-border); border-radius: var(--radius);
   background: linear-gradient(var(--red-dim), var(--red-dim)), var(--card); color: var(--muted);
 }
-#app :is(.job-error, .opp-error, .prj-error, .bkp-error, .tm-error, .cl-error, .cli-error, .ovw-error, .state-error) :is(strong, h3) {
+#app :is(.job-error, .opp-error, .bkp-error, .tm-error, .cl-error, .cli-error, .ovw-error, .state-error) :is(strong, h3) {
   display: block; margin: 0; color: var(--red); font: 700 14px/1.4 var(--font-body); letter-spacing: 0; text-transform: none;
 }
 #app :is(.ovw-error, .state-error) p { margin: 0; color: var(--muted); font-size: 13px; }
-#app :is(.job-error, .opp-error, .prj-error, .bkp-error, .tm-error, .cl-error, .state-error) button { margin: 8px 0 0; }
+#app :is(.job-error, .opp-error, .bkp-error, .tm-error, .cl-error, .state-error) button { margin: 8px 0 0; }
 
 /* Empty: quiet text on the card, no tint. */
-#app :is(.job-empty, .opp-empty, .prj-empty, .bkp-empty, .tm-empty, .cl-empty, .state-empty) {
+#app :is(.job-empty, .opp-empty, .bkp-empty, .tm-empty, .cl-empty, .state-empty) {
   padding: 28px 22px; border: 1px solid var(--border-dim); border-radius: var(--radius);
   background: var(--card); color: var(--muted); text-align: center;
 }
@@ -189,10 +189,10 @@
          .bkp-window button, .cli-filter button):active:not(:disabled) { transform: translateY(1px); }
 
 /* Dialogs: the backdrop fades, the panel rises into place. */
-#app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .cmp-modal-bg, .lev-modal-bg, .prj-backdrop) {
+#app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .cmp-modal-bg, .lev-modal-bg, .alr-backdrop) {
   background: var(--overlay); animation: gk-fade var(--dur-2) var(--ease) both;
 }
-#app :is(.prf-modal, .mil-modal, .cli-modal, .tsh-modal, .cmp-modal, .lev-modal, .prj-modal) {
+#app :is(.prf-modal, .mil-modal, .cli-modal, .tsh-modal, .cmp-modal, .lev-modal, .alr-modal) {
   animation: gk-rise var(--dur-3) var(--ease) both;
 }
 

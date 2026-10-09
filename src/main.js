@@ -12,7 +12,6 @@
  *
  * Adding an extracted section later is two lines: import it, register it.
  */
-import * as projects from './sections/projects.js';
 import * as backups from './sections/backups.js';
 import * as alerts from './sections/alerts.js';
 import * as opportunities from './sections/opportunities.js';
@@ -37,7 +36,6 @@ import * as teamCore from './core/team.js';
 import * as profitability from './core/profitability.js';
 
 window.GeckoSections = window.GeckoSections || {};
-window.GeckoSections.projects = { init: projects.init };
 window.GeckoSections.backups  = { init: backups.init };
 window.GeckoSections.alerts   = { init: alerts.init };
 window.GeckoSections.opportunities = { init: opportunities.init, show: opportunities.show, reload: opportunities.reload };
