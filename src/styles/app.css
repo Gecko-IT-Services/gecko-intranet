@@ -37,7 +37,6 @@
 /* Hub strip: one sidebar entry, several sections under it */
 .app-hub { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 16px; }
 .app-hub[hidden] { display: none; }
-.app-hub-title { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 /* Inside a hub the strip names the view, so each section's own long description is dropped. */
 .main.in-hub .section.active > .section-head > p { display: none; }
 

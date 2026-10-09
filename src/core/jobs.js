@@ -17,18 +17,6 @@ const round2 = n => Math.round((Number(n) || 0) * 100) / 100;
 const num = v => (v == null || v === '' ? 0 : Number(v) || 0);
 export const monthOf = d => String(d || '').slice(0, 7);
 
-/** Count and £ value per stage: { quoted: { count, value }, … }. */
-export function stageTotals(jobs) {
-  const out = Object.fromEntries(STAGES.map(([k]) => [k, { count: 0, value: 0 }]));
-  for (const j of jobs) {
-    const s = out[j.status];
-    if (!s) continue;
-    s.count += 1;
-    s.value = round2(s.value + num(j.value));
-  }
-  return out;
-}
-
 /**
  * This month's sales from the Xero feed, and what the month is on course for.
  * - invoiced: Xero invoices dated this month (recurring + one-off), per contact

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { stageTotals, monthSales, salesHistory, previousMonth, STAGES, xeroMonthSales, xeroHistory, repeatDates, jobInvoices, jobRaised, invoiceIndex, owed, invoicedGroups, nudgeInvoices, nudgeEmail } from '../src/core/jobs.js';
+import { monthSales, salesHistory, previousMonth, xeroMonthSales, xeroHistory, repeatDates, jobInvoices, jobRaised, invoiceIndex, owed, invoicedGroups, nudgeInvoices, nudgeEmail } from '../src/core/jobs.js';
 
 assert.equal(previousMonth('2026-01'), '2025-12');
 assert.equal(previousMonth('2026-10'), '2026-09');
@@ -13,10 +13,6 @@ const jobs = [
   { status: 'invoiced', value: 99 },
   { status: 'bogus', value: 1 }
 ];
-const t = stageTotals(jobs);
-assert.equal(Object.keys(t).length, STAGES.length);
-assert.deepEqual(t.in_progress, { count: 2, value: 1300 });
-assert.deepEqual(t.agreed, { count: 1, value: 0 }, 'no value yet counts as £0');
 
 const feed = { xero: {
   months: {

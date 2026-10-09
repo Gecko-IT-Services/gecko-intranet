@@ -25,10 +25,6 @@ export function taxYear(key) {
   const start = y + (key >= `${y}-04-06` ? 0 : -1);
   return `${start}/${String(start + 1).slice(-2)}`;
 }
-export function taxYearBounds(ty) {
-  const y = Number(String(ty).slice(0, 4));
-  return { start: `${y}-04-06`, end: `${y + 1}-04-05` };
-}
 
 /** The first name a record means: "Jack Morris" → "Jack". */
 export const person = name => {
@@ -49,27 +45,6 @@ export function holiday(requests, entitlements, who, ty) {
   const booked = round2(mine.filter(r => r.status === 'Approved').reduce((t, r) => t + Number(r.hours || 0), 0));
   const pending = round2(mine.filter(r => r.status === 'Pending').reduce((t, r) => t + Number(r.hours || 0), 0));
   return { entitlement, booked, pending, remaining: round2(entitlement - booked), days: round2((entitlement - booked) / DAY_HOURS) };
-}
-
-/**
- * The next `weeks` weeks from this Monday: per person, a cell per day:
- * { date, weekend, today, state: 'off' | 'pending' | '', type }.
- */
-export function calendar(requests, today, { weeks = 4 } = {}) {
-  const start = monday(today);
-  const days = Array.from({ length: weeks * 7 }, (_, i) => addDays(start, i));
-  const live = (requests || []).filter(r => r.status === 'Approved' || r.status === 'Pending');
-  return {
-    days,
-    rows: PEOPLE.map(p => ({
-      person: p,
-      cells: days.map(d => {
-        const r = live.find(x => person(x.person) === p && day(x.start) <= d && day(x.end || x.start) >= d);
-        return { date: d, weekend: dow(d) === 0 || dow(d) === 6, today: d === today,
-          state: r ? (r.status === 'Approved' ? 'off' : 'pending') : '', type: r?.type || '' };
-      })
-    }))
-  };
 }
 
 /** Today and next: is each person off today, and their next leave from today. */
