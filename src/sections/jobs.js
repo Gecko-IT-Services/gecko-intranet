@@ -488,12 +488,12 @@ function xeroHtml() {
   const x = JOB.xero;
   if (!x) return '';
   if (!x.connected) {
-    return `<div class="job-panel job-xero"><div class="job-panel-head"><strong>Connect Xero directly</strong></div>
+    return `<div class="job-panel job-xero"><div class="job-panel-head"><strong><span class="xero-mark" role="img" aria-label="Xero"></span>Connect directly</strong></div>
       <button type="button" class="btn btn-primary btn-sm" data-job-act="xero-connect" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Opening Xero…' : 'Connect Xero'}</button></div>`;
   }
   const state = x.last_sync_ok === false ? 'bad' : 'ok';
   return `<div class="job-panel job-xero" data-state="${state}">
-      <div class="job-panel-head"><strong>Xero: ${escapeHtml(x.tenant_name || 'connected')}</strong>
+      <div class="job-panel-head"><strong><span class="xero-mark" role="img" aria-label="Xero"></span>${escapeHtml(x.tenant_name || 'connected')}</strong>
         <span class="job-muted">${x.last_sync_at ? `${x.last_sync_ok === false ? 'Last sync failed' : 'Synced'} ${escapeHtml(when(x.last_sync_at))} · ` : ''}${escapeHtml(String(x.invoices))} invoices, ${escapeHtml(String(x.repeating))} repeating</span></div>
       ${x.last_sync_ok === false ? `<p class="job-note bad">${escapeHtml(x.last_error)}</p>` : ''}
       <div class="job-actions"><button type="button" class="btn btn-sm" data-job-act="xero-sync" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Syncing…' : 'Sync now'}</button>
