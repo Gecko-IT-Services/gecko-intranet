@@ -338,7 +338,6 @@ body {
    as separated surfaces — critical in light theme where white-on-near-white
    otherwise blends into one mass. */
 #section-overview .ovw-card,
-#section-profitability .prf-xero-import,
 #section-clients .cli-card,
 #section-clients .cli-tbl-wrap,
 #section-timesheets .tsh-card,
@@ -1218,107 +1217,13 @@ body {
 /* — Add-service inline trigger row (last row in service table when card open) — */
 #section-profitability .prf-arow td { padding: 8px 14px; }
 
-/* — Xero CSV Import card (Phase 10) — */
-#section-profitability .prf-xero-import {
-  background: var(--card); border: 1px solid var(--border-dim);
-  border-radius: var(--radius); padding: 16px 20px;
-  display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;
-}
-#section-profitability .prf-xero-import h4 {
-  font-family: var(--font-body); font-weight: 700;
-  font-size: 13px; letter-spacing: .07em; text-transform: uppercase;
-  color: var(--white); margin-bottom: 10px;
-  display: flex; align-items: center; gap: 7px;
-}
-#section-profitability .prf-xero-import h4 svg { color: var(--amber); }
-/* Live feed status (2026-10-06) — one line above each import card's body. */
+/* Live feed status (2026-10-06) — the one status line above the table. */
 #section-profitability .prf-feed {
   font-size: 12px; line-height: 1.45; padding: 7px 10px; margin: 0 0 10px;
   border-radius: 6px; border: 1px solid var(--green-line); background: var(--green-glow);
 }
 #section-profitability .prf-feed.warn { border-color: var(--amber-border); background: var(--amber-dim); }
 #section-profitability .prf-feed.bad  { border-color: var(--red); background: var(--red-dim); }
-#section-profitability .prf-feed button { margin-left: 8px; padding: 3px 10px; font-size: 11px; }
-#section-profitability .prf-drop-zone {
-  flex: 1; min-width: 240px;
-  border: 2px dashed var(--border); border-radius: 10px;
-  padding: 22px 18px; text-align: center; cursor: pointer;
-  transition: all .2s ease; position: relative;
-}
-#section-profitability .prf-drop-zone:hover,
-#section-profitability .prf-drop-zone.drag-over {
-  border-color: var(--green); background: var(--green-glow);
-}
-#section-profitability .prf-drop-zone .dz-text {
-  font-size: 12px; color: var(--muted); margin-bottom: 8px;
-}
-#section-profitability .prf-drop-zone .dz-text strong { color: var(--white); }
-#section-profitability .prf-drop-zone .dz-browse {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 12px; border-radius: var(--radius-sm);
-  background: var(--card); border: 1px solid var(--border);
-  color: var(--muted); font-size: 11px; cursor: pointer;
-  font-family: var(--font-body); transition: all .15s;
-}
-#section-profitability .prf-drop-zone .dz-browse:hover { color: var(--green); border-color: var(--green); }
-#section-profitability .prf-drop-zone input[type="file"] {
-  position: absolute; inset: 0; opacity: 0; cursor: pointer;
-}
-
-/* — CSP cost import card (2026-08-13) —
-     Reuses .prf-xero-import for the card shell; only the preview table
-     and its controls are new. — */
-#section-profitability .prf-csp-import { margin-top: 14px; }
-#section-profitability .csp-hint { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
-#section-profitability .csp-month { display: block; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
-#section-profitability .csp-month select {
-  margin-left: 8px; padding: 5px 9px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border-dim); background: var(--inset);
-  color: var(--white); font: inherit; font-size: 12px;
-}
-#section-profitability .csp-preview { max-height: 420px; overflow: auto; margin-top: 12px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); }
-#section-profitability .csp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-#section-profitability .csp-table th {
-  position: sticky; top: 0; background: var(--card); text-align: left;
-  padding: 8px 10px; border-bottom: 1px solid var(--hair);
-  font-weight: 600; color: var(--muted); white-space: nowrap;
-}
-#section-profitability .csp-table td { padding: 7px 10px; border-bottom: 1px solid var(--hair); color: var(--white); }
-#section-profitability .csp-table .csp-num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-#section-profitability .csp-from { color: var(--faint); }
-#section-profitability .csp-up { color: var(--amber); }
-#section-profitability .csp-down { color: var(--green); }
-#section-profitability .csp-same { color: var(--faint); font-family: var(--font-body); }
-#section-profitability .csp-flag {
-  display: inline-block; margin-left: 6px; padding: 1px 7px;
-  border-radius: var(--radius-pill); background: var(--hair);
-  color: var(--faint); font-size: 11px;
-}
-#section-profitability .csp-flag-warn { background: var(--amber-dim); color: var(--amber); }
-#section-profitability .csp-unmatched {
-  margin-top: 10px; padding: 10px 12px; border-radius: var(--radius-sm);
-  background: var(--amber-dim); color: var(--amber); font-size: 12px; line-height: 1.6;
-}
-#section-profitability .csp-actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
-#section-profitability .csp-summary { font-size: 12px; color: var(--muted); margin-right: auto; }
-#section-profitability .csp-clear,
-#section-profitability .csp-apply {
-  padding: 7px 15px; border-radius: var(--radius-pill); font: inherit;
-  font-size: 12px; font-weight: 600; cursor: pointer;
-  transition: opacity var(--dur-2) var(--ease);
-}
-#section-profitability .csp-clear { background: none; border: 1px solid var(--border-dim); color: var(--muted); }
-#section-profitability .csp-apply { background: var(--ink); border: 0; color: var(--on-ink); }
-#section-profitability .csp-apply:hover:not(:disabled),
-#section-profitability .csp-clear:hover { opacity: .85; }
-#section-profitability .csp-apply:disabled { opacity: .45; cursor: not-allowed; }
-#section-profitability .csp-warn {
-  margin-top: 12px; padding: 12px 14px; border-radius: var(--radius-sm);
-  background: var(--red-dim); border: 1px solid var(--red); color: var(--white);
-  font-size: 12px; line-height: 1.6;
-}
-#section-profitability .csp-warn strong { color: var(--red); }
-#section-profitability .csp-warn label { display: block; margin-top: 8px; color: var(--white); }
 
 /* — Month selector (Phase 10) — */
 #section-profitability .prf-month-sel {
@@ -2731,7 +2636,6 @@ body::before {
 #section-overview .ovw-kpi,
 #section-overview .ovw-card,
 #section-profitability .prf-sum-strip,
-#section-profitability .prf-xero-import,
 #section-mileage .mil-quick-card,
 #section-mileage .mil-claim-bar,
 #section-clients .cli-tbl-wrap,
@@ -7638,18 +7542,6 @@ const PRF = {
   modalCb:     null,                             // active modal confirm callback
   selectedMonth:  null,         // 'YYYY-MM' for the month selector (defaults to current month)
   xeroUnmatched:  {},           // { 'YYYY-MM': [{ xeroName, total }] } — Xero contacts on no client, from the feed
-  // CSP cost import (2026-08-13)
-  csp: {
-    imported:  false,   // a file has been parsed this session
-    month:     '',      // 'YYYY-MM' the user confirmed the export covers
-    rows:      [],      // [{ csvName, client, service, oldCost, newCost, ticked, status }]
-    unmatched: [],      // [{ csvName, cost }]
-    total:     0,       // sum of Seller Cost across the whole file
-    warning:   null,    // null | { ratio, baseline }
-    confirmed: false,   // user ticked "I've checked this is a full month"
-    applying:  false,   // an apply is in flight; keeps Apply disabled regardless of ticks
-    invoice:   null     // TD SYNNEX invoice number when the preview came from the live feed
-  },
   // Live feed (2026-10-06): a scheduled job writes Xero revenue and the
   // latest TD SYNNEX invoice to a JSON file; see src/core/profit-feed.js.
   feed: { state: 'idle', data: null, error: null, problems: [] },
@@ -7957,7 +7849,7 @@ function prfRenderAll() {
 }
 
 function prfRenderStatus() {
-  return `<div class="prf-status">${prfRenderFeedStatus('xero')}</div>`;
+  return `<div class="prf-status">${prfRenderFeedStatus()}</div>`;
 }
 
 /** One line of figures for the month: Xero's recurring split when the feed has it, else the typed lines. */
@@ -8368,9 +8260,8 @@ function prfXeroMatchName(xeroName, portalClients) {
 /* ─── Live feed (2026-10-06) ──────────────────────────────────────────
    A scheduled job writes Gecko Dashboard Data/profitability-feed.json in
    the portal site's Documents: Xero revenue per contact per month, and the
-   latest TD SYNNEX CSP invoice per customer. Revenue is applied
-   automatically (it only mirrors Xero). Costs still go through the CSP
-   preview, because Apply rewrites GeckoServices rows.
+   TD SYNNEX CSP invoices per customer. Supplier invoices land on each client
+   in the month they are dated (ProfitFeed.invoicedCosts).
    From 8 Oct 2026 the same JSON can live in Supabase (table profit_feed, one
    row); CONFIG.DATA_BACKEND.feed says which one is read. */
 
@@ -8454,8 +8345,8 @@ async function prfApplyFeedXero(feed) {
   }
 }
 
-/** One status line for the Xero ('xero') or CSP ('csp') card. */
-function prfRenderFeedStatus(kind) {
+/** The status line: when Xero last came in and which supplier invoices are in the month. */
+function prfRenderFeedStatus() {
   const F = window.ProfitFeed;
   const f = PRF.feed || {};
   if (!F || f.state === 'idle' || f.state === 'loading') return '';
@@ -8474,525 +8365,33 @@ function prfRenderFeedStatus(kind) {
   const stale = F.isStale(data);
   const staleNote = stale ? ' The nightly update looks stopped: may be out of date.' : '';
 
-  if (kind === 'xero') {
-    // One line: when Xero last came in and which supplier invoices are in this month's cost.
-    const month = PRF.selectedMonth || prfCurrentMonth();
-    const label = escapeHtml(prfMonthLabel(month));
-    const inv = prfMonthInvoiced(month);
-    let sup = '';
-    if (inv) {
-      const seen = new Map();
-      const all = [...inv.byClient.values()].flatMap(e => e.lines).concat(inv.shared, inv.unassigned);
-      for (const l of all) {
-        const e = seen.get(l.supplier) || { total: 0, refs: new Set() };
-        e.total = round2(e.total + l.net); e.refs.add(String(l.ref || '')); seen.set(l.supplier, e);
-      }
-      const parts = [...seen].map(([sup, e]) => `${escapeHtml(sup)} ${e.refs.size === 1 ? `invoice ${escapeHtml([...e.refs][0])}` : `${e.refs.size} invoices`} ${prfFmtForce(e.total)}`);
-      sup = parts.length ? ` Supplier invoices in ${label}: ${parts.join(', ')}.`
-        : ` No supplier invoices for ${label} yet: licence cost is nil until TD SYNNEX bills (~16th).`;
-    } else if (!prfMonthHasSplit(month)) {
-      sup = ` The feed doesn’t cover ${label}: the figures are the typed service lines.`;
+  const month = PRF.selectedMonth || prfCurrentMonth();
+  const label = escapeHtml(prfMonthLabel(month));
+  const inv = prfMonthInvoiced(month);
+  let sup = '';
+  if (inv) {
+    const seen = new Map();
+    const all = [...inv.byClient.values()].flatMap(e => e.lines).concat(inv.shared, inv.unassigned);
+    for (const l of all) {
+      const e = seen.get(l.supplier) || { total: 0, refs: new Set() };
+      e.total = round2(e.total + l.net); e.refs.add(String(l.ref || '')); seen.set(l.supplier, e);
     }
-    let html = box(stale ? 'warn' : 'ok', `Xero updated ${when}.${staleNote}${sup}`);
-    // What is in Xero or on a supplier invoice but on no client: named, never guessed.
-    const contacts = (PRF.xeroUnmatched[month] || []).map(u => `${escapeHtml(u.xeroName)} ${prfFmtForce(u.total)}`);
-    if (contacts.length) html += `<p class="prf-loose warn">In Xero but on no client, so not in the figures: ${contacts.join(' · ')}. Add them in the Directory if they are clients.</p>`;
-    const lines = (inv ? inv.unassigned : []).map(l => `${escapeHtml(l.supplier)}: ${escapeHtml(l.name || l.desc)} ${prfFmtForce(l.net)}`);
-    if (lines.length) html += `<p class="prf-loose warn">Supplier lines on no client (in the cost total): ${lines.join(' · ')}. Tell Felix which client each is.</p>`;
-    if (inv && inv.shared.length) html += `<p class="prf-loose">Gecko’s own, in the cost total: ${inv.shared.map(l => `${escapeHtml(l.supplier)} ${escapeHtml(l.desc)} ${prfFmtForce(l.net)}`).join(' · ')}.</p>`;
-    return html;
+    const parts = [...seen].map(([sup, e]) => `${escapeHtml(sup)} ${e.refs.size === 1 ? `invoice ${escapeHtml([...e.refs][0])}` : `${e.refs.size} invoices`} ${prfFmtForce(e.total)}`);
+    sup = parts.length ? ` Supplier invoices in ${label}: ${parts.join(', ')}.`
+      : ` No supplier invoices for ${label} yet: licence cost is nil until TD SYNNEX bills (~16th).`;
+  } else if (!prfMonthHasSplit(month)) {
+    sup = ` The feed doesn’t cover ${label}: the figures are the typed service lines.`;
   }
-
-  const c = data.csp;
-  if (!c) {
-    const why = data.cspError ? ` ${escapeHtml(data.cspError)}` : '';
-    return box('warn', `No TD SYNNEX invoice in the latest update.${why}`);
-  }
-  const last = cspReadLastImport();
-  const applied = last && last.invoice === c.invoice;
-  const label = `TD SYNNEX invoice <strong>${escapeHtml(c.invoice)}</strong> (${escapeHtml(c.date || '')}), ${escapeHtml(prfMonthLabel(c.month))} charges, ${prfFmtForce(c.netTotal)} net`;
-  if (applied) return box(stale ? 'warn' : 'ok', `${label}. Already applied.${staleNote}`);
-  return box('warn', `${label}. Not applied yet.${staleNote}
-    <button type="button" class="prf-refresh" onclick="cspLoadFromFeed()">Review costs from this invoice</button>`);
+  let html = box(stale ? 'warn' : 'ok', `Xero updated ${when}.${staleNote}${sup}`);
+  // What is in Xero or on a supplier invoice but on no client: named, never guessed.
+  const contacts = (PRF.xeroUnmatched[month] || []).map(u => `${escapeHtml(u.xeroName)} ${prfFmtForce(u.total)}`);
+  if (contacts.length) html += `<p class="prf-loose warn">In Xero but on no client, so not in the figures: ${contacts.join(' · ')}. Add them in the Directory if they are clients.</p>`;
+  const lines = (inv ? inv.unassigned : []).map(l => `${escapeHtml(l.supplier)}: ${escapeHtml(l.name || l.desc)} ${prfFmtForce(l.net)}`);
+  if (lines.length) html += `<p class="prf-loose warn">Supplier lines on no client (in the cost total): ${lines.join(' · ')}. Tell Felix which client each is.</p>`;
+  if (inv && inv.shared.length) html += `<p class="prf-loose">Gecko’s own, in the cost total: ${inv.shared.map(l => `${escapeHtml(l.supplier)} ${escapeHtml(l.desc)} ${prfFmtForce(l.net)}`).join(' · ')}.</p>`;
+  return html;
 }
 
-// ─── CSP cost import (2026-08-13) ─────────────────────────────────────
-// Reads Seller Cost from a TD SYNNEX StreamOne Ion CSP billing export and
-// overwrites CostPerMonth on each client's m365 row. Pure logic lives in
-// src/core/csp-costs.js so it can be unit-tested — this writes money.
-
-const CSP_LAST_IMPORT_KEY = 'gecko.csp.lastImport.v1';
-
-let cspImportSeq = 0;   // a later import always wins; an older one must not clobber it
-
-/** Default the month selector to last month. */
-function cspDefaultMonth() {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 1);
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-}
-
-function cspHandleDrop(event) {
-  const file = event.dataTransfer?.files?.[0];
-  if (file) cspImportFile(file);
-}
-
-function cspHandleFileInput(input) {
-  const file = input.files?.[0];
-  if (file) cspImportFile(file);
-}
-
-/**
- * Parse the export, match every customer to a client and an m365 row, and
- * render the preview. Writes nothing — Apply does that.
- */
-async function cspImportFile(file) {
-  if (!file) return;
-  // An apply in flight owns PRF.csp — a fresh import would replace the
-  // preview underneath the loop that is still writing from it.
-  if (PRF.csp.applying) {
-    toast('An import is still being applied — wait for it to finish.', 'error', 4000);
-    return;
-  }
-  const seq = ++cspImportSeq;
-  showLoading(true);
-  try {
-    const rows = prfParseCsv(await file.text());
-    // Superseded by a newer import, or an apply claimed PRF.csp while this
-    // file was being read — either way this preview must not land.
-    if (seq !== cspImportSeq || PRF.csp.applying) return;
-    if (!rows.length) {
-      toast('That CSV has no data rows.', 'error', 4000);
-      return;
-    }
-    if (!('Customer Name' in rows[0]) || !('Seller Cost (GBP)' in rows[0])) {
-      toast('Missing Customer Name / Seller Cost (GBP). Is this the Microsoft CSP Billing Customers Report?', 'error', 6000);
-      return;
-    }
-    // toast() escapes its message, so the raw CSV values are safe to name.
-    const unreadable = window.CspCosts.findUnparsableCosts(rows);
-    if (unreadable.length) {
-      const first = unreadable[0];
-      toast(`${unreadable.length} row(s) have a Seller Cost this importer cannot read — first: ${first.customer} = "${first.value}". Refusing rather than treating them as zero.`, 'error', 9000);
-      return;
-    }
-
-    PRF.csp.invoice = null;
-    cspBuildPreview(window.CspCosts.aggregateByCustomer(rows), seq);
-  } catch (err) {
-    toast('Could not read that file: ' + (err.message || 'unknown error'), 'error', 6000);
-  } finally {
-    showLoading(false);
-  }
-}
-
-/** Load the preview from the live feed's latest TD SYNNEX invoice. Writes nothing. */
-function cspLoadFromFeed() {
-  const c = PRF.feed?.data?.csp;
-  if (!c) return;
-  if (PRF.csp.applying) {
-    toast('An import is still being applied — wait for it to finish.', 'error', 4000);
-    return;
-  }
-  const seq = ++cspImportSeq;
-  PRF.csp.month   = c.month;
-  PRF.csp.invoice = c.invoice;
-  cspBuildPreview(window.ProfitFeed.cspAggregated(PRF.feed.data), seq);
-  document.getElementById('prfCspImportCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-/**
- * Match every customer to a client and an m365 row, and render the preview.
- * Shared by the CSV import and the live feed. Writes nothing.
- */
-function cspBuildPreview(aggregated, seq) {
-  {
-    const previewRows = [];
-    const unmatched   = [];
-
-    for (const { customer, cost } of aggregated) {
-      const client = prfXeroMatchName(window.CspCosts.stripContact(customer), PRF.clients);
-      if (!client) { unmatched.push({ csvName: customer, cost }); continue; }
-
-      const found = window.CspCosts.findM365Row(client.name, PRF.services);
-      if (found.none) {
-        previewRows.push({ csvName: customer, client, service: null, oldCost: null, newCost: cost, ticked: false, status: 'none' });
-      } else if (found.ambiguous) {
-        previewRows.push({ csvName: customer, client, service: null, oldCost: null, newCost: cost, ticked: false, status: 'ambiguous' });
-      } else {
-        // A loose match (starts-with or Levenshtein) is catchable but not
-        // caught on a 24-row table where everything arrives ticked, and a
-        // zero or negative total would wipe a real cost and read as a
-        // green "good news" drop. Both stay importable, neither by default.
-        // Two portal clients can normalise to the same key ("ABC Ltd" and
-        // "ABC Limited"), and prfXeroMatchName just returns the first. That
-        // is the last silent auto-tick against a possibly-wrong client.
-        const clientKey = prfXeroNormaliseName(client.name);
-        const clash = PRF.clients.filter(c => prfXeroNormaliseName(c.name) === clientKey).length > 1;
-        const nameMatched = prfXeroNormaliseName(window.CspCosts.stripContact(customer)) === clientKey;
-        const exact = !clash && nameMatched;
-        previewRows.push({
-          csvName: customer,
-          client,
-          service: found.row,
-          oldCost: found.row.cost,
-          newCost: cost,
-          // Distinct flags: the name did not match, versus it matched two
-          // clients at once. A clash is not a loose match.
-          fuzzy:     !nameMatched,
-          nameClash: clash,
-          ticked:  window.CspCosts.isPreTicked(found.row.name) && exact && cost > 0,
-          status:  'ok'
-        });
-      }
-    }
-
-    // Two CSV customers can match the same client, and therefore the same
-    // service row. Writing both would leave one subscription's figure in
-    // place of their sum, with a preview that looks entirely correct.
-    // Never guess which one wins — flag them all and write neither.
-    const byServiceId = new Map();
-    for (const r of previewRows) {
-      if (r.status !== 'ok') continue;
-      byServiceId.set(r.service.id, [...(byServiceId.get(r.service.id) || []), r]);
-    }
-    for (const claimants of byServiceId.values()) {
-      if (claimants.length < 2) continue;
-      for (const r of claimants) {
-        r.status        = 'duplicate';
-        r.ticked        = false;
-        r.duplicateWith = claimants.filter(o => o !== r).map(o => o.csvName);
-      }
-    }
-
-    if (seq !== cspImportSeq || PRF.csp.applying) return;   // superseded, or an apply owns the state
-    PRF.csp.rows      = previewRows.sort((a, b) => a.client.name.localeCompare(b.client.name));
-    PRF.csp.unmatched = unmatched;
-    PRF.csp.total     = aggregated.reduce((sum, a) => sum + a.cost, 0);
-    PRF.csp.imported  = true;
-    PRF.csp.confirmed = false;
-    if (!PRF.csp.month) PRF.csp.month = cspDefaultMonth();
-    const base  = cspBaseline(new Set(previewRows.map(r => r.client.name)));
-    const check = window.CspCosts.checkTotalPlausible(PRF.csp.total, base.value);
-    // The `high` bound only means something against a real previous import.
-    // The fallback baseline is the stale stored costs this feature exists to
-    // replace, so a correct first import is *supposed* to be far above it —
-    // warning there would deadlock: every import warns, every warning is
-    // overridden, and an overridden import never records a baseline.
-    const suppressHigh = check.direction === 'high' && base.source !== 'last-import';
-    PRF.csp.warning = (check.ok || suppressHigh) ? null : {
-      ratio:         check.ratio,
-      direction:     check.direction,
-      baseline:      base.value,
-      source:        base.source,
-      baselineMonth: base.month
-    };
-
-    prfRenderAll();
-    toast(`Parsed ${previewRows.length} client(s). Review before applying.`, 'success', 4000);
-  }
-}
-
-function cspSetMonth(value) {
-  PRF.csp.month = value;
-}
-
-function cspToggleRow(index, checked) {
-  const row = PRF.csp.rows[index];
-  if (row && row.status === 'ok') row.ticked = checked;
-  cspSyncApplyState();
-}
-
-function cspClear() {
-  // Preserved, not reset: clearing the preview must not make a second,
-  // concurrent apply possible while the first loop is still running.
-  PRF.csp = { imported: false, month: PRF.csp.month, rows: [], unmatched: [], total: 0, warning: null, confirmed: false, applying: PRF.csp.applying };
-  prfRenderAll();
-}
-
-/**
- * Month options for the selector — this month and the 12 before it, newest
- * first. The current month is offered because the commonest part-month
- * mistake is a month-to-date export of it; the default stays last month.
- */
-function cspMonthOptions(selected) {
-  const opts = [];
-  const d = new Date();
-  for (let i = 0; i <= 12; i++) {
-    const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
-    const value = m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0');
-    opts.push(`<option value="${value}"${value === selected ? ' selected' : ''}>${prfMonthLabel(value)}</option>`);
-  }
-  return opts.join('');
-}
-
-function cspRenderPreviewRow(row, index) {
-  // An 'ok' row can carry more than one caution at once — a loosely matched
-  // bundle is both — so these accumulate rather than shadowing each other.
-  const note =
-    row.status === 'none'      ? '<span class="csp-flag">no m365 row — skipped</span>' :
-    row.status === 'ambiguous' ? '<span class="csp-flag">two m365 rows — skipped</span>' :
-    row.status === 'duplicate' ? `<span class="csp-flag csp-flag-warn">also matched by ${escapeHtml(row.duplicateWith.join(', '))} — skipped</span>` :
-    [
-      !window.CspCosts.isPreTicked(row.service.name) ? 'bundled — check before ticking'            : '',
-      row.fuzzy                                      ? 'name matched loosely — check before ticking' : '',
-      row.nameClash                                  ? 'two clients share this name — check before ticking' : '',
-      row.newCost <= 0                               ? 'zero or negative total — check before ticking' : ''
-    ].filter(Boolean).map(t => `<span class="csp-flag csp-flag-warn">${t}</span>`).join(' ');
-
-  // prfFmtForce, not prfFmt: prfFmt renders 0 as an em dash, which in a
-  // money column would read as "no data" rather than "zero pounds".
-  // Rounded to pence before comparing: a stored cost carrying sub-penny
-  // float precision would otherwise give a delta of ~1e-14, which is not
-  // === 0 and would render as "+£0.00" instead of "no change".
-  const delta = row.status === 'ok'
-    ? Math.round((row.newCost - row.oldCost) * 100) / 100
-    : null;
-  const deltaHtml =
-    delta === null ? '—' :
-    delta === 0    ? '<span class="csp-same">no change</span>' :
-    `<span class="${delta > 0 ? 'csp-up' : 'csp-down'}">${delta > 0 ? '+' : '−'}${prfFmtForce(Math.abs(delta))}</span>`;
-
-  return `
-    <tr>
-      <td>${row.status === 'ok'
-            ? `<input type="checkbox" ${row.ticked ? 'checked' : ''} onchange="cspToggleRow(${index},this.checked)" aria-label="Apply ${escapeHtml(row.client.name)}">`
-            : ''}</td>
-      <td>${escapeHtml(row.client.name)}</td>
-      <td class="csp-from">${escapeHtml(row.csvName)}</td>
-      <td>${row.service ? escapeHtml(row.service.name) : '—'} ${note}</td>
-      <td class="csp-num">${row.oldCost === null ? '—' : prfFmtForce(row.oldCost)}</td>
-      <td class="csp-num">${prfFmtForce(row.newCost)}</td>
-      <td class="csp-num">${deltaHtml}</td>
-    </tr>`;
-}
-
-// ponytail: the CSP import panel is no longer rendered (TD SYNNEX invoices
-// arrive through the feed and land in their month, 7 Oct 2026). The code
-// below stays one release so the manual path can be restored if the feed
-// ever stops; remove once the automatic path has run a full month.
-function cspRenderImport() {
-  const dropZone = `
-    <div class="prf-drop-zone" id="cspDropZone"
-         ondragover="event.preventDefault();this.classList.add('drag-over')"
-         ondragleave="this.classList.remove('drag-over')"
-         ondrop="event.preventDefault();this.classList.remove('drag-over');cspHandleDrop(event)">
-      <div class="dz-text"><strong>Drag &amp; drop</strong> the CSP billing CSV here, or</div>
-      <button type="button" class="dz-browse" onclick="document.getElementById('cspCsvFile').click()">Browse…</button>
-      <input type="file" id="cspCsvFile" accept=".csv" onchange="cspHandleFileInput(this)">
-    </div>`;
-
-  let body = `
-    ${prfRenderFeedStatus('csp')}
-    <p class="csp-hint">
-      Manual alternative: TD SYNNEX → StreamOne Ion → Reports → <strong>Microsoft CSP Billing Customers Report</strong>.
-      Set <strong>Date Range to exactly one full month</strong> before exporting. The file
-      carries no date range, so nothing here can tell a part-month export (which understates
-      every cost) from one spanning two months (which overstates them).
-      ${cspReadLastImport() ? '' : `<br><strong>This is the first import on this browser</strong>,
-      so there is no previous total to compare against — neither the too-low nor the too-high
-      check can fire. Read the per-client changes below before applying.`}
-    </p>
-    <label class="csp-month">Month covered
-      <select onchange="cspSetMonth(this.value)">${cspMonthOptions(PRF.csp.month || cspDefaultMonth())}</select>
-    </label>
-    ${dropZone}`;
-
-  if (PRF.csp.imported) {
-    const applicable = PRF.csp.rows.filter(r => r.status === 'ok');
-    const skipped    = PRF.csp.rows.filter(r => r.status !== 'ok');
-
-    const unmatchedHtml = PRF.csp.unmatched.length ? `
-      <div class="csp-unmatched">
-        <strong>${PRF.csp.unmatched.length} unmatched client(s)</strong> — no match in the Directory, nothing written:
-        ${PRF.csp.unmatched.map(u => `<div>${escapeHtml(u.csvName)} — ${prfFmtForce(u.cost)}</div>`).join('')}
-      </div>` : '';
-
-    // A client the export simply didn't cover keeps a stale cost with no
-    // signal at all, which is the quiet version of the failure this
-    // feature exists to fix.
-    const coveredClients = new Set(PRF.csp.rows.map(r => r.client.name));
-    // Deduped: a client with two m365 rows is one uncovered client, not two.
-    const uncovered = [...new Set(PRF.services
-      .filter(s => s.category === 'm365' && !coveredClients.has(s.clientName))
-      .map(s => s.clientName))];
-    const uncoveredHtml = uncovered.length ? `
-      <div class="csp-unmatched">
-        <strong>${uncovered.length} client(s) with an m365 row had no line in this export</strong>
-        — their stored cost is unchanged:
-        ${uncovered.map(n => `<div>${escapeHtml(n)}</div>`).join('')}
-      </div>` : '';
-
-    body += `
-      ${cspRenderWarning()}
-      <div class="csp-preview">
-        <table class="csp-table">
-          <thead><tr>
-            <th></th><th>Client</th><th>Matched from</th><th>Service row</th>
-            <th class="csp-num">Now</th><th class="csp-num">New</th><th class="csp-num">Change</th>
-          </tr></thead>
-          <tbody>${PRF.csp.rows.map(cspRenderPreviewRow).join('')}</tbody>
-        </table>
-      </div>
-      ${unmatchedHtml}
-      ${uncoveredHtml}
-      <div class="csp-actions">
-        <span class="csp-summary">${applicable.length} applicable · ${skipped.length} skipped · file total ${prfFmtForce(PRF.csp.total)}</span>
-        <button type="button" class="csp-clear" onclick="cspClear()">Clear</button>
-        <button type="button" class="csp-apply" id="cspApply" onclick="cspApply()">Apply ticked</button>
-      </div>`;
-  }
-
-  return `
-    <div class="prf-xero-import prf-csp-import" id="prfCspImportCard">
-      <div style="flex:1;min-width:250px">
-        <h4>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-          Import CSP costs
-        </h4>
-        ${body}
-      </div>
-    </div>`;
-}
-
-/** The previous import's total, if this browser has one. */
-function cspReadLastImport() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(CSP_LAST_IMPORT_KEY) || 'null');
-    if (raw && typeof raw.total === 'number' && raw.total > 0) return raw;
-  } catch { /* corrupt or unavailable — fall through to the weaker baseline */ }
-  return null;
-}
-
-function cspWriteLastImport(month, total) {
-  try {
-    localStorage.setItem(CSP_LAST_IMPORT_KEY, JSON.stringify({ month, total, invoice: PRF.csp.invoice || null }));
-  } catch (err) {
-    console.warn('Could not record the CSP import baseline', err);
-  }
-}
-
-/**
- * What to compare this import against.
- * Preferred: the previous import's total. Fallback: the stored m365 cost of
- * the clients this export covers — much weaker, because those values are
- * known to be stale and mostly too low, which is the reason this feature
- * exists.
- */
-function cspBaseline(clientNames) {
-  const last = cspReadLastImport();
-  if (last) return { value: last.total, source: 'last-import', month: last.month };
-  const stored = window.CspCosts.sumStoredM365(PRF.services, clientNames);
-  if (stored > 0) return { value: stored, source: 'stored', month: null };
-  return { value: null, source: 'none', month: null };
-}
-
-function cspConfirm(checked) {
-  PRF.csp.confirmed = checked;
-  cspSyncApplyState();
-}
-
-/** Apply is disabled with nothing ticked, or on an unconfirmed warning. */
-function cspSyncApplyState() {
-  const btn = document.getElementById('cspApply');
-  if (!btn) return;
-  // An apply in flight outranks everything else: the row checkboxes stay
-  // live during the PATCH loop, and without this a tick would re-enable
-  // the button and allow a second, concurrent apply.
-  if (PRF.csp.applying) { btn.disabled = true; return; }
-  const anyTicked = PRF.csp.rows.some(r => r.status === 'ok' && r.ticked);
-  const blocked   = PRF.csp.warning && !PRF.csp.confirmed;
-  btn.disabled = !anyTicked || !!blocked;
-}
-
-function cspRenderWarning() {
-  if (!PRF.csp.warning) return '';
-  const { ratio, direction, baseline, source, baselineMonth } = PRF.csp.warning;
-  const pct = Math.round(ratio * 100);
-  const against = source === 'last-import'
-    ? `last import${baselineMonth ? ' (' + escapeHtml(prfMonthLabel(baselineMonth)) + ')' : ''}`
-    : 'your current stored m365 costs';
-
-  // The file carries no date range, so both failures look identical on the
-  // page: too small is a month-to-date export, too large is a range covering
-  // more than one month or a file pasted in twice.
-  const body = direction === 'high'
-    ? `This export totals <strong>${prfFmtForce(PRF.csp.total)}</strong> —
-       <strong>${pct}%</strong> of ${against}, <strong>${prfFmtForce(baseline)}</strong>.
-       If the Date Range spanned more than one month, or the file was pasted
-       twice, every cost below is overstated. Re-export before applying.`
-    : `This export totals <strong>${prfFmtForce(PRF.csp.total)}</strong> — only
-       <strong>${pct}%</strong> of ${against}, <strong>${prfFmtForce(baseline)}</strong>.
-       If you exported <em>Month to date</em> rather than a full month, every cost
-       below is understated. Re-export before applying.`;
-
-  return `
-    <div class="csp-warn">
-      ${body}
-      <label>
-        <input type="checkbox" ${PRF.csp.confirmed ? 'checked' : ''} onchange="cspConfirm(this.checked)">
-        I've checked — this export covers exactly one full month
-      </label>
-    </div>`;
-}
-
-/**
- * Write every ticked row. Failures are collected rather than aborting, so
- * one bad row cannot strand the rest, and the result is reported honestly.
- */
-async function cspApply() {
-  const btn = document.getElementById('cspApply');
-  const targets = PRF.csp.rows.filter(r => r.status === 'ok' && r.ticked && r.service);
-  // Snapshotted with targets: Clear is still clickable during the loop and
-  // reassigns PRF.csp wholesale, so reading these live after the await would
-  // record a zeroed total for a run that actually succeeded.
-  const importMonth  = PRF.csp.month;
-  const importTotal  = PRF.csp.total;
-  const importWarned = !!PRF.csp.warning;
-  if (!targets.length) return;
-  if (PRF.csp.warning && !PRF.csp.confirmed) return;
-  if (PRF.csp.applying) return;
-
-  PRF.csp.applying = true;
-  if (btn) btn.disabled = true;
-  showLoading(true);
-
-  const failures = [];
-  let applied = 0;
-  for (const row of targets) {
-    try {
-      await prfPatchService(row.service.id, { CostPerMonth: row.newCost });
-      applied++;
-    } catch (err) {
-      failures.push(`${row.client.name}: ${err.message || 'write failed'}`);
-    }
-  }
-
-  // Only record a baseline when everything landed — a partial write would
-  // set a misleadingly low bar for next month's sanity check.
-  // Not recorded when the plausibility warning was overridden: an accepted
-  // part-month total would become next month's bar and disarm the check.
-  if (applied && !failures.length && !importWarned) {
-    cspWriteLastImport(importMonth, importTotal);
-  }
-
-  showLoading(false);
-
-  if (failures.length) {
-    toast(`${applied} updated, ${failures.length} failed — ${failures[0]}`, 'error', 8000);
-  } else {
-    toast(`${applied} cost${applied === 1 ? '' : 's'} updated.`, 'success', 4000);
-  }
-
-  // Re-read from SharePoint so the board shows what was actually stored,
-  // not what we hoped we wrote. prfRefreshData re-renders, which rebuilds
-  // the card — so never touch `btn` after this point.
-  PRF.csp = { imported: false, month: PRF.csp.month, rows: [], unmatched: [], total: 0, warning: null, confirmed: false, applying: false };
-  await prfRefreshData(true);
-}
-
-
-// ─── Phase 10: Drop zone event handlers ───────────────────────────────
 
 // ─── Phase 10: CSV Export ─────────────────────────────────────────────
 

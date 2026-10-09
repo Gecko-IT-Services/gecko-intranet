@@ -17,8 +17,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Static site. No bundler, no framework, no TypeScript, no build step. Deploy is
   `git push` to `main`; GitHub Pages serves with a ~10-minute cache, so after a
   merge wait a couple of minutes and hard-refresh (Cmd+Shift+R).
-- `index.html` (~17.5k lines) holds the shell, the design system CSS and the
-  original sections (Overview `ovw*`, Profitability `prf*`/`csp*`, Mileage
+- `index.html` (~14k lines) holds the shell, the design system CSS and the
+  original sections (Overview `ovw*`, Profitability `prf*`, Mileage
   `mil*`, Clients `cli*`, Timesheets `tsh*`, Leave `lev*`) as one inline script.
 - Newer sections are ES modules: `src/sections/<name>.js` + `src/styles/<name>.css`,
   registered in `src/main.js` as `window.GeckoSections.<key> = { init }`.
@@ -80,9 +80,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - The current month shows no licence cost until the TD SYNNEX invoice lands
   (~16th); the Xero box says so. Hosting clients swing month to month. Both are
   intended.
-- The Import CSP Costs panel is no longer rendered; `csp*` import code remains
-  one release (ponytail) and can be deleted after November 2026 if the automatic
-  path has held.
+- The manual CSP cost import (CSV → m365 service lines) was removed 9 Oct; TD SYNNEX
+  invoices only come in through the feed. Git history has it if ever needed.
 - Months the feed does not cover fall back to the typed service lines.
 - The page (9 Oct, `2026-10-09-simpler-profitability-design.md`): one status line, one line of figures, one
   table with **Needs a look** first (losing money, margin under 40%, Xero £1+ under the lines, not billed in a
