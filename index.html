@@ -16341,9 +16341,8 @@ async function cmpLoadClients() {
     return;
   }
 
-  const url = `/sites/${CMP.siteId}/lists/${CMP.listIds.geckoClients}/items?$expand=fields&$top=500`;
-  const res = await graphFetch(url);
-  CMP.clients = (res.value || [])
+  const items = await clientListItems('gecko_clients', CMP.siteId, CMP.listIds.geckoClients, 500);
+  CMP.clients = items
     .map(it => ({ name: (it.fields || {}).Title || '' }))
     .filter(c => c.name)
     .sort((a, b) => a.name.localeCompare(b.name));
