@@ -250,3 +250,9 @@
 #section-overview .ovw-rv-hours[class*="lp-"] .prev { background: color-mix(in srgb, var(--who) 35%, transparent); }
 #section-overview .ovw-rv-legend .now { background: var(--muted); }
 #section-overview .ovw-rv-legend .prev { background: color-mix(in srgb, var(--muted) 35%, transparent); }
+@media (max-width: 640px) {
+  #section-overview .ovw-pr { grid-template-columns: 42px repeat(7, minmax(0, 1fr)) 38px; gap: 2px; }
+  #section-overview .ovw-pc b { font-size: 9.5px; letter-spacing: -.05em; }
+  #section-overview .ovw-pw { font-size: 11px; }
+  #section-overview .ovw-pt { font-size: 11px; letter-spacing: -.03em; }
+}
