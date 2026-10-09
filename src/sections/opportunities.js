@@ -76,17 +76,17 @@ async function readFeed() {
   }
 }
 
-/** The Refresh button: busy while it reloads, then says so (it gave no sign before). */
+/** The header Refresh: its icon turns while it reloads (the label and icon stay), then "Synced HH:MM". */
 async function refresh() {
   const btn = els('oppRefresh');
   if (!btn || btn.disabled || OPP.loading) return;
-  btn.disabled = true; btn.textContent = 'Refreshing…';
+  btn.disabled = true; btn.classList.add('spinning'); btn.setAttribute('aria-busy', 'true');
   try {
     await load();
     if (OPP.error) toast('Could not reload opportunities: ' + (OPP.error.message || OPP.error), 'error', 8000);
     else toast('Opportunities refreshed', 'success', 3000);
   } finally {
-    btn.disabled = false; btn.textContent = 'Refresh';
+    btn.disabled = false; btn.classList.remove('spinning'); btn.removeAttribute('aria-busy');
   }
 }
 
@@ -130,6 +130,8 @@ async function load() {
     // Prospects load on their own: a missing table (before the migration lands) never stops the rest.
     try { OPP.prospects = await prospects; OPP.prospectsError = ''; }
     catch (e) { OPP.prospects = null; OPP.prospectsError = e.message || String(e); }
+    const sync = els('oppLastSync');
+    if (sync) sync.textContent = 'Synced ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   } catch (err) {
     OPP.error = err;
   } finally {
@@ -472,8 +474,8 @@ function render() {
   if (OPP.error) {
     const e = OPP.error;
     mount.innerHTML = e.code === 'DB_SIGNIN_REQUIRED'
-      ? `<div class="opp-error"><strong>Connect to the Gecko database</strong>Opportunities are kept in the database. Connect once with your Microsoft account.<button type="button" data-opp-act="connect">Connect</button></div>`
-      : `<div class="opp-error"><strong>Could not load opportunities.</strong>${escapeHtml(e.message || e)}<button type="button" data-opp-act="reload">Retry</button></div>`;
+      ? `<div class="opp-error"><strong>Connect to the Gecko database</strong>Opportunities are kept in the database. Connect once with your Microsoft account.<button type="button" class="btn btn-sm btn-primary" data-opp-act="connect">Connect</button></div>`
+      : `<div class="opp-error"><strong>Could not load opportunities.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
     return;
   }
   mount.innerHTML = (OPP.feedNote ? `<p class="opp-note">${escapeHtml(OPP.feedNote)}</p>` : '') + progressHtml() +
@@ -537,7 +539,7 @@ function gapsHtml() {
   const head = `<div class="opp-toolbar">
       <span><strong>${strong}</strong> gaps with evidence across <strong>${rows.length}</strong> clients${unchecked ? ` · ${unchecked} not checked yet` : ''}</span>
       <label class="opp-check"><input type="checkbox" data-opp-act="showall" ${OPP.showAll ? 'checked' : ''}> Also show products they simply don’t buy yet</label>
-      <button type="button" class="opp-btn" data-opp-act="checkall" ${OPP.checking ? 'disabled' : ''}>Check email &amp; websites</button>
+      <button type="button" class="btn btn-primary" data-opp-act="checkall" ${OPP.checking ? 'disabled' : ''}>Check email &amp; websites</button>
     </div>`;
   if (!rows.length) return head + '<p class="opp-empty">No clients found in the client list.</p>';
   return head + rows.map(({ c, gaps, dnsRow, psRow }) => {
@@ -547,17 +549,17 @@ function gapsHtml() {
         <div class="opp-signals">${signalLine(c, dnsRow, psRow)}</div>
         <p class="opp-client-page">${clientLink(c.name)} <span class="opp-muted">· everything about this client</span></p>
         <div class="opp-domain"><input type="text" placeholder="Add a domain, e.g. ${escapeHtml(norm(c.name).split(' ')[0] || 'client')}.co.uk" data-opp-domain="${escapeHtml(c.name)}" aria-label="Add a domain for ${escapeHtml(c.name)}">
-          <button type="button" class="opp-btn ghost" data-opp-act="adddomain" data-client="${escapeHtml(c.name)}">Add &amp; check</button>
-          ${c.domains.length ? `<button type="button" class="opp-btn ghost" data-opp-act="checkone" data-client="${escapeHtml(c.name)}" ${OPP.checking ? 'disabled' : ''}>Re-check now</button>` : ''}</div>
+          <button type="button" class="btn btn-sm" data-opp-act="adddomain" data-client="${escapeHtml(c.name)}">Add &amp; check</button>
+          ${c.domains.length ? `<button type="button" class="btn btn-sm" data-opp-act="checkone" data-client="${escapeHtml(c.name)}" ${OPP.checking ? 'disabled' : ''}>Re-check now</button>` : ''}</div>
         ${gaps.length ? gaps.map(g => `<div class="opp-gap">
-            <div class="opp-gap-head"><strong>${escapeHtml(g.product.name)}</strong><span class="opp-chip s${g.strength}">${STRENGTH[g.strength]}</span>
+            <div class="opp-gap-head"><strong>${escapeHtml(g.product.name)}</strong><span class="badge${['', ' badge-amber', ' badge-green'][g.strength] || ''}">${STRENGTH[g.strength]}</span>
               <span class="opp-muted">${g.mrr != null ? escapeHtml(money(g.mrr)) + '/mo' : 'price not set'}${g.oneOff ? ' · ' + escapeHtml(money(g.oneOff)) + ' one-off' : ''}</span></div>
             <ul>${g.reasons.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
             <div class="opp-gap-actions">
-              <button type="button" class="opp-btn" data-opp-act="draft" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Add &amp; draft email</button>
-              <button type="button" class="opp-btn ghost" data-opp-act="add" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Add to pipeline</button>
-              <button type="button" class="opp-btn ghost" data-opp-act="has" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Already has it</button>
-              <button type="button" class="opp-btn ghost" data-opp-act="notint" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Not interested</button>
+              <button type="button" class="btn btn-sm btn-primary" data-opp-act="draft" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Add &amp; draft email</button>
+              <button type="button" class="btn btn-sm" data-opp-act="add" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Add to pipeline</button>
+              <button type="button" class="btn btn-sm" data-opp-act="has" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Already has it</button>
+              <button type="button" class="btn btn-sm" data-opp-act="notint" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Not interested</button>
             </div></div>`).join('') : '<p class="opp-muted">No gaps found for this client.</p>'}
       </div>`;
     return `<section class="opp-card${isOpen ? ' open' : ''}">
@@ -583,10 +585,10 @@ function pipelineHtml() {
     const items = OPP.opps.filter(o => o.status === key);
     const total = sum(items);
     const on = OPP.stage === key || (OPP.stage === 'open' && (key === 'idea' || key === 'proposed'));
-    return `<button type="button" class="opp-stage st-${key}${on ? ' on' : ''}" data-opp-act="stage" data-stage="${key}" aria-pressed="${on}">
-        <span class="opp-stage-label">${label}</span>
-        <span class="opp-stage-value">${escapeHtml(money(total))}<small>/mo</small></span>
-        <span class="opp-stage-count">${items.length} ${items.length === 1 ? 'deal' : 'deals'}</span>
+    return `<button type="button" class="kpi opp-stage st-${key}${on ? ' on' : ''}" data-opp-act="stage" data-stage="${key}" aria-pressed="${on}">
+        <span class="kpi-label">${label}</span>
+        <span class="kpi-value">${escapeHtml(money(total))}<small>/mo</small></span>
+        <span class="kpi-sub">${items.length} ${items.length === 1 ? 'deal' : 'deals'}</span>
         <span class="opp-stage-bar"><i style="width:${Math.round((total / all) * 100)}%"></i></span>
       </button>`;
   }).join('');
@@ -596,17 +598,17 @@ function pipelineHtml() {
   const heading = OPP.stage === 'open' ? 'Open deals, biggest first' : `${STATUSES.find(([k]) => k === OPP.stage)[1]} deals`;
   const label = Object.fromEntries(STATUSES);
   const quick = o => (o.status === 'won' || o.status === 'lost'
-    ? `<button type="button" class="opp-btn ghost" data-opp-act="move" data-status="proposed" data-id="${o.id}">Reopen</button>`
-    : `${o.status === 'idea' ? `<button type="button" class="opp-btn ghost" data-opp-act="move" data-status="proposed" data-id="${o.id}">Mark proposed</button>` : ''}
-       <button type="button" class="opp-btn win" data-opp-act="move" data-status="won" data-id="${o.id}">Won</button>
-       <button type="button" class="opp-btn ghost" data-opp-act="move" data-status="lost" data-id="${o.id}">Lost</button>`);
+    ? `<button type="button" class="btn btn-sm" data-opp-act="move" data-status="proposed" data-id="${o.id}">Reopen</button>`
+    : `${o.status === 'idea' ? `<button type="button" class="btn btn-sm" data-opp-act="move" data-status="proposed" data-id="${o.id}">Mark proposed</button>` : ''}
+       <button type="button" class="btn btn-sm btn-success" data-opp-act="move" data-status="won" data-id="${o.id}">Won</button>
+       <button type="button" class="btn btn-sm" data-opp-act="move" data-status="lost" data-id="${o.id}">Lost</button>`);
   const t = todayKey();
   const flags = o => {
     const st = dealState(o, t);
     return [
-      st.followUpDue ? `<span class="opp-flag ${st.followUpLate > 7 ? 'red' : 'amber'}">Follow up ${escapeHtml(dueText(o.follow_up_on, t))}</span>` : '',
-      st.followUpSoon != null ? `<span class="opp-flag">Follow up ${escapeHtml(shortDate(o.follow_up_on))}</span>` : '',
-      st.stale ? `<span class="opp-flag muted" title="Nothing changed on this deal for ${st.stale} days">Quiet ${st.stale} days</span>` : ''
+      st.followUpDue ? `<span class="badge ${st.followUpLate > 7 ? 'badge-red' : 'badge-amber'}">Follow up ${escapeHtml(dueText(o.follow_up_on, t))}</span>` : '',
+      st.followUpSoon != null ? `<span class="badge">Follow up ${escapeHtml(shortDate(o.follow_up_on))}</span>` : '',
+      st.stale ? `<span class="badge" title="Nothing changed on this deal for ${st.stale} days">Quiet ${st.stale} days</span>` : ''
     ].join('');
   };
   const nextSteps = o => {
@@ -614,9 +616,9 @@ function pipelineHtml() {
     if (!st.needsJob && !st.needsBilling && !(o.status === 'won' && (o.job_id || o.billing_set_up_at))) return '';
     return `<div class="opp-won-steps"><strong>Won: next steps</strong><ul>
       ${Number(o.one_off) > 0 ? `<li class="${o.job_id ? 'done' : ''}">${o.job_id ? '✓ Job created for the one-off part' : `Create the job for the one-off part (${escapeHtml(money(o.one_off))})`}
-        ${o.job_id ? '<button type="button" class="opp-linkbtn" data-opp-act="openjobs">Open Jobs →</button>' : `<button type="button" class="opp-btn" data-opp-act="mkjob" data-id="${o.id}">Create job</button>`}</li>` : ''}
+        ${o.job_id ? '<button type="button" class="btn btn-sm btn-ghost" data-opp-act="openjobs">Open Jobs →</button>' : `<button type="button" class="btn btn-sm btn-primary" data-opp-act="mkjob" data-id="${o.id}">Create job</button>`}</li>` : ''}
       ${Number(o.mrr) > 0 ? `<li class="${o.billing_set_up_at ? 'done' : ''}">${o.billing_set_up_at ? `✓ Monthly billing set up${o.billing_set_up_by ? ' by ' + escapeHtml(o.billing_set_up_by) : ''}` : `Set up the monthly billing: a repeating invoice in Xero for ${escapeHtml(money(o.mrr))}/mo + VAT, and the service line in Profitability`}
-        ${o.billing_set_up_at ? '' : `<button type="button" class="opp-btn ghost" data-opp-act="billingdone" data-id="${o.id}">Mark done</button>`}</li>` : ''}
+        ${o.billing_set_up_at ? '' : `<button type="button" class="btn btn-sm" data-opp-act="billingdone" data-id="${o.id}">Mark done</button>`}</li>` : ''}
     </ul></div>`;
   };
   const deal = o => {
@@ -635,9 +637,9 @@ function pipelineHtml() {
         <span class="opp-deal-meta"><b class="opp-dot"></b>${label[o.status] || escapeHtml(o.status)} · ${escapeHtml(ago(o.closed_at || o.modified_at))}</span>
       </div>
       <div class="opp-deal-actions">
-        ${o.status !== 'won' && o.status !== 'lost' ? `<button type="button" class="opp-btn" data-opp-act="emailopp" data-id="${o.id}">Draft email</button>` : ''}
+        ${o.status !== 'won' && o.status !== 'lost' ? `<button type="button" class="btn btn-sm btn-primary" data-opp-act="emailopp" data-id="${o.id}">Draft email</button>` : ''}
         ${quick(o)}
-        <button type="button" class="opp-btn ghost" data-opp-act="editopp" data-id="${o.id}" aria-expanded="${editing}">${editing ? 'Close' : 'Edit'}</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-opp-act="editopp" data-id="${o.id}" aria-expanded="${editing}">${editing ? 'Close' : 'Edit'}</button>
       </div>
       ${editing ? `<form class="opp-item-form opp-deal-edit" data-opp-form="${o.id}">
           <label>£/month <input name="mrr" type="number" step="0.01" min="0" value="${escapeHtml(o.mrr)}"></label>
@@ -646,13 +648,13 @@ function pipelineHtml() {
           <label>Stage <select name="status">${STATUSES.map(([k, l]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
           <label class="wide">Next step <input name="next_step" type="text" value="${escapeHtml(o.next_step)}" placeholder="e.g. Call Chris on Tuesday"></label>
           <div class="opp-fu wide"><span>Follow up</span>
-            <button type="button" class="opp-chip-btn" data-opp-fu="">None</button>
-            ${followUpChoices(t).map(([l, d]) => `<button type="button" class="opp-chip-btn" data-opp-fu="${d}" title="${escapeHtml(shortDate(d))}">${l}</button>`).join('')}
+            <button type="button" class="btn btn-sm btn-ghost" data-opp-fu="">None</button>
+            ${followUpChoices(t).map(([l, d]) => `<button type="button" class="btn btn-sm btn-ghost" data-opp-fu="${d}" title="${escapeHtml(shortDate(d))}">${l}</button>`).join('')}
             <input name="follow_up_on" type="date" value="${escapeHtml(String(o.follow_up_on || '').slice(0, 10))}" aria-label="Follow-up date">
           </div>
-          <div class="opp-gap-actions wide">
-            <button type="submit" class="opp-btn">Save</button>
-            <button type="button" class="opp-btn ghost" data-opp-act="delopp" data-id="${o.id}">Delete</button>
+          <div class="opp-form-actions wide">
+            <button type="button" class="btn btn-sm btn-danger" data-opp-act="delopp" data-id="${o.id}">Delete</button>
+            <button type="submit" class="btn btn-sm btn-primary">Save</button>
           </div>
         </form>` : ''}
       ${nextSteps(o)}
@@ -662,9 +664,9 @@ function pipelineHtml() {
   const states = OPP.opps.map(o => dealState(o, t));
   const dueN = states.filter(x => x.followUpDue).length, quietN = states.filter(x => x.stale).length;
   const setupN = states.filter(x => x.needsJob || x.needsBilling).length;
-  const summary = [dueN && `<span class="opp-flag amber">${dueN} follow-up${dueN === 1 ? '' : 's'} due</span>`,
-    quietN && `<span class="opp-flag muted">${quietN} quiet for ${14}+ days</span>`,
-    setupN && `<span class="opp-flag green">${setupN} won deal${setupN === 1 ? '' : 's'} to set up</span>`].filter(Boolean).join('');
+  const summary = [dueN && `<span class="badge badge-amber">${dueN} follow-up${dueN === 1 ? '' : 's'} due</span>`,
+    quietN && `<span class="badge">${quietN} quiet for ${14}+ days</span>`,
+    setupN && `<span class="badge badge-green">${setupN} won deal${setupN === 1 ? '' : 's'} to set up</span>`].filter(Boolean).join('');
   const toggle = `<div class="opp-view" role="group" aria-label="Pipeline view">
       <button type="button" data-opp-act="view" data-view="list" aria-pressed="${OPP.view === 'list'}">List</button>
       <button type="button" data-opp-act="view" data-view="board" aria-pressed="${OPP.view === 'board'}">Board</button></div>`;
@@ -673,23 +675,23 @@ function pipelineHtml() {
         <div class="opp-card-top">${clientLink(o.client_name)}<strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong></div>
         <div class="opp-card-title">${escapeHtml(findProduct(o.product_key)?.name || o.title)}${Number(o.one_off) ? ` <span>+ ${escapeHtml(money(o.one_off))}</span>` : ''}</div>
         ${o.next_step ? `<div class="opp-card-next">${escapeHtml(o.next_step)}</div>` : ''}
-        <div class="opp-flags">${flags(o)}${o.status === 'won' && (dealState(o, t).needsJob || dealState(o, t).needsBilling) ? '<span class="opp-flag green">To set up</span>' : ''}</div>
-        <div class="opp-card-acts">${o.status === 'idea' ? `<button type="button" class="opp-linkbtn" data-opp-act="move" data-status="proposed" data-id="${o.id}">Proposed →</button>` : ''}
-          ${o.status === 'idea' || o.status === 'proposed' ? `<button type="button" class="opp-linkbtn win" data-opp-act="move" data-status="won" data-id="${o.id}">Won</button><button type="button" class="opp-linkbtn" data-opp-act="move" data-status="lost" data-id="${o.id}">Lost</button>` : ''}
-          <button type="button" class="opp-linkbtn" data-opp-act="openlist" data-id="${o.id}">Details</button></div>
+        <div class="opp-flags">${flags(o)}${o.status === 'won' && (dealState(o, t).needsJob || dealState(o, t).needsBilling) ? '<span class="badge badge-green">To set up</span>' : ''}</div>
+        <div class="opp-card-acts">${o.status === 'idea' ? `<button type="button" class="btn btn-sm btn-ghost" data-opp-act="move" data-status="proposed" data-id="${o.id}">Proposed →</button>` : ''}
+          ${o.status === 'idea' || o.status === 'proposed' ? `<button type="button" class="btn btn-sm btn-success" data-opp-act="move" data-status="won" data-id="${o.id}">Won</button><button type="button" class="btn btn-sm btn-ghost" data-opp-act="move" data-status="lost" data-id="${o.id}">Lost</button>` : ''}
+          <button type="button" class="btn btn-sm btn-ghost" data-opp-act="openlist" data-id="${o.id}">Details</button></div>
       </div>`;
     const cols = boardColumns(OPP.opps, t).map(c => {
       const total = c.items.reduce((a, o) => a + (Number(o.mrr) || 0), 0);
-      return `<section class="opp-col st-${c.key}"><header><strong>${label[c.key]}</strong><span>${c.items.length} · ${escapeHtml(money(total))}/mo</span></header>
+      return `<section class="opp-col st-${c.key}"><header><strong><b class="opp-dot"></b>${label[c.key]}</strong><span>${c.items.length} · ${escapeHtml(money(total))}/mo</span></header>
         ${c.items.map(card).join('') || '<p class="opp-muted">None</p>'}</section>`;
     }).join('');
     return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
       <div class="opp-board">${cols}</div><p class="opp-muted">Won and lost show the last 90 days.</p>`;
   }
   return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
-    <div class="opp-stages">${stages}</div>
+    <div class="opp-stages kpi-panel">${stages}</div>
     <div class="opp-deals-head"><strong>${heading}</strong>
-      ${OPP.stage !== 'open' ? '<button type="button" class="opp-linkbtn" data-opp-act="stage" data-stage="open">Back to open deals</button>' : ''}</div>
+      ${OPP.stage !== 'open' ? '<button type="button" class="btn btn-sm btn-ghost" data-opp-act="stage" data-stage="open">Back to open deals</button>' : ''}</div>
     <div class="opp-deals">${shown.map(deal).join('') || '<p class="opp-muted">None at this stage.</p>'}</div>`;
 }
 
@@ -726,25 +728,25 @@ function prospectFormHtml(p) {
       <label>Worth £/month <input name="est_mrr" type="number" min="0" step="0.01" value="${escapeHtml(v.est_mrr || '')}" placeholder="estimate"></label>
       <label class="wide">Next step <input name="next_step" type="text" maxlength="200" value="${escapeHtml(v.next_step || '')}" placeholder="e.g. Book a site visit"></label>
       <div class="opp-fu wide"><span>Follow up</span>
-        <button type="button" class="opp-chip-btn" data-opp-fu="">None</button>
-        ${followUpChoices(t).map(([l, d]) => `<button type="button" class="opp-chip-btn" data-opp-fu="${d}" title="${escapeHtml(shortDate(d))}">${l}</button>`).join('')}
+        <button type="button" class="btn btn-sm btn-ghost" data-opp-fu="">None</button>
+        ${followUpChoices(t).map(([l, d]) => `<button type="button" class="btn btn-sm btn-ghost" data-opp-fu="${d}" title="${escapeHtml(shortDate(d))}">${l}</button>`).join('')}
         <input name="follow_up_on" type="date" value="${escapeHtml(String(v.follow_up_on || '').slice(0, 10))}" aria-label="Follow-up date">
       </div>
       <label class="wide">Notes <textarea name="notes" rows="2" maxlength="2000">${escapeHtml(v.notes || '')}</textarea></label>
-      <div class="opp-gap-actions wide">
-        <button type="submit" class="opp-btn"${OPP.saving ? ' disabled' : ''}>${OPP.saving ? 'Saving…' : p ? 'Save' : 'Add prospect'}</button>
-        <button type="button" class="opp-btn ghost" data-opp-act="pcancel">Cancel</button>
-        ${p ? `<button type="button" class="opp-btn ghost" data-opp-act="pdelete" data-id="${p.id}">Delete</button>` : ''}
+      <div class="opp-form-actions wide">
+        ${p ? `<button type="button" class="btn btn-sm btn-danger" data-opp-act="pdelete" data-id="${p.id}">Delete</button>` : ''}
+        <button type="button" class="btn btn-sm btn-ghost" data-opp-act="pcancel">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary"${OPP.saving ? ' disabled' : ''}>${OPP.saving ? 'Saving…' : p ? 'Save' : 'Add prospect'}</button>
       </div>
     </form>`;
 }
 
 function prospectsHtml() {
-  if (!OPP.prospects) return `<div class="opp-error"><strong>Prospects didn’t load.</strong>${escapeHtml(/prospects/.test(OPP.prospectsError) ? 'The prospects table isn’t in the database yet (it arrives with this update).' : OPP.prospectsError)}<button type="button" data-opp-act="reload">Retry</button></div>`;
+  if (!OPP.prospects) return `<div class="opp-error"><strong>Prospects didn’t load.</strong>${escapeHtml(/prospects/.test(OPP.prospectsError) ? 'The prospects table isn’t in the database yet (it arrives with this update).' : OPP.prospectsError)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
   const t = todayKey();
   const sm = prospectSummary(OPP.prospects, t);
   const shown = sortProspects(OPP.prospects).filter(p => OPP.prospectView === 'all' || (OPP.prospectView === 'open' ? P_OPEN.includes(p.stage) : p.stage === OPP.prospectView));
-  const stageStrip = P_OPEN.map(k => `<div class="opp-pstage"><span>${P_LABEL[k]}</span><strong>${sm.by[k].count}</strong><small>${sm.by[k].mrr ? escapeHtml(money(sm.by[k].mrr)) + '/mo' : '—'}</small></div>`).join('');
+  const stageStrip = P_OPEN.map(k => `<div class="kpi"><span class="kpi-label">${P_LABEL[k]}</span><strong class="kpi-value">${sm.by[k].count}</strong><small class="kpi-sub">${sm.by[k].mrr ? escapeHtml(money(sm.by[k].mrr)) + '/mo' : '—'}</small></div>`).join('');
   const card = p => {
     if (OPP.prospectEdit === p.id) return `<article class="opp-prospect editing">${prospectFormHtml(p)}</article>`;
     const due = p.follow_up_on && P_OPEN.includes(p.stage) ? dueText(p.follow_up_on, t) : '';
@@ -752,30 +754,30 @@ function prospectsHtml() {
     const late = p.follow_up_on && (Date.parse(t) - Date.parse(String(p.follow_up_on).slice(0, 10))) > 7 * 86400000;
     return `<article class="opp-prospect st-${escapeHtml(p.stage)}">
       <div class="opp-prospect-main">
-        <div class="opp-prospect-top"><strong>${escapeHtml(p.company)}</strong><span class="opp-pill st-${escapeHtml(p.stage)}">${escapeHtml(P_LABEL[p.stage] || p.stage)}</span></div>
+        <div class="opp-prospect-top"><strong>${escapeHtml(p.company)}</strong><span class="badge${({ meeting: ' badge-amber', proposal: ' badge-amber', won: ' badge-green' })[p.stage] || ''}">${escapeHtml(P_LABEL[p.stage] || p.stage)}</span></div>
         <div class="opp-prospect-who">${[p.contact_name && escapeHtml(p.contact_name), p.email && `<a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a>`, p.phone && `<a href="tel:${escapeHtml(p.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(p.phone)}</a>`].filter(Boolean).join(' · ') || '<span class="opp-muted">No contact yet</span>'}</div>
         <div class="opp-prospect-meta">${escapeHtml(SRC_LABEL[p.source] || 'Other')}${p.interest ? ' · ' + escapeHtml(p.interest) : ''}</div>
         ${p.next_step ? `<div class="opp-deal-next"><span>Next</span> ${escapeHtml(p.next_step)}</div>` : ''}
-        <div class="opp-flags">${due ? `<span class="opp-flag ${late ? 'red' : String(p.follow_up_on).slice(0, 10) <= t ? 'amber' : ''}">Follow up ${escapeHtml(due)}</span>` : ''}
-          ${p.converted_client ? `<span class="opp-flag green">Client since ${escapeHtml(shortDate(p.converted_at))}</span>` : ''}</div>
+        <div class="opp-flags">${due ? `<span class="badge${late ? ' badge-red' : String(p.follow_up_on).slice(0, 10) <= t ? ' badge-amber' : ''}">Follow up ${escapeHtml(due)}</span>` : ''}
+          ${p.converted_client ? `<span class="badge badge-green">Client since ${escapeHtml(shortDate(p.converted_at))}</span>` : ''}</div>
       </div>
       <div class="opp-deal-value"><strong>${Number(p.est_mrr) ? escapeHtml(money(p.est_mrr)) + '<small>/mo</small>' : '—'}</strong><span class="opp-deal-meta">${escapeHtml(ago(p.modified_at || p.created_at))}</span></div>
       <div class="opp-deal-actions">
-        ${p.converted_client ? `<button type="button" class="opp-btn ghost" data-opp-act="pclient" data-name="${escapeHtml(p.converted_client)}">Open client</button>`
-          : P_OPEN.includes(p.stage) ? `<button type="button" class="opp-btn win" data-opp-act="pconvert" data-id="${p.id}">Make client</button>
-             <button type="button" class="opp-btn ghost" data-opp-act="plost" data-id="${p.id}">Lost</button>`
-          : `<button type="button" class="opp-btn ghost" data-opp-act="preopen" data-id="${p.id}">Reopen</button>`}
-        <button type="button" class="opp-btn ghost" data-opp-act="pedit" data-id="${p.id}">Edit</button>
+        ${p.converted_client ? `<button type="button" class="btn btn-sm" data-opp-act="pclient" data-name="${escapeHtml(p.converted_client)}">Open client</button>`
+          : P_OPEN.includes(p.stage) ? `<button type="button" class="btn btn-sm btn-success" data-opp-act="pconvert" data-id="${p.id}">Make client</button>
+             <button type="button" class="btn btn-sm" data-opp-act="plost" data-id="${p.id}">Lost</button>`
+          : `<button type="button" class="btn btn-sm" data-opp-act="preopen" data-id="${p.id}">Reopen</button>`}
+        <button type="button" class="btn btn-sm btn-ghost" data-opp-act="pedit" data-id="${p.id}">Edit</button>
       </div>
     </article>`;
   };
   const views = [['open', `Open ${sm.openCount}`], ['won', `Won ${sm.by.won.count}`], ['lost', `Lost ${sm.by.lost.count}`], ['all', 'All']];
   return `<div class="opp-pipe-head">
       <div class="opp-view" role="group" aria-label="Which prospects">${views.map(([k, l]) => `<button type="button" data-opp-act="pview" data-view="${k}" aria-pressed="${OPP.prospectView === k}">${escapeHtml(l)}</button>`).join('')}</div>
-      <div class="opp-flags">${sm.openMrr ? `<span class="opp-flag green">${escapeHtml(money(sm.openMrr))}/mo if they all sign</span>` : ''}${sm.due ? `<span class="opp-flag amber">${sm.due} follow-up${sm.due === 1 ? '' : 's'} due</span>` : ''}</div>
-      ${OPP.prospectEdit === 'new' ? '' : '<button type="button" class="opp-btn" data-opp-act="padd">+ Add prospect</button>'}
+      <div class="opp-flags">${sm.openMrr ? `<span class="badge badge-green">${escapeHtml(money(sm.openMrr))}/mo if they all sign</span>` : ''}${sm.due ? `<span class="badge badge-amber">${sm.due} follow-up${sm.due === 1 ? '' : 's'} due</span>` : ''}</div>
+      ${OPP.prospectEdit === 'new' ? '' : '<button type="button" class="btn btn-primary" data-opp-act="padd">Add prospect</button>'}
     </div>
-    <div class="opp-pstages">${stageStrip}</div>
+    <div class="opp-pstages kpi-panel">${stageStrip}</div>
     ${OPP.prospectEdit === 'new' ? `<article class="opp-prospect editing"><strong class="opp-form-title">New prospect</strong>${prospectFormHtml(null)}</article>` : ''}
     <div class="opp-deals">${shown.map(card).join('') || `<p class="opp-muted">${OPP.prospectView === 'open' ? 'No open prospects. Add the next company you’re talking to.' : 'None here.'}</p>`}</div>`;
 }
@@ -842,7 +844,7 @@ function dealerHtml() {
       <label>£ commission/mo <input name="commission" type="number" min="0" step="0.01" value="${d.commission ?? ''}" placeholder="?"></label>
       <label class="wide">Details <input name="extras" type="text" value="${escapeHtml(d.extras || '')}" placeholder="e.g. 100MB/100MB, 12 x maintenance"></label>
       <label class="wide">Notes <input name="notes" type="text" value="${escapeHtml(d.notes || '')}"></label>
-      <div class="opp-gap-actions"><button type="submit" class="opp-btn ghost">Save</button><button type="button" class="opp-btn ghost" data-opp-act="deldealer" data-id="${d.id}">Remove</button></div>
+      <div class="opp-form-actions"><button type="button" class="btn btn-sm btn-danger" data-opp-act="deldealer" data-id="${d.id}">Remove</button><button type="submit" class="btn btn-sm">Save</button></div>
     </form>`;
   return `<p class="opp-note">Customers on your VoIP Unlimited <strong>dealer</strong> account (they buy direct; you earn commission). They are not offered VoxOne or connectivity; out-of-contract lines and VoIP Exchange seats become opportunities instead.${due ? ` <strong>${due}</strong> out of contract or ending within 90 days.` : ''} Services you resell yourself stay as service lines on Profitability.</p>
     <form class="opp-dealer-row opp-dealer-add" data-opp-dealer="new">
@@ -852,7 +854,7 @@ function dealerHtml() {
       <label>Service <select name="service">${DEALER_SERVICES.map(k => `<option value="${k}">${escapeHtml(optLabel(k))}</option>`).join('')}</select></label>
       <label>Qty <input name="quantity" type="number" min="0" step="1" value="1"></label>
       <label>Contract <select name="contract">${CONTRACTS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
-      <div class="opp-gap-actions"><button type="submit" class="opp-btn">Add</button></div>
+      <div class="opp-form-actions"><button type="submit" class="btn btn-sm btn-primary">Add</button></div>
     </form>
     ${[...OPP.dealer].sort((a, b) => a.client_name.localeCompare(b.client_name)).map(row).join('') || '<p class="opp-muted">No dealer services recorded.</p>'}`;
 }
@@ -905,7 +907,7 @@ function productsHtml() {
         <label>Subject <input name="subject" type="text" value="${escapeHtml(p.email_subject)}"></label>
         <label>Body <textarea name="body" rows="10">${escapeHtml(p.email_body)}</textarea></label>
       </details>
-      <button type="submit" class="opp-btn ghost">Save</button>
+      <button type="submit" class="btn btn-sm">Save</button>
     </form>`).join('')}</div>`;
 }
 

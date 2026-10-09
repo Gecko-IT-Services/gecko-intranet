@@ -1,0 +1,140 @@
+/* Gecko HQ design system: the parts every section shares (10 Oct 2026).
+   Design: docs/superpowers/specs/2026-10-10-design-consistency-design.md
+
+   Loads after index.html's inline <style>, and every rule is anchored on #app
+   (the <main>), so it wins over the older per-section ID rules and the light
+   theme's band overrides alike. That means only theme tokens here, never
+   literal colours: the tokens already change per theme.
+
+   One look per part:
+   1  Header actions   [section actions] [Refresh] Synced HH:MM
+   2  Buttons          .btn · .btn-primary (ink) · .btn-ghost · .btn-danger · .btn-success · .btn-sm
+   3  Figures          one hairline-divided panel, mono values
+   4  Error state      red-tinted box; never the empty state's look
+   5  Lists            full 1px borders; status shown by a dot or badge, not a side stripe
+   6  Badges           .badge (status, small caps) */
+
+
+/* ── 1 · Header actions ─────────────────────────────────────────────── */
+#app :is(.ovw-head-actions, .prf-head-actions, .mil-head-actions, .cli-head-actions, .tsh-head-actions,
+         .lev-head-actions, .cmp-head-actions, .prj-head-actions, .bkp-head-actions, .alr-head-actions,
+         .pnl-actions, .head-actions) {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px;
+}
+
+/* Every Refresh (and the plain controls beside it) is the default .btn. */
+#app .section-head :is(.ovw-refresh, .prf-refresh, .prf-manage-link, .prf-export-btn, .mil-refresh,
+                       .cli-refresh, .tsh-refresh, .lev-refresh, .lev-month-sel, .cmp-refresh,
+                       .prj-refresh, .bkp-refresh, .head-btn) {
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 34px; padding: 7px 14px; border-radius: var(--radius-pill);
+  border: 1px solid var(--border-dim); background: var(--panel); color: var(--muted);
+  font: 500 13px/1.2 var(--font-body); box-shadow: none; cursor: pointer; text-decoration: none;
+  transition: background-color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+#app .section-head :is(.ovw-refresh, .prf-refresh, .prf-manage-link, .prf-export-btn, .mil-refresh,
+                       .cli-refresh, .tsh-refresh, .lev-refresh, .cmp-refresh, .prj-refresh, .bkp-refresh, .head-btn):hover {
+  background: var(--card-hover); border-color: var(--border); color: var(--white);
+}
+#app .section-head :is(.ovw-refresh, .prf-refresh, .mil-refresh, .cli-refresh, .tsh-refresh, .lev-refresh,
+                       .cmp-refresh, .prj-refresh, .bkp-refresh, .head-btn) svg { width: 13px; height: 13px; flex: none; }
+
+/* While a refresh runs: .spinning on the button turns its icon. */
+#app .section-head .spinning svg { animation: spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { #app .section-head .spinning svg { animation: none; } }
+
+/* "Synced 09:00" sits straight after Refresh, quiet and mono, everywhere. */
+#app .section-head :is(.ovw-last-sync, .prf-last-sync, .mil-last-sync, .cli-last-sync, .tsh-last-sync,
+                       .lev-last-sync, .cmp-last-sync, .prj-last-sync, .bkp-last-sync, .head-sync) {
+  margin-left: 2px; font: 500 11px var(--font-mono); color: var(--muted); letter-spacing: 0;
+}
+
+
+/* Segmented choices (time window, table/cards) look like the tab strips: green = selected. */
+#app :is(.bkp-window, .cli-view-toggle) {
+  display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border-dim);
+  border-radius: var(--radius-pill); background: var(--card); box-shadow: none; overflow: visible;
+}
+#app :is(.bkp-window, .cli-view-toggle) button {
+  min-height: 28px; padding: 4px 12px; border: 0; border-radius: var(--radius-pill); background: transparent;
+  color: var(--muted); font: 500 12px/1.2 var(--font-body); box-shadow: none; cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+#app :is(.bkp-window, .cli-view-toggle) button:hover { color: var(--white); }
+#app :is(.bkp-window button[aria-pressed="true"], .cli-view-toggle .cli-vt-btn.active) {
+  background: var(--green); color: var(--on-green); font-weight: 600;
+}
+
+
+/* ── 2 · Buttons ────────────────────────────────────────────────────── */
+#app .btn {
+  min-height: 34px; padding: 7px 14px; border-radius: var(--radius-pill);
+  font-size: 13px; font-weight: 500; line-height: 1.2; justify-content: center; white-space: nowrap;
+}
+#app .btn-primary { font-weight: 600; }
+#app .btn-sm { min-height: 30px; padding: 5px 12px; font-size: 12px; gap: 6px; }
+#app .btn-danger {
+  background: transparent; border-color: var(--red-border); color: var(--red); box-shadow: none;
+}
+#app .btn-danger:hover { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+#app .btn-success { background: var(--green); border-color: var(--green); color: var(--on-green); font-weight: 600; }
+#app .btn-success:hover { background: var(--green-bright); border-color: var(--green-bright); color: var(--on-green); }
+#app .btn:disabled, #app .btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+#app .btn[aria-busy="true"] { cursor: progress; }
+
+/* The light theme's band rule recolours every non-primary header button; the
+   variants keep their own meaning there. */
+#app .section-head .btn-ghost { background: transparent; border-color: transparent; }
+#app .section-head .btn-danger { background: transparent; border-color: var(--red-border); color: var(--red); }
+
+
+/* ── 3 · Figures: one hairline-divided panel ────────────────────────── */
+#app :is(.job-kpis, .opp-kpis, .bkp-kpis, .ovw-stats, .prf-sum-strip, .pnl-summary, .cl-kpis, .kpi-panel) {
+  gap: 1px; background: var(--hair); border: 1px solid var(--border-dim);
+  border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
+}
+#app :is(.job-kpi, .opp-kpi, .bkp-kpi, .ovw-stat, .prf-sum-s, .pnl-kpi, .cl-kpi, .kpi) {
+  background: var(--card); border: 0; border-radius: 0; box-shadow: none; padding: 14px 16px 16px;
+}
+/* Labels: small caps, muted. Values: mono, white unless a status colour is the point. */
+#app :is(.job-kpi > span, .opp-kpi > span, .bkp-kpi-lbl, .ovw-stat .l, .prf-sum-l, .cl-kpi > span, .kpi-label) {
+  font: 600 10px/1.3 var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+#app :is(.job-kpi > strong, .opp-kpi > strong, .bkp-kpi-val, .prf-sum-v, .cl-kpi > strong, .kpi-value) {
+  font-family: var(--font-mono); font-weight: 500; font-size: 22px; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}
+#app :is(.job-kpi > strong, .opp-kpi > strong) { color: var(--white); }
+#app :is(.job-kpi > small, .opp-kpi > small, .prf-sum-sub, .cl-kpi > small, .kpi-sub) { font-size: 12px; color: var(--muted); }
+
+
+/* ── 4 · Error state: red-tinted, with its recovery button ─────────── */
+#app :is(.job-error, .opp-error, .prj-error, .bkp-error, .tm-error, .cl-error, .cli-error, .ovw-error, .state-error) {
+  display: grid; justify-items: center; gap: 6px; text-align: center;
+  padding: 24px 22px; border: 1px solid var(--red-border); border-radius: var(--radius);
+  background: linear-gradient(var(--red-dim), var(--red-dim)), var(--card); color: var(--muted);
+}
+#app :is(.job-error, .opp-error, .prj-error, .bkp-error, .tm-error, .cl-error, .cli-error, .ovw-error, .state-error) :is(strong, h3) {
+  display: block; margin: 0; color: var(--red); font: 700 14px/1.4 var(--font-body); letter-spacing: 0; text-transform: none;
+}
+#app :is(.ovw-error, .state-error) p { margin: 0; color: var(--muted); font-size: 13px; }
+#app :is(.job-error, .opp-error, .prj-error, .bkp-error, .tm-error, .cl-error, .state-error) button { margin: 8px 0 0; }
+
+/* Empty: quiet text on the card, no tint. */
+#app :is(.job-empty, .opp-empty, .prj-empty, .bkp-empty, .tm-empty, .cl-empty, .state-empty) {
+  padding: 28px 22px; border: 1px solid var(--border-dim); border-radius: var(--radius);
+  background: var(--card); color: var(--muted); text-align: center;
+}
+
+
+/* ── 5 · Lists: no coloured side stripes ────────────────────────────── */
+#app :is(.job-card, .opp-deal, .opp-prospect, .bkp-client, .cl-fu li) { border-left-width: 1px; border-left-color: var(--border-dim); }
+
+
+/* ── 6 · Badges ─────────────────────────────────────────────────────── */
+#app .badge { border-radius: var(--radius-pill); padding: 2px 8px; font-size: 10px; line-height: 1.5; white-space: nowrap; }
+
+
+@media (max-width: 560px) {
+  #app :is(.job-kpis, .opp-kpis, .bkp-kpis, .ovw-stats, .cl-kpis) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

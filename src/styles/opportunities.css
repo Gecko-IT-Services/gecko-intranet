@@ -3,44 +3,13 @@
    Existing design tokens only. ID-scoped to outrank the inline stylesheet.
    ═══════════════════════════════════════════════════════════════════ */
 
-#section-opportunities .opp-head-actions {
-  display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap;
-}
-#section-opportunities .opp-tabs { display: flex; gap: 6px; overflow-x: auto; max-width: 100%; }
-#section-opportunities .opp-tabs button,
-#section-opportunities .opp-btn {
-  min-height: 34px; padding: 7px 14px; border-radius: var(--radius-pill);
-  border: 1px solid var(--border-dim); background: transparent; color: var(--muted);
-  font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
-  transition: color .15s, border-color .15s, background .15s;
-}
-#section-opportunities .opp-tabs button[aria-selected="true"] { color: var(--on-green); background: var(--green); border-color: var(--green); }
-#section-opportunities .opp-btn { color: var(--on-ink); background: var(--ink); border-color: var(--ink); font-weight: 600; }
-#section-opportunities .opp-btn.ghost { color: var(--muted); background: transparent; border-color: var(--border-dim); font-weight: 400; }
-#section-opportunities .opp-btn:hover:not(:disabled),
-#section-opportunities .opp-tabs button:hover { border-color: var(--green); }
-#section-opportunities .opp-btn:disabled { opacity: .5; cursor: not-allowed; }
+/* The .opp-tabs strip is styled by .app-tabs (geckoInkify); buttons are the shared .btn family. */
 
-/* — KPIs — */
-#section-opportunities .opp-kpis {
-  display: grid; gap: 12px; margin: 18px 0; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
-}
-#section-opportunities .opp-kpi {
-  padding: 14px 16px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card);
-  display: flex; flex-direction: column; gap: 2px; min-width: 0;
-}
-#section-opportunities .opp-kpi span { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-#section-opportunities .opp-kpi strong { font-family: var(--font-mono); font-size: 22px; color: var(--green); }
-#section-opportunities .opp-kpi small { color: var(--faint); font-size: 12px; }
+/* — KPIs: one hairline panel (system.css draws it) — */
+#section-opportunities .opp-kpis { display: grid; margin: 18px 0; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+#section-opportunities :is(.opp-kpi, .opp-stage, .opp-pstages .kpi) { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
-/* — Shared states — */
-#section-opportunities .opp-empty,
-#section-opportunities .opp-error {
-  padding: 28px 22px; border: 1px solid var(--border-dim); border-radius: var(--radius);
-  background: var(--card); color: var(--muted); text-align: center;
-}
-#section-opportunities .opp-error strong { display: block; color: var(--white); margin-bottom: 6px; }
-#section-opportunities .opp-error button { display: block; margin: 14px auto 0; }
+/* — States: .opp-empty / .opp-error are drawn by system.css — */
 #section-opportunities .opp-note { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
 #section-opportunities .opp-muted { color: var(--faint); font-size: 12px; }
 #section-opportunities .opp-check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
@@ -49,18 +18,19 @@
   display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 12px; color: var(--muted); font-size: 13px;
 }
 #section-opportunities .opp-toolbar strong { color: var(--white); }
-#section-opportunities .opp-toolbar .opp-btn { margin-left: auto; }
+#section-opportunities .opp-toolbar .btn { margin-left: auto; }
 
 #section-opportunities .opp-progress {
   position: relative; height: 30px; margin-bottom: 12px; border-radius: var(--radius-sm);
   background: var(--inset); overflow: hidden; border: 1px solid var(--border-dim);
 }
-#section-opportunities .opp-progress div { position: absolute; inset: 0 auto 0 0; background: var(--green-glow); transition: width .3s; }
+#section-opportunities .opp-progress div { position: absolute; inset: 0 auto 0 0; background: var(--green-glow); transition: width var(--dur-3) var(--ease); }
 #section-opportunities .opp-progress span { position: relative; display: block; padding: 6px 12px; font-size: 12px; color: var(--muted); }
 
 /* — Client cards (Gaps tab) — */
+/* .opp-card: a client card here, a deal card on the board (.opp-col .opp-card, below). */
 #section-opportunities .opp-card {
-  border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); margin-bottom: 10px;
+  border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); margin-bottom: 10px; min-width: 0;
 }
 #section-opportunities .opp-card.open { border-color: var(--green-line); }
 #section-opportunities .opp-card-head {
@@ -76,6 +46,8 @@
 }
 #section-opportunities .opp-chip.s1 { color: var(--amber); border-color: var(--amber-border); background: var(--amber-dim); }
 #section-opportunities .opp-chip.s2 { color: var(--green); border-color: var(--green-line); background: var(--green-glow); }
+/* Neutral status badge (no colour variant): quiet outline. */
+#section-opportunities .badge:not([class*="badge-"]) { color: var(--muted); border: 1px solid var(--border-dim); }
 
 #section-opportunities .opp-card-body { padding: 0 16px 16px; border-top: 1px solid var(--hair); }
 #section-opportunities .opp-signals { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 12px 0; font-size: 12px; color: var(--muted); }
@@ -110,24 +82,22 @@
 #section-opportunities .opp-product-head .opp-check { margin-left: auto; }
 #section-opportunities .opp-product-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 #section-opportunities .opp-product textarea { width: 100%; resize: vertical; font-family: var(--font-body); }
-#section-opportunities .opp-product > button { align-self: flex-start; }
+#section-opportunities .opp-product > .btn { align-self: flex-start; }
+/* Form actions: Delete far left, then Cancel, the primary last. */
+#section-opportunities .opp-form-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+#section-opportunities .opp-form-actions .btn-danger { margin-right: auto; }
 
 /* — Phones: stack the client header — */
 @media (max-width: 640px) {
   #section-opportunities .opp-card-head { grid-template-columns: 1fr auto; }
   #section-opportunities .opp-chips { grid-column: 1 / -1; grid-row: 2; }
-  #section-opportunities .opp-toolbar .opp-btn { margin-left: 0; }
-}
-@media (max-width: 640px) {
-  #section-opportunities .opp-kpi { padding: 12px; }
-  #section-opportunities .opp-kpi strong { font-size: 18px; }
+  #section-opportunities .opp-toolbar .btn { margin-left: 0; }
 }
 /* Inputs fill their grid cell, never their intrinsic width (the board columns are narrow). */
 #section-opportunities .opp-item-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 #section-opportunities .opp-item-form input,
 #section-opportunities .opp-item-form select,
 #section-opportunities .opp-product input { width: 100%; box-sizing: border-box; }
-#section-opportunities .opp-item-form .opp-btn { align-self: end; min-height: 34px; height: 34px; padding: 0 14px; }
 #section-opportunities .opp-product input[type="checkbox"],
 #section-opportunities .opp-toolbar input[type="checkbox"] { width: auto; min-height: 0; padding: 0; accent-color: var(--green); }
 #section-opportunities .opp-product label.opp-check { flex-direction: row; font-size: 12px; color: var(--muted); }
@@ -142,7 +112,7 @@
 #section-opportunities .opp-dealer-client { grid-column: 1 / -1; color: var(--white); }
 #section-opportunities .opp-dealer-row label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--faint); min-width: 0; }
 #section-opportunities .opp-dealer-row .wide { grid-column: span 2; }
-#section-opportunities .opp-dealer-row .opp-gap-actions { grid-column: 1 / -1; margin-top: 0; }
+#section-opportunities .opp-dealer-row .opp-form-actions { grid-column: 1 / -1; }
 #section-opportunities .opp-dealer-row input,
 #section-opportunities .opp-dealer-row select {
   width: 100%; box-sizing: border-box; min-height: 34px; padding: 6px 10px; border-radius: var(--radius-sm);
@@ -151,35 +121,32 @@
 @media (max-width: 640px) { #section-opportunities .opp-dealer-row .wide { grid-column: 1 / -1; } }
 
 /* — Pipeline: stage summary + one list of deals (replaces the four-column board) — */
-#section-opportunities .opp-stages { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 18px; }
+#section-opportunities .opp-stages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 18px; }
 @container oppwrap (min-width: 760px) { #section-opportunities .opp-stages { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* Stage cells are filter buttons inside the hairline panel: dimmed when off. */
 #section-opportunities .opp-stage {
   --st: var(--muted);
-  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; text-align: left;
-  padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--border-dim); background: var(--card);
-  font: inherit; color: var(--muted); cursor: pointer; opacity: .62; transition: opacity .15s, border-color .15s, box-shadow .15s;
+  align-items: flex-start; text-align: left; font: inherit; color: var(--muted); cursor: pointer; opacity: .62;
+  transition: opacity var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
 }
-#section-opportunities .opp-stage.on { opacity: 1; border-color: var(--st); box-shadow: inset 0 3px 0 var(--st); }
+#section-opportunities .opp-stage.on { opacity: 1; background: var(--card-hover); }
 #section-opportunities .opp-stage:hover { opacity: 1; }
+#section-opportunities .opp-stage:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
 #section-opportunities .st-proposed { --st: var(--amber); }
 #section-opportunities .st-won { --st: var(--green); }
 #section-opportunities .st-lost { --st: var(--red); }
-#section-opportunities .opp-stage-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-#section-opportunities .opp-stage-value { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--white); }
-#section-opportunities .opp-stage-value small,
-#section-opportunities .opp-deal-value small { font-size: .6em; font-weight: 400; color: var(--muted); }
-#section-opportunities .opp-stage-count { font-size: 12px; }
-#section-opportunities .opp-stage-bar { width: 100%; height: 4px; border-radius: 4px; background: var(--border-dim); overflow: hidden; margin-top: 4px; }
+#section-opportunities .opp-stage .kpi-value { color: var(--white); }
+#section-opportunities :is(.opp-stage .kpi-value, .opp-deal-value strong) small { font-size: 12px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+#section-opportunities .opp-stage-bar { width: 100%; height: 4px; border-radius: var(--radius-pill); background: var(--border-dim); overflow: hidden; margin-top: 4px; }
 #section-opportunities .opp-stage-bar i { display: block; height: 100%; background: var(--st); }
 
 #section-opportunities .opp-deals-head { display: flex; align-items: baseline; gap: 12px; margin: 0 2px 10px; font-size: 14px; color: var(--white); }
-#section-opportunities .opp-linkbtn { border: 0; background: none; padding: 0; color: var(--green); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; }
 #section-opportunities .opp-deals { display: flex; flex-direction: column; gap: 10px; }
 #section-opportunities .opp-deal {
   --st: var(--muted);
   display: grid; gap: 10px 18px; align-items: center; padding: 14px 16px;
   grid-template-columns: minmax(0, 1fr) auto;
-  border: 1px solid var(--border-dim); border-left: 4px solid var(--st); border-radius: var(--radius); background: var(--card);
+  border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card);
 }
 #section-opportunities .opp-deal-client { font-weight: 700; color: var(--white); font-size: 15px; }
 #section-opportunities .opp-deal-product { color: var(--muted); font-size: 13px; margin-top: 2px; }
@@ -193,7 +160,6 @@
 #section-opportunities .opp-deal-meta { display: inline-flex; align-items: center; gap: 6px; }
 #section-opportunities .opp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--st); }
 #section-opportunities .opp-deal-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
-#section-opportunities .opp-btn.win { color: var(--on-green); background: var(--green); border-color: var(--green); font-weight: 600; }
 #section-opportunities .opp-deal-edit {
   grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 12px; border-radius: var(--radius-sm); background: var(--panel);
@@ -210,58 +176,44 @@
 
 /* Sharper pipeline (9 Oct): view toggle, flags, follow-ups, won next steps, board */
 #section-opportunities .opp-pipe-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-#section-opportunities .opp-view { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border-dim); border-radius: 999px; background: var(--card); }
-#section-opportunities .opp-view button { font: inherit; font-size: 12px; cursor: pointer; border: 0; border-radius: 999px; padding: 6px 14px; background: transparent; color: var(--muted); }
+#section-opportunities .opp-view { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border-dim); border-radius: var(--radius-pill); background: var(--card); }
+#section-opportunities .opp-view button { font: inherit; font-size: 12px; cursor: pointer; border: 0; border-radius: var(--radius-pill); padding: 6px 14px; background: transparent; color: var(--muted); transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
 #section-opportunities .opp-view button[aria-pressed="true"] { background: var(--green); color: var(--on-green); font-weight: 600; }
 #section-opportunities .opp-flags { display: flex; gap: 6px; flex-wrap: wrap; }
 #section-opportunities .opp-flags:empty { display: none; }
 #section-opportunities .opp-deal-main .opp-flags { margin-top: 6px; }
-#section-opportunities .opp-flag { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); white-space: nowrap; }
-#section-opportunities .opp-flag.amber { color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent); }
-#section-opportunities .opp-flag.red { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
-#section-opportunities .opp-flag.green { color: var(--green); background: var(--green-glow); }
 #section-opportunities .opp-fu { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
 #section-opportunities .opp-fu > span { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; margin-right: 4px; }
 #section-opportunities .opp-fu input[type="date"] { width: auto; }
-#section-opportunities .opp-chip-btn { font: inherit; font-size: 12px; cursor: pointer; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-dim); background: transparent; color: var(--muted); }
-#section-opportunities .opp-chip-btn:hover { border-color: var(--green); color: var(--green); }
-#section-opportunities .opp-won-steps { grid-column: 1 / -1; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--green-glow); border: 1px solid color-mix(in srgb, var(--green) 40%, transparent); }
+#section-opportunities .opp-won-steps { grid-column: 1 / -1; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--green-glow); border: 1px solid var(--green-line); }
 #section-opportunities .opp-won-steps strong { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--green); margin-bottom: 6px; }
 #section-opportunities .opp-won-steps ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 #section-opportunities .opp-won-steps li { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--white); flex-wrap: wrap; }
 #section-opportunities .opp-won-steps li.done { color: var(--muted); }
 #section-opportunities .opp-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; margin-bottom: 8px; }
-#section-opportunities .opp-col { background: color-mix(in srgb, var(--border-dim) 25%, transparent); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; border-top: 3px solid var(--border-dim); }
-#section-opportunities .opp-col.st-proposed { border-top-color: var(--amber); }
-#section-opportunities .opp-col.st-won { border-top-color: var(--green); }
-#section-opportunities .opp-col.st-lost { border-top-color: var(--muted); }
+#section-opportunities .opp-col { background: color-mix(in srgb, var(--border-dim) 25%, transparent); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; --st: var(--muted); }
+#section-opportunities .opp-col.st-proposed { --st: var(--amber); }
+#section-opportunities .opp-col.st-won { --st: var(--green); }
 #section-opportunities .opp-col header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 4px 4px; }
-#section-opportunities .opp-col header strong { font-size: 13px; color: var(--white); }
-#section-opportunities .opp-col header span { font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); }
-#section-opportunities .opp-card { background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+#section-opportunities .opp-col header strong { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--white); }
+#section-opportunities .opp-col header span { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+#section-opportunities .opp-col .opp-card { margin: 0; border-radius: var(--radius-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; }
 #section-opportunities .opp-card-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 13px; min-width: 0; }
 #section-opportunities .opp-card-top .client-link { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 #section-opportunities .opp-card-top strong { font-family: var(--font-mono); font-weight: 500; font-size: 13px; color: var(--white); white-space: nowrap; }
 #section-opportunities .opp-card-top small { color: var(--muted); }
-#section-opportunities .opp-card-title { font-size: 12.5px; color: var(--muted); }
-#section-opportunities .opp-card-title span { font-family: var(--font-mono); font-size: 11.5px; }
+#section-opportunities .opp-card-title { font-size: 12px; color: var(--muted); }
+#section-opportunities .opp-card-title span { font-family: var(--font-mono); font-size: 11px; }
 #section-opportunities .opp-card-next { font-size: 12px; color: var(--white); }
-#section-opportunities .opp-card-acts { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid var(--border-dim); margin-top: 2px; }
-#section-opportunities .opp-card-acts .opp-linkbtn { font-size: 12px; }
-#section-opportunities .opp-card-acts .opp-linkbtn.win { color: var(--green); font-weight: 600; }
+#section-opportunities .opp-card-acts { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid var(--border-dim); margin-top: 2px; }
 @media (max-width: 1100px) { #section-opportunities .opp-board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { #section-opportunities .opp-board { grid-template-columns: minmax(0, 1fr); } }
 
 /* Prospects (9 Oct) */
-#section-opportunities .opp-pipe-head > .opp-btn { margin-left: auto; }
-#section-opportunities .opp-pstages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
-#section-opportunities .opp-pstage { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); }
-#section-opportunities .opp-pstage span { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--muted); }
-#section-opportunities .opp-pstage strong { font-family: var(--font-mono); font-weight: 500; font-size: 20px; color: var(--white); }
-#section-opportunities .opp-pstage small { font-size: 12px; color: var(--muted); }
-#section-opportunities .opp-prospect { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; padding: 14px 16px; background: var(--card); border: 1px solid var(--border-dim); border-left: 3px solid var(--border-dim); border-radius: var(--radius); }
-#section-opportunities .opp-prospect.st-meeting, #section-opportunities .opp-prospect.st-proposal { border-left-color: var(--amber); }
-#section-opportunities .opp-prospect.st-won { border-left-color: var(--green); }
+#section-opportunities .opp-pipe-head > .btn { margin-left: auto; }
+#section-opportunities .opp-pstages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 14px; }
+#section-opportunities .opp-pstages .kpi-value { color: var(--white); }
+#section-opportunities .opp-prospect { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; padding: 14px 16px; background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius); }
 #section-opportunities .opp-prospect.st-lost { opacity: .7; }
 #section-opportunities .opp-prospect.editing { display: block; }
 #section-opportunities .opp-prospect .opp-deal-actions { grid-column: 1 / -1; }
@@ -271,9 +223,6 @@
 #section-opportunities .opp-prospect-who { font-size: 13px; color: var(--white); overflow-wrap: anywhere; }
 #section-opportunities .opp-prospect-who a { color: var(--green); text-decoration: none; }
 #section-opportunities .opp-prospect-meta { font-size: 12px; color: var(--muted); }
-#section-opportunities .opp-pill { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); }
-#section-opportunities .opp-pill.st-meeting, #section-opportunities .opp-pill.st-proposal { color: var(--amber); background: color-mix(in srgb, var(--amber) 14%, transparent); }
-#section-opportunities .opp-pill.st-won { color: var(--green); background: var(--green-glow); }
 #section-opportunities .opp-form-title { display: block; margin-bottom: 10px; color: var(--white); }
 #section-opportunities .opp-prospect-form textarea { width: 100%; }
 @media (max-width: 760px) { #section-opportunities .opp-pstages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

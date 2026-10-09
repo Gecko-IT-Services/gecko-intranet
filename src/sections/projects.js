@@ -177,6 +177,7 @@ async function load() {
   const seq = ++loadSeq;
   PRJ.loading = true;
   PRJ.error   = null;
+  setBusy(true);
   render();
   try {
     const [projects, clients] = await Promise.all([fetchProjects(), fetchClientNames()]);
@@ -192,9 +193,18 @@ async function load() {
   } finally {
     if (seq === loadSeq) {
       PRJ.loading = false;
+      setBusy(false);
       render();
     }
   }
+}
+
+function setBusy(busy) {
+  const btn = document.getElementById('prjRefresh');
+  if (!btn) return;
+  btn.disabled = busy;
+  btn.classList.toggle('spinning', busy);
+  if (busy) btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy');
 }
 
 // ─── Render ───────────────────────────────────────────────────────────
@@ -305,7 +315,7 @@ function render() {
       <div class="prj-error">
         <strong>Could not load projects.</strong>
         ${escapeHtml(PRJ.error)}
-        <button type="button" id="prjRetry">Retry</button>
+        <button type="button" class="btn btn-sm" id="prjRetry">Retry</button>
       </div>`;
     document.getElementById('prjRetry')?.addEventListener('click', load);
     return;
@@ -315,7 +325,7 @@ function render() {
     mount.innerHTML = `
       <div class="prj-empty">
         <strong>No projects yet.</strong>
-        <button type="button" data-prj-open="new">Add the first one</button>
+        <button type="button" class="btn btn-sm btn-primary" data-prj-open="new">Add the first one</button>
       </div>`;
     return;
   }
@@ -425,9 +435,9 @@ function openModal(id) {
       <label>Atera ticket<input name="AteraRef" value="${value('ateraRef')}" placeholder="131"></label>
       <label>Notes<textarea name="Notes" rows="4">${value('notes')}</textarea></label>
       <div class="prj-form-actions">
-        ${project ? '<button type="button" class="prj-danger" id="prjDelete">Delete</button>' : ''}
-        <button type="button" id="prjCancel">Cancel</button>
-        <button type="submit" class="prj-primary">${project ? 'Save' : 'Create'}</button>
+        ${project ? '<button type="button" class="btn btn-danger" id="prjDelete">Delete</button>' : ''}
+        <button type="button" class="btn btn-ghost" id="prjCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">${project ? 'Save' : 'Add project'}</button>
       </div>
     </form>`;
 
