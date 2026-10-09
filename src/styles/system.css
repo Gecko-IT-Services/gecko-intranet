@@ -19,14 +19,14 @@
 
 /* ── 1 · Header actions ─────────────────────────────────────────────── */
 #app :is(.ovw-head-actions, .prf-head-actions, .mil-head-actions, .cli-head-actions, .tsh-head-actions,
-         .lev-head-actions, .cmp-head-actions, .bkp-head-actions, .alr-head-actions,
+         .lev-head-actions, .bkp-head-actions, .alr-head-actions,
          .pnl-actions, .head-actions) {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px;
 }
 
 /* Every Refresh (and the plain controls beside it) is the default .btn. */
 #app .section-head :is(.ovw-refresh, .prf-refresh, .prf-manage-link, .prf-export-btn, .mil-refresh,
-                       .cli-refresh, .tsh-refresh, .lev-refresh, .cmp-refresh,
+                       .cli-refresh, .tsh-refresh, .lev-refresh,
                        .bkp-refresh, .head-btn) {
   display: inline-flex; align-items: center; gap: 7px;
   min-height: 34px; padding: 7px 14px; border-radius: var(--radius-pill);
@@ -36,11 +36,10 @@
               transform var(--dur-1) var(--ease);
 }
 #app .section-head :is(.ovw-refresh, .prf-refresh, .prf-manage-link, .prf-export-btn, .mil-refresh,
-                       .cli-refresh, .tsh-refresh, .lev-refresh, .cmp-refresh, .bkp-refresh, .head-btn):hover {
+                       .cli-refresh, .tsh-refresh, .lev-refresh, .bkp-refresh, .head-btn):hover {
   background: var(--card-hover); border-color: var(--border); color: var(--white);
 }
-#app .section-head :is(.ovw-refresh, .prf-refresh, .mil-refresh, .cli-refresh, .tsh-refresh, .lev-refresh,
-                       .cmp-refresh, .bkp-refresh, .head-btn) svg { width: 13px; height: 13px; flex: none; }
+#app .section-head :is(.ovw-refresh, .prf-refresh, .mil-refresh, .cli-refresh, .tsh-refresh, .lev-refresh, .bkp-refresh, .head-btn) svg { width: 13px; height: 13px; flex: none; }
 
 /* These rules set display, which would beat the hidden attribute (Connect, Copy to Supabase…). */
 #app [hidden] { display: none !important; }
@@ -66,7 +65,7 @@
 
 /* "Synced 09:00" sits straight after Refresh, quiet and mono, everywhere. */
 #app .section-head :is(.ovw-last-sync, .prf-last-sync, .mil-last-sync, .cli-last-sync, .tsh-last-sync,
-                       .lev-last-sync, .cmp-last-sync, .bkp-last-sync, .head-sync) {
+                       .lev-last-sync, .bkp-last-sync, .head-sync) {
   margin-left: 2px; font: 500 11px var(--font-mono); color: var(--muted); letter-spacing: 0;
 }
 
@@ -189,10 +188,10 @@
          .bkp-window button, .cli-filter button):active:not(:disabled) { transform: translateY(1px); }
 
 /* Dialogs: the backdrop fades, the panel rises into place. */
-#app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .cmp-modal-bg, .lev-modal-bg, .alr-backdrop) {
+#app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .lev-modal-bg, .alr-backdrop) {
   background: var(--overlay); animation: gk-fade var(--dur-2) var(--ease) both;
 }
-#app :is(.prf-modal, .mil-modal, .cli-modal, .tsh-modal, .cmp-modal, .lev-modal, .alr-modal) {
+#app :is(.prf-modal, .mil-modal, .cli-modal, .tsh-modal, .lev-modal, .alr-modal) {
   animation: gk-rise var(--dur-3) var(--ease) both;
 }
 
@@ -231,17 +230,17 @@
   #app :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { font-size: 16px; }
 
   /* Dialogs become bottom sheets: full width, thumb-height, actions always in reach. */
-  #app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .cmp-modal-bg, .lev-modal-bg).show { align-items: flex-end; padding: 0; }
-  #app :is(.prf-modal, .mil-modal, .cli-modal, .tsh-modal, .cmp-modal, .lev-modal) {
+  #app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .lev-modal-bg).show { align-items: flex-end; padding: 0; }
+  #app :is(.prf-modal, .mil-modal, .cli-modal, .tsh-modal, .lev-modal) {
     width: 100%; max-width: none; margin: 0; max-height: 92dvh; padding: 20px 16px 0;
     border-radius: var(--radius) var(--radius) 0 0; border-bottom: 0;
     animation: gk-sheet var(--dur-3) var(--ease) both;
   }
-  #app :is(.prf-mm-actions, .cli-mm-actions, .cmp-mm-actions, .tsh-mm-actions, .mil-modal .mm-actions, .lev-edit-actions) {
+  #app :is(.prf-mm-actions, .cli-mm-actions, .tsh-mm-actions, .mil-modal .mm-actions, .lev-edit-actions) {
     position: sticky; bottom: 0; z-index: 1; display: flex; gap: 8px; margin: 8px -16px 0;
     padding: 12px 16px calc(12px + var(--safe-b)); background: var(--card); border-top: 1px solid var(--border-dim);
   }
-  #app :is(.prf-mm-actions, .cli-mm-actions, .cmp-mm-actions, .tsh-mm-actions, .mil-modal .mm-actions, .lev-edit-actions) .btn { flex: 1; }
+  #app :is(.prf-mm-actions, .cli-mm-actions, .tsh-mm-actions, .mil-modal .mm-actions, .lev-edit-actions) .btn { flex: 1; }
 
   /* The top bar already names the page on a phone; the band keeps just its actions (and date/tax year). */
   #app .section-head { padding: 12px 14px; margin-bottom: 14px; }
