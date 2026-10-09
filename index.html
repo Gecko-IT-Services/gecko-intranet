@@ -2911,7 +2911,7 @@ body {
   display: inline-block; padding: 2px 8px; border-radius: 999px;
   font-size: 10px; font-weight: 700; letter-spacing: .04em;
 }
-#section-timesheets .tsh-eng-pill.philip { background: var(--green-glow); color: var(--green); border: 1px solid var(--border); }
+#section-timesheets .tsh-eng-pill.philip { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-border); }
 #section-timesheets .tsh-eng-pill.jack   { background: var(--purple-dim); color: var(--purple); border: 1px solid var(--purple-border); }
 #section-timesheets .tsh-eng-pill.system { background: var(--border-dim); color: var(--muted); border: 1px solid var(--border-dim); }
 
@@ -6667,6 +6667,9 @@ body::before {
 
       <!-- ═══ LOG TIME TAB ═══ -->
       <div class="tsh-panel active" id="tshPanelLog" role="tabpanel">
+
+        <!-- The week as a time card: a lane per engineer, a cell per day; a cell picks engineer + date below -->
+        <div class="tsh-card tsh-timecard" id="tshCard" style="margin-bottom:16px;"></div>
 
         <!-- Quick-log form -->
         <div class="tsh-card" style="margin-bottom:16px;">
@@ -15519,6 +15522,7 @@ async function tshRefreshData(silent = false) {
       await Promise.all([tshLoadEntries(), tshLoadSsaClients()]);
       tshResolveClientNames();  // Lookup IDs → display names (must run after both loads)
     }
+    await tshLoadLeave();
     TSH.lastSync = new Date();
     tshPopulateClientDropdown();
     tshRenderAll();
@@ -15722,6 +15726,7 @@ function tshFormChanged() {
   tshSetButton();
   tshSaveDraft(v);
   tshRenderQuick();
+  tshRenderCard();
 }
 
 function tshShowChecks(res) {
@@ -15949,6 +15954,76 @@ function tshFilteredEntries() {
 
 
 // ─── Render — main entry point ───────────────────────────────────────
+/** Leave for the time card's "Off" days (best effort: a failure is named on the card, never hidden). */
+async function tshLoadLeave() {
+  TSH.leaveError = '';
+  try {
+    if (dataBackend('leave') !== 'supabase') { TSH.leave = null; TSH.leaveError = 'Leave is not on the database'; return; }
+    const items = await geckoStore().listItems('leave_requests');
+    TSH.leave = items.map(it => { const f = it.fields || {}; return {
+      person: f.Person || '', start: spDateToLocalDateKey(f.StartDate), end: spDateToLocalDateKey(f.EndDate) || spDateToLocalDateKey(f.StartDate),
+      status: levNormaliseStatus(f.Status), type: f.LeaveType || 'Annual Leave', note: f.Notes || '' }; });
+  } catch (err) {
+    TSH.leave = null; TSH.leaveError = err.message || String(err);
+  }
+}
+
+/**
+ * The time card: the week (Mon–Sun) with a lane per engineer, each day's hours filling its cell towards a
+ * 7-hour day, days off (from Leave) hatched, and weekdays already past with nothing logged outlined.
+ * Clicking a cell sets the engineer and date of the form below. Logic: GeckoWeekly.weekSummary, GeckoTeam.bars.
+ */
+const TSH_DAY_HOURS = 7;
+function tshRenderCard() {
+  const el = tshEl('tshCard');
+  const W = window.GeckoWeekly, T = window.GeckoTeam;
+  if (!el || !W || !T) return;
+  const t = today();
+  if (!TSH.cardWeek) TSH.cardWeek = W.monday(t);
+  const w = W.weekSummary(TSH.entries, TSH.cardWeek, t);
+  const off = TSH.leave ? T.bars(TSH.leave, w.start, w.end) : [];
+  const engSel = tshEl('tshEngineer')?.value || '';
+  const dateSel = tshEl('tshDate')?.value || '';
+  const label = w.isCurrent ? 'This week' : w.start === W.addDays(W.monday(t), -7) ? 'Last week' : 'Week of ' + tshDayLbl(w.start, { day: 'numeric', month: 'short' });
+  const head = w.days.map(d => `<span class="${d.date === t ? 'today' : ''}${d.weekend ? ' we' : ''}">${escapeHtml(tshDayLbl(d.date, { weekday: 'short' }))}<em>${escapeHtml(tshDayLbl(d.date, { day: 'numeric' }))}</em></span>`).join('');
+  const lanes = W.ENGINEERS.map(p => {
+    const cells = w.days.map(d => {
+      const h = d.byEng[p] || 0;
+      const lv = off.find(b => b.person === p && b.from <= d.date && b.to >= d.date);
+      const gap = !h && !lv && !d.weekend && d.date <= t;
+      const cls = ['tsh-tc-c', d.weekend ? 'we' : '', d.future ? 'future' : '', d.date === t ? 'today' : '', lv ? (lv.status === 'Pending' ? 'off pending' : 'off') : '', gap ? 'gap' : '', p === engSel && d.date === dateSel ? 'sel' : ''].filter(Boolean).join(' ');
+      const what = lv ? `${lv.note || lv.type}${lv.status === 'Pending' ? ' (requested)' : ''}` : '';
+      const title = `${p} · ${tshDayLbl(d.date, { weekday: 'long', day: 'numeric', month: 'short' })} · ${h ? tshH(h) + ' logged' : 'nothing logged'}${what ? ' · off: ' + what : ''}`;
+      return `<button type="button" class="${cls}" data-tc-eng="${escapeHtml(p)}" data-tc-date="${d.date}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
+        <i style="height:${(Math.min(1, h / TSH_DAY_HOURS) * 68).toFixed(1)}%"></i><b>${h ? escapeHtml(tshH(h)) : lv ? 'Off' : ''}</b>${h ? `<b class="s">${escapeHtml(String(Math.round(h * 100) / 100))}</b>` : ''}</button>`;
+    }).join('');
+    return `<div class="tsh-tc-row lp-${p.toLowerCase()}"><span class="tsh-tc-who">${escapeHtml(p)}</span>${cells}<strong class="tsh-tc-tot">${escapeHtml(tshH(w.byEng[p] || 0))}</strong></div>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="tsh-card-head tsh-tc-head">
+      <h3>${escapeHtml(label)}</h3><span class="tsh-tc-range">${escapeHtml(W.weekLabel(w.start))}</span>
+      <span class="tsh-tc-nav"><button type="button" class="tsh-wk-arrow" data-tc-step="-1" aria-label="Previous week">‹</button><button type="button" class="tsh-wk-arrow" data-tc-step="1" aria-label="Next week" ${w.isCurrent || w.isFuture ? 'disabled' : ''}>›</button></span>
+      <span class="tsh-tc-hint">${TSH.leaveError ? `Days off not shown: ${escapeHtml(TSH.leaveError)}` : 'Pick a day to log time against it'}</span>
+    </div>
+    <div class="tsh-tc" role="group" aria-label="Hours logged, ${escapeHtml(label.toLowerCase())}">
+      <div class="tsh-tc-row head" aria-hidden="true"><span></span>${head}<span>Week</span></div>
+      ${lanes}
+    </div>`;
+}
+document.addEventListener('click', e => {
+  const c = e.target.closest?.('#tshCard [data-tc-date]');
+  if (c) {
+    const eng = tshEl('tshEngineer');
+    if (eng && [...eng.options].some(o => o.value === c.dataset.tcEng)) eng.value = c.dataset.tcEng;
+    tshEl('tshDate').value = c.dataset.tcDate;
+    tshFormChanged();
+    tshEl('tshClient')?.focus();
+    return;
+  }
+  const st = e.target.closest?.('#tshCard [data-tc-step]');
+  if (st && window.GeckoWeekly) { TSH.cardWeek = window.GeckoWeekly.addDays(TSH.cardWeek, 7 * Number(st.dataset.tcStep)); tshRenderCard(); }
+});
+
 function tshRenderAll() {
   if (TSH.activeTab === 'log') tshRenderLog();
   else if (TSH.activeTab === 'ssa') tshRenderSsa();
@@ -15961,6 +16036,7 @@ function tshRenderLog() {
   const wrap = document.getElementById('tshLogWrap');
   if (!wrap) return;
   tshRenderQuick();
+  tshRenderCard();
   const rows = tshFilteredEntries();
 
   // Update count
@@ -16052,15 +16128,14 @@ function tshSsaCardHtml(r) {
         <span class="tsh-ssa-pill ${st.cls}">${st.label}</span>
       </div>
       <div class="tsh-ssa-body">
-        <div class="tsh-ssa-ring ${ringCls}" style="--left:${(r.pctLeft * 100).toFixed(1)}" role="img" aria-label="${escapeHtml(`${tshFmtHours(r.remaining)} left of ${tshFmtHours(r.purchased)}`)}">
-          <div><strong>${tshFmtHours(r.remaining)}</strong><span>left of ${tshFmtHours(r.purchased)}</span></div>
-        </div>
+        <div class="tsh-ssa-left ${ringCls}"><strong>${r.remaining < 0 ? tshFmtHours(-r.remaining) : tshFmtHours(r.remaining)}</strong><span>${r.remaining < 0 ? 'over' : 'left'} of ${tshFmtHours(r.purchased)}</span></div>
         <ul class="tsh-ssa-facts">
           <li><span>Use per month</span><span>${r.perMonth ? escapeHtml(window.GeckoTimelog?.fmtHours(r.perMonth) || tshFmtHours(r.perMonth)) : '—'}</span></li>
           <li><span>Runs out</span><span>${runs}</span></li>
           <li><span>Last work</span><span>${r.lastDate ? `${escapeHtml(tshShortDate(r.lastDate))} <small>${escapeHtml(r.lastBy)}</small>` : '—'}</span></li>
         </ul>
       </div>
+      ${window.GeckoTeam && r.purchased > 0 ? window.GeckoTeam.tokensHtml({ entitlement: r.purchased, booked: r.purchased - r.remaining }, { unit: 1, noun: 'hour' }) : ''}
       <div class="tsh-ssa-spark" aria-label="Hours used, last six months">
         ${r.byMonth.map(m => `<div title="${escapeHtml(new Date(m.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'long' }) + ': ' + tshFmtHours(m.hours))}"><i class="${m.hours ? '' : 'zero'}" style="height:${(m.hours / max * 100).toFixed(1)}%"></i><span>${escapeHtml(new Date(m.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'narrow' }))}</span></div>`).join('')}
       </div>

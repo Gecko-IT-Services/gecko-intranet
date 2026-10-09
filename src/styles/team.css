@@ -1,19 +1,19 @@
 /* Team overview (src/sections/team.js), the first tab of the Team hub.
    Person colours (Philip blue, Jack purple) are shared with Leave and Mileage; the holiday tokens with Leave. */
-:is(#section-team, #section-leave, #section-mileage) :is(.tm-philip, .lp-philip) { --who: var(--blue); }
-:is(#section-team, #section-leave, #section-mileage) :is(.tm-jack, .lp-jack) { --who: var(--purple); }
+:is(#section-team, #section-leave, #section-mileage, #section-timesheets) :is(.tm-philip, .lp-philip) { --who: var(--blue); }
+:is(#section-team, #section-leave, #section-mileage, #section-timesheets) :is(.tm-jack, .lp-jack) { --who: var(--purple); }
 
 /* Holiday tokens (tokensHtml in core/team.js): one pill per day; spent → requested → left, filled bottom-up. */
-:is(#section-team, #section-leave) .hol-tokens { display: flex; gap: 4px; }
-:is(#section-team, #section-leave) .hol-tokens i {
+:is(#section-team, #section-leave, #section-timesheets) .hol-tokens { display: flex; gap: 4px; }
+:is(#section-team, #section-leave, #section-timesheets) .hol-tokens i {
   flex: 0 1 11px; min-width: 4px; height: 24px; border-radius: 3px;
-  background: linear-gradient(to top, color-mix(in srgb, var(--muted) 28%, transparent) 0 var(--b), var(--amber) var(--b) var(--p), var(--green) var(--p));
+  background: linear-gradient(to top, color-mix(in srgb, var(--muted) 28%, transparent) 0 var(--b), var(--amber) var(--b) var(--p), var(--tok-left, var(--green)) var(--p));
   animation: tm-pop var(--dur-3) var(--ease) both;
 }
-:is(#section-team, #section-leave) .hol-tokens i.over { background: var(--red); }
-:is(#section-team, #section-leave) .hol-tokens i:nth-child(n+6) { animation-delay: 30ms; }
-:is(#section-team, #section-leave) .hol-tokens i:nth-child(n+11) { animation-delay: 60ms; }
-:is(#section-team, #section-leave) .hol-tokens i:nth-child(n+16) { animation-delay: 90ms; }
+:is(#section-team, #section-leave, #section-timesheets) .hol-tokens i.over { background: var(--red); }
+:is(#section-team, #section-leave, #section-timesheets) .hol-tokens i:nth-child(n+6) { animation-delay: 30ms; }
+:is(#section-team, #section-leave, #section-timesheets) .hol-tokens i:nth-child(n+11) { animation-delay: 60ms; }
+:is(#section-team, #section-leave, #section-timesheets) .hol-tokens i:nth-child(n+16) { animation-delay: 90ms; }
 
 #section-team #teamWrap, #section-team .app-pane { display: grid; gap: 14px; }
 #section-team .tm-muted { color: var(--muted); font-size: 12px; margin: 0; }
@@ -95,7 +95,7 @@
 @keyframes tm-grow { from { transform: scaleY(0); } to { transform: none; } }
 @keyframes tm-pop { from { opacity: 0; transform: scaleY(.4); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  #section-team .tm-card, #section-team .tm-days i, :is(#section-team, #section-leave) .hol-tokens i { animation: none; }
+  #section-team .tm-card, #section-team .tm-days i, :is(#section-team, #section-leave, #section-timesheets) .hol-tokens i { animation: none; }
 }
 @media (max-width: 900px) { #section-team .tm-cards { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {

@@ -177,10 +177,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Nudge (8 Oct): Jobs › Owed to us › **Nudge** drafts a friendly payment reminder in the clicker's Outlook Drafts
   (never sent by the portal) to the contact's Xero email, with pay-online links (`xero-invoice` action `nudge`, read
   only); logged in `payment_nudges`. Jobs › Refresh syncs Xero first. Design `2026-10-09-nudge-and-prices-design.md`.
-- Timesheets › Log Time (9 Oct): time typed as 1:30 / 1h30 / 45m or tapped, SSA balance preview before saving, checks in
+- Timesheets › Log Time (9 Oct): a time card of the week on top (click a day to set engineer + date; days off from Leave), time typed as 1:30 / 1h30 / 45m or tapped, SSA balance preview before saving, checks in
   `src/core/timelog.js` (errors stop; duplicates, future/old/weekend dates, long days, going over SSA need **Log anyway**),
   one save at a time, draft kept in the browser. No "Billable" switch: every entry counts against the balance. Design
-  `2026-10-09-timesheets-entry-design.md`. SSA Dashboard (9 Oct): summary, Needs attention/All, per-client ring, status,
+  `2026-10-09-timesheets-entry-design.md`. SSA Dashboard (9 Oct): summary, Needs attention/All, per-client hour tokens (one per prepaid hour), status,
   use per month and run-out date from the last 90 days (`src/core/ssa.js`; balances never recalculated). Design
   `2026-10-09-ssa-dashboard-design.md`. Weekly Summary (9 Oct): one week at a time with ‹ ›, totals vs the week before, by
   day/client/work type, weekdays with nothing logged, 8-week trend, entries (`src/core/weekly.js`; work only, no System entries).

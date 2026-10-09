@@ -75,3 +75,9 @@ assert.match(tk, /aria-label="9.5 of 20 days left, 1 requested"/);
 assert.match(tk, /--b:50%;--p:100%/);
 assert.match(tk, /--b:0%;--p:50%/);
 assert.equal((tokensHtml({ entitlement: 140, booked: 147, pending: 0 }).match(/class="over"/g) || []).length, 1, 'over-booked day');
+
+// SSA hours as tokens: one per hour; over-used hours are red and the label says so.
+const ssa = tokensHtml({ entitlement: 10, booked: 11.5 }, { unit: 1, noun: 'hour' });
+assert.equal((ssa.match(/<i/g) || []).length, 12);
+assert.equal((ssa.match(/class="over"/g) || []).length, 2);
+assert.match(ssa, /aria-label="1.5 hours over 10"/);
