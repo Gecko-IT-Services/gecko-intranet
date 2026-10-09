@@ -39,7 +39,7 @@ const CONTRACTS = [['in_contract', 'In contract'], ['out_of_contract', 'Out of c
 const SIGNAL_MAX_AGE_DAYS = 30;   // re-check a domain after this long
 
 const OPP = {
-  tab: 'gaps',
+  tab: 'pipeline',
   showAll: false,          // include "not bought, no evidence yet" gaps
   open: new Set(),         // expanded client cards
   stage: 'open',           // pipeline filter: open (idea + proposed) | idea | proposed | won | lost
@@ -51,7 +51,7 @@ const OPP = {
   clients: [], latestMonth: '', feedNote: '', commission: null,
   prospects: null, prospectsError: '', prospectEdit: null, prospectView: 'open', saving: false,   // Prospects tab
   view: 'board',           // pipeline: board (the whiteboard) or list; remembered per browser, read in init
-  gapView: 'list',         // Gaps: list (client cards) or map (clients × products)
+  gapView: 'map',          // Gaps: map (clients × products) or list (client cards); remembered per browser
   selected: null,          // the board sticky whose full deal shows under the board
   dragging: ''
 };
@@ -512,10 +512,7 @@ function renderKpis() {
   k.innerHTML = [
     ['Recurring revenue', money(current), month],
     ['Open pipeline', money(t.openMrr) + '/mo', `${t.openCount} open · ${money(t.openOneOff)} one-off`],
-    ['Won this month', money(t.wonMrrThisMonth) + '/mo', `${t.wonCountThisMonth} won`],
-    ['Won to date', money(t.wonMrr) + '/mo', ''],
-    ['Dealer commission', OPP.commission ? money(OPP.commission.net) : '—',
-      OPP.commission ? `Invoiced ${new Date(OPP.commission.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}` : 'not in Xero yet']
+    ['Won this month', money(t.wonMrrThisMonth) + '/mo', `${t.wonCountThisMonth} won`]
   ].map(([l, v, s]) => `<div class="opp-kpi"><span>${escapeHtml(l)}</span><strong>${escapeHtml(v)}</strong>${s ? `<small>${escapeHtml(s)}</small>` : ''}</div>`).join('');
 }
 
@@ -959,7 +956,10 @@ function dealerHtml() {
       <label class="wide">Notes <input name="notes" type="text" value="${escapeHtml(d.notes || '')}"></label>
       <div class="opp-form-actions"><button type="button" class="btn btn-sm btn-danger" data-opp-act="deldealer" data-id="${d.id}">Remove</button><button type="submit" class="btn btn-sm">Save</button></div>
     </form>`;
-  return `${due ? `<p class="opp-note"><strong>${due}</strong> out of contract or ending within 90 days.</p>` : ''}
+  const c = OPP.commission;
+  const commission = c ? `Dealer commission <strong>${escapeHtml(money(c.net))}</strong>, invoiced ${escapeHtml(new Date(c.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }))}`
+    : 'Dealer commission: not in Xero yet';
+  return `<p class="opp-note">${commission}${due ? ` · <strong>${due}</strong> out of contract or ending within 90 days` : ''}.</p>
     <form class="opp-dealer-row opp-dealer-add" data-opp-dealer="new">
       <strong class="opp-dealer-client">Add a dealer service</strong>
       <label class="wide">Client <input name="client_name" type="text" list="oppClientNames" required placeholder="Client name"></label>
@@ -1163,7 +1163,7 @@ export function init() {
   OPP.started = true;
   try {
     OPP.view = localStorage.getItem('gecko.opp.view') === 'list' ? 'list' : 'board';
-    OPP.gapView = localStorage.getItem('gecko.opp.gapview') === 'map' ? 'map' : 'list';
+    OPP.gapView = localStorage.getItem('gecko.opp.gapview') === 'list' ? 'list' : 'map';
   } catch { /* private window: the defaults */ }
   const section = els('section-opportunities');
   section?.addEventListener('click', onClick);

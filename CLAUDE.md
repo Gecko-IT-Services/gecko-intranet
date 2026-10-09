@@ -117,6 +117,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - `src/sections/opportunities.js` + `src/core/opportunities.js`; design note
   `2026-10-08-opportunities-design.md`. Goal (Philip): grow monthly recurring revenue and never
   miss an opportunity. Gecko is a VoIP Unlimited partner (VoxOne, FTTP, SOGEA, Ethernet).
+- Page (tidied 9 Oct, `2026-10-09-tidier-opportunities-design.md`): opens on Pipeline (board; List kept); tabs Pipeline ·
+  Gaps (Map by default) · Prospects · VoIP Unlimited · Products; three figures (Recurring revenue, Open pipeline, Won this month).
 - Gaps (Clients list or a clients × products **Map**, `mapCell`; `2026-10-09-opportunities-whiteboard-design.md`) come from what a client buys (service lines, feed), public email/website checks
   (Cloudflare DoH, Google PageSpeed, no keys) and six months of timesheet descriptions.
   The catalogue (rules, patterns, prices, email text) is data in `opportunity_products`,
@@ -146,7 +148,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
-  contact "Voip Unlimited" (shown as the Dealer commission KPI, never as a client's revenue).
+  contact "Voip Unlimited" (shown as one line at the top of the VoIP Unlimited tab, never as a client's revenue).
   Dealer services live in `voip_dealer_services` (Opportunities › VoIP Unlimited tab). A dealer
   customer is never offered VoxOne or connectivity; instead out-of-contract/expiring lines raise
   a renewal, VoIP Exchange seats raise a VoxOne migration (£4/seat commission), and dealer
