@@ -77,6 +77,7 @@
 <link rel="stylesheet" href="src/styles/app.css">
 <link rel="stylesheet" href="src/styles/client.css">
 <link rel="stylesheet" href="src/styles/team.css">
+<link rel="stylesheet" href="src/styles/leave.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -153,7 +154,6 @@
   --purple-dim:   rgba(155,109,255,0.12);
   --teal:         #2dd4bf;
   --teal-dim:     rgba(45,212,191,0.10);
-
 
   /* Borders — status colours (Phase 9 consolidation) */
   --amber-border: rgba(224,154,46,0.28);
@@ -364,8 +364,7 @@ body {
 #section-clients .cli-tbl-wrap,
 #section-timesheets .tsh-card,
 #section-leave .lev-card,
-#section-leave .lev-person,
-#section-profit-loss .pnl-card {
+#section-profit-loss .pnl-card{
   box-shadow: var(--shadow-sm);
 }
 
@@ -385,7 +384,6 @@ body {
 
 /* Shared spinner (Phase 9 — replaces ovwSpin, prfSpin, milSpin, cliSpin) */
 @keyframes spin { to { transform: rotate(360deg); } }
-
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   LOGIN SCREEN                                                    ║
@@ -457,7 +455,6 @@ body {
 #signInBtn:disabled { opacity: .55; cursor: not-allowed; }
 
 .login-foot { margin-top: 22px; font-size: 10px; color: var(--muted); letter-spacing: .05em; }
-
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   PORTAL SHELL — sidebar + header + content area                  ║
@@ -584,7 +581,6 @@ body {
   outline-offset: 3px;
 }
 
-
 /* — Main content area — */
 .main {
   flex: 1;
@@ -635,7 +631,6 @@ body {
   0%   { left: -30%; }
   100% { left: 100%; }
 }
-
 
 /* — Section panels — */
 .section {
@@ -695,7 +690,6 @@ body {
 }
 .placeholder p { color: var(--muted); font-size: 13px; max-width: 440px; margin: 0 auto 18px; }
 
-
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   TOAST NOTIFICATIONS — shared global component                   ║
    ║   Use:  toast('Saved successfully', 'success')                    ║
@@ -743,7 +737,6 @@ body {
   to   { transform: translateX(20px); opacity: 0; }
 }
 
-
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   RESPONSIVE — slide-over sidebar on narrow screens               ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
@@ -788,7 +781,6 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
-
 
 /* ═══════════════════════════════════════════════════════════════════
    SECTION-SPECIFIC STYLES — added in later phases
@@ -1084,7 +1076,6 @@ body {
   }
   #section-overview .ovw-op:last-child { border-bottom: none; }
 }
-
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║                                                                   ║
@@ -1746,7 +1737,6 @@ body {
 #section-profitability .prf-gtst { padding: 0 14px; }
 }
 
-
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   PROFIT & LOSS SECTION                                           ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
@@ -1945,7 +1935,6 @@ body {
   #section-profit-loss .pnl-table { min-width: 620px; }
   #section-profit-loss .pnl-card { overflow-x: auto; }
 }
-
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║                                                                   ║
@@ -2879,7 +2868,6 @@ body {
   #section-clients .cli-head-actions .cli-last-sync { display: none; }
 }
 
-
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   TIMESHEETS SECTION (Phase 6)                                    ║
    ║                                                                   ║
@@ -3230,7 +3218,6 @@ body {
   #section-timesheets .tsh-tbl tbody td.col-cat { display: none; }
 }
 
-
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   SETTINGS SECTION (Phase 7)                                      ║
    ║                                                                   ║
@@ -3517,7 +3504,6 @@ body {
   #section-settings .set-detail:last-child { border-bottom: none; }
   #section-settings .set-segmented { grid-template-columns: minmax(0, 1fr); }
 }
-
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   COMPLIANCE SECTION (Phase 8)                                    ║
@@ -3889,40 +3875,7 @@ body {
   letter-spacing: .07em; text-transform: uppercase;
 }
 #section-leave .lev-wrap { display: flex; flex-direction: column; gap: 14px; }
-#section-leave .lev-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-#section-leave .lev-person {
-  background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius);
-  overflow: hidden;
-}
-#section-leave .lev-person-head {
-  display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  padding: 14px 16px; border-bottom: 1px solid var(--border-dim);
-}
-#section-leave .lev-person-name {
-  font-family: var(--font-body); font-size: 18px; font-weight: 800;
-  letter-spacing: .05em; text-transform: uppercase; color: var(--white);
-}
-#section-leave .lev-year-pill {
-  padding: 4px 9px; border-radius: 999px; background: var(--green-glow);
-  border: 1px solid var(--border); color: var(--green); font-size: 10px; font-weight: 800;
-  letter-spacing: .06em; text-transform: uppercase;
-}
-#section-leave .lev-person-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-#section-leave .lev-stat { padding: 14px 16px; border-right: 1px solid var(--border-dim); }
-#section-leave .lev-stat:last-child { border-right: none; }
-#section-leave .lev-stat .v {
-  font-family: var(--font-body); font-size: 26px; line-height: 1;
-  font-weight: 800; color: var(--white);
-}
-#section-leave .lev-stat .v.green { color: var(--green); }
-#section-leave .lev-stat .v.amber { color: var(--amber); }
-#section-leave .lev-stat .v.red { color: var(--red); }
-#section-leave .lev-stat .l {
-  margin-top: 5px; color: var(--muted); font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .07em;
-}
-#section-leave .lev-stat .s { margin-top: 3px; color: var(--muted); font-size: 11px; }
-#section-leave .lev-main-grid { display: grid; grid-template-columns: minmax(300px, .72fr) minmax(0, 1.28fr); gap: 14px; align-items: start; min-width: 0; }
+
 #section-leave .lev-card {
   background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius);
   padding: 16px; overflow: hidden;
@@ -3951,77 +3904,7 @@ body {
 #section-leave .lev-textarea { min-height: 74px; resize: vertical; }
 #section-leave .lev-hint { color: var(--muted); font-size: 11px; line-height: 1.45; }
 #section-leave .lev-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
-#section-leave .lev-calendar { padding: 0; }
-#section-leave .lev-cal-head,
-#section-leave .lev-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
-#section-leave .lev-cal-grid {
-  position: relative;
-  grid-template-rows: repeat(6, minmax(104px, 1fr));
-  overflow: hidden;
-}
-#section-leave .lev-cal-head { border-bottom: 1px solid var(--border-dim); }
-#section-leave .lev-cal-head span {
-  padding: 10px 8px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
-}
-#section-leave .lev-day {
-  min-height: 104px; padding: 8px; border-right: 1px solid var(--border-dim); border-bottom: 1px solid var(--border-dim);
-  background: rgba(255,255,255,0.012);
-  position: relative;
-  z-index: 1;
-}
-#section-leave .lev-day:nth-child(7n) { border-right: none; }
-#section-leave .lev-day.out { opacity: .42; }
-#section-leave .lev-day.today { box-shadow: 0 0 0 1px var(--green) inset; }
-#section-leave .lev-day-num { font-family: var(--font-body); font-size: 13px; font-weight: 800; color: var(--white); margin-bottom: 6px; }
-#section-leave .lev-span {
-  position: relative; z-index: 3; align-self: start; justify-self: stretch;
-  min-height: 18px; margin: 31px 2px 0; padding: 3px 8px;
-  border: 0; border-radius: 3px;
-  color: var(--white); font-size: 10px; font-weight: 800; line-height: 1.2;
-  text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  cursor: pointer; box-shadow: 0 1px 0 rgba(255,255,255,0.18) inset;
-}
-#section-leave .lev-span:hover { filter: brightness(1.06); }
-#section-leave .lev-span.person-jack { background: rgba(139,92,246,0.68); }
-#section-leave .lev-span.person-philip { background: rgba(74,158,221,0.68); }
-#section-leave .lev-span.pending { box-shadow: 0 0 0 1px rgba(224,154,46,0.78) inset, 0 1px 0 rgba(255,255,255,0.18) inset; }
-#section-leave .lev-span.rejected,
-#section-leave .lev-span.cancelled { opacity: .62; text-decoration: line-through; }
-#section-leave .lev-span.continues-left { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-color: transparent; }
-#section-leave .lev-span.continues-right { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
-#section-leave .lev-span:not(.continues-left) { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
-#section-leave .lev-span:not(.continues-right) { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
-#section-leave .lev-mobile-agenda { display: none; padding: 0 14px 14px; }
-#section-leave .lev-agenda-day {
-  display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px;
-  padding: 12px 0; border-top: 1px solid var(--border-dim);
-}
-#section-leave .lev-agenda-date {
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-  font-family: var(--font-body); font-weight: 800; color: var(--white);
-}
-#section-leave .lev-agenda-date .dow { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
-#section-leave .lev-agenda-date .num { font-size: 24px; line-height: 1; }
-#section-leave .lev-agenda-items { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-#section-leave .lev-agenda-item {
-  position: relative; width: 100%; display: block; font-family: var(--font-body); text-align: left; cursor: pointer;
-  padding: 10px 11px 10px 24px; border-radius: 8px; border: 1px solid var(--border-dim);
-  background: rgba(255,255,255,0.026);
-}
-#section-leave .lev-agenda-item::before {
-  content: ''; position: absolute; left: 11px; top: 15px;
-  width: 7px; height: 7px; border-radius: 50%; background: var(--border);
-}
-#section-leave .lev-agenda-item:hover { border-color: var(--border); background: var(--row-hover); }
-#section-leave .lev-agenda-item.person-jack::before { background: var(--purple); }
-#section-leave .lev-agenda-item.person-philip::before { background: var(--blue); }
-#section-leave .lev-agenda-item.pending { box-shadow: 0 0 0 1px rgba(224,154,46,0.22) inset; }
-#section-leave .lev-agenda-main {
-  display: flex; justify-content: space-between; gap: 8px; color: var(--white);
-  font-size: 13px; font-weight: 800;
-}
-#section-leave .lev-agenda-sub { margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.35; }
-#section-leave .lev-agenda-empty { padding: 20px 0; color: var(--muted); text-align: center; font-size: 12px; }
+
 #section-leave .lev-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
 #section-leave .lev-chip {
   padding: 6px 12px; border-radius: 999px; background: var(--card);
@@ -4075,28 +3958,16 @@ body {
 
 /* Collapse the form+calendar grid earlier: the fixed 268px sidebar eats
    into content width, so a 2-col layout only has room above ~1040px. */
-@media (max-width: 1040px) {
-  #section-leave .lev-main-grid { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 920px) {
-  #section-leave .lev-kpis { grid-template-columns: minmax(0, 1fr); }
-}
 @media (max-width: 640px) {
   #section-leave .lev-head-actions { width: 100%; }
   #section-leave .lev-refresh,
   #section-leave .lev-month-sel { min-height: 40px; }
-  #section-leave .lev-kpis { gap: 10px; }
-  #section-leave .lev-person-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #section-leave .lev-stat:nth-child(2) { border-right: none; }
-  #section-leave .lev-stat:nth-child(-n+2) { border-bottom: 1px solid var(--border-dim); }
+
   #section-leave .lev-form { grid-template-columns: minmax(0, 1fr); }
   #section-leave .lev-edit-grid { grid-template-columns: minmax(0, 1fr); }
   #section-leave .lev-form-actions,
   #section-leave .lev-form-actions .btn { width: 100%; justify-content: center; }
-  #section-leave .lev-calendar .lev-card-head { margin-bottom: 8px !important; }
-  #section-leave .lev-cal-head,
-  #section-leave .lev-cal-grid { display: none; }
-  #section-leave .lev-mobile-agenda { display: block; }
+
   #section-leave .lev-toolbar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   #section-leave .lev-toolbar::-webkit-scrollbar { display: none; }
   #section-leave .lev-edit-actions { flex-direction: column; }
@@ -4179,14 +4050,13 @@ body::before {
 #section-clients .cli-card,
 #section-timesheets .tsh-kpi,
 #section-timesheets .tsh-ssa-card,
-#section-leave .lev-person,
 #section-leave .lev-card,
 #section-settings .set-card,
   #section-compliance .cmp-kpi,
   #section-compliance .cmp-item,
   #section-compliance .cmp-form,
   #section-compliance .cmp-empty,
-  #section-overview .ovw-ops {
+  #section-overview .ovw-ops{
   background:
     linear-gradient(180deg, rgba(255,255,255,0.028), rgba(255,255,255,0.006)),
     var(--card);
@@ -4200,9 +4070,8 @@ body::before {
 #section-overview .ovw-card:hover,
 #section-profitability .prf-cc:hover,
 #section-clients .cli-card:hover,
-#section-leave .lev-person:hover,
 #section-leave .lev-card:hover,
-#section-compliance .cmp-item:hover {
+#section-compliance .cmp-item:hover{
   border-color: var(--border);
   box-shadow: var(--shadow-md);
 }
@@ -4394,8 +4263,7 @@ textarea:focus {
 #section-overview .ovw-kpi .k-value,
 #section-mileage .mil-kpi .k-value,
 #section-timesheets .tsh-kpi .k-value,
-#section-leave .lev-stat .v,
-#section-compliance .cmp-kpi .k-value {
+#section-compliance .cmp-kpi .k-value{
   font-family: var(--font-mono);
   font-weight: 500;
   letter-spacing: -0.03em;
@@ -5103,10 +4971,8 @@ body::before {
 
   #section-clients .cli-grid,
   #section-timesheets .tsh-ssa-grid,
-  #section-leave .lev-kpis,
-  #section-leave .lev-main-grid,
   #section-settings .set-grid,
-  #section-settings .set-profile-details {
+  #section-settings .set-profile-details{
     grid-template-columns: minmax(0, 1fr) !important;
   }
 
@@ -5291,7 +5157,6 @@ body::before {
   box-shadow: var(--shadow-sm);
 }
 :root[data-theme="light"] .section-head::after { opacity: .5; }
-
 
 :root[data-theme="light"] .section-head p,
 :root[data-theme="light"] .section-head .prf-last-sync,
@@ -5492,7 +5357,6 @@ body::before {
   font-weight: 700;
 }
 
-
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║                                                                   ║
    ║   RESPONSIVE APP SHELL                                            ║
@@ -5510,7 +5374,6 @@ body::before {
    ║     5. Touch hit areas                                            ║
    ║                                                                   ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
-
 
 /* ─── 1 · Safe areas ──────────────────────────────────────────────────
    viewport-fit=cover means the shell paints edge to edge, including
@@ -5539,7 +5402,6 @@ body::before {
   align-items: flex-end;
 }
 .toast { max-width: min(360px, 100%); }
-
 
 /* ─── 2 · Sidebar reachability ────────────────────────────────────────
    The sidebar previously scrolled only its <nav>, while the brand, the
@@ -5581,7 +5443,6 @@ body::before {
   .user-chip { padding: 6px 10px; margin-bottom: 6px; }
   .user-avatar { width: 27px; height: 27px; }
 }
-
 
 /* ─── 3 · Overflowing control rows ────────────────────────────────────
    Two different problems that were both showing up as horizontal
@@ -5641,7 +5502,6 @@ body::before {
 #section-profit-loss .pnl-drop { min-width: 0; }
 #section-profit-loss .pnl-drop,
 #section-profit-loss .pnl-btn { overflow: visible; }
-
 
 /* ─── 4 · Wide tables → cards ─────────────────────────────────────────
    A 10-column journey log inside overflow-x:auto is not a mobile
@@ -5915,7 +5775,6 @@ body::before {
   }
 }
 
-
 /* Phone ergonomics, which really are viewport concerns: how many
    metrics fit on a screen someone is holding. */
 @media (max-width: 720px) {
@@ -5925,8 +5784,7 @@ body::before {
      the mono figures step down to stay inside the narrower column. */
   #section-overview .ovw-kpis,
   #section-mileage .mil-kpis,
-  #section-leave .lev-kpis,
-  #section-compliance .cmp-kpis {
+  #section-compliance .cmp-kpis{
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   #section-overview .ovw-kpi .k-value,
@@ -5945,10 +5803,8 @@ body::before {
 @media (max-width: 379px) {
   #section-overview .ovw-kpis,
   #section-mileage .mil-kpis,
-  #section-leave .lev-kpis,
-  #section-compliance .cmp-kpis { grid-template-columns: minmax(0, 1fr); }
+  #section-compliance .cmp-kpis{ grid-template-columns: minmax(0, 1fr); }
 }
-
 
 /* ─── 5 · Touch hit areas ─────────────────────────────────────────────
    Keyed on pointer, not width: an iPad at 1024px is touch hardware and
@@ -7116,14 +6972,13 @@ body::before {
     <section class="section" id="section-leave">
       <div class="section-head">
         <h1>Annual <span>Leave</span></h1>
-        <p>Tax year <span id="levTaxYear">—</span></p>
         <div class="lev-head-actions">
-          <div class="lev-month-sel" role="group" aria-label="Leave calendar month selector">
-            <button class="lev-month-btn" type="button" onclick="levChangeMonth(-1)" aria-label="Previous month" title="Previous month">
+          <div class="lev-month-sel" role="group" aria-label="Tax year">
+            <button class="lev-month-btn" type="button" onclick="levChangeYear(-1)" aria-label="Previous tax year" title="Previous tax year">
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             <span class="lev-month-label" id="levMonthLabel">—</span>
-            <button class="lev-month-btn" type="button" onclick="levChangeMonth(1)" aria-label="Next month" title="Next month">
+            <button class="lev-month-btn" type="button" onclick="levChangeYear(1)" aria-label="Next tax year" title="Next tax year">
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
@@ -7139,14 +6994,21 @@ body::before {
       </div>
 
       <div class="lev-wrap">
-        <div class="lev-kpis" id="levKpis"></div>
+        <div class="lev-allow" id="levKpis"></div>
 
-        <div class="lev-main-grid">
-          <div class="lev-card">
-            <div class="lev-card-head">
-              <h3>Request / book leave</h3>
-              <span id="levModeHint">—</span>
-            </div>
+        <div class="lev-card lev-planner">
+          <div class="lev-card-head">
+            <h3>Year planner</h3>
+            <span id="levCalendarCount">—</span>
+          </div>
+          <div id="levCalendar"></div>
+        </div>
+
+        <div class="lev-card lev-book" id="levBook">
+          <div class="lev-card-head">
+            <h3>Book leave</h3>
+            <span id="levModeHint">—</span>
+          </div>
             <form class="lev-form" id="levForm" onsubmit="levSubmitRequest(event)">
               <div class="lev-field">
                 <label for="levPerson">Person</label>
@@ -7186,28 +7048,17 @@ body::before {
                 <input class="lev-input" type="number" id="levHours" min="0.5" step="0.25" required oninput="levHoursEdited()">
               </div>
               <div class="lev-field full">
-                <div class="lev-hint" id="levEstimateHint"></div>
-              </div>
-              <div class="lev-field full">
                 <label for="levNotes">Notes</label>
                 <textarea class="lev-textarea" id="levNotes" placeholder="Optional context"></textarea>
               </div>
               <div class="lev-form-actions">
+                <span class="lev-hint" id="levEstimateHint"></span>
                 <button class="btn btn-primary" type="submit" id="levSubmitBtn">
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Save leave
                 </button>
               </div>
             </form>
-          </div>
-
-          <div class="lev-card lev-calendar">
-            <div class="lev-card-head" style="padding:16px 16px 0;margin-bottom:12px;">
-              <h3>Shared calendar</h3>
-              <span id="levCalendarCount">—</span>
-            </div>
-            <div id="levCalendar"></div>
-          </div>
         </div>
 
         <div class="lev-card">
@@ -17413,8 +17264,8 @@ const LEV = {
   listIds: { requests: null, entitlements: null },
   requests: [],
   entitlements: [],
-  selectedMonth: today().slice(0, 7),
   selectedTaxYear: '',
+  pick: null,                    // year planner: { person, start, end } being picked
   filter: 'all',
   lastSync: null,
   hoursEdited: false,
@@ -17938,6 +17789,7 @@ async function levSubmitRequest(event) {
       }
     }
     document.getElementById('levForm')?.reset();
+    LEV.pick = null;
     levSetDefaultFormValues();
     toast(status === 'Approved' ? 'Leave booked' : (emailSent ? 'Leave requested and Philip notified' : 'Leave requested. Email notification could not be sent.'), emailSent || status === 'Approved' ? 'success' : 'warning', 5500);
     await levRefreshData(true);
@@ -18010,10 +17862,10 @@ async function levCancel(id) {
   }
 }
 
-function levChangeMonth(delta) {
-  const d = new Date(LEV.selectedMonth + '-01T00:00:00');
-  d.setMonth(d.getMonth() + delta);
-  LEV.selectedMonth = localDateKey(d).slice(0, 7);
+function levChangeYear(delta) {
+  const y = Number(String(LEV.selectedTaxYear || levCurrentTaxYear()).slice(0, 4)) + delta;
+  LEV.selectedTaxYear = `${y}/${String(y + 1).slice(-2)}`;
+  LEV.pick = null;
   levRenderAll();
 }
 
@@ -18033,150 +17885,114 @@ function levSummaryFor(person) {
   return { entitlement, approved, pending, remaining: entitlement - approved };
 }
 
+/** Leave in the shape core/team.js reads (window.GeckoTeam: tokens, presence, planner bars). */
+function levTeamRequests() {
+  return LEV.requests.map(r => ({ id: r.id, person: r.person, start: r.startDate, end: r.endDate || r.startDate,
+    hours: r.hours, status: r.status, type: r.leaveType, note: r.notes }));
+}
+
+const LEV_LANES = ['Philip', 'Jack'];
+const levDayNum = hours => levFmtDays(hours).slice(0, -1);
+
 function levRenderKpis() {
   const el = document.getElementById('levKpis');
   if (!el) return;
-  el.innerHTML = LEV.people.map(person => {
+  const T = window.GeckoTeam;
+  const pres = T ? T.presence(levTeamRequests(), today()) : {};
+  el.innerHTML = LEV_LANES.map(person => {
     const s = levSummaryFor(person);
-    const remCls = s.remaining < 0 ? 'red' : s.remaining < LEV.standardDayHours ? 'amber' : 'green';
-    return `<div class="lev-person">
-      <div class="lev-person-head">
-        <div class="lev-person-name">${escapeHtml(person)}</div>
-        <span class="lev-year-pill">${escapeHtml(LEV.selectedTaxYear)}</span>
-      </div>
-      <div class="lev-person-grid">
-        <div class="lev-stat"><div class="v">${levFmtHours(s.entitlement)}</div><div class="l">Entitlement</div><div class="s">${levFmtDays(s.entitlement)}</div></div>
-        <div class="lev-stat"><div class="v">${levFmtHours(s.approved)}</div><div class="l">Booked</div><div class="s">${levFmtDays(s.approved)}</div></div>
-        <div class="lev-stat"><div class="v amber">${levFmtHours(s.pending)}</div><div class="l">Pending</div><div class="s">${levFmtDays(s.pending)}</div></div>
-        <div class="lev-stat"><div class="v ${remCls}">${levFmtHours(s.remaining)}</div><div class="l">Remaining</div><div class="s">${levFmtDays(s.remaining)}</div></div>
-      </div>
+    const cls = s.remaining < 0 ? 'red' : s.remaining < LEV.standardDayHours ? 'amber' : 'green';
+    const pr = pres[person];
+    const back = pr?.back ? new Date(pr.back + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
+    const badge = !pr ? '' : pr.off ? `<span class="badge badge-amber">Off · back ${escapeHtml(back)}</span>` : '<span class="badge badge-green">In today</span>';
+    return `<div class="lev-allow-card lp-${person.toLowerCase()}">
+      <div class="lev-allow-head"><span class="lev-allow-av" aria-hidden="true">${person[0]}</span><strong>${escapeHtml(person)}</strong>${badge}</div>
+      <div class="lev-allow-fig"><span class="v ${cls}">${escapeHtml(levDayNum(s.remaining))}</span><span class="u">days left</span><span class="h">${escapeHtml(levFmtHours(s.remaining))}</span></div>
+      ${T ? T.tokensHtml({ entitlement: s.entitlement, booked: s.approved, pending: s.pending }) : ''}
+      <div class="lev-allow-sub">${escapeHtml(levDayNum(s.approved))} booked · ${escapeHtml(levDayNum(s.pending))} requested · of ${escapeHtml(levDayNum(s.entitlement))}</div>
     </div>`;
   }).join('');
 }
 
-function levEventsForDate(dateKey) {
-  return LEV.requests.filter(r =>
-    ['Approved', 'Pending'].includes(r.status) &&
-    r.startDate <= dateKey &&
-    (r.endDate || r.startDate) >= dateKey
-  ).sort((a, b) => a.person.localeCompare(b.person) || a.status.localeCompare(b.status));
-}
-
-function levAddDays(date, days) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function levDaysBetween(start, end) {
-  return Math.round((end - start) / 86400000);
-}
-
-function levCalendarSegments(gridStart) {
-  const gridEnd = levAddDays(gridStart, 41);
-  const lanes = Array.from({ length: 6 }, () => []);
-  const segments = [];
-  const visible = LEV.requests
-    .filter(r => ['Approved', 'Pending'].includes(r.status))
-    .filter(r => r.startDate <= localDateKey(gridEnd) && (r.endDate || r.startDate) >= localDateKey(gridStart))
-    .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || '') || a.person.localeCompare(b.person));
-
-  for (const req of visible) {
-    const reqStart = new Date(req.startDate + 'T00:00:00');
-    const reqEnd = new Date((req.endDate || req.startDate) + 'T00:00:00');
-    for (let week = 0; week < 6; week++) {
-      const weekStart = levAddDays(gridStart, week * 7);
-      const weekEnd = levAddDays(weekStart, 6);
-      if (reqEnd < weekStart || reqStart > weekEnd) continue;
-
-      const segStart = reqStart > weekStart ? reqStart : weekStart;
-      const segEnd = reqEnd < weekEnd ? reqEnd : weekEnd;
-      const colStart = levDaysBetween(weekStart, segStart) + 1;
-      const span = levDaysBetween(segStart, segEnd) + 1;
-      const occupied = { start: colStart, end: colStart + span - 1 };
-      const lane = [0, 1, 2].find(i => !lanes[week].some(x => x.lane === i && !(occupied.end < x.start || occupied.start > x.end)));
-      if (lane === undefined) continue;
-      lanes[week].push({ lane, ...occupied });
-
-      segments.push({
-        req,
-        week,
-        lane,
-        colStart,
-        span,
-        continuesLeft: reqStart < segStart,
-        continuesRight: reqEnd > segEnd
-      });
-    }
-  }
-  return segments;
-}
-
-function levRenderMobileAgenda(monthStart, monthEnd) {
-  const days = [];
-  const d = new Date(localDateKey(monthStart) + 'T00:00:00');
-  while (d <= monthEnd) {
-    const key = localDateKey(d);
-    const events = levEventsForDate(key);
-    if (events.length) {
-      const dateLabel = d.toLocaleDateString('en-GB', { weekday: 'short' });
-      const items = events.map(e => `<button class="lev-agenda-item ${levPersonClass(e.person)} ${levStatusClass(e.status)}" type="button" onclick="levOpenEditModal('${e.id}')">
-        <div class="lev-agenda-main"><span>${escapeHtml(e.person)}</span><span>${escapeHtml(e.status)}</span></div>
-        <div class="lev-agenda-sub">${escapeHtml(levDateRangeLabel(e.startDate, e.endDate))} · ${escapeHtml(levFmtHoursDays(e.hours))}${e.notes ? ' · ' + escapeHtml(e.notes) : ''}</div>
-      </button>`).join('');
-      days.push(`<div class="lev-agenda-day">
-        <div class="lev-agenda-date"><span class="dow">${escapeHtml(dateLabel)}</span><span class="num">${d.getDate()}</span></div>
-        <div class="lev-agenda-items">${items}</div>
-      </div>`);
-    }
-    d.setDate(d.getDate() + 1);
-  }
-  return `<div class="lev-mobile-agenda">${days.join('') || '<div class="lev-agenda-empty">No leave this month.</div>'}</div>`;
-}
-
+/**
+ * The year planner: the tax year as a wall planner, a row per month (April → March), a column per day,
+ * a lane per person. Leave is a sticker in the person's colour (hatched while requested); a sticker opens
+ * the edit dialog. Clicking a day on a lane you can book starts a range, a second click ends it, and the
+ * booking form below follows (the date inputs stay the keyboard route).
+ */
 function levRenderCalendar() {
-  const labelEl = document.getElementById('levMonthLabel');
-  const countEl = document.getElementById('levCalendarCount');
   const wrap = document.getElementById('levCalendar');
   if (!wrap) return;
-  const monthStart = new Date(LEV.selectedMonth + '-01T00:00:00');
-  if (labelEl) labelEl.textContent = monthStart.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  const label = document.getElementById('levMonthLabel');
+  if (label) label.textContent = LEV.selectedTaxYear;
+  const T = window.GeckoTeam;
+  if (!T) { wrap.innerHTML = '<div class="lev-empty">Loading…</div>'; return; }
+  const y = Number(LEV.selectedTaxYear.slice(0, 4));
+  const yb = levTaxYearBounds(LEV.selectedTaxYear);
+  const reqs = levTeamRequests();
+  const t = today();
+  const me = levCurrentPerson();
+  const pick = LEV.pick;
+  const inPick = (p, k) => pick && pick.person === p && k >= pick.start && k <= (pick.end || pick.start);
+  const pad = n => String(n).padStart(2, '0');
 
-  const firstDay = monthStart.getDay() || 7;
-  const gridStart = new Date(monthStart);
-  gridStart.setDate(monthStart.getDate() - (firstDay - 1));
-  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
-  const visible = LEV.requests.filter(r => ['Approved', 'Pending'].includes(r.status) && r.startDate <= localDateKey(monthEnd) && (r.endDate || r.startDate) >= LEV.selectedMonth + '-01');
-  if (countEl) countEl.textContent = `${visible.length} visible`;
-
-  const days = [];
-  for (let i = 0; i < 42; i++) {
-    const d = new Date(gridStart);
-    d.setDate(gridStart.getDate() + i);
-    const key = localDateKey(d);
-    const out = d.getMonth() !== monthStart.getMonth() ? ' out' : '';
-    const isToday = key === today() ? ' today' : '';
-    const week = Math.floor(i / 7) + 1;
-    const col = (i % 7) + 1;
-    days.push(`<div class="lev-day${out}${isToday}" style="grid-row:${week};grid-column:${col};"><div class="lev-day-num">${d.getDate()}</div></div>`);
+  const count = document.getElementById('levCalendarCount');
+  if (count) {
+    const fmt = k => new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    count.textContent = !pick ? 'Click a day on your row to book from it'
+      : !pick.end ? `${pick.person} from ${fmt(pick.start)}: now click the last day`
+      : `${pick.person}: ${pick.start === pick.end ? fmt(pick.start) : fmt(pick.start) + ' – ' + fmt(pick.end)}`;
   }
-  const spans = levCalendarSegments(gridStart).map(seg => {
-    const cls = [
-      'lev-span',
-      levPersonClass(seg.req.person),
-      levStatusClass(seg.req.status),
-      seg.continuesLeft ? 'continues-left' : '',
-      seg.continuesRight ? 'continues-right' : ''
-    ].filter(Boolean).join(' ');
-    const label = `${seg.req.person} · ${seg.req.notes || seg.req.status}`;
-    const title = `${seg.req.person} · ${levDateRangeLabel(seg.req.startDate, seg.req.endDate)} · ${levFmtHoursDays(seg.req.hours)} · ${seg.req.status}`;
-    return `<button class="${cls}" type="button" onclick="levOpenEditModal('${seg.req.id}')" title="${escapeHtml(title)}" style="grid-row:${seg.week + 1};grid-column:${seg.colStart} / span ${seg.span};margin-top:${31 + (seg.lane * 22)}px">${escapeHtml(label)}</button>`;
+
+  const head = `<div class="lp-row lp-head" aria-hidden="true"><span></span>${Array.from({ length: 31 }, (_, d) => `<span style="grid-column:${d + 2}">${d + 1}</span>`).join('')}</div>`;
+  const months = Array.from({ length: 12 }, (_, m) => {
+    const first = new Date(y, 3 + m, 1);
+    const ym = `${first.getFullYear()}-${pad(first.getMonth() + 1)}`;
+    const dim = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    const name = first.toLocaleDateString('en-GB', { month: 'short' });
+    const lanes = LEV_LANES.map((p, li) => {
+      const can = levIsPhilip() || p === me;
+      const cells = Array.from({ length: dim }, (_, d) => {
+        const k = `${ym}-${pad(d + 1)}`;
+        const wd = new Date(k + 'T00:00:00').getDay();
+        const cls = ['lp-c', `lp-${p.toLowerCase()}`, wd === 0 || wd === 6 ? 'we' : '', k === t ? 'today' : '', k < yb.start ? 'out' : '', inPick(p, k) ? 'sel' : '', can ? '' : 'lock'].filter(Boolean).join(' ');
+        return `<span class="${cls}" data-d="${k}" data-p="${p}" style="grid-row:${li + 1};grid-column:${d + 2}"></span>`;
+      }).join('');
+      const stickers = T.bars(reqs.filter(r => r.person === p), `${ym}-01`, `${ym}-${pad(dim)}`).map(b => {
+        const c0 = Number(b.from.slice(8)) + 1, c1 = Number(b.to.slice(8)) + 2;
+        const what = b.note || b.type;
+        const title = `${p} · ${levDateRangeLabel(b.from, b.to)} · ${what}${b.status === 'Pending' ? ' · requested' : ''}`;
+        return `<button type="button" class="lp-bar lp-${p.toLowerCase()}${b.status === 'Pending' ? ' pending' : ''}${b.cutStart ? ' cut-s' : ''}${b.cutEnd ? ' cut-e' : ''}"
+          style="grid-row:${li + 1};grid-column:${c0} / ${c1}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"
+          onclick="levOpenEditModal('${escapeHtml(String(b.id))}')">${escapeHtml(what)}</button>`;
+      }).join('');
+      return `<span class="lp-who lp-${p.toLowerCase()}" style="grid-row:${li + 1}" aria-hidden="true">${p[0]}</span>${cells}${stickers}`;
+    }).join('');
+    return `<div class="lp-row lp-month${ym === t.slice(0, 7) ? ' now' : ''}" role="group" aria-label="${escapeHtml(first.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }))}">
+      <span class="lp-mname">${escapeHtml(name)}<small>${String(first.getFullYear()).slice(-2)}</small></span>${lanes}</div>`;
   }).join('');
-  wrap.innerHTML = `
-    <div class="lev-cal-head"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
-    <div class="lev-cal-grid">${days.join('')}${spans}</div>
-    ${levRenderMobileAgenda(monthStart, monthEnd)}
-  `;
+  const lanesKey = LEV_LANES.map(p => `<li class="lp-${p.toLowerCase()}"><b></b>${p}</li>`).join('');
+  wrap.innerHTML = `<div class="lp" onclick="levPlannerClick(event)">${head}${months}</div>
+    <ul class="lp-legend">${lanesKey}<li class="lp-key-pending"><b></b>Requested</li><li class="lp-key-today"><b></b>Today</li></ul>`;
+}
+
+function levPlannerClick(e) {
+  const c = e.target.closest('.lp-c[data-d]');
+  if (!c || c.classList.contains('lock')) return;
+  const p = c.dataset.p, k = c.dataset.d;
+  const pick = LEV.pick;
+  LEV.pick = !pick || pick.person !== p || pick.end ? { person: p, start: k, end: null }
+    : { person: p, start: k < pick.start ? k : pick.start, end: k < pick.start ? pick.start : k };
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('levPerson', p);
+  set('levStartDate', LEV.pick.start);
+  set('levEndDate', LEV.pick.end || LEV.pick.start);
+  const mode = document.getElementById('levDurationMode');
+  if (mode && mode.value === 'custom') mode.value = 'full';
+  LEV.hoursEdited = false;
+  levUpdateEstimate();
+  levRenderCalendar();
+  if (LEV.pick.end) document.getElementById('levBook')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function levFilteredRequests() {
@@ -18226,8 +18042,6 @@ function levRenderTable() {
 
 function levRenderAll() {
   LEV.selectedTaxYear = LEV.selectedTaxYear || levCurrentTaxYear();
-  const ty = document.getElementById('levTaxYear');
-  if (ty) ty.textContent = LEV.selectedTaxYear;
   const sync = document.getElementById('levLastSync');
   if (sync && LEV.lastSync) sync.textContent = 'Synced ' + LEV.lastSync.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   levRenderKpis();

@@ -1,0 +1,77 @@
+/* Leave (index.html `lev*`): holiday left as day tokens, the tax year as a wall planner, the booking bar.
+   Anchored on #app because the older inline Leave rules load after this file. Person colours and
+   .hol-tokens come from team.css. */
+
+/* — Holiday left — */
+#app #section-leave .lev-allow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+#app #section-leave .lev-allow-card { background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius); padding: 18px 20px; display: grid; gap: 12px; align-content: start; }
+#app #section-leave .lev-allow-head { display: flex; align-items: center; gap: 10px; }
+#app #section-leave .lev-allow-head strong { font-size: 15px; font-weight: 700; color: var(--white); }
+#app #section-leave .lev-allow-head .badge { margin-left: auto; }
+#app #section-leave .lev-allow-av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px;
+  color: var(--who); background: color-mix(in srgb, var(--who) 12%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--who) 40%, transparent); }
+#app #section-leave .lev-allow-fig { display: flex; align-items: baseline; gap: 8px; }
+#app #section-leave .lev-allow-fig .v { font: 500 44px/1 var(--font-mono); letter-spacing: -.05em; color: var(--white); }
+#app #section-leave .lev-allow-fig .v.green { color: var(--green); }
+#app #section-leave .lev-allow-fig .v.amber { color: var(--amber); }
+#app #section-leave .lev-allow-fig .v.red { color: var(--red); }
+#app #section-leave .lev-allow-fig .u { font-size: 14px; font-weight: 600; color: var(--muted); }
+#app #section-leave .lev-allow-fig .h { margin-left: auto; font: 500 11px var(--font-mono); color: var(--muted); }
+#app #section-leave .lev-allow .hol-tokens { gap: 5px; }
+#app #section-leave .lev-allow .hol-tokens i { width: 14px; height: 30px; border-radius: 4px; }
+#app #section-leave .lev-allow-sub { font: 500 11px var(--font-mono); color: var(--muted); }
+
+/* — Year planner — */
+#app #section-leave .lev-planner { padding: 18px 20px 16px; }
+#app #section-leave .lev-planner .lev-card-head span { color: var(--muted); font-size: 12px; text-align: right; }
+#app #section-leave .lp { display: grid; }
+#app #section-leave .lp-row { display: grid; grid-template-columns: 58px repeat(31, minmax(0, 1fr)); grid-template-rows: 15px 15px; row-gap: 2px; padding: 4px 0; border-top: 1px solid var(--border-dim); }
+#app #section-leave .lp-head { grid-template-rows: auto; border-top: 0; padding: 0 0 4px; }
+#app #section-leave .lp-head span { grid-row: 1; font: 500 10px/1 var(--font-mono); color: var(--muted); text-align: center; }
+#app #section-leave .lp-mname { grid-column: 1; grid-row: 1 / 3; align-self: center; font-size: 12px; font-weight: 700; color: var(--white); }
+#app #section-leave .lp-mname small { margin-left: 3px; font: 500 9px var(--font-mono); color: var(--muted); }
+#app #section-leave .lp-month.now .lp-mname { color: var(--green); }
+#app #section-leave .lp-who { grid-column: 1; justify-self: end; align-self: center; margin-right: 8px; font: 700 9px/1 var(--font-mono); color: var(--who); }
+#app #section-leave .lp-c { margin: 0 1px; border-radius: 2px; background: color-mix(in srgb, var(--border-dim) 50%, transparent); cursor: pointer; transition: background var(--dur-1) var(--ease); }
+#app #section-leave .lp-c.we { background: var(--border-dim); }
+#app #section-leave .lp-c.out { opacity: .35; }
+#app #section-leave .lp-c:not(.lock):hover { background: color-mix(in srgb, var(--who) 30%, transparent); }
+#app #section-leave .lp-c.sel { background: color-mix(in srgb, var(--who) 45%, transparent); box-shadow: inset 0 0 0 1px var(--who); }
+#app #section-leave .lp-c.today { box-shadow: inset 0 0 0 1.5px var(--green); }
+#app #section-leave .lp-c.lock { cursor: default; }
+#app #section-leave .lp-bar {
+  z-index: 1; min-width: 0; margin: 0 1px; padding: 0 5px; border: 0; border-radius: 4px; cursor: pointer;
+  font: 600 10px/15px var(--font-body); color: var(--card); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: var(--who); transition: filter var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+}
+#app #section-leave .lp-bar:hover { filter: brightness(1.08); transform: translateY(-1px); }
+#app #section-leave .lp-bar:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+#app #section-leave .lp-bar.pending { color: var(--who); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--who) 30%, transparent) 0 3px, transparent 3px 7px); box-shadow: inset 0 0 0 1.5px var(--who); }
+#app #section-leave .lp-bar.cut-s { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+#app #section-leave .lp-bar.cut-e { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+#app #section-leave .lp-legend { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+#app #section-leave .lp-legend li { display: inline-flex; align-items: center; gap: 6px; }
+#app #section-leave .lp-legend b { width: 14px; height: 10px; border-radius: 3px; background: var(--who); }
+#app #section-leave .lp-legend .lp-key-pending b { background: repeating-linear-gradient(135deg, var(--border) 0 2px, transparent 2px 5px); box-shadow: inset 0 0 0 1.5px var(--muted); }
+#app #section-leave .lp-legend .lp-key-today b { background: transparent; box-shadow: inset 0 0 0 1.5px var(--green); }
+
+/* — Booking bar: one row of fields under the planner — */
+#app #section-leave .lev-book .lev-form { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+#app #section-leave .lev-book .lev-textarea { min-height: 40px; height: 40px; }
+#app #section-leave .lev-book .lev-form-actions .lev-hint { margin-right: auto; font-family: var(--font-mono); }
+
+@media (max-width: 760px) { #app #section-leave .lev-allow { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  #app #section-leave .lev-allow-card, #app #section-leave .lev-planner { padding: 14px; }
+  #app #section-leave .lev-allow-fig .v { font-size: 36px; }
+  #app #section-leave .lev-allow .hol-tokens i { width: 11px; height: 24px; }
+  #app #section-leave .lp-row { grid-template-columns: 30px repeat(31, minmax(0, 1fr)); grid-template-rows: 11px 11px; }
+  #app #section-leave .lp-head span { font-size: 0; }
+  #app #section-leave .lp-head span:is(:nth-child(2), :nth-child(11), :nth-child(21), :nth-child(31)) { font-size: 9px; }
+  #app #section-leave .lp-mname { font-size: 10px; }
+  #app #section-leave .lp-mname small, #app #section-leave .lp-who { display: none; }
+  #app #section-leave .lp-c, #app #section-leave .lp-bar { margin: 0 .5px; }
+  #app #section-leave .lp-bar { font-size: 0; padding: 0; }
+  #app #section-leave .lev-planner .lev-card-head { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { #app #section-leave :is(.lp-c, .lp-bar) { transition: none; } }

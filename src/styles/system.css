@@ -240,10 +240,10 @@
   #app :is(.job-kpi > strong, .opp-kpi > strong, .bkp-kpi-val, .prf-sum-v, .cl-kpi > strong, .kpi-value) { font-size: 20px; }
   #app #section-mileage .mil-kpis { gap: 8px; }
   /* Leave: the four figures per person sit in one row. */
-  #app #section-leave .lev-person-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
-  #app #section-leave .lev-stat { padding: 10px 8px; min-width: 0; }
-  #app #section-leave .lev-stat .v { font-size: 17px; }
-  #app #section-leave .lev-stat .l { font-size: 9px; letter-spacing: .03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  
+  
+  
+  
 
   /* Overview lists: the Open button becomes a chevron at the row's end instead of a line of its own. */
   #app #section-overview li:has(> button[data-ovw-go]) { grid-template-columns: 10px minmax(0, 1fr) auto !important; align-items: center; }

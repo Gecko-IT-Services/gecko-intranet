@@ -81,7 +81,7 @@ export function presence(requests, today) {
     const mine = live.filter(r => person(r.person) === p && day(r.end || r.start) >= today);
     const now = mine.find(r => r.status === 'Approved' && day(r.start) <= today);
     const next = mine.find(r => day(r.start) > today);
-    return [p, { off: !!now, back: now ? addDays(day(now.end || now.start), 1) : null, next: next || null, pendingCount: mine.filter(r => r.status === 'Pending').length }];
+    return [p, { off: !!now, now: now || null, back: now ? addDays(day(now.end || now.start), 1) : null, next: next || null, pendingCount: mine.filter(r => r.status === 'Pending').length }];
   }));
 }
 
@@ -118,4 +118,37 @@ export function mileage(journeys, today) {
     }
   }
   return out;
+}
+
+/**
+ * Live leave (approved or requested) as planner bars between two dates, per request, clipped to the window:
+ * { person, from, to, cutStart, cutEnd, status, type, note, id }. Rejected and cancelled are left out.
+ */
+export function bars(requests, from, to) {
+  return (requests || [])
+    .filter(r => (r.status === 'Approved' || r.status === 'Pending') && day(r.start) <= to && day(r.end || r.start) >= from)
+    .sort((a, b) => day(a.start).localeCompare(day(b.start)))
+    .map(r => {
+      const s = day(r.start), e = day(r.end || r.start);
+      return { person: person(r.person), from: s < from ? from : s, to: e > to ? to : e, cutStart: s < from, cutEnd: e > to,
+        status: r.status, type: r.type || 'Annual Leave', note: r.note || '', id: r.id ?? null };
+    });
+}
+
+/** Whole days between two date keys (b − a). */
+export const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5);
+
+/**
+ * Holiday as a row of day tokens, one per day of entitlement: booked days spent (left), then requested,
+ * then what is left. Days booked beyond the entitlement show as extra tokens marked `over`.
+ * Numbers only, so no escaping needed. Used by Team › Overview and Leave.
+ */
+export function tokensHtml({ entitlement, booked, pending }) {
+  const e = entitlement / DAY_HOURS, b = booked / DAY_HOURS, p = (booked + pending) / DAY_HOURS;
+  const n = Math.max(1, Math.ceil(e), Math.ceil(p));
+  const part = (i, edge) => Math.round(Math.max(0, Math.min(1, edge - i)) * 100);
+  const left = round2(e - b);
+  return `<span class="hol-tokens" role="img" aria-label="${left} of ${round2(e)} days left${pending ? `, ${round2(pending / DAY_HOURS)} requested` : ''}">`
+    + Array.from({ length: n }, (_, i) => `<i${i >= e ? ' class="over"' : ''} style="--b:${part(i, b)}%;--p:${part(i, p)}%"></i>`).join('')
+    + '</span>';
 }

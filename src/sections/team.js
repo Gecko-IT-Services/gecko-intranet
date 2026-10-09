@@ -13,7 +13,7 @@
 
 import { toast, escapeHtml } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
-import { PEOPLE, DAY_HOURS, taxYear, holiday, calendar, presence, hours, mileage, monday, addDays } from '../core/team.js';
+import { PEOPLE, DAY_HOURS, taxYear, holiday, bars, daysBetween, tokensHtml, presence, hours, mileage, monday, addDays } from '../core/team.js';
 
 const TM = { data: null, loading: false, error: null };
 const els = id => document.getElementById(id);
@@ -26,6 +26,9 @@ const days = v => { const d = Math.round((Number(v) || 0) / DAY_HOURS * 2) / 2; 
 const short = k => new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 const weekday = k => new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' });
 const range = (a, b) => (!b || a === b ? short(a) : `${short(a)} – ${short(b)}`);
+const longDay = k => new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+const dayNum = v => Math.round((Number(v) || 0) / DAY_HOURS * 2) / 2;
+const WEEKS = 4;
 
 async function load() {
   TM.loading = true; TM.error = null; render();
@@ -34,14 +37,14 @@ async function load() {
     const since = addDays(monday(today()), -7);
     const q = (table, cols, f = x => x) => settle(f(sb.from(table).select(cols)).then(must));
     const [requests, ents, journeys, entries] = await Promise.all([
-      q('leave_requests', 'person,start_date,end_date,hours,status,leave_type'),
+      q('leave_requests', 'id,person,start_date,end_date,hours,status,leave_type,notes'),
       q('leave_entitlements', 'person,tax_year,entitlement_hours,carry_over_hours,adjustment_hours'),
       q('mileage_journeys', 'driver,journey_date,miles,amount,claimed_date'),
       q('timesheet_entries', 'engineer,entry_date,hours,deleted_at', x => x.gte('entry_date', since))
     ]);
     const status = s => (/approved/i.test(s) ? 'Approved' : /rejected/i.test(s) ? 'Rejected' : /cancel/i.test(s) ? 'Cancelled' : 'Pending');
     TM.data = {
-      requests: requests.v ? requests.v.map(r => ({ person: r.person, start: r.start_date, end: r.end_date || r.start_date, hours: Number(r.hours) || 0, status: status(r.status), type: r.leave_type || 'Annual Leave' })) : null,
+      requests: requests.v ? requests.v.map(r => ({ person: r.person, start: r.start_date, end: r.end_date || r.start_date, hours: Number(r.hours) || 0, status: status(r.status), type: r.leave_type || 'Annual Leave', note: r.notes || '', id: r.id })) : null,
       ents: ents.v || [], journeys: journeys.v || null, entries: entries.v || null,
       errors: { leave: requests.e?.message || '', mileage: journeys.e?.message || '', hours: entries.e?.message || '' }
     };
@@ -71,48 +74,53 @@ function render() {
   const cards = PEOPLE.map(p => {
     const hol = d.requests ? holiday(d.requests, d.ents, p, ty) : null;
     const pr = pres?.[p];
-    const used = hol ? Math.max(0, Math.min(1, hol.booked / (hol.entitlement || 1))) : 0;
-    const status = !pr ? '<span class="badge">—</span>'
-      : pr.off ? `<span class="badge badge-amber">Off · back ${escapeHtml(short(pr.back))}</span>` : '<span class="badge badge-green">In today</span>';
+    const away = pr?.off;
+    const what = r => r.note || (r.type === 'Annual Leave' ? 'Holiday' : r.type);
+    const statusLine = !pr ? `<span class="tm-state">${escapeHtml(d.errors.leave ? 'Leave didn’t load' : '—')}</span>`
+      : away ? `<span class="tm-state away"><b aria-hidden="true"></b>Away · back ${escapeHtml(longDay(pr.back))}</span><span class="tm-state-sub">${escapeHtml(what(pr.now))}</span>`
+      : `<span class="tm-state in"><b aria-hidden="true"></b>In today</span><span class="tm-state-sub">${pr.next ? `Next off ${escapeHtml(range(pr.next.start, pr.next.end))}${pr.next.status === 'Pending' ? ' (requested)' : ''}` : 'No leave booked'}</span>`;
+    const left = hol ? dayNum(hol.remaining) : null;
     const maxDay = Math.max(1, ...(hrs?.[p]?.byDay || [0]));
-    return `<div class="tm-card">
-      <div class="tm-card-head"><div class="tm-av" aria-hidden="true">${p[0]}</div><div><strong>${p} Morris</strong>${status}</div></div>
-      <div class="tm-card-body">
-        <div class="tm-ring ${hol && hol.remaining < DAY_HOURS ? 'low' : ''}" style="--used:${(used * 100).toFixed(1)}">
-          <div class="tm-ring-in"><strong>${hol ? escapeHtml(days(hol.remaining)) : '—'}</strong><span>holiday left ${escapeHtml(ty)}</span></div>
-        </div>
-        <ul class="tm-facts">
-          <li><span>Booked</span><span>${hol ? escapeHtml(days(hol.booked)) : '—'}</span></li>
-          <li><span>Pending</span><span>${hol ? escapeHtml(days(hol.pending)) : '—'}</span></li>
-          <li><span>Next off</span><span>${pr?.next ? escapeHtml(range(pr.next.start, pr.next.end)) + (pr.next.status === 'Pending' ? ' (pending)' : '') : 'nothing booked'}</span></li>
-          <li><span>Mileage to claim</span><span>${mil ? (mil[p].unclaimed ? `<b class="warn">${escapeHtml(money(mil[p].unclaimed))}</b> · ${mil[p].unclaimedTrips} trip${mil[p].unclaimedTrips === 1 ? '' : 's'}` : 'all claimed') : '—'}</span></li>
-        </ul>
-      </div>
-      <div class="tm-week">
-        <div class="tm-week-head"><span>Hours this week</span><strong>${hrs ? escapeHtml(h(hrs[p].week)) : '—'}</strong>${hrs ? `<small>last week ${escapeHtml(h(hrs[p].last))}</small>` : ''}</div>
-        ${hrs ? `<div class="tm-days">${hrs[p].byDay.slice(0, 5).map((v, i) => `<div title="${escapeHtml(h(v))}"><i style="height:${(v / maxDay * 100).toFixed(1)}%"></i><span>${'MTWTF'[i]}</span></div>`).join('')}</div>` : `<p class="tm-muted">${escapeHtml(d.errors.hours || 'Timesheets didn’t load')}</p>`}
-      </div>
-      <div class="tm-actions">
+    const m = mil?.[p];
+    return `<article class="tm-card tm-${p.toLowerCase()}${away ? ' is-away' : ''}">
+      <header class="tm-card-head"><div class="tm-av" aria-hidden="true">${p[0]}</div><div class="tm-who"><h2>${p} Morris</h2>${statusLine}</div></header>
+      <section class="tm-hol" aria-label="Holiday ${escapeHtml(ty)}">
+        <div class="tm-row-head"><span>Holiday ${escapeHtml(ty)}</span>${hol ? `<strong class="${hol.remaining < 0 ? 'bad' : hol.remaining < DAY_HOURS ? 'low' : ''}">${escapeHtml(String(left))}<small> day${left === 1 ? '' : 's'} left</small></strong>` : '<strong>—</strong>'}</div>
+        ${hol ? tokensHtml(hol) : `<p class="tm-muted">${escapeHtml(d.errors.leave || 'Leave didn’t load')}</p>`}
+        ${hol ? `<p class="tm-sub">${escapeHtml(String(dayNum(hol.booked)))} booked · ${escapeHtml(String(dayNum(hol.pending)))} requested · of ${escapeHtml(String(dayNum(hol.entitlement)))}</p>` : ''}
+      </section>
+      <section class="tm-figs">
+        <div class="tm-fig"><span>Hours this week</span><strong>${hrs ? escapeHtml(h(hrs[p].week)) : '—'}</strong><small>${hrs ? `last week ${escapeHtml(h(hrs[p].last))}` : escapeHtml(d.errors.hours || 'Timesheets didn’t load')}</small>
+          ${hrs ? `<div class="tm-days" aria-hidden="true">${hrs[p].byDay.slice(0, 5).map((v, i) => `<div title="${escapeHtml(h(v))}"><i style="height:${(v / maxDay * 100).toFixed(1)}%"></i><span>${'MTWTF'[i]}</span></div>`).join('')}</div>` : ''}</div>
+        <div class="tm-fig"><span>Mileage to claim</span><strong class="${m?.unclaimed ? 'warn' : ''}">${m ? escapeHtml(m.unclaimed ? money(m.unclaimed) : '£0') : '—'}</strong><small>${m ? (m.unclaimed ? `${m.unclaimedTrips} trip${m.unclaimedTrips === 1 ? '' : 's'} since ${escapeHtml(short(m.oldest))}` : 'all claimed') : escapeHtml(d.errors.mileage || 'Mileage didn’t load')}</small></div>
+      </section>
+      <footer class="tm-actions">
         <button type="button" class="btn btn-sm" data-tm-go="leave">Book leave</button>
-        <button type="button" class="btn btn-sm" data-tm-go="mileage">${mil?.[p]?.unclaimed ? 'Claim mileage' : 'Add journey'}</button>
+        <button type="button" class="btn btn-sm" data-tm-go="mileage">${m?.unclaimed ? 'Claim mileage' : 'Add journey'}</button>
         <button type="button" class="btn btn-sm" data-tm-go="timesheets:log">Log time</button>
-      </div>
-    </div>`;
+      </footer>
+    </article>`;
   }).join('');
 
-  let cal = `<p class="tm-muted">${escapeHtml(d.errors.leave || 'Leave didn’t load')}</p>`;
+  let strip = `<p class="tm-muted">${escapeHtml(d.errors.leave || 'Leave didn’t load')}</p>`;
   if (d.requests) {
-    const c = calendar(d.requests, t, { weeks: 4 });
-    cal = `<div class="tm-cal" role="table" aria-label="Who's off, next four weeks">
-      <div class="tm-cal-row head" role="row"><span role="columnheader"></span>${c.days.map(x => `<span role="columnheader" class="${x === t ? 'today' : ''}${[0, 6].includes(new Date(x + 'T00:00:00Z').getUTCDay()) ? ' we' : ''}" title="${escapeHtml(weekday(x) + ' ' + short(x))}">${new Date(x + 'T00:00:00Z').getUTCDate()}</span>`).join('')}</div>
-      ${c.rows.map(r => `<div class="tm-cal-row" role="row"><span role="rowheader">${r.person}</span>${r.cells.map(x => `<span role="cell" class="${[x.state, x.weekend ? 'we' : '', x.today ? 'today' : ''].filter(Boolean).join(' ')}" title="${escapeHtml(`${r.person} · ${weekday(x.date)} ${short(x.date)}${x.state ? ` · ${x.state === 'off' ? x.type : 'pending ' + x.type}` : ''}`)}"></span>`).join('')}</div>`).join('')}
+    const from = monday(t), to = addDays(from, WEEKS * 7 - 1);
+    const days = Array.from({ length: WEEKS * 7 }, (_, i) => addDays(from, i));
+    const we = k => [0, 6].includes(new Date(k + 'T00:00:00Z').getUTCDay());
+    const col = k => daysBetween(from, k) + 2;
+    const all = bars(d.requests, from, to);
+    const cells = days.map(k => `<span class="tm-c${we(k) ? ' we' : ''}${k === t ? ' today' : ''}${k.endsWith('-01') || k === from ? ' m' : ''}" style="grid-column:${col(k)}"></span>`).join('');
+    strip = `<div class="tm-plan" role="group" aria-label="Who’s off, next four weeks">
+      <div class="tm-plan-row head"><span></span>${days.map(k => `<span class="${k === t ? 'today' : ''}${we(k) ? ' we' : ''}" style="grid-column:${col(k)}" title="${escapeHtml(longDay(k))}">${k.endsWith('-01') || k === from ? `<em>${escapeHtml(new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short' }))}</em>` : ''}${Number(k.slice(8))}</span>`).join('')}</div>
+      ${PEOPLE.map(p => `<div class="tm-plan-row tm-${p.toLowerCase()}"><span class="tm-plan-who">${p}</span>${cells}${all.filter(x => x.person === p).map(x =>
+        `<button type="button" class="tm-bar${x.status === 'Pending' ? ' pending' : ''}${x.cutStart ? ' cut-s' : ''}${x.cutEnd ? ' cut-e' : ''}" style="grid-column:${col(x.from)} / ${col(x.to) + 1}" data-tm-go="leave" title="${escapeHtml(`${p} · ${range(x.from, x.to)} · ${x.note || x.type}${x.status === 'Pending' ? ' · requested' : ''}`)}">${escapeHtml(x.note || x.type)}</button>`).join('')}</div>`).join('')}
     </div>
-    <ul class="tm-legend"><li><b class="off"></b>Off</li><li><b class="pending"></b>Requested</li><li><b class="today"></b>Today</li></ul>`;
+    <ul class="tm-legend"><li><b class="booked"></b>Booked</li><li><b class="pending"></b>Requested</li><li><b class="today"></b>Today</li></ul>`;
   }
 
   mount.innerHTML = `<div class="app-pane">
     <div class="tm-cards">${cards}</div>
-    <div class="tm-panel"><div class="tm-panel-head"><strong>Next four weeks</strong><button type="button" class="btn btn-sm btn-ghost" data-tm-go="leave">Leave calendar →</button></div>${cal}</div>
+    <section class="tm-panel"><div class="tm-panel-head"><h2>Next four weeks</h2><button type="button" class="btn btn-sm btn-ghost" data-tm-go="leave">Year planner →</button></div>${strip}</section>
   </div>`;
 }
 

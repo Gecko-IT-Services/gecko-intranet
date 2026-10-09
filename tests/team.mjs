@@ -59,3 +59,19 @@ assert.deepEqual(mi.Jack, { miles: 10, amount: 4.5, trips: 1, unclaimed: 0, uncl
 assert.equal(addDays('2026-10-31', 1), '2026-11-01');
 
 console.log('team: ok');
+
+// Planner bars: clipped to the window, rejected left out.
+import { bars, daysBetween, tokensHtml } from '../src/core/team.js';
+const b = bars(requests, '2026-10-09', '2026-10-31');
+assert.deepEqual(b.map(x => [x.person, x.from, x.to, x.cutStart, x.status]),
+  [['Philip', '2026-10-09', '2026-10-09', true, 'Approved'], ['Jack', '2026-10-12', '2026-10-13', false, 'Pending']]);
+assert.equal(daysBetween('2026-10-05', '2026-11-02'), 28);
+assert.equal(pr.Philip.now.start, '2026-10-08');
+
+// Tokens: 20 days, 10.5 booked, 1 requested → token 10 half spent, token 11 half requested.
+const tk = tokensHtml({ entitlement: 140, booked: 73.5, pending: 7 });
+assert.equal((tk.match(/<i/g) || []).length, 20);
+assert.match(tk, /aria-label="9.5 of 20 days left, 1 requested"/);
+assert.match(tk, /--b:50%;--p:100%/);
+assert.match(tk, /--b:0%;--p:50%/);
+assert.equal((tokensHtml({ entitlement: 140, booked: 147, pending: 0 }).match(/class="over"/g) || []).length, 1, 'over-booked day');
