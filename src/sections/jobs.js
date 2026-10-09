@@ -560,7 +560,7 @@ function boardHtml() {
       <div class="job-drop" data-drop="invoiced"><strong>Invoiced</strong><span>${escapeHtml(count(b.done.invoiced))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="invoiced">See them</button></div>
       <div class="job-drop" data-drop="lost"><strong>Lost</strong><span>${escapeHtml(count(b.done.lost))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="lost">See them</button></div>
     </div>
-    ${sel ? `<div class="job-pinned"><div class="job-list-sub"><strong>${escapeHtml(sel.client_name)}</strong><button type="button" class="job-link" data-job-act="pick" data-id="${sel.id}">Close</button></div>${jobCard(sel)}</div>` : ''}
+    ${sel ? `<div class="job-pinned"><div class="job-list-sub"><span class="job-muted">Picked from the board</span><button type="button" class="job-link" data-job-act="pick" data-id="${sel.id}">Close</button></div>${jobCard(sel)}</div>` : ''}
     ${imported ? '' : `<p class="job-note"><button type="button" class="job-link" data-job-act="import" ${JOB.importing ? 'disabled' : ''}>${JOB.importing ? 'Importing…' : 'Import open projects from the old board'}</button></p>`}`;
 }
 

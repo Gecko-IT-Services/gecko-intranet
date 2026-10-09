@@ -245,7 +245,7 @@
    job) and straightens under the pointer; dragging lifts it; a column under a drag lights up. */
 #section-jobs .job-list-head .job-view { margin-left: 4px; }
 #section-jobs .job-board {
-  display: grid; grid-template-columns: repeat(5, minmax(200px, 1fr)); gap: 12px; align-items: start;
+  display: grid; grid-template-columns: repeat(5, minmax(160px, 1fr)); gap: 10px; align-items: start;
   padding: 14px; border: 1px solid var(--border-dim); border-radius: var(--radius); overflow-x: auto;
   background: radial-gradient(circle, color-mix(in srgb, var(--muted) 22%, transparent) 1px, transparent 1.5px) 0 0 / 18px 18px, var(--card);
 }
