@@ -321,7 +321,7 @@ function jobCard(j) {
       ${xi.map(x => xeroBadge(j, x)).join('')}
     </div>
     <div class="job-actions">
-      ${NEXT[j.status].map(([to, label]) => `<button type="button" class="btn btn-sm${to === 'invoiced' || to === 'to_invoice' ? ' btn-success' : ''}" data-job-act="move" data-status="${to}" data-id="${j.id}">${label}</button>`).join('')}
+      ${NEXT[j.status].map(([to, label]) => `<button type="button" class="btn btn-sm${(to === 'invoiced' && !canInvoice) || to === 'to_invoice' ? ' btn-success' : ''}" data-job-act="move" data-status="${to}" data-id="${j.id}">${label}</button>`).join('')}
       ${canInvoice ? `<button type="button" class="btn btn-sm${j.status === 'to_invoice' ? ' btn-success' : ''}" data-job-act="xero-invoice" data-id="${j.id}" aria-expanded="${invoicing}">${invoicing ? 'Close' : 'Invoice in Xero'}</button>` : ''}
       <button type="button" class="btn btn-ghost btn-sm" data-job-act="edit" data-id="${j.id}" aria-expanded="${editing}">${editing ? 'Close' : 'Edit'}</button>
     </div>

@@ -24,7 +24,7 @@
 
 /* Every Refresh (and the plain controls beside it) is the default .btn. */
 #app .section-head :is(.ovw-refresh, .prf-refresh, .prf-manage-link, .prf-export-btn, .mil-refresh,
-                       .cli-refresh, .tsh-refresh, .lev-refresh, .lev-month-sel, .cmp-refresh,
+                       .cli-refresh, .tsh-refresh, .lev-refresh, .cmp-refresh,
                        .prj-refresh, .bkp-refresh, .head-btn) {
   display: inline-flex; align-items: center; gap: 7px;
   min-height: 34px; padding: 7px 14px; border-radius: var(--radius-pill);
@@ -39,9 +39,27 @@
 #app .section-head :is(.ovw-refresh, .prf-refresh, .mil-refresh, .cli-refresh, .tsh-refresh, .lev-refresh,
                        .cmp-refresh, .prj-refresh, .bkp-refresh, .head-btn) svg { width: 13px; height: 13px; flex: none; }
 
+/* These rules set display, which would beat the hidden attribute (Connect, Copy to Supabase…). */
+#app [hidden] { display: none !important; }
+
 /* While a refresh runs: .spinning on the button turns its icon. */
 #app .section-head .spinning svg { animation: spin 1s linear infinite; }
 @media (prefers-reduced-motion: reduce) { #app .section-head .spinning svg { animation: none; } }
+
+/* Month pickers: one pill, chevrons either side, the month in mono. */
+#app .section-head :is(.prf-month-sel, .lev-month-sel) {
+  display: inline-flex; align-items: center; gap: 2px; min-height: 34px; padding: 2px;
+  border: 1px solid var(--border-dim); border-radius: var(--radius-pill); background: var(--panel); box-shadow: none;
+}
+#app .section-head :is(.prf-month-btn, .lev-month-btn) {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0;
+  border-radius: var(--radius-pill); background: transparent; color: var(--muted); cursor: pointer;
+}
+#app .section-head :is(.prf-month-btn, .lev-month-btn):hover { background: var(--card-hover); color: var(--white); }
+#app .section-head :is(.prf-month-label, .lev-month-label) {
+  min-width: 96px; padding: 0 6px; text-align: center; color: var(--white);
+  font: 500 12px var(--font-mono); letter-spacing: 0; text-transform: none;
+}
 
 /* "Synced 09:00" sits straight after Refresh, quiet and mono, everywhere. */
 #app .section-head :is(.ovw-last-sync, .prf-last-sync, .mil-last-sync, .cli-last-sync, .tsh-last-sync,
@@ -96,6 +114,9 @@
 #app :is(.job-kpi, .opp-kpi, .bkp-kpi, .ovw-stat, .prf-sum-s, .pnl-kpi, .cl-kpi, .kpi) {
   background: var(--card); border: 0; border-radius: 0; box-shadow: none; padding: 14px 16px 16px;
 }
+/* Label above the value in every panel (some sections render it after). */
+#app :is(.bkp-kpi, .prf-sum-s) { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+#app :is(.bkp-kpi-lbl, .prf-sum-l) { order: -1; }
 /* Labels: small caps, muted. Values: mono, white unless a status colour is the point. */
 #app :is(.job-kpi > span, .opp-kpi > span, .bkp-kpi-lbl, .ovw-stat .l, .prf-sum-l, .cl-kpi > span, .kpi-label) {
   font: 600 10px/1.3 var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
