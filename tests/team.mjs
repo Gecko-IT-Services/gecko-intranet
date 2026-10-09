@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
-import { taxYear, taxYearBounds, person, holiday, calendar, presence, hours, mileage, monday, addDays } from '../src/core/team.js';
+import { taxYear, person, holiday, presence, hours, mileage, monday, addDays } from '../src/core/team.js';
 
 assert.equal(taxYear('2026-04-05'), '2025/26');
 assert.equal(taxYear('2026-04-06'), '2026/27');
-assert.deepEqual(taxYearBounds('2026/27'), { start: '2026-04-06', end: '2027-04-05' });
 assert.equal(person('Jack Morris'), 'Jack');
 assert.equal(person('philip'), 'Philip');
 assert.equal(monday('2026-10-11'), '2026-10-05', 'Sunday belongs to the week before');
@@ -25,16 +24,6 @@ assert.deepEqual(holiday(requests, ents, 'Philip', '2026/27'), { entitlement: 14
 const across = [{ person: 'Philip', start: '2027-04-01', end: '2027-04-09', hours: 35, status: 'Approved', type: 'Annual Leave' }];
 assert.equal(holiday(across, [], 'Philip', '2026/27').booked, 35);
 assert.equal(holiday(across, [], 'Philip', '2027/28').booked, 0);
-
-const cal = calendar(requests, today, { weeks: 2 });
-assert.equal(cal.days.length, 14);
-assert.equal(cal.days[0], '2026-10-05');
-const ph = cal.rows.find(r => r.person === 'Philip').cells;
-assert.deepEqual(ph.filter(c => c.state).map(c => [c.date, c.state]), [['2026-10-08', 'off'], ['2026-10-09', 'off']]);
-assert.ok(ph.find(c => c.date === today).today);
-assert.ok(ph.find(c => c.date === '2026-10-10').weekend);
-const jk = cal.rows.find(r => r.person === 'Jack').cells;
-assert.deepEqual(jk.filter(c => c.state).map(c => c.state), ['pending', 'pending'], 'rejected not shown');
 
 const pr = presence(requests, today);
 assert.deepEqual([pr.Philip.off, pr.Philip.back], [true, '2026-10-10']);

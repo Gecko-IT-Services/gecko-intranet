@@ -283,9 +283,8 @@ body {
 /* — Shared utility classes — */
 /* .barlow is a legacy class name from an earlier typeface. Kept so existing
    markup/JS that adds it still resolves to the current display family. */
-.barlow   { font-family: var(--font-display); font-weight: 600; letter-spacing: normal; }
+
 .display  { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
-.mono     { font-family: var(--font-mono); }
 /* Small tracked labels / eyebrows — always the body family. */
 .label    { font-family: var(--font-body); text-transform: uppercase; letter-spacing: .1em;
             font-size: 10px; font-weight: 600; color: var(--muted); }
@@ -338,7 +337,6 @@ body {
    as separated surfaces — critical in light theme where white-on-near-white
    otherwise blends into one mass. */
 #section-overview .ovw-card,
-#section-clients .cli-card,
 #section-clients .cli-tbl-wrap,
 #section-timesheets .tsh-card,
 #section-leave .lev-card {
@@ -504,11 +502,6 @@ body {
 }
 .sb-link .ic { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
 .sb-link .lbl { flex: 1; }
-.sb-link .tag {
-  font-size: 8px; padding: 2px 6px; border-radius: 999px;
-  background: var(--border-dim); color: var(--muted);
-  letter-spacing: .05em; text-transform: uppercase; font-weight: 700;
-}
 
 .sb-foot {
   padding: 12px 12px 16px;
@@ -649,15 +642,6 @@ body {
   border-radius: var(--radius);
   padding: 60px 30px;
   text-align: center;
-}
-.placeholder .ph-icon {
-  width: 56px; height: 56px;
-  border-radius: 14px;
-  background: var(--green-glow);
-  border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 16px;
-  font-size: 24px; color: var(--green);
 }
 .placeholder h3 {
   font-family: var(--font-body);
@@ -830,21 +814,15 @@ body {
 }
 #section-overview .ovw-kpi .k-sub strong { color: var(--white); font-weight: 600; }
 /* KPI value colour variants */
-#section-overview .ovw-kpi.neutral  .k-value { color: var(--white); }
+
 #section-overview .ovw-kpi.profit   .k-value { color: var(--green); }
 #section-overview .ovw-kpi.miles    .k-value { color: var(--green); }
 #section-overview .ovw-kpi.revenue  .k-value { color: var(--green); }
 #section-overview .ovw-kpi.clients  .k-value { color: var(--white); }
 #section-overview .ovw-kpi.hours    .k-value { color: var(--blue); }
-#section-overview .ovw-kpi.ssa-risk .k-value { color: var(--green); }
-#section-overview .ovw-kpi.ssa-risk.has-risk .k-value { color: var(--amber); }
 
 /* — Two-column detail row (mileage breakdown + revenue breakdown) — */
-#section-overview .ovw-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 14px;
-}
+
 #section-overview .ovw-card {
   background: var(--card);
   border: 1px solid var(--border-dim);
@@ -874,135 +852,6 @@ body {
   text-transform: uppercase;
 }
 
-/* — Breakdown tables (mileage by driver + revenue P&L) — */
-#section-overview .ovw-tbl {
-  width: 100%; border-collapse: collapse;
-}
-#section-overview .ovw-tbl th,
-#section-overview .ovw-tbl td {
-  padding: 10px 13px;
-  border-bottom: 1px solid var(--border-dim);
-  text-align: left;
-  font-size: 13px;
-}
-#section-overview .ovw-tbl th:first-child,
-#section-overview .ovw-tbl td:first-child { padding-left: 18px; }
-#section-overview .ovw-tbl th:last-child,
-#section-overview .ovw-tbl td:last-child { padding-right: 18px; }
-#section-overview .ovw-tbl td.num { white-space: nowrap; }
-#section-overview .ovw-tbl tbody tr:last-child th,
-#section-overview .ovw-tbl tbody tr:last-child td { border-bottom: none; }
-#section-overview .ovw-tbl th {
-  font-size: 9px; color: var(--muted);
-  letter-spacing: .1em; text-transform: uppercase;
-  font-weight: 700;
-  background: rgba(0,0,0,0.2);
-}
-#section-overview .ovw-tbl th.num { text-align: right; }
-#section-overview .ovw-tbl td.num {
-  text-align: right;
-  white-space: nowrap;
-  font-family: var(--font-mono);
-  font-size: 13.5px; font-weight: 500;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-#section-overview .ovw-tbl td.num { color: var(--white); }
-#section-overview .ovw-tbl td.num.muted   { color: var(--muted); font-weight: 600; font-size: 14px; }
-#section-overview .ovw-tbl td.num.green   { color: var(--green); }
-#section-overview .ovw-tbl td.num.red     { color: var(--red); }
-#section-overview .ovw-tbl td.num.amber   { color: var(--amber); }
-#section-overview .ovw-tbl td .driver-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-weight: 500; color: var(--white);
-}
-#section-overview .ovw-tbl td .driver-pill .dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--green); flex-shrink: 0;
-}
-#section-overview .ovw-tbl td .driver-pill.jack .dot { background: var(--blue); }
-#section-overview .ovw-tbl tr.ovw-trow td {
-  background: rgba(82,176,46,0.06);
-  border-top: 1px solid var(--green-line);
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 13px;
-  letter-spacing: .05em; text-transform: uppercase;
-}
-#section-overview .ovw-tbl tr.ovw-trow td.num { font-size: 16px; }
-
-/* — Empty state inside breakdown cards — */
-#section-overview .ovw-empty {
-  padding: 24px 18px; text-align: center;
-  color: var(--muted); font-size: 12px;
-  font-style: italic;
-}
-
-/* — Operational snapshot — */
-#section-overview .ovw-ops {
-  background: var(--card);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-#section-overview .ovw-ops-head {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border-dim);
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-}
-#section-overview .ovw-ops-head h3 {
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 14px;
-  letter-spacing: .07em; text-transform: uppercase;
-  color: var(--white);
-  flex: 1;
-}
-#section-overview .ovw-ops-head p {
-  width: 100%;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-#section-overview .ovw-ops-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-#section-overview .ovw-op {
-  padding: 16px 18px;
-  border-right: 1px solid var(--border-dim);
-  min-width: 0;
-}
-#section-overview .ovw-op:last-child { border-right: none; }
-#section-overview .ovw-op .op-label {
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-#section-overview .ovw-op .op-value {
-  font-family: var(--font-body);
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1.05;
-  color: var(--white);
-  margin-bottom: 5px;
-}
-#section-overview .ovw-op.good .op-value { color: var(--green); }
-#section-overview .ovw-op.warn .op-value { color: var(--amber); }
-#section-overview .ovw-op.info .op-value { color: var(--blue); }
-#section-overview .ovw-op .op-note {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.4;
-}
-#section-overview .ovw-op .op-note strong {
-  color: var(--white);
-  font-weight: 600;
-}
-
-/* — Quick actions card — */
-
 /* — Error / empty state for the whole section — */
 #section-overview .ovw-error {
   background: linear-gradient(var(--red-dim), var(--red-dim)), var(--card);
@@ -1023,19 +872,9 @@ body {
 /* — Responsive — */
 @media (max-width: 1100px) {
   #section-overview .ovw-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #section-overview .ovw-ops-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #section-overview .ovw-op:nth-child(2) { border-right: none; }
-  #section-overview .ovw-op:nth-child(-n+2) { border-bottom: 1px solid var(--border-dim); }
 }
 @media (max-width: 720px) {
   #section-overview .ovw-kpis { grid-template-columns: minmax(0, 1fr); }
-  #section-overview .ovw-row  { grid-template-columns: minmax(0, 1fr); }
-  #section-overview .ovw-ops-grid { grid-template-columns: minmax(0, 1fr); }
-  #section-overview .ovw-op {
-    border-right: none;
-    border-bottom: 1px solid var(--border-dim);
-  }
-  #section-overview .ovw-op:last-child { border-bottom: none; }
 }
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
@@ -1064,15 +903,6 @@ body {
 #section-profitability .prf-refresh svg { transition: transform .4s ease; }
 #section-profitability .prf-refresh.spinning svg { animation: spin 1s linear infinite; }
 #section-profitability .prf-last-sync { font-size: 11px; color: var(--muted); margin-left: 4px; }
-#section-profitability .prf-add-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border-radius: var(--radius-sm);
-  background: var(--green); color: var(--on-green);
-  border: 1px solid var(--green);
-  font-family: var(--font-body); font-size: 12px; font-weight: 700;
-  cursor: pointer; transition: all .15s ease;
-}
-#section-profitability .prf-add-btn:hover { background: var(--green-dark); border-color: var(--green-dark); color: var(--white); }
 
 /* — Wrapper layout — */
 #section-profitability .prf-wrap { display: flex; flex-direction: column; gap: 14px; }
@@ -1193,7 +1023,6 @@ body {
 #section-profitability .prf-nc { color: var(--red); }
 #section-profitability .prf-ns { color: var(--white); font-weight: 700; }
 #section-profitability .prf-ng { color: var(--green); font-weight: 700; }
-#section-profitability .prf-nb { color: var(--muted); }
 #section-profitability .prf-pend { color: var(--muted); font-size: 11px; font-style: italic; }
 
 /* — Inline service edit row (replaces a row when editing/adding) — */
@@ -1274,26 +1103,6 @@ body {
   letter-spacing: .06em; text-transform: uppercase; margin-bottom: 14px;
 }
 #section-profitability .prf-modal p { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
-#section-profitability .prf-form-grp { margin-bottom: 14px; }
-#section-profitability .prf-form-grp label {
-  display: block;
-  font-size: 10px; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .07em;
-  margin-bottom: 6px; font-weight: 600;
-}
-.prf-form-grp input,
-.prf-form-grp select,
-#section-profitability .prf-form-grp textarea {
-  width: 100%; padding: 8px 12px;
-  background: var(--dark); color: var(--white);
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  font-family: var(--font-body); font-size: 13px;
-  outline: none; transition: border-color .15s;
-}
-.prf-form-grp input:focus,
-.prf-form-grp select:focus,
-#section-profitability .prf-form-grp textarea:focus { border-color: var(--green); }
-#section-profitability .prf-form-grp textarea { resize: vertical; min-height: 70px; }
 #section-profitability .prf-mm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
@@ -1655,15 +1464,6 @@ body {
   font-size: 13px; color: var(--white);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-#section-mileage .mil-client-row .cm {
-  font-family: var(--font-body);
-  font-weight: 700; font-size: 14px;
-  color: var(--green);
-  padding: 2px 8px;
-  background: var(--green-glow);
-  border-radius: 999px;
-  white-space: nowrap;
-}
 #section-mileage .mil-client-row .ca { display: flex; gap: 4px; }
 
 /* — Add Client inline form — */
@@ -1961,18 +1761,15 @@ body {
 #section-clients .cli-tbl tbody td .cli-contact-email a:hover { color: var(--green); }
 
 /* — Empty / error / loading states — */
-#section-clients .cli-empty,
-#section-clients .cli-error {
+#section-clients .cli-empty {
   background: var(--card); border: 1px solid var(--border-dim);
   border-radius: var(--radius); padding: 40px 24px; text-align: center;
 }
-#section-clients .cli-empty h3,
-#section-clients .cli-error h3 {
+#section-clients .cli-empty h3 {
   font-family: var(--font-body); font-weight: 700;
   font-size: 16px; letter-spacing: .06em; text-transform: uppercase;
   margin-bottom: 8px;
 }
-#section-clients .cli-error p { color: var(--muted); font-size: 13px; }
 
 /* — Modal (mirrors prf-modal pattern; separate ID so modules stay independent) — */
 #section-clients .cli-modal-bg {
@@ -2298,10 +2095,6 @@ body {
 #section-timesheets .tsh-ssa-archived-name { font-weight: 600; }
 #section-timesheets .tsh-ssa-archived-hours { color: var(--muted); }
 #section-timesheets .tsh-ssa-archived-row .tsh-ssa-link { margin-left: auto; }
-#section-timesheets .tsh-copy-result { flex-basis: 100%; font-size: 12px; color: var(--muted); }
-#section-timesheets .tsh-copy-result:empty { display: none; }
-#section-timesheets .tsh-copy-result[data-state="ok"]  { color: var(--green); }
-#section-timesheets .tsh-copy-result[data-state="bad"] { color: var(--red); }
 #section-timesheets .tsh-sync {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; padding: 10px 14px;
   border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--card); font-size: 12.5px; color: var(--muted);
@@ -2636,15 +2429,10 @@ body::before {
 #section-overview .ovw-kpi,
 #section-overview .ovw-card,
 #section-profitability .prf-sum-strip,
-#section-mileage .mil-quick-card,
-#section-mileage .mil-claim-bar,
 #section-clients .cli-tbl-wrap,
-#section-clients .cli-card,
-#section-timesheets .tsh-kpi,
 #section-timesheets .tsh-ssa-card,
 #section-leave .lev-card,
-#section-settings .set-card,
-  #section-overview .ovw-ops {
+#section-settings .set-card {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.028), rgba(255,255,255,0.006)),
     var(--card);
@@ -2656,7 +2444,6 @@ body::before {
 .placeholder:hover,
 #section-overview .ovw-kpi:hover,
 #section-overview .ovw-card:hover,
-#section-clients .cli-card:hover,
 #section-leave .lev-card:hover {
   border-color: var(--border);
   box-shadow: var(--shadow-md);
@@ -2754,7 +2541,6 @@ body::before {
 #section-profitability .prf-refresh,
 #section-profitability .prf-manage-link,
 #section-profitability .prf-export-btn,
-#section-profitability .prf-add-btn,
 #section-mileage .mil-refresh,
 #section-mileage .mil-tab,
 #section-mileage .mil-chip,
@@ -2770,8 +2556,7 @@ body::before {
 }
 
 .btn-primary,
-#signInBtn,
-#section-profitability .prf-add-btn {
+#signInBtn {
   box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 10px 24px rgba(82,176,46,0.16);
 }
 
@@ -2780,7 +2565,6 @@ select,
 textarea,
 #section-mileage .mil-input,
 #section-mileage .mil-select,
-#section-mileage .mil-textarea,
 #section-clients .cli-srch input,
 #section-clients .cli-form-grp input,
 #section-clients .cli-form-grp select,
@@ -2804,8 +2588,7 @@ textarea:focus {
 /* Unified KPI cluster — one instrument panel, hairline-divided cells
    (replaces the 6-separate-cards "hero-metric" template). Applied across
    every section's stat strip for a consistent precision-instrument read. */
-#section-overview .ovw-kpis,
-#section-timesheets .tsh-kpi-strip {
+#section-overview .ovw-kpis {
   gap: 1px;
   background: var(--hair);
   border: 1px solid var(--border-dim);
@@ -2814,8 +2597,7 @@ textarea:focus {
   box-shadow: var(--shadow-sm);
 }
 
-#section-overview .ovw-kpi,
-#section-timesheets .tsh-kpi {
+#section-overview .ovw-kpi {
   padding: 16px 18px 18px;
   background: var(--card);
   border: none !important;
@@ -2823,14 +2605,12 @@ textarea:focus {
   box-shadow: none !important;
   transition: background var(--dur-2) var(--ease);
 }
-#section-overview .ovw-kpi:hover,
-#section-timesheets .tsh-kpi:hover {
+#section-overview .ovw-kpi:hover {
   background: var(--card-hover);
   box-shadow: none !important;
 }
 
-#section-overview .ovw-kpi .k-value,
-#section-timesheets .tsh-kpi .k-value {
+#section-overview .ovw-kpi .k-value {
   font-family: var(--font-mono);
   font-weight: 500;
   letter-spacing: -0.03em;
@@ -2858,7 +2638,6 @@ tbody td {
 .toast,
 #section-profitability .prf-modal,
 #section-mileage .mil-modal,
-#section-mileage .mil-claim-modal,
 #section-clients .cli-modal,
 #section-timesheets .tsh-modal,
 #section-leave .lev-modal {
@@ -2988,52 +2767,6 @@ body::before {
   font-size: 13px;
 }
 
-.sb-system-card {
-  margin: 0 12px 12px;
-  padding: 13px;
-  border-radius: 13px;
-  border: 1px solid rgba(82,176,46,0.24);
-  background:
-    linear-gradient(145deg, rgba(82,176,46,0.13), rgba(255,255,255,0.028)),
-    rgba(255,255,255,0.025);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
-}
-
-.sb-system-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--white);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .03em;
-  margin-bottom: 10px;
-}
-
-.sb-system-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 14px rgba(82,176,46,0.9);
-}
-
-.sb-system-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.sb-system-grid span {
-  padding: 4px 7px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.24);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(242,245,241,0.74);
-  font-size: 10px;
-  font-weight: 600;
-}
-
 .sb-foot {
   padding: 13px 12px 16px;
   border-top-color: rgba(255,255,255,0.08);
@@ -3159,10 +2892,6 @@ body::before {
 
   .section-head h1 {
     font-size: 28px;
-  }
-
-  .sb-system-card {
-    display: none;
   }
 }
 
@@ -3310,25 +3039,17 @@ body::before {
     padding: 8px 12px;
   }
 
-  #section-overview .ovw-kpis,
-  #section-overview .ovw-row,
-  #section-overview .ovw-ops-grid,
-  #section-timesheets .tsh-kpi-strip,
-  .demo-preview-grid {
+  #section-overview .ovw-kpis {
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 10px;
   }
 
-  #section-overview .ovw-kpi,
-  #section-timesheets .tsh-kpi,
-  .demo-preview-card {
+  #section-overview .ovw-kpi {
     min-height: 96px;
     padding: 16px;
   }
 
-  #section-overview .ovw-kpi .k-value,
-  #section-timesheets .tsh-kpi .k-value,
-  .demo-preview-value{
+  #section-overview .ovw-kpi .k-value {
     font-size: 30px;
   }
 
@@ -3422,7 +3143,6 @@ body::before {
     justify-content: center;
   }
 
-  #section-clients .cli-grid,
   #section-timesheets .tsh-ssa-grid {
     grid-template-columns: minmax(0, 1fr) !important;
   }
@@ -3451,7 +3171,6 @@ body::before {
 
   #section-profitability .prf-modal,
   #section-mileage .mil-modal,
-  #section-mileage .mil-claim-modal,
   #section-clients .cli-modal,
   #section-timesheets .tsh-modal,
   #section-leave .lev-modal {
@@ -3628,16 +3347,14 @@ body::before {
 }
 
 :root[data-theme="light"] .sb-brand-name,
-:root[data-theme="light"] .user-name,
-:root[data-theme="light"] .sb-system-top {
+:root[data-theme="light"] .user-name {
   color: #17201b;
 }
 
 :root[data-theme="light"] .sb-brand-sub,
 :root[data-theme="light"] .sb-nav-label,
 :root[data-theme="light"] .user-role,
-:root[data-theme="light"] #signOutBtn,
-:root[data-theme="light"] .sb-system-grid span {
+:root[data-theme="light"] #signOutBtn {
   color: #52645a;
 }
 
@@ -3679,17 +3396,12 @@ body::before {
   box-shadow: 0 0 0 1px var(--border) inset;
 }
 
-:root[data-theme="light"] .sb-system-card,
+
 :root[data-theme="light"] .user-chip {
   background:
     linear-gradient(145deg, rgba(82,176,46,0.08), rgba(255,255,255,0.66)),
     #ffffff;
   border-color: rgba(82,176,46,0.18);
-}
-
-:root[data-theme="light"] .sb-system-grid span {
-  background: rgba(23,32,27,0.04);
-  border-color: rgba(23,32,27,0.08);
 }
 
 :root[data-theme="light"] .sb-foot {
@@ -3701,7 +3413,6 @@ body::before {
 :root[data-theme="light"] textarea,
 :root[data-theme="light"] #section-mileage .mil-input,
 :root[data-theme="light"] #section-mileage .mil-select,
-:root[data-theme="light"] #section-mileage .mil-textarea,
 :root[data-theme="light"] #section-clients .cli-srch input,
 :root[data-theme="light"] #section-clients .cli-form-grp input,
 :root[data-theme="light"] #section-clients .cli-form-grp select,
@@ -3719,9 +3430,6 @@ body::before {
 
 :root[data-theme="light"] table thead th,
 :root[data-theme="light"] .set-pref-label,
-:root[data-theme="light"] .ovw-ops-head p,
-:root[data-theme="light"] .ovw-op .op-label,
-:root[data-theme="light"] .ovw-op .op-note,
 :root[data-theme="light"] .tsh-ssa-hint {
   color: #405247 !important;
 }
@@ -3795,12 +3503,6 @@ body::before {
 .sb-nav {
   flex: 1 0 auto;    /* grows into spare space, never shrinks below content */
   overflow: visible;
-}
-
-/* The integrations card is reassurance, not a destination. It is the
-   first thing to go when vertical space is contested. */
-@media (max-height: 980px) {
-  .sb-system-card { display: none; }
 }
 
 /* Below this the chrome itself tightens so the whole column — nine
@@ -4124,8 +3826,7 @@ body::before {
   #section-overview .ovw-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  #section-overview .ovw-kpi .k-value,
-  #section-leave .lev-kpi .k-value {
+  #section-overview .ovw-kpi .k-value {
     font-size: 21px;
     letter-spacing: -0.035em;
   }
@@ -4156,19 +3857,6 @@ body::before {
   #portalShell input:not([type="checkbox"]):not([type="radio"]),
   #portalShell textarea {
     min-height: var(--touch-min) !important;
-  }
-
-  /* Switches are a 38x20 label wrapping a display:none checkbox, so they
-     cannot simply be grown without moving the track. An invisible
-     overlay inside the label extends the hit area in place. */
-  #portalShell .tsh-toggle { touch-action: manipulation; }
-  #portalShell .tsh-toggle::after {
-    content: '';
-    position: absolute;
-    top: 50%; left: 50%;
-    width: max(100%, var(--touch-min));
-    height: var(--touch-min);
-    transform: translate(-50%, -50%);
   }
 
   /* Checkboxes get a hit area without a 44px painted box. */
@@ -4253,7 +3941,6 @@ body::before {
   :root[data-sidebar="collapsed"] .sb-brand-text,
   :root[data-sidebar="collapsed"] .sb-nav-label,
   :root[data-sidebar="collapsed"] .sb-link .lbl,
-  :root[data-sidebar="collapsed"] .sb-link .tag,
   :root[data-sidebar="collapsed"] .user-info,
   :root[data-sidebar="collapsed"] #signOutBtn .so-label {
     position: absolute;
@@ -4297,7 +3984,6 @@ body::before {
     gap: 0;
   }
   :root[data-sidebar="collapsed"] #signOutBtn { padding: 8px 0; gap: 0; }
-  :root[data-sidebar="collapsed"] .sb-system-card { display: none; }
 }
 
 /* Keep hover lifts for pointer hardware only. */
@@ -6762,14 +6448,6 @@ const ovwFmtMiles = v => {
   const n = Number(v) || 0;
   return n.toFixed(1).replace(/\.0$/, '') + ' mi';
 };
-const ovwFmtPct = v => {
-  if (!isFinite(v)) return '—';
-  return (v * 100).toFixed(1) + '%';
-};
-const ovwFmtMonth = d => {
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  return months[d.getMonth()] + ' ' + d.getFullYear();
-};
 
 /**
  * Normalise a driver name from SharePoint to one of the canonical drivers.
@@ -8105,71 +7783,6 @@ function prfUpdateMonthUI() {
   if (label) label.textContent = prfMonthLabel(PRF.selectedMonth || prfCurrentMonth());
 }
 
-// ─── Phase 10: CSV parser ─────────────────────────────────────────────
-
-/**
- * Parse a CSV string into an array of objects. Handles quoted fields
- * (with commas and newlines inside quotes). Assumes first row is header.
- */
-function prfParseCsv(text) {
-  // Normalise line endings
-  const raw = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const rows = [];
-  let i = 0;
-  const len = raw.length;
-
-  function parseField() {
-    if (i >= len || raw[i] === '\n') return '';
-    if (raw[i] === '"') {
-      // Quoted field
-      i++; // skip opening quote
-      let val = '';
-      while (i < len) {
-        if (raw[i] === '"') {
-          if (i + 1 < len && raw[i + 1] === '"') {
-            val += '"'; i += 2;
-          } else {
-            i++; // skip closing quote
-            break;
-          }
-        } else {
-          val += raw[i]; i++;
-        }
-      }
-      return val;
-    } else {
-      let val = '';
-      while (i < len && raw[i] !== ',' && raw[i] !== '\n') {
-        val += raw[i]; i++;
-      }
-      return val;
-    }
-  }
-
-  function parseRow() {
-    const fields = [];
-    while (i < len && raw[i] !== '\n') {
-      fields.push(parseField());
-      if (i < len && raw[i] === ',') i++; // skip comma
-    }
-    if (i < len && raw[i] === '\n') i++; // skip newline
-    return fields;
-  }
-
-  // Parse header
-  const header = parseRow();
-  // Parse data rows
-  while (i < len) {
-    if (raw[i] === '\n') { i++; continue; } // skip blank lines
-    const fields = parseRow();
-    if (fields.length === 0 || (fields.length === 1 && fields[0] === '')) continue;
-    const obj = {};
-    header.forEach((h, idx) => { obj[h.trim()] = (fields[idx] || '').trim(); });
-    rows.push(obj);
-  }
-  return rows;
-}
-
 
 // ─── Phase 10: Name matching algorithm ────────────────────────────────
 
@@ -8251,12 +7864,6 @@ function prfXeroMatchName(xeroName, portalClients) {
 }
 
 
-// ─── Phase 10: Xero CSV Import flow ───────────────────────────────────
-
-/**
- * Process a Xero CSV file: parse, detect month, match names, populate
- * Xero reconciliation fields, save to SharePoint.
- */
 /* ─── Live feed (2026-10-06) ──────────────────────────────────────────
    A scheduled job writes Gecko Dashboard Data/profitability-feed.json in
    the portal site's Documents: Xero revenue per contact per month, and the
@@ -13236,10 +12843,6 @@ function levNormaliseStatus(status) {
 
 function levStatusClass(status) {
   return levNormaliseStatus(status).toLowerCase();
-}
-
-function levPersonClass(person) {
-  return String(person || '').toLowerCase().includes('philip') ? 'person-philip' : 'person-jack';
 }
 
 function levEntitlementFor(person, taxYear = LEV.selectedTaxYear) {

@@ -132,12 +132,12 @@
 
 
 /* ── 4 · Error state: red-tinted, with its recovery button ─────────── */
-#app :is(.job-error, .opp-error, .bkp-error, .tm-error, .cl-error, .cli-error, .ovw-error, .state-error) {
+#app :is(.job-error, .opp-error, .bkp-error, .tm-error, .cl-error, .ovw-error, .state-error) {
   display: grid; justify-items: center; gap: 6px; text-align: center;
   padding: 24px 22px; border: 1px solid var(--red-border); border-radius: var(--radius);
   background: linear-gradient(var(--red-dim), var(--red-dim)), var(--card); color: var(--muted);
 }
-#app :is(.job-error, .opp-error, .bkp-error, .tm-error, .cl-error, .cli-error, .ovw-error, .state-error) :is(strong, h3) {
+#app :is(.job-error, .opp-error, .bkp-error, .tm-error, .cl-error, .ovw-error, .state-error) :is(strong, h3) {
   display: block; margin: 0; color: var(--red); font: 700 14px/1.4 var(--font-body); letter-spacing: 0; text-transform: none;
 }
 #app :is(.ovw-error, .state-error) p { margin: 0; color: var(--muted); font-size: 13px; }
