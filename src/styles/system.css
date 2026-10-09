@@ -231,8 +231,8 @@
   #app .section-head > p { margin: 0 0 8px; }
   #app .section-head :is([class$="-head-actions"], .head-actions, .pnl-actions) { margin-top: 0; }
 
-  /* The client page's h1 is the client's name, not the page's: keep it, smaller. */
-  #app #section-client .section-head h1 { display: block; font-size: 22px; }
+  /* The client page's h1 is the client's name, and Overview's is the greeting: not the page's name, so keep them, smaller. */
+  #app :is(#section-client, #section-overview) .section-head h1 { display: block; font-size: 22px; }
 
   /* Figure strips: two across, an odd last figure takes the row (no empty grey cell). */
   #app :is(.ovw-kpis.ovw-money, .prf-sum-strip) { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; overflow: visible; }
@@ -246,7 +246,6 @@
     border-radius: var(--radius-pill);
   }
   #portalShell #section-overview li > button[data-ovw-go]::before { content: '›'; font-size: 22px; line-height: 1; }
-  #app #section-overview .ovw-actions-btns { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   /* Jobs: the stage totals swipe sideways rather than filling the first screen. */
   #app #section-jobs .job-stages { display: grid; grid-auto-flow: column; grid-auto-columns: 42%; grid-template-columns: none; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }

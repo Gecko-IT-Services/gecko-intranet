@@ -11,7 +11,8 @@ same dots, same Open buttons, a count each). Business ended in a Quick actions b
 ## Design
 - **One header.** The greeting is the title ("Good afternoon, *Jack*", the name in the green second-word
   style every section uses); underneath, the date and when backups and alerts were last checked.
-  **Log time** sits in the header beside Refresh (one click from any Overview tab).
+  **Log time** sits in the header beside Refresh (one click from any Overview tab). On a phone the heading stays
+  (smaller), as the client page's does: it is the greeting, not the page's name.
 - **One Needs attention list.** Monitoring's rows (failed backups, alerts that need a look, backups with
   warnings; at most eight, then "n more in Monitoring") join the list. Order: red, amber, info;
   monitoring first within a colour. One count. "Not checked: …" still names a source that failed.

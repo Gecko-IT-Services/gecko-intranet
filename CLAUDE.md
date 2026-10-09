@@ -205,6 +205,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `src/core/overview.js` (tests `tests/overview.mjs`); database reads `src/sections/overview.js`; page
   `ovw*` in index.html + `src/styles/overview.css`. A source that fails is named ("Not checked"), never
   shown as zero. Backups/Alerts are not read here (mailbox reads too slow for the landing page).
+  Neatened 9 Oct (`2026-10-09-neater-overview-design.md`): the greeting is the header (with Log time), and
+  Monitoring's rows are part of the one Needs attention list; no Quick actions bar.
 
 ## The feed (where the money numbers come from)
 - `Gecko Dashboard Data/profitability-feed.json` in the portal site's Documents
