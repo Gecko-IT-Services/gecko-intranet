@@ -617,11 +617,11 @@ function render() {
   const rtoggle = document.getElementById('alrShowResolved');
   if (rtoggle) rtoggle.checked = ALR.showResolved;
 
-  if (ALR.loading && !ALR.issues) { mount.innerHTML = '<p class="bkp-empty">Loading alerts…</p>'; return; }
+  if (ALR.loading && !ALR.issues) { mount.innerHTML = '<p class="bkp-empty art art-loading">Loading alerts…</p>'; return; }
   if (ALR.error === 'CONSENT')   { mount.innerHTML = consentMessage(); return; }
   if (ALR.error === 'NO_ACCESS') { mount.innerHTML = noAccessMessage(); return; }
   if (ALR.error) {
-    mount.innerHTML = `<div class="bkp-error"><strong>Could not load Atera alerts.</strong>${escapeHtml(ALR.error)}<button type="button" class="btn btn-sm" id="alrRetry">Retry</button></div>`;
+    mount.innerHTML = `<div class="bkp-error art art-offline"><strong>Could not load Atera alerts.</strong>${escapeHtml(ALR.error)}<button type="button" class="btn btn-sm" id="alrRetry">Retry</button></div>`;
     return;
   }
   if (!ALR.issues) return;
@@ -634,7 +634,7 @@ function render() {
 
   const main = actionable.length
     ? table(actionable.map(renderIssue).join(''))
-    : '<p class="bkp-empty">Nothing needs attention.</p>';
+    : '<p class="bkp-empty art art-clear">Nothing needs attention.</p>';
 
   const noisePart = ALR.showNoise && noise.length
     ? `<h3 class="alr-h">Filtered (${noise.length} issues, ${ALR.stats.noiseAlerts} emails)</h3>${table(noise.map(renderIssue).join(''))}`

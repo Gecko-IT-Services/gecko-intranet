@@ -206,12 +206,12 @@ function render() {
   const s = JOB.error ? null : sales();
   renderTabs(tabList(s));
   renderKpis();
-  if (JOB.loading && !JOB.jobs.length) { mount.innerHTML = '<p class="job-empty">Loading…</p>'; return; }
+  if (JOB.loading && !JOB.jobs.length) { mount.innerHTML = '<p class="job-empty art art-loading">Loading jobs…</p>'; return; }
   if (JOB.error) {
     const e = JOB.error;
     mount.innerHTML = e.code === 'DB_SIGNIN_REQUIRED'
-      ? '<div class="job-error"><strong>Connect to the Gecko database</strong>Sign in once with your Microsoft account.<button type="button" class="btn btn-primary btn-sm" data-job-act="connect">Connect</button></div>'
-      : `<div class="job-error"><strong>Could not load jobs.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-job-act="reload">Retry</button></div>`;
+      ? '<div class="job-error art art-offline"><strong>Connect to the Gecko database</strong>Sign in once with your Microsoft account.<button type="button" class="btn btn-primary btn-sm" data-job-act="connect">Connect</button></div>'
+      : `<div class="job-error art art-offline"><strong>Could not load jobs.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-job-act="reload">Retry</button></div>`;
     return;
   }
   mount.innerHTML = (JOB.feedNote && !onXero() && JOB.tab !== 'jobs' ? `<p class="job-note">${escapeHtml(JOB.feedNote)}</p>` : '') +
@@ -226,7 +226,7 @@ function render() {
 function renderKpis() {
   const k = els('jobKpis');
   if (!k) return;
-  if (JOB.error) { k.innerHTML = ''; return; }
+  if (JOB.error || (JOB.loading && !JOB.jobs.length)) { k.innerHTML = ''; return; }   // no "Needs Xero" before it has loaded
   const s = sales();
   const o = onXero() ? owed(JOB.inv, today()) : null;
   const left = s ? s.projected - s.invoiced : 0;

@@ -490,12 +490,12 @@ function render() {
   document.querySelectorAll('#section-opportunities [data-opp-tab]').forEach(b =>
     b.setAttribute('aria-selected', String(b.dataset.oppTab === OPP.tab)));
 
-  if (OPP.loading && !OPP.clients.length) { mount.innerHTML = '<p class="opp-empty">Loading…</p>'; return; }
+  if (OPP.loading && !OPP.clients.length) { mount.innerHTML = '<p class="opp-empty art art-loading">Loading opportunities…</p>'; return; }
   if (OPP.error) {
     const e = OPP.error;
     mount.innerHTML = e.code === 'DB_SIGNIN_REQUIRED'
-      ? `<div class="opp-error"><strong>Connect to the Gecko database</strong>Sign in once with your Microsoft account.<button type="button" class="btn btn-sm btn-primary" data-opp-act="connect">Connect</button></div>`
-      : `<div class="opp-error"><strong>Could not load opportunities.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
+      ? `<div class="opp-error art art-offline"><strong>Connect to the Gecko database</strong>Sign in once with your Microsoft account.<button type="button" class="btn btn-sm btn-primary" data-opp-act="connect">Connect</button></div>`
+      : `<div class="opp-error art art-offline"><strong>Could not load opportunities.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
     return;
   }
   mount.innerHTML = (OPP.feedNote ? `<p class="opp-note">${escapeHtml(OPP.feedNote)}</p>` : '') + progressHtml() +
@@ -561,7 +561,7 @@ function gapsHtml() {
         <button type="button" data-opp-act="gapview" data-view="map" aria-pressed="${OPP.gapView === 'map'}">Map</button></div>
       <button type="button" class="btn btn-primary" data-opp-act="checkall" ${OPP.checking ? 'disabled' : ''}>Check email &amp; websites</button>
     </div>`;
-  if (!rows.length) return head + '<p class="opp-empty">No clients found in the client list.</p>';
+  if (!rows.length) return head + '<p class="opp-empty art art-empty">No clients found in the client list.</p>';
   if (OPP.gapView === 'map') return head + gapMapHtml(rows);
   return head + rows.map(({ c, gaps, dnsRow, psRow }) => {
     const isOpen = OPP.open.has(c.name);
@@ -629,7 +629,7 @@ function ago(iso) {
 }
 
 function pipelineHtml() {
-  if (!OPP.opps.length) return '<p class="opp-empty">Nothing in the pipeline yet.</p>';
+  if (!OPP.opps.length) return '<p class="opp-empty art art-empty">Nothing in the pipeline yet.</p>';
   const sum = list => list.reduce((t, o) => t + (Number(o.mrr) || 0), 0);
   const all = sum(OPP.opps) || 1;
   const stages = STATUSES.map(([key, label]) => {
@@ -850,7 +850,7 @@ function prospectFormHtml(p) {
 }
 
 function prospectsHtml() {
-  if (!OPP.prospects) return `<div class="opp-error"><strong>Prospects didn’t load.</strong>${escapeHtml(/prospects/.test(OPP.prospectsError) ? 'The prospects table isn’t in the database yet.' : OPP.prospectsError)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
+  if (!OPP.prospects) return `<div class="opp-error art art-offline"><strong>Prospects didn’t load.</strong>${escapeHtml(/prospects/.test(OPP.prospectsError) ? 'The prospects table isn’t in the database yet.' : OPP.prospectsError)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
   const t = todayKey();
   const sm = prospectSummary(OPP.prospects, t);
   const shown = sortProspects(OPP.prospects).filter(p => OPP.prospectView === 'all' || (OPP.prospectView === 'open' ? P_OPEN.includes(p.stage) : p.stage === OPP.prospectView));

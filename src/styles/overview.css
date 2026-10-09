@@ -71,7 +71,7 @@
 #section-overview :is(.ovw-attn button:not(.client-link), .ovw-me-acts button):focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 #section-overview :is(.ovw-attn button:not(.client-link), .ovw-me-acts button):disabled { opacity: .5; cursor: not-allowed; }
 #section-overview .ovw-clear { padding: 22px 18px; display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 13px; }
-#section-overview .ovw-clear b { color: var(--green); font-size: 16px; }
+#section-overview .ovw-clear.art::before { width: 64px; height: 64px; margin: 0; flex: none; }
 #section-overview .ovw-warn-line { margin: 0; padding: 10px 18px; font-size: 12px; color: var(--amber); border-top: 1px solid var(--border-dim); }
 
 /* This week */

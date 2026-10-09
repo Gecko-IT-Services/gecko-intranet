@@ -139,7 +139,7 @@ function render() {
   if (!mount) return;
   if (!CL.name) {
     if (head) head.innerHTML = '';
-    mount.innerHTML = '<p class="cl-empty">Choose a client from the Directory.</p>';
+    mount.innerHTML = '<p class="cl-empty art art-none">Choose a client from the Directory.</p>';
     return;
   }
   const p = CL.data?.profile;
@@ -148,11 +148,11 @@ function render() {
   if (strip) moveInk(strip);
   if (CL.error) {
     mount.innerHTML = CL.error.code === 'DB_SIGNIN_REQUIRED'
-      ? '<div class="cl-error"><strong>Connect to the Gecko database</strong>Client pages read the database. <button type="button" class="btn btn-sm" data-cl-act="connect">Connect</button></div>'
-      : `<div class="cl-error"><strong>Could not load ${escapeHtml(CL.name)}.</strong>${escapeHtml(CL.error.message || CL.error)} <button type="button" class="btn btn-sm" data-cl-act="reload">Retry</button></div>`;
+      ? '<div class="cl-error art art-offline"><strong>Connect to the Gecko database</strong>Client pages read the database. <button type="button" class="btn btn-sm" data-cl-act="connect">Connect</button></div>'
+      : `<div class="cl-error art art-offline"><strong>Could not load ${escapeHtml(CL.name)}.</strong>${escapeHtml(CL.error.message || CL.error)} <button type="button" class="btn btn-sm" data-cl-act="reload">Retry</button></div>`;
     return;
   }
-  if (!p) { mount.innerHTML = `<p class="cl-empty">Loading ${escapeHtml(CL.name)}…</p>`; return; }
+  if (!p) { mount.innerHTML = `<p class="cl-empty art art-loading">Loading ${escapeHtml(CL.name)}…</p>`; return; }
   const pane = { summary: summaryHtml, activity: activityHtml, emails: emailsHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
   mount.innerHTML = `<div class="app-pane ${CL.dir}">${pane(p, CL.data.errors)}</div>`;
   CL.dir = '';
