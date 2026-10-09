@@ -250,18 +250,15 @@ const BADGE = { ok: 'badge-green', warn: 'badge-amber', fail: 'badge-red' };
 // not exist when this module is evaluated under Node.
 const consentMessage = () => `
   <div class="bkp-error">
-    <strong>The portal needs permission to read the support mailbox.</strong>
-    This section reads Acronis emails in ${escapeHtml(MAILBOX)} and needs the
-    Mail.Read.Shared permission on the portal's app registration. Once it has
-    been added in Entra, grant it here.
+    <strong>No permission to read ${escapeHtml(MAILBOX)}.</strong>
+    Needs Mail.Read.Shared on the app in Entra.
     <button type="button" class="btn btn-sm btn-primary" id="bkpGrant">Grant mailbox access</button>
   </div>`;
 
 const noAccessMessage = () => `
   <div class="bkp-error">
     <strong>Your account can't open ${escapeHtml(MAILBOX)}.</strong>
-    Give your user Full Access to the support mailbox in the Exchange admin
-    centre, then press Refresh. Changes can take up to an hour to apply.
+    Needs Full Access in Exchange admin (can take an hour).
   </div>`;
 
 export function renderKpis(board, filter) {
@@ -294,7 +291,7 @@ export function renderAlerts(alerts) {
   }).join('');
   return `
     <section class="bkp-card bkp-alerts">
-      <h3>Active alerts <span class="bkp-sub">from Acronis daily reports</span></h3>
+      <h3>Active alerts</h3>
       <ul>${rows}</ul>
     </section>`;
 }
@@ -351,7 +348,7 @@ function render() {
   if (kpis) kpis.innerHTML = renderKpis(BKP.error ? null : BKP.board, BKP.filter);
 
   if (BKP.loading && !BKP.board) {
-    mount.innerHTML = '<p class="bkp-empty">Reading Acronis emails from the support mailbox…</p>';
+    mount.innerHTML = '<p class="bkp-empty">Loading backups…</p>';
     return;
   }
   if (BKP.error === 'CONSENT') { mount.innerHTML = consentMessage(); return; }
@@ -371,14 +368,13 @@ function render() {
     .map(c => renderClient(c, { filter: BKP.filter, query: BKP.query }))
     .join('');
   const empty = BKP.board.jobCount
-    ? '<p class="bkp-empty">No backup jobs match this filter.</p>'
-    : '<p class="bkp-empty">No Acronis job emails in this window.</p>';
+    ? '<p class="bkp-empty">No matches.</p>'
+    : '<p class="bkp-empty">No backup emails in this window.</p>';
 
   mount.innerHTML = `
-    ${BKP.capped ? `<p class="bkp-note">Showing the newest ${SAFETY_LIMIT.toLocaleString('en-GB')} emails. Pick a shorter window for the full picture.</p>` : ''}
+    ${BKP.capped ? `<p class="bkp-note">Newest ${SAFETY_LIMIT.toLocaleString('en-GB')} emails only. Pick a shorter window.</p>` : ''}
     ${renderAlerts(BKP.board.alerts)}
-    <div class="bkp-clients">${clients || empty}</div>
-    <p class="bkp-foot">Status is the latest email for each job in the window. A job that sent nothing doesn't appear, so offline machines show in Active alerts instead.</p>`;
+    <div class="bkp-clients">${clients || empty}</div>`;
   syncTableLabels(mount);
 }
 

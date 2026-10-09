@@ -43,7 +43,6 @@
 
 /* — States: empty and error boxes come from system.css. — */
 .bkp-note { color: var(--amber); font-size: 12px; margin: 0 0 10px; }
-.bkp-foot { color: var(--faint); font-size: 11px; margin-top: 14px; }
 .bkp-sub { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
 .bkp-mono { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -56,7 +55,6 @@
   margin: 0 0 10px; font-size: 13px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .08em; color: var(--muted);
 }
-.bkp-card h3 .bkp-sub { display: inline; text-transform: none; letter-spacing: 0; margin-left: 6px; }
 .bkp-alerts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .bkp-alert { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: start; }
 .bkp-alert-body { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }

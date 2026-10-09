@@ -17,7 +17,8 @@ New and converted markup uses the shared classes; older sections are unified by 
 rather than by rewriting every template.
 
 ## The standard (what every section does)
-1. **Header**: `.section-head` band; `h1` is two words with the second in `<span>` (green); one `p`;
+1. **Header**: `.section-head` band; `h1` is two words with the second in `<span>` (green); a `p` only
+   when it carries live data (Overview's date, the tax year), never a tagline;
    then a head-actions row: section actions (primary last-but-one), **Refresh** (13px icon + "Refresh",
    default button), then **"Synced HH:MM"** (mono, muted) straight after it. View tabs sit *below* the
    band, never inside it.
@@ -38,6 +39,16 @@ rather than by rewriting every template.
 9. **Copy**: sentence case for headings, buttons and empty states ("Add client", not "Add Client");
    "…" not "..."; Refresh's title is "Reload"; dates en-GB ("9 Oct 2026"), times 24h.
 10. **Tokens**: no literal colours, `999px` → `--radius-pill`, motion on `--ease` / `--dur-*`.
+11. **Motion** (second pass, same day): one curve, `--ease` (ease-out quint), three speeds `--dur-1/2/3`
+    (120/180/260 ms). Pages rise 6px; hub panes slide 12px; dialogs fade their backdrop and lift the
+    panel; toasts rise in and leave faster; every press nudges 1px; `<details>` opens smoothly where
+    the browser can size to auto. Data replacing a "Loading…" placeholder fades in (first eight
+    staggered 30ms) from one observer in `src/main.js`, so re-renders from filters or typing never
+    flash. Everything sits behind `prefers-reduced-motion`. Theme/density changes crossfade with a
+    View Transition.
+12. **Copy diet** (Jack: "clear and concise … without being bombarded"): no taglines, no text that
+    explains the page, restates a heading, names the data source or repeats what a button says.
+    Sublines stay only when they carry a fact. Errors, money/safety notes and draft-only warnings stay.
 
 ## Non-goals
 - No new layout, features or IA changes; the Overview "today" tiles keep their words-not-numbers role.

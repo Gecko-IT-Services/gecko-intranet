@@ -170,7 +170,7 @@ assert.match(j2.why, /Resolved by Philip Morris: Cleared 40 GB/);
 const fp2 = after.find(i => i.device === 'FP Server');
 assert.equal(fp2.level, 'critical', 'resolved 1 Oct but alerted again 2 Oct: back on the list');
 assert.ok(fp2.reopened, 'flagged as back again');
-assert.match(fp2.why, /^Back after being resolved by Jack Morris on 1 Oct/);
+assert.match(fp2.why, /^Back since 1 Oct/);
 
 const sage2 = buildIssues(replay, NOW, new Map([[issues.find(i => i.device === 'Sage PC').key, { id: '9', at: new Date('2026-10-01T00:00:00Z'), by: 'Jack' }]]))
   .find(i => i.device === 'Sage PC');

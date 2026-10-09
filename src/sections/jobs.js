@@ -227,11 +227,11 @@ function render() {
   const s = JOB.error ? null : sales();
   renderTabs(tabList(s));
   renderKpis();
-  if (JOB.loading && !JOB.jobs.length) { mount.innerHTML = '<p class="job-empty">Loading jobs and Xero sales…</p>'; return; }
+  if (JOB.loading && !JOB.jobs.length) { mount.innerHTML = '<p class="job-empty">Loading…</p>'; return; }
   if (JOB.error) {
     const e = JOB.error;
     mount.innerHTML = e.code === 'DB_SIGNIN_REQUIRED'
-      ? '<div class="job-error"><strong>Connect to the Gecko database</strong>Jobs are kept in the database. Connect once with your Microsoft account.<button type="button" class="btn btn-primary btn-sm" data-job-act="connect">Connect</button></div>'
+      ? '<div class="job-error"><strong>Connect to the Gecko database</strong>Sign in once with your Microsoft account.<button type="button" class="btn btn-primary btn-sm" data-job-act="connect">Connect</button></div>'
       : `<div class="job-error"><strong>Could not load jobs.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-job-act="reload">Retry</button></div>`;
     return;
   }
@@ -250,16 +250,15 @@ function renderKpis() {
   if (JOB.error) { k.innerHTML = ''; return; }
   const t = stageTotals(JOB.jobs);
   const s = sales();
-  const m = monthName(thisMonth());
   const o = onXero() ? owed(JOB.inv, today()) : null;
   k.innerHTML = [
-    ['Invoiced this month', s ? money(s.invoiced) : '—', s ? `Xero, ${m}` : 'Xero not available'],
-    ['Projected for the month', s ? money(s.projected) : '—', 'invoiced + still to come'],
-    ...(o ? [['Owed to us', money(o.total), o.overdue ? `${money(o.overdue)} overdue · incl. VAT` : 'nothing overdue · incl. VAT']] : []),
+    ['Invoiced this month', s ? money(s.invoiced) : '—', s ? '' : 'Xero not available'],
+    ['Projected for the month', s ? money(s.projected) : '—', ''],
+    ...(o ? [['Owed to us', money(o.total), `${o.overdue ? `${money(o.overdue)} overdue` : 'none overdue'} · incl. VAT`]] : []),
     ['Ready to invoice', money(t.to_invoice.value), `${t.to_invoice.count} ${t.to_invoice.count === 1 ? 'job' : 'jobs'}`],
-    ['Work in hand', money(t.agreed.value + t.in_progress.value), `${t.agreed.count + t.in_progress.count} agreed or in progress`],
-    ['Quoted', money(t.quoted.value), `${t.quoted.count} awaiting a yes`]
-  ].map(([l, v, sub]) => `<div class="job-kpi"><span>${escapeHtml(l)}</span><strong>${escapeHtml(v)}</strong><small>${escapeHtml(sub)}</small></div>`).join('');
+    ['Work in hand', money(t.agreed.value + t.in_progress.value), `${t.agreed.count + t.in_progress.count} ${t.agreed.count + t.in_progress.count === 1 ? 'job' : 'jobs'}`],
+    ['Quoted', money(t.quoted.value), `${t.quoted.count} ${t.quoted.count === 1 ? 'job' : 'jobs'}`]
+  ].map(([l, v, sub]) => `<div class="job-kpi"><span>${escapeHtml(l)}</span><strong>${escapeHtml(v)}</strong>${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</div>`).join('');
 }
 
 function clientOptions() {
@@ -345,7 +344,7 @@ function xeroBadge(j, { ref, state, invoice: inv }) {
   if (state === 'paid') detail = `${inv.invoice_number} · ${money(inv.sub_total)} net`;
   else if (state === 'due' || state === 'overdue') detail = `${money(inv.amount_due)} due ${fmtDate(String(inv.due_date || '').slice(0, 10))}`;
   else if (state === 'missing') detail = ref;
-  else if (state === 'draft') detail = `${inv.invoice_number} · ${money(inv.sub_total)} net · approve it in Xero`;
+  else if (state === 'draft') detail = `${inv.invoice_number} · ${money(inv.sub_total)} net`;
   else detail = inv.invoice_number;
   const hint = j.status === 'to_invoice' && (state === 'paid' || state === 'due' || state === 'overdue') ? ' · raised' : '';
   const name = inv ? `<a href="${escapeHtml(xeroLink(inv))}" target="_blank" rel="noopener">${escapeHtml(label)}</a>` : escapeHtml(label);
@@ -358,7 +357,7 @@ function invoiceForm(j, byNumber) {
   if (!f.opts) {
     return `<div class="job-form job-inv">${f.error
       ? `<div class="job-error full"><strong>Could not get the Xero contacts</strong>${escapeHtml(f.error)}<button type="button" class="btn btn-sm" data-job-act="xero-retry" data-id="${j.id}">Retry</button></div>`
-      : '<p class="job-muted">Getting your Xero contacts and items…</p>'}</div>`;
+      : '<p class="job-muted">Loading Xero contacts…</p>'}</div>`;
   }
   const { contacts, suggested, items } = f.opts;
   const raised = jobRaised(j, byNumber);
@@ -377,7 +376,7 @@ function invoiceForm(j, byNumber) {
       <label class="full">Description (printed on the invoice) <textarea name="description" rows="3" required ${busy}>${escapeHtml(j.title)}</textarea></label>
       <label>Amount £ (net) <input name="amount" type="number" min="0.01" step="0.01" required value="${escapeHtml(value)}" ${busy}></label>
       <label class="wide">Reference <input name="reference" type="text" maxlength="255" value="${escapeHtml(j.title)}" ${busy}></label>
-      <p class="job-muted full">${raised ? `${escapeHtml(money(raised))} already invoiced for this job; the amount is what’s left. ` : ''}VAT is added by Xero from the item’s account. It is created as a <strong>draft</strong>: check it, approve and send it in Xero. Once approved and covering the job, the job moves to Invoiced by itself.</p>
+      <p class="job-muted full">${raised ? `${escapeHtml(money(raised))} already invoiced; amount is what’s left. ` : ''}Creates a <strong>draft</strong> only: approve and send it in Xero. Xero adds VAT.</p>
       ${f.error ? `<p class="job-note bad full">${escapeHtml(f.error)}</p>` : ''}
       <div class="job-actions full">
         <button type="button" class="btn btn-ghost btn-sm" data-job-act="xero-invoice" data-id="${j.id}">Cancel</button>
@@ -452,7 +451,7 @@ function jobsHtml() {
     .sort((a, b) => (order[b.status] - order[a.status]) ||
       String(a.target_date || '9999').localeCompare(String(b.target_date || '9999')) ||
       (Number(b.value) || 0) - (Number(a.value) || 0));
-  const heading = JOB.stage === 'open' ? 'Current jobs, nearest to invoicing first' : `${stageLabel(JOB.stage)}`;
+  const heading = JOB.stage === 'open' ? 'Current jobs' : `${stageLabel(JOB.stage)}`;
   const imported = JOB.jobs.some(j => String(j.source_ref || '').startsWith('projects:'));
   return `<div class="job-stages">${tiles}</div>
     ${clientOptions()}
@@ -463,8 +462,8 @@ function jobsHtml() {
     </div>
     ${JOB.adding ? jobForm(null) : ''}
     ${JOB.stage === 'invoiced' && groups ? invoicedHtml(groups) : `<div class="job-list">${shown.map(jobCard).join('') ||
-      `<p class="job-empty">${JOB.jobs.length ? 'No jobs at this stage.' : 'No jobs yet. Add MSA Safety, Onsite Commercial Services and Clarke Lane Engineering’s work with “Add a job”.'}</p>`}</div>`}
-    ${imported ? '' : `<p class="job-note">Had projects on the old Projects board? <button type="button" class="job-link" data-job-act="import" ${JOB.importing ? 'disabled' : ''}>${JOB.importing ? 'Bringing them across…' : 'Bring the open ones across'}</button> (once; you’ll add a value to each).</p>`}`;
+      `<p class="job-empty">${JOB.jobs.length ? 'No jobs at this stage.' : 'No jobs yet.'}</p>`}</div>`}
+    ${imported ? '' : `<p class="job-note"><button type="button" class="job-link" data-job-act="import" ${JOB.importing ? 'disabled' : ''}>${JOB.importing ? 'Importing…' : 'Import open projects from the old board'}</button></p>`}`;
 }
 
 /**
@@ -473,13 +472,13 @@ function jobsHtml() {
  */
 function invoicedHtml(g) {
   const block = (title, note, list) => list.length
-    ? `<div class="job-list-sub"><strong>${escapeHtml(title)}</strong><span class="job-muted">${escapeHtml(note)}</span></div><div class="job-list">${list.map(jobCard).join('')}</div>`
+    ? `<div class="job-list-sub"><strong>${escapeHtml(title)}</strong>${note ? `<span class="job-muted">${escapeHtml(note)}</span>` : ''}</div><div class="job-list">${list.map(jobCard).join('')}</div>`
     : '';
   const paid = JOB.allPaid ? g.paid : g.recent;
   const older = g.paid.length - g.recent.length;
-  const html = block('Awaiting payment', 'Invoiced, not yet paid in Xero; overdue first', g.awaiting) +
-    block('Not matched to a Xero invoice', 'Add the invoice number under Edit so payment can be followed', g.unmatched) +
-    block('Paid: done', JOB.allPaid ? 'Every paid job, newest first' : 'Paid in full, invoiced in the last 90 days', paid) +
+  const html = block('Awaiting payment', '', g.awaiting) +
+    block('Not matched to a Xero invoice', 'Add the invoice number under Edit', g.unmatched) +
+    block('Paid', JOB.allPaid ? '' : 'Last 90 days', paid) +
     (older > 0 ? `<p class="job-note"><button type="button" class="job-link" data-job-act="allpaid">${JOB.allPaid ? 'Show only the last 90 days' : `Show ${older} older paid ${older === 1 ? 'job' : 'jobs'}`}</button></p>` : '');
   return html || '<p class="job-empty">No invoiced jobs yet.</p>';
 }
@@ -489,14 +488,13 @@ function xeroHtml() {
   const x = JOB.xero;
   if (!x) return '';
   if (!x.connected) {
-    return `<div class="job-panel job-xero"><div class="job-panel-head"><strong>Connect Xero directly</strong>
-        <span class="job-muted">Invoices and repeating invoices sync every hour, so jobs can be matched to their invoice and invoiced as drafts in Xero.</span></div>
+    return `<div class="job-panel job-xero"><div class="job-panel-head"><strong>Connect Xero directly</strong></div>
       <button type="button" class="btn btn-primary btn-sm" data-job-act="xero-connect" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Opening Xero…' : 'Connect Xero'}</button></div>`;
   }
   const state = x.last_sync_ok === false ? 'bad' : 'ok';
   return `<div class="job-panel job-xero" data-state="${state}">
       <div class="job-panel-head"><strong>Xero: ${escapeHtml(x.tenant_name || 'connected')}</strong>
-        <span class="job-muted">${x.last_sync_at ? `${x.last_sync_ok === false ? 'Last sync failed' : 'Synced'} ${escapeHtml(when(x.last_sync_at))} · ` : ''}${escapeHtml(String(x.invoices))} invoices, ${escapeHtml(String(x.repeating))} repeating · syncs hourly</span></div>
+        <span class="job-muted">${x.last_sync_at ? `${x.last_sync_ok === false ? 'Last sync failed' : 'Synced'} ${escapeHtml(when(x.last_sync_at))} · ` : ''}${escapeHtml(String(x.invoices))} invoices, ${escapeHtml(String(x.repeating))} repeating</span></div>
       ${x.last_sync_ok === false ? `<p class="job-note bad">${escapeHtml(x.last_error)}</p>` : ''}
       <div class="job-actions"><button type="button" class="btn btn-sm" data-job-act="xero-sync" ${JOB.xeroBusy ? 'disabled' : ''}>${JOB.xeroBusy ? 'Syncing…' : 'Sync now'}</button>
         <button type="button" class="btn btn-sm" data-job-act="xero-connect">Reconnect</button></div>
@@ -641,8 +639,8 @@ function tabHtml(s) {
 // separation and contrast in light and dark.
 
 const asOfText = s => (s.source === 'xero'
-  ? `Xero, synced ${when(JOB.xero.last_sync_at)} (every hour)`
-  : `Xero figures as of ${JOB.feed.generatedAt ? when(JOB.feed.generatedAt) : ''} (the feed refreshes each morning)`);
+  ? `Xero, synced ${when(JOB.xero.last_sync_at)}`
+  : `Xero feed, ${JOB.feed.generatedAt ? when(JOB.feed.generatedAt) : ''}`);
 
 function overviewHtml(s, month) {
   const direct = s.source === 'xero';
@@ -673,12 +671,12 @@ function overviewHtml(s, month) {
         ${parts.map(([l, v, c]) => `<li><b class="v-${c}"></b><span>${escapeHtml(l)}</span><strong>${escapeHtml(money(v))}</strong></li>`).join('')}
         <li class="total"><b></b><span>On course for</span><strong>${escapeHtml(money(s.projected))}</strong></li>
       </ul>
-      ${s.other ? `<p class="job-muted">VoIP Unlimited dealer commission (${escapeHtml(money(s.other))}) is not counted as client sales.</p>` : ''}
-      ${s.source === 'xero' && s.drafts.length ? `<p class="job-muted">${s.drafts.length} draft ${s.drafts.length === 1 ? 'invoice' : 'invoices'} in Xero this month (${escapeHtml(money(s.draftValue))}): not counted until approved.</p>` : ''}
+      ${s.other ? `<p class="job-muted">Excludes VoIP Unlimited commission (${escapeHtml(money(s.other))}).</p>` : ''}
+      ${s.source === 'xero' && s.drafts.length ? `<p class="job-muted">${s.drafts.length} draft ${s.drafts.length === 1 ? 'invoice' : 'invoices'} in Xero (${escapeHtml(money(s.draftValue))}), not counted until approved.</p>` : ''}
     </div>
 
     <div class="job-panel">
-      <div class="job-panel-head"><strong>Last six months</strong><span class="job-muted">Net of VAT, from Xero · hover a month for the figures</span></div>
+      <div class="job-panel-head"><strong>Last six months</strong><span class="job-muted">Net of VAT</span></div>
       <div class="job-hist" role="list">
         ${hist.map(h => {
           const cur = h.month === month;
@@ -702,22 +700,22 @@ function overviewHtml(s, month) {
 
 function toComeHtml(s) {
   const direct = s.source === 'xero';
-  if (!s.recurringToCome.length) return `<div class="job-panel"><div class="job-panel-head"><strong>Repeating invoices still to come</strong></div><p class="job-muted">Every repeating invoice for ${escapeHtml(monthName(thisMonth()))} has been raised.</p></div>`;
+  if (!s.recurringToCome.length) return `<div class="job-panel"><div class="job-panel-head"><strong>Repeating invoices still to come</strong></div><p class="job-muted">All raised for ${escapeHtml(monthName(thisMonth()))}.</p></div>`;
   return `<div class="job-panel">
       <div class="job-panel-head"><strong>Repeating invoices still to come: ${escapeHtml(money(s.toCome))}</strong>
-        <span class="job-muted">${direct ? 'From Xero’s repeating invoice schedule, net of VAT' : 'Billed from a repeating invoice last month; shown at last month’s amount'}</span></div>
+        <span class="job-muted">${direct ? 'Net of VAT' : 'At last month’s amount'}</span></div>
       <table class="job-table"><thead><tr><th>Client</th>${direct ? '<th>Date</th>' : ''}<th class="num">${direct ? 'Net' : 'Last month'}</th></tr></thead>
       <tbody>${s.recurringToCome.map(r => `<tr><td>${clientLink(r.name)}</td>${direct ? `<td>${escapeHtml(fmtDate(r.date))}</td>` : ''}<td class="num">${escapeHtml(money(r.amount))}</td></tr>`).join('')}</tbody></table>
     </div>
     ${s.toInvoiceJobs.length || s.dueJobs.length ? `<div class="job-panel">
-      <div class="job-panel-head"><strong>Jobs still to come: ${escapeHtml(money(s.toInvoice + s.dueThisMonth))}</strong><span class="job-muted">Ready to invoice, or due to finish this month</span></div>
+      <div class="job-panel-head"><strong>Jobs still to come: ${escapeHtml(money(s.toInvoice + s.dueThisMonth))}</strong></div>
       <table class="job-table"><thead><tr><th>Client</th><th>Job</th><th class="num">Value</th></tr></thead>
       <tbody>${[...s.toInvoiceJobs, ...s.dueJobs].map(j => `<tr><td>${clientLink(j.client_name)}</td><td>${escapeHtml(j.title)} <span class="job-muted">· ${escapeHtml(stageLabel(j.status))}</span></td><td class="num">${escapeHtml(money(j.left ?? j.value))}</td></tr>`).join('')}</tbody></table>
     </div>` : ''}`;
 }
 
 function monthInvoicedHtml(s, month) {
-  if (!s.rows.length) return `<div class="job-panel"><div class="job-panel-head"><strong>Invoiced in ${escapeHtml(monthName(month))}</strong></div><p class="job-muted">Nothing invoiced in Xero yet this month.</p></div>`;
+  if (!s.rows.length) return `<div class="job-panel"><div class="job-panel-head"><strong>Invoiced in ${escapeHtml(monthName(month))}</strong></div><p class="job-muted">Nothing invoiced yet.</p></div>`;
   const top = Math.max(...s.rows.map(r => r.total), 1);
   return `<div class="job-panel">
       <div class="job-panel-head"><strong>Invoiced in ${escapeHtml(monthName(month))}: ${escapeHtml(money(s.invoiced))}</strong><span class="job-muted">${s.rows.length} ${s.rows.length === 1 ? 'client' : 'clients'} · net of VAT</span></div>
@@ -732,11 +730,11 @@ function monthInvoicedHtml(s, month) {
 
 /** Unpaid invoices by client, most overdue first (Xero's amount due, incl. VAT). */
 function owedHtml(o) {
-  if (!o.count) return '<div class="job-panel"><div class="job-panel-head"><strong>Owed to us</strong></div><p class="job-muted">Every approved invoice is paid.</p></div>';
+  if (!o.count) return '<div class="job-panel"><div class="job-panel-head"><strong>Owed to us</strong></div><p class="job-muted">Nothing owed.</p></div>';
   return `<div class="job-panel">
       <div class="job-panel-head"><strong>Owed to us: ${escapeHtml(money(o.total))}</strong>
         <span class="job-muted">${o.count} unpaid ${o.count === 1 ? 'invoice' : 'invoices'}${o.overdue ? `, ${escapeHtml(money(o.overdue))} overdue` : ', none overdue'} · incl. VAT</span></div>
-      <p class="job-muted job-owed-note">Nudge writes a friendly reminder into your Outlook Drafts, to the contact’s email in Xero, with each invoice and its pay-online link. Nothing is sent until you send it.</p>
+      <p class="job-muted job-owed-note">Nudge drafts a reminder in your Outlook Drafts; nothing is sent.</p>
       <table class="job-table job-owed"><thead><tr><th>Client</th><th class="num">Invoices</th><th>Oldest overdue</th><th class="num">Overdue</th><th class="num">Owed</th><th>Reminder</th></tr></thead>
       <tbody>${o.rows.map(r => `<tr><td>${clientLink(r.name)}</td><td class="num">${r.invoices}</td><td>${r.oldest ? `<span class="job-late">due ${escapeHtml(fmtDate(r.oldest))}</span>` : '—'}</td><td class="num">${r.overdue ? escapeHtml(money(r.overdue)) : '—'}</td><td class="num"><strong>${escapeHtml(money(r.due))}</strong></td><td>${nudgeCell(r)}</td></tr>`).join('')}</tbody></table>
     </div>`;

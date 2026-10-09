@@ -63,7 +63,7 @@ function render() {
       : `<div class="tm-error"><strong>Could not load the team.</strong>${escapeHtml(TM.error.message || TM.error)}<button type="button" class="btn btn-sm" data-tm-act="reload">Retry</button></div>`;
     return;
   }
-  if (!TM.data) { mount.innerHTML = '<p class="tm-empty">Loading the team…</p>'; return; }
+  if (!TM.data) { mount.innerHTML = '<p class="tm-empty">Loading…</p>'; return; }
   const t = today(), ty = taxYear(t), d = TM.data;
   const pres = d.requests ? presence(d.requests, t) : null;
   const hrs = d.entries ? hours(d.entries, t) : null;
@@ -107,7 +107,7 @@ function render() {
       <div class="tm-cal-row head" role="row"><span role="columnheader"></span>${c.days.map(x => `<span role="columnheader" class="${x === t ? 'today' : ''}${[0, 6].includes(new Date(x + 'T00:00:00Z').getUTCDay()) ? ' we' : ''}" title="${escapeHtml(weekday(x) + ' ' + short(x))}">${new Date(x + 'T00:00:00Z').getUTCDate()}</span>`).join('')}</div>
       ${c.rows.map(r => `<div class="tm-cal-row" role="row"><span role="rowheader">${r.person}</span>${r.cells.map(x => `<span role="cell" class="${[x.state, x.weekend ? 'we' : '', x.today ? 'today' : ''].filter(Boolean).join(' ')}" title="${escapeHtml(`${r.person} · ${weekday(x.date)} ${short(x.date)}${x.state ? ` · ${x.state === 'off' ? x.type : 'pending ' + x.type}` : ''}`)}"></span>`).join('')}</div>`).join('')}
     </div>
-    <ul class="tm-legend"><li><b class="off"></b>Off (approved)</li><li><b class="pending"></b>Requested</li><li><b class="today"></b>Today</li></ul>`;
+    <ul class="tm-legend"><li><b class="off"></b>Off</li><li><b class="pending"></b>Requested</li><li><b class="today"></b>Today</li></ul>`;
   }
 
   mount.innerHTML = `<div class="app-pane">

@@ -470,11 +470,11 @@ function render() {
   document.querySelectorAll('#section-opportunities [data-opp-tab]').forEach(b =>
     b.setAttribute('aria-selected', String(b.dataset.oppTab === OPP.tab)));
 
-  if (OPP.loading && !OPP.clients.length) { mount.innerHTML = '<p class="opp-empty">Gathering clients, invoices and timesheets…</p>'; return; }
+  if (OPP.loading && !OPP.clients.length) { mount.innerHTML = '<p class="opp-empty">Loading…</p>'; return; }
   if (OPP.error) {
     const e = OPP.error;
     mount.innerHTML = e.code === 'DB_SIGNIN_REQUIRED'
-      ? `<div class="opp-error"><strong>Connect to the Gecko database</strong>Opportunities are kept in the database. Connect once with your Microsoft account.<button type="button" class="btn btn-sm btn-primary" data-opp-act="connect">Connect</button></div>`
+      ? `<div class="opp-error"><strong>Connect to the Gecko database</strong>Sign in once with your Microsoft account.<button type="button" class="btn btn-sm btn-primary" data-opp-act="connect">Connect</button></div>`
       : `<div class="opp-error"><strong>Could not load opportunities.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
     return;
   }
@@ -490,13 +490,13 @@ function renderKpis() {
   const current = OPP.clients.reduce((s, c) => s + (c.mrr || 0), 0);
   const month = OPP.latestMonth ? new Date(OPP.latestMonth + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '';
   k.innerHTML = [
-    ['Recurring revenue', money(current), month ? `Xero, ${month}` : 'Xero'],
+    ['Recurring revenue', money(current), month],
     ['Open pipeline', money(t.openMrr) + '/mo', `${t.openCount} open · ${money(t.openOneOff)} one-off`],
     ['Won this month', money(t.wonMrrThisMonth) + '/mo', `${t.wonCountThisMonth} won`],
-    ['Won to date', money(t.wonMrr) + '/mo', 'added recurring revenue'],
+    ['Won to date', money(t.wonMrr) + '/mo', ''],
     ['Dealer commission', OPP.commission ? money(OPP.commission.net) : '—',
-      OPP.commission ? `VoIP Unlimited, invoiced ${new Date(OPP.commission.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}` : 'not in Xero yet']
-  ].map(([l, v, s]) => `<div class="opp-kpi"><span>${escapeHtml(l)}</span><strong>${escapeHtml(v)}</strong><small>${escapeHtml(s)}</small></div>`).join('');
+      OPP.commission ? `Invoiced ${new Date(OPP.commission.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}` : 'not in Xero yet']
+  ].map(([l, v, s]) => `<div class="opp-kpi"><span>${escapeHtml(l)}</span><strong>${escapeHtml(v)}</strong>${s ? `<small>${escapeHtml(s)}</small>` : ''}</div>`).join('');
 }
 
 function progressHtml() {
@@ -516,7 +516,7 @@ function signalLine(c, dnsRow, psRow) {
   if (c.dealer?.length) {
     parts.push('VoIP Unlimited (dealer): ' + c.dealer.map(d => `${d.quantity > 1 ? d.quantity + ' × ' : ''}${serviceLabel(d.service)}`).join(', '));
   }
-  if (!c.domains.length) parts.push('No domain known yet: add one to check their email and website.');
+  if (!c.domains.length) parts.push('No domain yet.');
   if (dnsRow) {
     const d = dnsRow.data;
     parts.push(d.error ? `Email check failed (${d.error})`
@@ -538,7 +538,7 @@ function gapsHtml() {
   const unchecked = OPP.clients.filter(c => (c.emailDomain && !OPP.signals.get(`dns:${c.emailDomain}`)) || (c.webDomain && !OPP.signals.get(`pagespeed:${c.webDomain}`))).length;
   const head = `<div class="opp-toolbar">
       <span><strong>${strong}</strong> gaps with evidence across <strong>${rows.length}</strong> clients${unchecked ? ` · ${unchecked} not checked yet` : ''}</span>
-      <label class="opp-check"><input type="checkbox" data-opp-act="showall" ${OPP.showAll ? 'checked' : ''}> Also show products they simply don’t buy yet</label>
+      <label class="opp-check"><input type="checkbox" data-opp-act="showall" ${OPP.showAll ? 'checked' : ''}> Include products they don’t buy</label>
       <button type="button" class="btn btn-primary" data-opp-act="checkall" ${OPP.checking ? 'disabled' : ''}>Check email &amp; websites</button>
     </div>`;
   if (!rows.length) return head + '<p class="opp-empty">No clients found in the client list.</p>';
@@ -547,7 +547,7 @@ function gapsHtml() {
     const chips = gaps.slice(0, 6).map(g => `<span class="opp-chip s${g.strength}">${escapeHtml(g.product.name)}</span>`).join('') + (gaps.length > 6 ? `<span class="opp-chip">+${gaps.length - 6}</span>` : '');
     const body = !isOpen ? '' : `<div class="opp-card-body">
         <div class="opp-signals">${signalLine(c, dnsRow, psRow)}</div>
-        <p class="opp-client-page">${clientLink(c.name)} <span class="opp-muted">· everything about this client</span></p>
+        <p class="opp-client-page">${clientLink(c.name)}</p>
         <div class="opp-domain"><input type="text" placeholder="Add a domain, e.g. ${escapeHtml(norm(c.name).split(' ')[0] || 'client')}.co.uk" data-opp-domain="${escapeHtml(c.name)}" aria-label="Add a domain for ${escapeHtml(c.name)}">
           <button type="button" class="btn btn-sm" data-opp-act="adddomain" data-client="${escapeHtml(c.name)}">Add &amp; check</button>
           ${c.domains.length ? `<button type="button" class="btn btn-sm" data-opp-act="checkone" data-client="${escapeHtml(c.name)}" ${OPP.checking ? 'disabled' : ''}>Re-check now</button>` : ''}</div>
@@ -560,7 +560,7 @@ function gapsHtml() {
               <button type="button" class="btn btn-sm" data-opp-act="add" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Add to pipeline</button>
               <button type="button" class="btn btn-sm" data-opp-act="has" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Already has it</button>
               <button type="button" class="btn btn-sm" data-opp-act="notint" data-client="${escapeHtml(c.name)}" data-product="${escapeHtml(g.product.key)}">Not interested</button>
-            </div></div>`).join('') : '<p class="opp-muted">No gaps found for this client.</p>'}
+            </div></div>`).join('') : '<p class="opp-muted">No gaps found.</p>'}
       </div>`;
     return `<section class="opp-card${isOpen ? ' open' : ''}">
       <button type="button" class="opp-card-head" data-opp-act="toggle" data-client="${escapeHtml(c.name)}" aria-expanded="${isOpen}">
@@ -578,7 +578,7 @@ function ago(iso) {
 }
 
 function pipelineHtml() {
-  if (!OPP.opps.length) return '<p class="opp-empty">Nothing in the pipeline yet. Open a client on the Gaps tab and choose “Add to pipeline”.</p>';
+  if (!OPP.opps.length) return '<p class="opp-empty">Nothing in the pipeline yet.</p>';
   const sum = list => list.reduce((t, o) => t + (Number(o.mrr) || 0), 0);
   const all = sum(OPP.opps) || 1;
   const stages = STATUSES.map(([key, label]) => {
@@ -595,7 +595,7 @@ function pipelineHtml() {
   const shown = OPP.opps
     .filter(o => (OPP.stage === 'open' ? o.status === 'idea' || o.status === 'proposed' : o.status === OPP.stage))
     .sort((a, b) => (Number(b.mrr) || 0) - (Number(a.mrr) || 0) || String(b.modified_at).localeCompare(String(a.modified_at)));
-  const heading = OPP.stage === 'open' ? 'Open deals, biggest first' : `${STATUSES.find(([k]) => k === OPP.stage)[1]} deals`;
+  const heading = OPP.stage === 'open' ? 'Open deals' : `${STATUSES.find(([k]) => k === OPP.stage)[1]} deals`;
   const label = Object.fromEntries(STATUSES);
   const quick = o => (o.status === 'won' || o.status === 'lost'
     ? `<button type="button" class="btn btn-sm" data-opp-act="move" data-status="proposed" data-id="${o.id}">Reopen</button>`
@@ -615,9 +615,9 @@ function pipelineHtml() {
     const st = dealState(o, t);
     if (!st.needsJob && !st.needsBilling && !(o.status === 'won' && (o.job_id || o.billing_set_up_at))) return '';
     return `<div class="opp-won-steps"><strong>Won: next steps</strong><ul>
-      ${Number(o.one_off) > 0 ? `<li class="${o.job_id ? 'done' : ''}">${o.job_id ? '✓ Job created for the one-off part' : `Create the job for the one-off part (${escapeHtml(money(o.one_off))})`}
+      ${Number(o.one_off) > 0 ? `<li class="${o.job_id ? 'done' : ''}">${o.job_id ? '✓ Job created' : `Create a job for the one-off (${escapeHtml(money(o.one_off))})`}
         ${o.job_id ? '<button type="button" class="btn btn-sm btn-ghost" data-opp-act="openjobs">Open Jobs →</button>' : `<button type="button" class="btn btn-sm btn-primary" data-opp-act="mkjob" data-id="${o.id}">Create job</button>`}</li>` : ''}
-      ${Number(o.mrr) > 0 ? `<li class="${o.billing_set_up_at ? 'done' : ''}">${o.billing_set_up_at ? `✓ Monthly billing set up${o.billing_set_up_by ? ' by ' + escapeHtml(o.billing_set_up_by) : ''}` : `Set up the monthly billing: a repeating invoice in Xero for ${escapeHtml(money(o.mrr))}/mo + VAT, and the service line in Profitability`}
+      ${Number(o.mrr) > 0 ? `<li class="${o.billing_set_up_at ? 'done' : ''}">${o.billing_set_up_at ? `✓ Monthly billing set up${o.billing_set_up_by ? ' by ' + escapeHtml(o.billing_set_up_by) : ''}` : `Set up billing: Xero repeating invoice (${escapeHtml(money(o.mrr))}/mo + VAT) and service line`}
         ${o.billing_set_up_at ? '' : `<button type="button" class="btn btn-sm" data-opp-act="billingdone" data-id="${o.id}">Mark done</button>`}</li>` : ''}
     </ul></div>`;
   };
@@ -686,7 +686,7 @@ function pipelineHtml() {
         ${c.items.map(card).join('') || '<p class="opp-muted">None</p>'}</section>`;
     }).join('');
     return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
-      <div class="opp-board">${cols}</div><p class="opp-muted">Won and lost show the last 90 days.</p>`;
+      <div class="opp-board">${cols}</div><p class="opp-muted">Won and lost: last 90 days.</p>`;
   }
   return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
     <div class="opp-stages kpi-panel">${stages}</div>
@@ -742,7 +742,7 @@ function prospectFormHtml(p) {
 }
 
 function prospectsHtml() {
-  if (!OPP.prospects) return `<div class="opp-error"><strong>Prospects didn’t load.</strong>${escapeHtml(/prospects/.test(OPP.prospectsError) ? 'The prospects table isn’t in the database yet (it arrives with this update).' : OPP.prospectsError)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
+  if (!OPP.prospects) return `<div class="opp-error"><strong>Prospects didn’t load.</strong>${escapeHtml(/prospects/.test(OPP.prospectsError) ? 'The prospects table isn’t in the database yet.' : OPP.prospectsError)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
   const t = todayKey();
   const sm = prospectSummary(OPP.prospects, t);
   const shown = sortProspects(OPP.prospects).filter(p => OPP.prospectView === 'all' || (OPP.prospectView === 'open' ? P_OPEN.includes(p.stage) : p.stage === OPP.prospectView));
@@ -779,7 +779,7 @@ function prospectsHtml() {
     </div>
     <div class="opp-pstages kpi-panel">${stageStrip}</div>
     ${OPP.prospectEdit === 'new' ? `<article class="opp-prospect editing"><strong class="opp-form-title">New prospect</strong>${prospectFormHtml(null)}</article>` : ''}
-    <div class="opp-deals">${shown.map(card).join('') || `<p class="opp-muted">${OPP.prospectView === 'open' ? 'No open prospects. Add the next company you’re talking to.' : 'None here.'}</p>`}</div>`;
+    <div class="opp-deals">${shown.map(card).join('') || `<p class="opp-muted">${OPP.prospectView === 'open' ? 'No open prospects.' : 'None here.'}</p>`}</div>`;
 }
 
 async function saveProspect(id, f) {
@@ -846,7 +846,7 @@ function dealerHtml() {
       <label class="wide">Notes <input name="notes" type="text" value="${escapeHtml(d.notes || '')}"></label>
       <div class="opp-form-actions"><button type="button" class="btn btn-sm btn-danger" data-opp-act="deldealer" data-id="${d.id}">Remove</button><button type="submit" class="btn btn-sm">Save</button></div>
     </form>`;
-  return `<p class="opp-note">Customers on your VoIP Unlimited <strong>dealer</strong> account (they buy direct; you earn commission). They are not offered VoxOne or connectivity; out-of-contract lines and VoIP Exchange seats become opportunities instead.${due ? ` <strong>${due}</strong> out of contract or ending within 90 days.` : ''} Services you resell yourself stay as service lines on Profitability.</p>
+  return `${due ? `<p class="opp-note"><strong>${due}</strong> out of contract or ending within 90 days.</p>` : ''}
     <form class="opp-dealer-row opp-dealer-add" data-opp-dealer="new">
       <strong class="opp-dealer-client">Add a dealer service</strong>
       <label class="wide">Client <input name="client_name" type="text" list="oppClientNames" required placeholder="Client name"></label>
@@ -892,7 +892,7 @@ function dealUnits(o) {
 }
 
 function productsHtml() {
-  return `<p class="opp-note"><strong>Client price</strong> is what the email quotes (“Hornetsecurity is £7.50 per user a month, plus VAT”); give an opportunity its number of users and the email adds the total. <strong>Pipeline £/month</strong> is the value a new opportunity starts with (for dealer products, your commission; never quoted). The email text is what “Draft email” starts from: {{first_name}}, {{client}}, {{evidence}}, {{price}} and {{sender}} are filled in. Windows 11 switches on once Atera device data is in the feed.</p>
+  return `<p class="opp-note"><strong>Client price</strong> is quoted in emails; <strong>Pipeline £/month</strong> is never quoted. Email fills in {{first_name}}, {{client}}, {{evidence}}, {{price}}, {{sender}}.</p>
     <div class="opp-products">${OPP.products.map(p => `<form class="opp-product" data-opp-product="${escapeHtml(p.key)}">
       <div class="opp-product-head"><strong>${escapeHtml(p.name)}</strong><span class="opp-muted">${escapeHtml([p.family, p.unit_note].filter(Boolean).join(' · '))}</span>
         <label class="opp-check"><input type="checkbox" name="active" ${p.active ? 'checked' : ''}> In use</label></div>

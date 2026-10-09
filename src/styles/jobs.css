@@ -174,7 +174,7 @@
 #section-jobs .job-proj-bar > i:first-child { border-radius: var(--radius-pill) 0 0 var(--radius-pill); }
 #section-jobs .job-proj-bar > i:last-child { border-radius: 0 var(--radius-pill) var(--radius-pill) 0; }
 #section-jobs .job-proj-bar > i:only-child { border-radius: var(--radius-pill); }
-#section-jobs .job-pane.job-enter .job-proj-bar > i { animation: job-grow-x .7s var(--ease) both; }
+#section-jobs .job-pane.job-enter .job-proj-bar > i { animation: job-grow-x .6s var(--ease) both; }
 @keyframes job-grow-x { from { transform: scaleX(0); } to { transform: none; } }
 #section-jobs .job-proj-legend li.total { border-top: 1px solid var(--border-dim); padding-top: 6px; color: var(--white); font-weight: 600; }
 #section-jobs .job-proj-legend li.total b { background: none; }
@@ -197,7 +197,7 @@
 #section-jobs .job-hist-bar i:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
 #section-jobs .job-hist-col:hover .job-hist-bar, #section-jobs .job-hist-col:focus-visible .job-hist-bar { filter: brightness(1.08); }
 #section-jobs .job-hist-col:focus-visible { box-shadow: 0 0 0 2px var(--green); }
-#section-jobs .job-pane.job-enter .job-hist-bar { animation: job-grow-y .7s var(--ease) both; }
+#section-jobs .job-pane.job-enter .job-hist-bar { animation: job-grow-y .6s var(--ease) both; }
 #section-jobs .job-pane.job-enter .job-hist-col:nth-child(2) .job-hist-bar { animation-delay: .04s; }
 #section-jobs .job-pane.job-enter .job-hist-col:nth-child(3) .job-hist-bar { animation-delay: .08s; }
 #section-jobs .job-pane.job-enter .job-hist-col:nth-child(4) .job-hist-bar { animation-delay: .12s; }

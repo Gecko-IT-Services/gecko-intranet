@@ -139,7 +139,7 @@ function render() {
   if (!mount) return;
   if (!CL.name) {
     if (head) head.innerHTML = '';
-    mount.innerHTML = '<p class="cl-empty">Choose a client from the Directory, or click any client name in Gecko HQ.</p>';
+    mount.innerHTML = '<p class="cl-empty">Choose a client from the Directory.</p>';
     return;
   }
   const p = CL.data?.profile;
@@ -167,7 +167,7 @@ function headHtml(p) {
   const addr = addressLine(CL.data?.details), maps = mapLinks(CL.data?.details), office = telHref(CL.data?.details?.office_phone);
   const due = (CL.data?.activity?.open || []).filter(a => String(a.follow_up_on) <= today());
   const contact = main ? [main.name, main.role && `(${main.role})`].filter(Boolean).join(' ') : '', email = main?.email || '', phone = main?.phone || '';
-  const kpi = (label, value, sub, cls = '') => `<div class="cl-kpi ${cls}"><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${sub}</small></div>`;
+  const kpi = (label, value, sub, cls = '') => `<div class="cl-kpi ${cls}"><span>${escapeHtml(label)}</span><strong>${value}</strong>${sub ? `<small>${sub}</small>` : ''}</div>`;
   const tabs = [
     { key: 'summary', label: 'Summary', badge: p?.flags.filter(f => f.level !== 'info').length || '' , warn: p?.flags.some(f => f.level === 'red') },
     { key: 'activity', label: 'Activity', badge: due.length || '', warn: due.some(a => String(a.follow_up_on) < today()) },
@@ -205,8 +205,8 @@ function headHtml(p) {
     </div>
     ${p ? `<div class="cl-kpis">
       ${kpi('Recurring', x ? whole(x.recurringMonthly) + '<em>/mo</em>' : '—', x ? `billed in ${escapeHtml(longMonth(x.lastMonth.month))}` : 'Xero not loaded')}
-      ${kpi('Last 12 months', x ? whole(x.year) : '—', x ? 'invoiced, net of VAT' : '')}
-      ${kpi('Owed', x ? whole(x.owed) : '—', x ? (x.overdue > 0 ? `<b class="bad">${escapeHtml(money(x.overdue))} overdue</b>` : 'nothing overdue') : '', x?.overdue > 0 ? 'warn' : '')}
+      ${kpi('Last 12 months', x ? whole(x.year) : '—', x ? 'net of VAT' : '')}
+      ${kpi('Owed', x ? whole(x.owed) : '—', x ? (x.overdue > 0 ? `<b class="bad">${escapeHtml(money(x.overdue))} overdue</b>` : 'none overdue') : '', x?.overdue > 0 ? 'warn' : '')}
       ${s ? kpi('Support hours left', hours(s.remaining), `of ${hours(s.purchased)} prepaid${s.monthsLeft != null ? ` · ~${s.monthsLeft} months at current use` : ''}`, s.remaining < 2 ? 'warn' : '')
           : p.services ? kpi('Service margin', p.services.sell ? whole(p.services.margin) + '<em>/mo</em>' : '—', p.services.pct != null ? `${Math.round(p.services.pct * 100)}% on ${escapeHtml(whole(p.services.sell))}/mo` : 'no service lines') : kpi('Support', '—', '')}
     </div>` : ''}
@@ -261,7 +261,7 @@ function invoicesHtml(p, errors) {
   const table = list => `<table class="cl-table"><thead><tr><th>Invoice</th><th>Date</th><th>Reference</th><th>Status</th><th class="num">Net</th><th class="num">Due (incl. VAT)</th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>`;
   return `${panel(`Unpaid: ${escapeHtml(money(p.xero.owed))}`, p.xero.unpaid.length ? table(p.xero.unpaid) : '<p class="cl-ok">✓ Nothing unpaid.</p>',
       p.xero.unpaid.length ? go('jobs', 'owed', 'Nudge from Owed to us →') : '')}
-    ${panel('Recent invoices', p.xero.recent.length ? table(p.xero.recent) : note('No invoices in Xero for this client in the last 12 months.'),
+    ${panel('Recent invoices', p.xero.recent.length ? table(p.xero.recent) : note('No invoices in the last 12 months.'),
       `<span class="cl-muted">${escapeHtml(p.xero.contacts.length ? 'Xero contact: ' + p.xero.contacts.join(', ') : 'No Xero contact matched this name')}</span>`)}`;
 }
 
@@ -276,17 +276,17 @@ function servicesHtml(p, errors) {
       <table class="cl-table"><thead><tr><th>Service</th><th>Type</th><th class="num">Sell /mo</th><th class="num">Cost /mo</th><th class="num">Margin</th></tr></thead>
       <tbody>${s.lines.map(l => `<tr><td>${escapeHtml(l.title)}</td><td>${escapeHtml(l.category)}</td><td class="num">${escapeHtml(money(l.sell))}</td><td class="num">${escapeHtml(money(l.cost))}</td><td class="num${l.margin < 0 ? ' bad' : ''}">${escapeHtml(money(l.margin))}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td>Total</td><td></td><td class="num">${escapeHtml(money(s.sell))}</td><td class="num">${escapeHtml(money(s.cost))}</td><td class="num">${escapeHtml(money(s.margin))}</td></tr></tfoot></table>
-      <p class="cl-muted">Typed service lines. Licence and hosting costs that come from supplier invoices are on Profitability, month by month.</p>`
-    : note('No service lines for this client yet.');
+      <p class="cl-muted">Licence and hosting costs are on Profitability.</p>`
+    : note('No service lines.');
   return panel('What they buy from us', body, go('profitability', '', 'Edit on Profitability →')) +
-    (p.dealer?.length ? panel('With VoIP Unlimited (dealer, commission to Gecko)', `<table class="cl-table"><thead><tr><th>Service</th><th class="num">Qty</th><th>Contract</th><th>Ends</th></tr></thead><tbody>${p.dealer.map(d => `<tr><td>${escapeHtml(d.service.replace(/_/g, ' '))}${d.extras ? ` <span class="cl-muted">${escapeHtml(d.extras)}</span>` : ''}</td><td class="num">${d.quantity}</td><td>${escapeHtml(d.contract.replace(/_/g, ' '))}</td><td>${escapeHtml(fmtDate(d.contract_end)) || '—'}</td></tr>`).join('')}</tbody></table>`) : '');
+    (p.dealer?.length ? panel('With VoIP Unlimited (dealer)', `<table class="cl-table"><thead><tr><th>Service</th><th class="num">Qty</th><th>Contract</th><th>Ends</th></tr></thead><tbody>${p.dealer.map(d => `<tr><td>${escapeHtml(d.service.replace(/_/g, ' '))}${d.extras ? ` <span class="cl-muted">${escapeHtml(d.extras)}</span>` : ''}</td><td class="num">${d.quantity}</td><td>${escapeHtml(d.contract.replace(/_/g, ' '))}</td><td>${escapeHtml(fmtDate(d.contract_end)) || '—'}</td></tr>`).join('')}</tbody></table>`) : '');
 }
 
 function supportHtml(p, errors) {
   const s = p.support;
   if (!s) {
     if (errors.ssa) return panel('Support hours', failed('SSA balances', errors.ssa));
-    return panel('Support hours', `${note('This client has no prepaid support (SSA) block.')}${p.openOpps?.some(o => /support|ssa|retainer/i.test(o.title)) ? '' : go('opportunities', '', 'Suggest one in Opportunities →')}`);
+    return panel('Support hours', `${note('No prepaid support (SSA).')}${p.openOpps?.some(o => /support|ssa|retainer/i.test(o.title)) ? '' : go('opportunities', '', 'Suggest one in Opportunities →')}`);
   }
   const used = Math.max(0, Math.min(1, s.purchased ? (s.purchased - Math.max(0, s.remaining)) / s.purchased : 1));
   const maxH = Math.max(1, ...s.perMonth.map(m => m.hours));
@@ -308,7 +308,7 @@ function supportHtml(p, errors) {
 
 function jobsHtml(p, errors) {
   if (!p.jobs) return panel('Jobs', failed('Jobs', errors.jobs || 'unknown error'));
-  if (!p.jobs.length) return panel('Jobs', note('No jobs for this client yet.'), go('jobs', 'jobs', 'Add one in Jobs →'));
+  if (!p.jobs.length) return panel('Jobs', note('No jobs yet.'), go('jobs', 'jobs', 'Add one in Jobs →'));
   const order = ['to_invoice', 'in_progress', 'agreed', 'quoted', 'invoiced', 'lost'];
   const list = [...p.jobs].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status) || String(b.modified_at || '').localeCompare(String(a.modified_at || '')));
   return panel(`Jobs (${p.openJobs.length} open)`, `<table class="cl-table"><thead><tr><th>Job</th><th>Stage</th><th>Target</th><th>Invoice</th><th class="num">Value</th></tr></thead>
@@ -321,7 +321,7 @@ function oppsHtml(p, errors) {
   if (!p.opps) return panel('Opportunities', failed('Opportunities', errors.opps || 'unknown error'));
   const add = `<button type="button" class="btn btn-sm" data-cl-act="new-opp">New opportunity</button>`;
   const form = CL.adding ? newOppHtml(p) : '';
-  if (!p.opps.length) return form + panel('Opportunities', note('Nothing in the pipeline for this client. Add one, or see what they don’t buy yet in Opportunities › Gaps.'), (CL.adding ? '' : add) + go('opportunities', 'gaps', 'Find gaps →'));
+  if (!p.opps.length) return form + panel('Opportunities', note('Nothing in the pipeline.'), (CL.adding ? '' : add) + go('opportunities', 'gaps', 'Find gaps →'));
   const label = { idea: 'Idea', proposed: 'Proposed', won: 'Won', lost: 'Lost' };
   return form + panel('Opportunities', `<table class="cl-table"><thead><tr><th>Opportunity</th><th>Stage</th><th>Next step</th><th class="num">£/month</th><th class="num">One-off</th></tr></thead>
     <tbody>${p.opps.map(o => `<tr><td>${escapeHtml(o.title)}</td><td><span class="badge ${STAGE_BADGE[o.status] || 'badge-blue'}">${escapeHtml(label[o.status] || o.status)}</span></td><td>${escapeHtml(o.next_step || '—')}</td>
@@ -339,7 +339,7 @@ function activityHtml() {
   const t = today();
   const contacts = CL.data.contacts || [];
   const draft = CL.actDraft || { kind: 'call', follow: '' };
-  const calling = CL.actDraft?.callStarted ? `<p class="cl-calling">☎ Calling${CL.actDraft.callWith ? ' ' + escapeHtml(CL.actDraft.callWith) : ''} since ${escapeHtml(new Date(CL.actDraft.callStarted).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))}. When you’re done, note what was said and save; how long is filled in for you.</p>` : '';
+  const calling = CL.actDraft?.callStarted ? `<p class="cl-calling">☎ Calling${CL.actDraft.callWith ? ' ' + escapeHtml(CL.actDraft.callWith) : ''} since ${escapeHtml(new Date(CL.actDraft.callStarted).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))}.</p>` : '';
   const add = calling + panel('Log activity', `<form class="cl-form cl-act-form" data-cl-form="activity" novalidate>
       <div class="cl-kinds wide" role="radiogroup" aria-label="What kind">${KINDS.map(([k, l]) => `<label class="cl-kind"><input type="radio" name="kind" value="${k}"${draft.kind === k ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
       <label class="wide">What happened / what’s needed <textarea name="body" rows="2" maxlength="2000" placeholder="e.g. Chris wants 3 more Hornet licences from November; send a quote">${escapeHtml(draft.body || '')}</textarea></label>
@@ -366,7 +366,7 @@ function activityHtml() {
       <span class="cl-tl-kind">${escapeHtml(KIND_LABEL[x.kind] || x.kind)}</span>
       <div><p>${escapeHtml(x.body)}</p><small>${escapeHtml(stamp(x.happened_at || x.created_at))}${x.direction ? ' · ' + (x.direction === 'in' ? '↙ incoming' : '↗ outgoing') : ''}${x.duration_min ? ' · ' + escapeHtml(durationText(x.duration_min)) : ''}${x.created_by ? ' · ' + escapeHtml(x.created_by) : ''}${x.contact_name ? ' · with ' + escapeHtml(x.contact_name) : ''}${x.follow_up_on ? ` · follow up ${escapeHtml(fmtDate(x.follow_up_on))}${x.follow_up_done_at ? ' ✓ done' : ''}` : ''}</small></div>
       <button type="button" class="btn btn-sm btn-danger" data-cl-act="act-del" data-id="${x.id}" aria-label="Delete this entry">Delete</button>
-    </li>`).join('')}</ol>` : note('Nothing logged yet. Log calls, emails, meetings and visits here so you both know where things stand.');
+    </li>`).join('')}</ol>` : note('Nothing logged yet.');
   return add + fu + panel(`Timeline (${a.items.length})`, items);
 }
 
@@ -450,7 +450,7 @@ function detailsHtml() {
           ${p.website ? `<a class="btn btn-sm" href="${escapeHtml(p.website)}" target="_blank" rel="noopener">Website</a>` : ''}
         </div>
         ${p.visit_notes ? `<p class="cl-visit"><strong>Visiting:</strong> ${escapeHtml(p.visit_notes)}</p>` : ''}
-        ${addr && !m?.embed ? '<p class="cl-muted">No map: the postcode wasn’t found. Check it and save again.</p>' : ''}
+        ${addr && !m?.embed ? '<p class="cl-muted">No map: postcode not found.</p>' : ''}
       </div>
       ${m?.embed ? `<div class="cl-map"><iframe title="Map of ${escapeHtml(CL.name)}" src="${escapeHtml(m.embed)}" loading="lazy" referrerpolicy="no-referrer"></iframe></div>` : ''}
     </div>`, '<button type="button" class="btn btn-sm btn-ghost" data-cl-act="profile-edit">Edit</button>');
@@ -530,8 +530,8 @@ function emailsHtml() {
   const m = CL.mail;
   if (!m) { setTimeout(() => { if (!CL.mail && CL.tab === 'emails') loadMail(false); }, 0); return panel('Emails', note('Looking for emails…')); }
   if (m.state === 'loading') return panel('Emails', note(`Searching the team’s mailboxes and ${SUPPORT_MAILBOX} for ${m.terms.join(', ')}…`));
-  if (m.state === 'none') return panel('Emails', note('Add a contact with an email address, or the website on Details & contacts, so emails can be found.'));
-  if (m.state === 'consent') return panel('Emails', `<p class="cl-muted">Reading emails needs your OK once (the same permission Backups and Alerts use).</p><button type="button" class="btn btn-sm" data-cl-act="mail-consent">Allow mail access</button>`);
+  if (m.state === 'none') return panel('Emails', note('Add a contact email or website to find emails.'));
+  if (m.state === 'consent') return panel('Emails', `<p class="cl-muted">Reading emails needs your OK once.</p><button type="button" class="btn btn-sm" data-cl-act="mail-consent">Allow mail access</button>`);
   const rows = m.list.length ? `<ul class="cl-mail">${m.list.map((x, i) => `<li>
       <span class="cl-mail-dir ${x.direction}" title="${x.direction === 'in' ? 'From them' : 'From us'}">${x.direction === 'in' ? '↙' : '↗'}</span>
       <div class="cl-mail-body">
@@ -541,14 +541,14 @@ function emailsHtml() {
       </div>
       <div class="cl-mail-acts">${x.webLink ? `<a class="btn btn-sm btn-ghost" href="${escapeHtml(x.webLink)}" target="_blank" rel="noopener">Open in Outlook</a>` : ''}
         <button type="button" class="btn btn-sm btn-ghost" data-cl-act="mail-log" data-i="${i}">Log it</button></div>
-    </li>`).join('')}</ul>` : note('No emails with this client in your mailbox or support@ recently.');
+    </li>`).join('')}</ul>` : note('No recent emails.');
   const me = myAddress();
   const access = m.colleague.length
-    ? `<p class="cl-warn">Can’t read ${escapeHtml(m.colleague.map(a => a.split('@')[0][0].toUpperCase() + a.split('@')[0].slice(1) + '’s').join(' or '))} mailbox yet. In the Microsoft 365 admin centre: Users › Active users › ${escapeHtml(m.colleague.map(a => a.split('@')[0][0].toUpperCase() + a.split('@')[0].slice(1)).join(' / '))} › Mail › Read and manage permissions › Add ${escapeHtml(me || 'your account')}. It can take up to an hour to work.</p>`
+    ? `<p class="cl-warn">Can’t read ${escapeHtml(m.colleague.map(a => a.split('@')[0][0].toUpperCase() + a.split('@')[0].slice(1) + '’s').join(' or '))} mailbox yet. In the Microsoft 365 admin centre: Users › Active users › ${escapeHtml(m.colleague.map(a => a.split('@')[0][0].toUpperCase() + a.split('@')[0].slice(1)).join(' / '))} › Mail › Read and manage permissions › Add ${escapeHtml(me || 'your account')}. Takes up to an hour.</p>`
     : '';
   const other = m.noAccess.filter(l => !m.colleague.some(a => l.toLowerCase().startsWith(a.split('@')[0])));
   return panel(`Recent emails (${m.list.length})`, rows + access + (other.length || m.errors.length ? `<p class="cl-warn">Not searched: ${escapeHtml([...other.map(l => l + ' (no access)'), ...m.errors].join('; '))}</p>` : '')
-    + `<p class="cl-muted">Read-only. Searched ${escapeHtml(m.searched.join(', '))} for ${escapeHtml(m.terms.join(', '))}. Nothing is sent or changed.</p>`,
+    + `<p class="cl-muted">Searched ${escapeHtml(m.searched.join(', '))} for ${escapeHtml(m.terms.join(', '))}.</p>`,
     '<button type="button" class="btn btn-sm" data-cl-act="mail-reload">Refresh</button>');
 }
 
@@ -593,7 +593,7 @@ function contactsHtml() {
       </div>
     </div>`).join('');
   return detailsHtml() + form + panel(`Contacts (${list.length})`,
-    list.length ? `<div class="cl-contacts">${cards}</div>` : note('No contacts yet. Add the people you deal with: owner, accounts, office manager.'),
+    list.length ? `<div class="cl-contacts">${cards}</div>` : note('No contacts yet.'),
     CL.contactEdit === 'new' ? '' : add);
 }
 
@@ -690,7 +690,7 @@ function newOppHtml(p) {
       <label>£ one-off <input name="one_off" type="number" min="0" step="0.01" inputmode="decimal" value="${escapeHtml(a.oneOff ?? '')}" placeholder="${escapeHtml(preview.error ? '0' : String(preview.one_off))}"></label>
       <label>Stage <select name="status"><option value="idea"${a.status !== 'proposed' ? ' selected' : ''}>Idea</option><option value="proposed"${a.status === 'proposed' ? ' selected' : ''}>Proposed</option></select></label>
       <label class="wide">Next step <input name="next_step" type="text" maxlength="200" value="${escapeHtml(a.nextStep || '')}" placeholder="e.g. Call Chris about seats"></label>
-      ${open.has(a.product) ? '<p class="cl-form-warn wide">This client already has this one open in the pipeline.</p>' : ''}
+      ${open.has(a.product) ? '<p class="cl-form-warn wide">Already open in the pipeline.</p>' : ''}
       <div class="cl-form-actions wide">
         <span class="cl-muted">${preview.error ? '' : `Adds to the pipeline: ${escapeHtml(preview.title)}${preview.mrr ? ` · ${escapeHtml(money(preview.mrr))}/mo` : ''}${preview.one_off ? ` · ${escapeHtml(money(preview.one_off))} one-off` : ''}`}</span>
         <button type="button" class="btn btn-ghost" data-cl-act="cancel-opp">Cancel</button>

@@ -86,3 +86,19 @@ if (location.hash.startsWith('#xero=')) {
     }
   }, 500);
 }
+
+// Data arriving: whatever replaces a "Loading…"/"Checking…" placeholder fades and lifts in (first few
+// staggered), so a page settles rather than snapping. Re-renders (filters, typing) aren't touched.
+const isPlaceholder = n => (n.nodeType === 1 || n.nodeType === 3) && /^(Loading|Checking)\b/.test(n.textContent.trim());
+const arrive = (el, i = 0) => el.animate(
+  [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }],
+  { duration: 260, delay: Math.min(i, 8) * 30, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' });
+new MutationObserver(muts => {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (const m of muts) {
+    if (![...m.removedNodes].some(isPlaceholder)) continue;
+    const added = [...m.addedNodes].filter(n => n.nodeType === 1 && !isPlaceholder(n));
+    if (added.length > 40) arrive(m.target);
+    else added.forEach(arrive);
+  }
+}).observe(document.getElementById('app'), { childList: true, subtree: true });
