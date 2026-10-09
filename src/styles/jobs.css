@@ -235,3 +235,7 @@
 #section-jobs .job-owed-note { margin: -4px 0 10px; }
 #section-jobs .job-nudge { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 #section-jobs .job-nudge .job-muted { font-size: 12px; white-space: nowrap; }
+/* Xero's wordmark (brand asset, src/assets/xero.svg): drawn as a mask so it takes Midnight on light, white on dark. */
+#section-jobs .xero-mark { display: inline-block; width: 52px; height: 15px; vertical-align: -2px; margin-right: 6px; background: #fff;
+  -webkit-mask: url(../assets/xero.svg) no-repeat center / contain; mask: url(../assets/xero.svg) no-repeat center / contain; }
+:root[data-theme="light"] #section-jobs .xero-mark { background: #000856; }
