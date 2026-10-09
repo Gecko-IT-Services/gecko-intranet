@@ -85,10 +85,6 @@
 #section-overview .ovw-week li.now span:last-child { color: var(--amber); }
 #section-overview .ovw-week li.late span:last-child { color: var(--red); }
 #section-overview .ovw-week .none { font-size: 12px; color: var(--muted); }
-#section-overview .ovw-hours { display: grid; gap: 6px; }
-#section-overview .ovw-hours div { display: grid; grid-template-columns: 54px minmax(0, 1fr) 48px; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
-#section-overview .ovw-hours i { display: block; height: 6px; border-radius: var(--radius-pill); background: var(--blue); transform-origin: left; animation: ovw-grow-x .6s var(--ease) both; }
-#section-overview .ovw-hours em { font-style: normal; font-family: var(--font-mono); color: var(--white); text-align: right; }
 
 /* Last six months (same marks as Jobs › Month overview) */
 #section-overview .ovw-hist { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; height: 170px; padding: 10px 18px 0; }
@@ -118,7 +114,7 @@
 @keyframes ovw-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes ovw-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  #section-overview .ovw-bar > i, #section-overview .ovw-hours i, #section-overview .ovw-hist-bar, #section-overview .ovw-attn li { animation: none; }
+  #section-overview .ovw-bar > i, #section-overview .ovw-hist-bar, #section-overview .ovw-attn li { animation: none; }
 }
 
 /* Phones: index.html's phone rules stack the KPI panel one per row (!important); left as is. */
@@ -205,7 +201,7 @@
 #section-overview .ovw-rv small.down { color: var(--amber); }
 #section-overview .ovw-rv-hours { display: grid; grid-template-columns: 52px minmax(0, 1fr) 54px; gap: 4px 10px; align-items: center; font-size: 13px; color: var(--white); }
 #section-overview .ovw-rv-hours small { grid-column: 2 / 4; }
-#section-overview .ovw-rv-hours strong { font-family: var(--font-mono); font-weight: 500; text-align: right; color: var(--blue); }
+#section-overview .ovw-rv-hours strong { font-family: var(--font-mono); font-weight: 500; text-align: right; color: var(--who, var(--blue)); }
 #section-overview .ovw-rv-hours .bars { display: grid; gap: 3px; }
 #section-overview .ovw-rv-hours .bars i, #section-overview .ovw-rv-legend b { display: block; height: 7px; border-radius: var(--radius-pill); min-width: 2px; transform-origin: left; animation: ovw-grow-x .6s var(--ease) both; }
 #section-overview .ovw-rv .now { background: var(--blue); }
@@ -222,3 +218,35 @@
 #section-overview .ovw-rv-none { margin: 0; font-size: 12px; color: var(--muted); }
 @media (max-width: 900px) { #section-overview .ovw-rv-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 520px) { #section-overview .ovw-me-list li { grid-template-columns: 26px minmax(0, 1fr); } #section-overview .ovw-me-acts { grid-column: 2; justify-content: flex-start; } }
+
+/* This week as a strip of the wall planner (Team, Leave, Timesheets): lanes × Mon–Sun. */
+#section-overview .ovw-plan { display: grid; gap: 4px; }
+#section-overview .ovw-pr { display: grid; grid-template-columns: 52px repeat(7, minmax(0, 1fr)) 44px; gap: 3px; align-items: stretch; }
+#section-overview .ovw-ph span { font: 600 10px/1.15 var(--font-body); color: var(--muted); text-align: center; }
+#section-overview .ovw-ph span em { display: block; font: 500 12px var(--font-mono); font-style: normal; color: var(--white); }
+#section-overview .ovw-ph span.today, #section-overview .ovw-ph span.today em { color: var(--green); }
+#section-overview .ovw-ph span.we { opacity: .55; }
+#section-overview .ovw-pw { align-self: center; font-size: 12px; font-weight: 700; color: var(--who, var(--muted)); }
+#section-overview .ovw-pt { align-self: center; text-align: right; font: 500 12px var(--font-mono); color: var(--white); white-space: nowrap; }
+#section-overview .ovw-pc { position: relative; height: 30px; display: flex; align-items: flex-start; justify-content: center; padding-top: 4px; overflow: hidden;
+  border: 1px solid var(--border-dim); border-radius: 6px; }
+#section-overview .ovw-pc i { position: absolute; left: 0; right: 0; bottom: 0; max-height: 45%; background: color-mix(in srgb, var(--who) 25%, transparent); box-shadow: inset 0 2px 0 var(--who); }
+#section-overview .ovw-pc b { position: relative; font: 500 11px var(--font-mono); color: var(--white); }
+#section-overview .ovw-pc.we { background: color-mix(in srgb, var(--muted) 7%, transparent); }
+#section-overview .ovw-pc.future { opacity: .55; }
+#section-overview .ovw-pc.today { border-color: var(--green); }
+#section-overview .ovw-pc.gap { border-style: dashed; border-color: var(--amber-border); }
+#section-overview .ovw-pc.off { background: repeating-linear-gradient(135deg, var(--amber-dim) 0 4px, transparent 4px 9px); border-color: var(--amber-border); opacity: 1; }
+#section-overview .ovw-pc.off b { font: 600 10px var(--font-body); color: var(--amber); }
+#section-overview .ovw-pc.off.pending { border-style: dashed; }
+#section-overview .ovw-pr-jobs .ovw-pc, #section-overview .ovw-pr-inv .ovw-pc { height: 24px; padding-top: 3px; border-color: transparent; background: none; }
+#section-overview .ovw-pc.mark { border-color: var(--border); background: var(--card); opacity: 1; }
+#section-overview .ovw-pc.mark b { font-size: 10px; letter-spacing: -.02em; }
+#section-overview .ovw-pc.late { border-color: var(--red-border); }
+#section-overview .ovw-pc.late b { color: var(--red); }
+#section-overview .ovw-plan-note { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+/* Weekly review: hours bars in each person's colour; the key stays neutral. */
+#section-overview .ovw-rv-hours[class*="lp-"] .now { background: var(--who); }
+#section-overview .ovw-rv-hours[class*="lp-"] .prev { background: color-mix(in srgb, var(--who) 35%, transparent); }
+#section-overview .ovw-rv-legend .now { background: var(--muted); }
+#section-overview .ovw-rv-legend .prev { background: color-mix(in srgb, var(--muted) 35%, transparent); }

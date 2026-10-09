@@ -29,7 +29,7 @@ export async function loadDb() {
   const [jobs, opps, leave, xero, nudges, ticks, followUps, prospects] = await Promise.all([
     settle(sb.from('jobs').select('id,client_name,title,status,value,target_date,invoice_ref,invoiced_at,created_at,modified_at').then(must)),
     settle(sb.from('opportunities').select('id,client_name,title,status,mrr,one_off,closed_at,created_at,modified_at,follow_up_on,job_id,billing_set_up_at').then(must)),
-    settle(sb.from('leave_requests').select('person,start_date,end_date,status,leave_type').then(must)),
+    settle(sb.from('leave_requests').select('person,start_date,end_date,status,leave_type,notes').then(must)),
     settle(sb.from('xero_status').select('*').eq('id', 1).maybeSingle().then(must)),
     settle(sb.from('payment_nudges').select('contact_name,created_at').gte('created_at', since).then(must)),
     settle(sb.from('month_end_checks').select('item,done_by,done_at').eq('month', month).then(must)),
@@ -43,7 +43,7 @@ export async function loadDb() {
   const out = {
     jobs: jobs.v || null,
     opps: opps.v || null,
-    leave: leave.v ? leave.v.map(l => ({ person: l.person || 'Jack', start: l.start_date, end: l.end_date || l.start_date, status: status(l.status), type: l.leave_type || 'Annual Leave' })) : null,
+    leave: leave.v ? leave.v.map(l => ({ person: l.person || 'Jack', start: l.start_date, end: l.end_date || l.start_date, status: status(l.status), type: l.leave_type || 'Annual Leave', note: l.notes || '' })) : null,
     xero: xero.v || null,
     nudges: nudges.v || null, ticks: ticks.v || null, followUps: followUps.v || null, prospects: prospects.v || null,
     inv: null, rep: null, errors
