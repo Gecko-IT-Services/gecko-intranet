@@ -6101,10 +6101,6 @@ body::before {
         <h1>Mileage <span>Tracker</span></h1>
         <p>Tax year <span id="milTaxYear">2026/27</span></p>
         <div class="mil-head-actions">
-          <button class="mil-refresh" id="milClaimEmailBtn" type="button" onclick="milEmailClaim()" title="Email your unclaimed journeys since your last claim">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            Email my claim
-          </button>
           <button class="mil-refresh" id="milRefresh" type="button" onclick="milRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
@@ -12957,7 +12953,7 @@ function milRenderKpis() {
       <div class="mil-driver-head"><span class="mil-av" aria-hidden="true">${escapeHtml(first[0])}</span>
         <div><strong>${escapeHtml(d)}</strong><span>${escapeHtml(role)}</span></div></div>
       <div class="mil-owed">${owed > 0
-        ? `<span class="v warn">${escapeHtml(milFmt(owed))}</span><span class="u">to claim</span><small>${open.length} trip${open.length === 1 ? '' : 's'} since ${escapeHtml(milFmtDate(oldest))}${d === me ? ' · <button type="button" class="mil-link" onclick="milEmailClaim()">Email my claim</button>' : ''}</small>`
+        ? `<span class="v warn">${escapeHtml(milFmt(owed))}</span><span class="u">to claim</span><small>${open.length} trip${open.length === 1 ? '' : 's'} since ${escapeHtml(milFmtDate(oldest))}${d === me ? ' · <button type="button" class="mil-link" id="milClaimEmailBtn" onclick="milEmailClaim()">Email my claim</button>' : ''}</small>`
         : '<span class="v ok">All claimed</span>'}</div>
       <div class="mil-road" role="img" aria-label="${escapeHtml(`${milFmtMiles(yrMiles)} of ${milFmtMiles(HMRC_THRESHOLD)} miles this tax year, ${milFmtMiles(yrOpen)} not claimed yet`)}">
         <span class="claimed" style="width:${pct(yrClaimed)}%"></span><span class="open" style="width:${Math.min(Number(pct(yrMiles)) - Number(pct(yrClaimed)), 100).toFixed(2)}%"></span>
