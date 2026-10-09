@@ -42,7 +42,9 @@ Every reason that applies, most serious first:
 4. **Not billed in Xero** (amber): feed month that has finished, monthly lines > £0, no Xero invoice.
    Never the current month (repeating invoices may not have gone out yet).
 
-No flag for a client with no lines and no Xero billing, or only Pending setup lines. Winding-down
+In the current month, a client the feed shows as not yet billed is not judged at all (no "Losing
+money" while its repeating invoice is still to go out). No flag for a client with no lines and no
+Xero billing, or only Pending setup lines. Winding-down
 clients are flagged like any other. Early in the current month costs are low until TD SYNNEX bills
 (~16th), so margins look healthy: same as today, by the invoiced-month rule.
 

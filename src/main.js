@@ -34,6 +34,7 @@ import * as timelog from './core/timelog.js';
 import * as ssa from './core/ssa.js';
 import * as weekly from './core/weekly.js';
 import * as teamCore from './core/team.js';
+import * as profitability from './core/profitability.js';
 
 window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
@@ -56,6 +57,8 @@ window.GeckoTeam = teamCore;
 // index.html's classic script and therefore cannot import modules itself.
 window.CspCosts = cspCosts;
 window.ProfitFeed = profitFeed;
+// Profitability's "Needs a look" flags (classic script).
+window.GeckoProfit = profitability;
 // Timesheets › SSA › Renew (also classic script).
 window.SsaRenewal = ssaRenewal;
 // Supabase session is dropped on Microsoft sign-out (classic script calls this).
