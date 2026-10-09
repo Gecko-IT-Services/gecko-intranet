@@ -22,8 +22,9 @@ import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
-  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns
+  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns, holds, mapCell
 } from '../core/opportunities.js';
+import { tilt } from '../core/jobs.js';
 import { followUpChoices, dueText } from '../core/activity.js';
 import { STAGES as P_STAGES, SOURCES as P_SOURCES, OPEN_STAGES as P_OPEN, cleanProspect, prospectSummary, sortProspects, conversion } from '../core/prospects.js';
 
@@ -49,7 +50,10 @@ const OPP = {
   products: [], statuses: {}, manualDomains: [], signals: new Map(), opps: [], dealer: [],
   clients: [], latestMonth: '', feedNote: '', commission: null,
   prospects: null, prospectsError: '', prospectEdit: null, prospectView: 'open', saving: false,   // Prospects tab
-  view: (() => { try { return localStorage.getItem('gecko.opp.view') === 'board' ? 'board' : 'list'; } catch { return 'list'; } })()   // pipeline: list or board
+  view: 'board',           // pipeline: board (the whiteboard) or list; remembered per browser, read in init
+  gapView: 'list',         // Gaps: list (client cards) or map (clients × products)
+  selected: null,          // the board sticky whose full deal shows under the board
+  dragging: ''
 };
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const shortDate = k => new Date(String(k).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -539,9 +543,13 @@ function gapsHtml() {
   const head = `<div class="opp-toolbar">
       <span><strong>${strong}</strong> gaps with evidence across <strong>${rows.length}</strong> clients${unchecked ? ` · ${unchecked} not checked yet` : ''}</span>
       <label class="opp-check"><input type="checkbox" data-opp-act="showall" ${OPP.showAll ? 'checked' : ''}> Include products they don’t buy</label>
+      <div class="opp-view" role="group" aria-label="Show gaps as">
+        <button type="button" data-opp-act="gapview" data-view="list" aria-pressed="${OPP.gapView === 'list'}">Clients</button>
+        <button type="button" data-opp-act="gapview" data-view="map" aria-pressed="${OPP.gapView === 'map'}">Map</button></div>
       <button type="button" class="btn btn-primary" data-opp-act="checkall" ${OPP.checking ? 'disabled' : ''}>Check email &amp; websites</button>
     </div>`;
   if (!rows.length) return head + '<p class="opp-empty">No clients found in the client list.</p>';
+  if (OPP.gapView === 'map') return head + gapMapHtml(rows);
   return head + rows.map(({ c, gaps, dnsRow, psRow }) => {
     const isOpen = OPP.open.has(c.name);
     const chips = gaps.slice(0, 6).map(g => `<span class="opp-chip s${g.strength}">${escapeHtml(g.product.name)}</span>`).join('') + (gaps.length > 6 ? `<span class="opp-chip">+${gaps.length - 6}</span>` : '');
@@ -569,6 +577,36 @@ function gapsHtml() {
         <span class="opp-mrr">${c.mrr ? escapeHtml(money(c.mrr)) + '/mo' : '—'}</span>
       </button>${body}</section>`;
   }).join('');
+}
+
+const MAP_LABEL = { strong: 'Gap: rule and timesheets agree', some: 'Gap: some evidence', maybe: 'Not bought, no evidence yet',
+  deal: 'In the pipeline', won: 'Won', has: 'Has it', no: 'Not interested' };
+const MAP_MARK = { strong: '●', some: '●', maybe: '○', deal: '◆', won: '✓', has: '✓', no: '–' };
+
+/**
+ * Gaps as a map: a row per client, a column per product, the whitespace grid you would draw on a
+ * whiteboard. A gap opens that client's card; a deal opens it on the pipeline board.
+ */
+function gapMapHtml(rows) {
+  const products = OPP.products.filter(p => p.active);
+  const cols = `52px minmax(150px, 1.4fr) repeat(${products.length}, minmax(26px, 1fr))`;
+  const head = `<div class="opp-map-row opp-map-head" style="grid-template-columns:${cols}" aria-hidden="true"><span></span><span></span>${products.map(p => `<span title="${escapeHtml(p.name)}"><em>${escapeHtml(p.name.replace(/\s*\(.*\)$/, ''))}</em></span>`).join('')}</div>`;
+  const body = rows.map(({ c, client }) => {
+    const gaps = new Map(clientGaps(client, OPP.products, OPP.statuses[c.name] || {}).map(g => [g.product.key, g]));
+    const deals = OPP.opps.filter(o => o.client_name === c.name && o.status !== 'lost');
+    const cells = products.map(p => {
+      const deal = deals.find(o => o.product_key === p.key);
+      const st = mapCell({ gap: gaps.get(p.key), deal, status: (OPP.statuses[c.name] || {})[p.key] || '', has: holds(client, p).has });
+      if (!st || (st === 'maybe' && !OPP.showAll)) return '<span class="opp-mc"></span>';
+      const label = `${c.name} · ${p.name}: ${MAP_LABEL[st]}`;
+      const act = deal ? `data-opp-act="mapdeal" data-id="${deal.id}"` : (st === 'strong' || st === 'some' || st === 'maybe') ? `data-opp-act="mapgap" data-client="${escapeHtml(c.name)}"` : '';
+      return act ? `<button type="button" class="opp-mc m-${st}" ${act} title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">${MAP_MARK[st]}</button>`
+        : `<span class="opp-mc m-${st}" title="${escapeHtml(label)}">${MAP_MARK[st]}</span>`;
+    }).join('');
+    return `<div class="opp-map-row" style="grid-template-columns:${cols}"><span class="opp-map-mrr">${c.mrr ? escapeHtml('£' + Math.round(c.mrr)) : ''}</span><span class="opp-map-name">${escapeHtml(c.name)}</span>${cells}</div>`;
+  }).join('');
+  const key = ['strong', 'some', ...(OPP.showAll ? ['maybe'] : []), 'deal', 'won', 'has', 'no'].map(k => `<li><span class="opp-mc m-${k}">${MAP_MARK[k]}</span>${MAP_LABEL[k]}</li>`).join('');
+  return `<div class="opp-map" role="group" aria-label="Gaps by client and product">${head}${body}</div><ul class="opp-map-key">${key}</ul>`;
 }
 
 function ago(iso) {
@@ -671,28 +709,85 @@ function pipelineHtml() {
       <button type="button" data-opp-act="view" data-view="list" aria-pressed="${OPP.view === 'list'}">List</button>
       <button type="button" data-opp-act="view" data-view="board" aria-pressed="${OPP.view === 'board'}">Board</button></div>`;
   if (OPP.view === 'board') {
-    const card = o => `<div class="opp-card st-${escapeHtml(o.status)}">
-        <div class="opp-card-top">${clientLink(o.client_name)}<strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong></div>
-        <div class="opp-card-title">${escapeHtml(findProduct(o.product_key)?.name || o.title)}${Number(o.one_off) ? ` <span>+ ${escapeHtml(money(o.one_off))}</span>` : ''}</div>
-        ${o.next_step ? `<div class="opp-card-next">${escapeHtml(o.next_step)}</div>` : ''}
-        <div class="opp-flags">${flags(o)}${o.status === 'won' && (dealState(o, t).needsJob || dealState(o, t).needsBilling) ? '<span class="badge badge-green">To set up</span>' : ''}</div>
-        <div class="opp-card-acts">${o.status === 'idea' ? `<button type="button" class="btn btn-sm btn-ghost" data-opp-act="move" data-status="proposed" data-id="${o.id}">Proposed →</button>` : ''}
-          ${o.status === 'idea' || o.status === 'proposed' ? `<button type="button" class="btn btn-sm btn-success" data-opp-act="move" data-status="won" data-id="${o.id}">Won</button><button type="button" class="btn btn-sm btn-ghost" data-opp-act="move" data-status="lost" data-id="${o.id}">Lost</button>` : ''}
-          <button type="button" class="btn btn-sm btn-ghost" data-opp-act="openlist" data-id="${o.id}">Details</button></div>
-      </div>`;
+    const person = n => (/^philip/i.test(n || '') ? 'philip' : /^jack/i.test(n || '') ? 'jack' : '');
+    const NEXT = { idea: ['proposed', 'Proposed'], proposed: ['won', 'Won'] };
+    const sticky = o => {
+      const p = person(o.owner);
+      const st = dealState(o, t);
+      const [to, lbl] = NEXT[o.status] || [];
+      return `<article class="job-sticky st-${escapeHtml(o.status)}${p ? ' lp-' + p : ''}${OPP.selected === o.id ? ' on' : ''}" draggable="true" data-drag="${o.id}"
+          data-opp-act="pick" data-id="${o.id}" tabindex="0" style="--tilt:${tilt(o.id)}deg" aria-label="${escapeHtml(`${o.client_name}: ${o.title}, ${label[o.status]}`)}">
+        <span class="js-tape" aria-hidden="true"></span>
+        <div class="js-top"><span class="js-client">${escapeHtml(o.client_name)}</span>${p ? `<b class="js-owner" title="${escapeHtml(o.owner)}">${p[0].toUpperCase()}</b>` : ''}</div>
+        <div class="js-title">${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
+        ${o.next_step ? `<div class="js-next">${escapeHtml(o.next_step)}</div>` : ''}
+        <div class="js-foot"><strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong>${Number(o.one_off) ? `<span class="js-date">+ ${escapeHtml(money(o.one_off))}</span>` : ''}</div>
+        <div class="opp-flags">${flags(o)}${st.needsJob || st.needsBilling ? '<span class="badge badge-green">To set up</span>' : ''}</div>
+        ${to ? `<button type="button" class="js-move" data-opp-act="move" data-status="${to}" data-id="${o.id}">${lbl} →</button>` : ''}
+      </article>`;
+    };
     const cols = boardColumns(OPP.opps, t).map(c => {
       const total = c.items.reduce((a, o) => a + (Number(o.mrr) || 0), 0);
-      return `<section class="opp-col st-${c.key}"><header><strong><b class="opp-dot"></b>${label[c.key]}</strong><span>${c.items.length} · ${escapeHtml(money(total))}/mo</span></header>
-        ${c.items.map(card).join('') || '<p class="opp-muted">None</p>'}</section>`;
+      const oneOff = c.items.reduce((a, o) => a + (Number(o.one_off) || 0), 0);
+      return `<section class="job-col col-${c.key}" data-drop="${c.key}" aria-label="${escapeHtml(label[c.key])}">
+        <header><strong>${label[c.key]}</strong><span>${escapeHtml(money(total))}/mo</span><small>${c.items.length} ${c.items.length === 1 ? 'deal' : 'deals'}${oneOff ? ` · + ${escapeHtml(money(oneOff))} one-off` : ''}${c.key === 'won' || c.key === 'lost' ? ' · last 90 days' : ''}</small></header>
+        <div class="job-col-body">${c.items.map(sticky).join('') || '<p class="job-col-note">None</p>'}</div></section>`;
     }).join('');
+    const sel = OPP.opps.find(o => o.id === OPP.selected);
     return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
-      <div class="opp-board">${cols}</div><p class="opp-muted">Won and lost: last 90 days.</p>`;
+      <div class="job-board opp-wb">${cols}</div>
+      ${sel ? `<div class="job-pinned"><div class="opp-deals-head"><span class="opp-muted">Picked from the board</span><button type="button" class="btn btn-sm btn-ghost" data-opp-act="pick" data-id="${sel.id}">Close</button></div>${deal(sel)}</div>` : ''}`;
   }
   return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
     <div class="opp-stages kpi-panel">${stages}</div>
     <div class="opp-deals-head"><strong>${heading}</strong>
       ${OPP.stage !== 'open' ? '<button type="button" class="btn btn-sm btn-ghost" data-opp-act="stage" data-stage="open">Back to open deals</button>' : ''}</div>
     <div class="opp-deals">${shown.map(deal).join('') || '<p class="opp-muted">None at this stage.</p>'}</div>`;
+}
+
+/** Move a deal to another stage (a button, or a sticky dropped on a column). */
+async function moveDeal(id, status) {
+  const o = OPP.opps.find(x => x.id === id);
+  if (!o || o.status === status) return false;
+  try {
+    await patchOpp(id, { status });
+    const st = status === 'won' ? dealState({ ...o, status: 'won' }, todayKey()) : null;
+    toast(status === 'won'
+      ? `Won: +${money(o.mrr)}/mo${st?.needsJob || st?.needsBilling ? `. Next: ${[st.needsJob && 'create the job', st.needsBilling && 'set up the monthly billing'].filter(Boolean).join(' and ')}.` : ''}`
+      : `Moved to ${{ idea: 'Idea', proposed: 'Proposed', lost: 'Lost' }[status] || status}`, 'success', 6000);
+    if (status === 'won') { if (OPP.view === 'board') OPP.selected = id; else OPP.stage = 'won'; }
+    render();
+    return true;
+  } catch (err) { toast('Could not update: ' + (err.message || err), 'error', 7000); return false; }
+}
+
+/** Drag and drop on the pipeline whiteboard (mouse and trackpad; on a phone the arrows do it). */
+function onDrag(e) {
+  const zone = e.target.closest?.('#section-opportunities [data-drop]');
+  if (e.type === 'dragstart') {
+    const s = e.target.closest?.('#section-opportunities [data-drag]');
+    if (!s) return;
+    OPP.dragging = s.dataset.drag;
+    e.dataTransfer.setData('text/plain', OPP.dragging);
+    e.dataTransfer.effectAllowed = 'move';
+    requestAnimationFrame(() => { s.classList.add('dragging'); els('oppWrap')?.classList.add('is-dragging'); });
+  } else if (e.type === 'dragend') {
+    OPP.dragging = '';
+    els('oppWrap')?.classList.remove('is-dragging');
+    document.querySelectorAll('#section-opportunities .dragging, #section-opportunities .drop-over').forEach(x => x.classList.remove('dragging', 'drop-over'));
+  } else if (e.type === 'dragover' && zone && OPP.dragging) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!zone.classList.contains('drop-over')) {
+      document.querySelectorAll('#section-opportunities .drop-over').forEach(x => x.classList.remove('drop-over'));
+      zone.classList.add('drop-over');
+    }
+  } else if (e.type === 'drop' && zone && OPP.dragging) {
+    e.preventDefault();
+    const id = Number(OPP.dragging);
+    onDrag({ type: 'dragend', target: e.target });
+    moveDeal(id, zone.dataset.drop);
+  }
 }
 
 /** A won deal's one-off part becomes a Job (once: jobs.source_ref = 'opp:<id>'), linked back to the deal. */
@@ -933,20 +1028,7 @@ async function onClick(event) {
   if (act === 'notint') { setStatus(client, product, 'not_interested'); return; }
   if (act === 'stage') { OPP.stage = OPP.stage === btn.dataset.stage ? 'open' : btn.dataset.stage; render(); return; }
   if (act === 'editopp') { const n = Number(id); OPP.editing.has(n) ? OPP.editing.delete(n) : OPP.editing.add(n); render(); return; }
-  if (act === 'move') {
-    btn.disabled = true;
-    const o = OPP.opps.find(x => x.id === Number(id));
-    try {
-      await patchOpp(Number(id), { status: btn.dataset.status });
-      const st = btn.dataset.status === 'won' ? dealState({ ...o, status: 'won' }, todayKey()) : null;
-      toast(btn.dataset.status === 'won'
-        ? `Won: +${money(o?.mrr)}/mo${st?.needsJob || st?.needsBilling ? `. Next: ${[st.needsJob && 'create the job', st.needsBilling && 'set up the monthly billing'].filter(Boolean).join(' and ')}.` : ''}`
-        : `Moved to ${btn.dataset.status === 'lost' ? 'Lost' : 'Proposed'}`, 'success', 6000);
-      if (btn.dataset.status === 'won') { OPP.stage = 'won'; OPP.view = 'list'; }
-      render();
-    } catch (err) { btn.disabled = false; toast('Could not update: ' + (err.message || err), 'error', 7000); }
-    return;
-  }
+  if (act === 'move') { btn.disabled = true; if (!(await moveDeal(Number(id), btn.dataset.status))) btn.disabled = false; return; }
   if (act === 'emailopp') { btn.disabled = true; draftEmail(Number(id)); return; }
   if (act === 'pview') { OPP.prospectView = btn.dataset.view; render(); return; }
   if (act === 'padd') { OPP.prospectEdit = 'new'; render(); els('oppWrap')?.querySelector('[data-opp-prospect="new"] [name="company"]')?.focus(); return; }
@@ -967,6 +1049,11 @@ async function onClick(event) {
     return;
   }
   if (act === 'view') { OPP.view = btn.dataset.view; try { localStorage.setItem('gecko.opp.view', OPP.view); } catch { /* per-browser only */ } render(); return; }
+  if (act === 'pick') { const n = Number(id); OPP.selected = OPP.selected === n ? null : n; render(); if (OPP.selected) els('oppWrap')?.querySelector('.job-pinned')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+  if (act === 'gapview') { OPP.gapView = btn.dataset.view; try { localStorage.setItem('gecko.opp.gapview', OPP.gapView); } catch { /* per-browser only */ } render(); return; }
+  if (act === 'mapgap') { OPP.gapView = 'list'; OPP.open.add(btn.dataset.client); render();
+    [...document.querySelectorAll('#section-opportunities .opp-card-head')].find(h => h.dataset.client === btn.dataset.client)?.scrollIntoView({ block: 'start' }); return; }
+  if (act === 'mapdeal') { OPP.view = 'board'; OPP.selected = Number(id); window.geckoGo?.('opportunities', 'pipeline'); setTimeout(() => els('oppWrap')?.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' }), 50); return; }
   if (act === 'openlist') {
     const o = OPP.opps.find(x => x.id === Number(id));
     OPP.view = 'list'; OPP.stage = o && (o.status === 'won' || o.status === 'lost') ? o.status : 'open'; OPP.editing.add(Number(id)); render();
@@ -1030,6 +1117,7 @@ async function onSubmit(event) {
 }
 
 function onKeydown(event) {
+  if ((event.key === 'Enter' || event.key === ' ') && event.target.matches?.('.job-sticky[data-opp-act="pick"]')) { event.preventDefault(); event.target.click(); return; }
   if (event.key === 'Enter' && event.target.matches?.('[data-opp-domain]')) {
     event.preventDefault();
     addDomain(event.target.dataset.oppDomain, event.target.value);
@@ -1052,11 +1140,16 @@ export function reload() {
 
 export function init() {
   OPP.started = true;
+  try {
+    OPP.view = localStorage.getItem('gecko.opp.view') === 'list' ? 'list' : 'board';
+    OPP.gapView = localStorage.getItem('gecko.opp.gapview') === 'map' ? 'map' : 'list';
+  } catch { /* private window: the defaults */ }
   const section = els('section-opportunities');
   section?.addEventListener('click', onClick);
   section?.addEventListener('change', onChange);
   section?.addEventListener('submit', onSubmit);
   section?.addEventListener('keydown', onKeydown);
+  for (const t of ['dragstart', 'dragend', 'dragover', 'drop']) section?.addEventListener(t, onDrag);
   els('oppRefresh')?.addEventListener('click', refresh);
   load();
 }
