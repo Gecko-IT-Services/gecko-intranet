@@ -2455,10 +2455,6 @@ body {
 }
 #section-clients .cli-refresh[hidden] { display: none; }
 /* Copy-to-Supabase result: own line, green when it reconciles, red when not. */
-#section-clients .cli-copy-result { flex-basis: 100%; font-size: 12px; color: var(--muted); }
-#section-clients .cli-copy-result:empty { display: none; }
-#section-clients .cli-copy-result[data-state="ok"]  { color: var(--green); }
-#section-clients .cli-copy-result[data-state="bad"] { color: var(--red); }
 
 #section-clients .cli-refresh {
   display: inline-flex; align-items: center; gap: 6px;
@@ -2473,24 +2469,6 @@ body {
 #section-clients .cli-refresh.spinning svg { animation: spin 1s linear infinite; }
 
 #section-clients .cli-last-sync { font-size: 11px; color: var(--muted); margin-left: auto; }
-
-/* — View toggle (Table | Cards) — */
-#section-clients .cli-view-toggle {
-  display: inline-flex; gap: 0; border: 1px solid var(--border-dim);
-  border-radius: 999px; overflow: hidden;
-}
-#section-clients .cli-vt-btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 12px; background: transparent; border: none;
-  color: var(--muted); font-family: var(--font-body);
-  font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s;
-  border-right: 1px solid var(--border-dim);
-}
-#section-clients .cli-vt-btn:last-child { border-right: none; }
-#section-clients .cli-vt-btn:hover { color: var(--white); }
-#section-clients .cli-vt-btn.active {
-  background: var(--green-glow); color: var(--green);
-}
 
 /* — Search toolbar — */
 #section-clients .cli-toolbar {
@@ -2512,7 +2490,10 @@ body {
   position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
   color: var(--muted); pointer-events: none; display: flex;
 }
-#section-clients .cli-toolbar-meta { font-size: 11px; color: var(--muted); margin-left: auto; }
+#section-clients .cli-filter { max-width: 100%; }
+#section-clients .cli-fn { font-family: var(--font-mono); font-size: 11px; opacity: .7; margin-left: 2px; }
+#section-clients .cli-tbl tbody tr[data-name] { cursor: pointer; }
+#section-clients .cli-mm-delete { margin-right: auto; }
 
 /* — Wrap (holds either table or cards) — */
 #section-clients .cli-wrap { display: flex; flex-direction: column; gap: 14px; }
@@ -2614,51 +2595,6 @@ body {
   color: var(--muted); text-decoration: none;
 }
 #section-clients .cli-tbl tbody td .cli-contact-email a:hover { color: var(--green); }
-
-/* ─── CARD VIEW ─── */
-#section-clients .cli-grid {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;
-}
-@media (max-width: 1080px) { #section-clients .cli-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 720px)  { #section-clients .cli-grid { grid-template-columns: minmax(0, 1fr); } }
-#section-clients .cli-card {
-  background: var(--card); border: 1px solid var(--border-dim);
-  border-radius: var(--radius); padding: 16px; transition: border-color .2s;
-  display: flex; flex-direction: column; gap: 12px;
-}
-#section-clients .cli-card:hover { border-color: var(--border); }
-#section-clients .cli-card-head {
-  display: flex; align-items: center; gap: 10px;
-}
-#section-clients .cli-card-head .cli-name {
-  font-family: var(--font-body); font-weight: 700;
-  font-size: 15px; letter-spacing: .04em; text-transform: uppercase;
-  color: var(--white); flex: 1; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-#section-clients .cli-card-rows {
-  display: flex; flex-direction: column; gap: 8px;
-  border-top: 1px solid var(--border-dim); padding-top: 12px;
-}
-#section-clients .cli-card-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  font-size: 12px;
-}
-#section-clients .cli-card-row .cli-rl {
-  font-size: 9px; color: var(--muted); text-transform: uppercase;
-  letter-spacing: .08em; font-weight: 600;
-}
-#section-clients .cli-card-row .cli-rv { color: var(--white); text-align: right; min-width: 0; }
-#section-clients .cli-card-row .cli-rv.muted { color: var(--muted); }
-#section-clients .cli-card-row .cli-rv.num {
-  font-family: var(--font-body); font-size: 14px; font-weight: 600;
-}
-#section-clients .cli-card-row .cli-rv a { color: var(--white); text-decoration: none; word-break: break-all; }
-#section-clients .cli-card-row .cli-rv a:hover { color: var(--green); }
-#section-clients .cli-card-actions {
-  display: flex; gap: 6px; justify-content: flex-end;
-  border-top: 1px solid var(--border-dim); padding-top: 12px;
-}
 
 /* — Empty / error / loading states — */
 #section-clients .cli-empty,
@@ -4046,7 +3982,7 @@ body::before {
 #section-mileage .mil-tab,
 #section-mileage .mil-chip,
 #section-clients .cli-refresh,
-#section-clients .cli-vt-btn,
+#section-clients .cli-fbtn,
 #section-timesheets .tsh-refresh,
 #section-timesheets .tsh-tab,
 #section-timesheets .tsh-chip,
@@ -4745,7 +4681,7 @@ body::before {
   #section-mileage .mil-tabs,
   #section-timesheets .tsh-tabs,
   #section-compliance .cmp-tabs,
-  #section-clients .cli-view-toggle {
+  #section-clients .cli-filter {
     display: flex;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -4755,14 +4691,14 @@ body::before {
   #section-mileage .mil-tabs::-webkit-scrollbar,
   #section-timesheets .tsh-tabs::-webkit-scrollbar,
   #section-compliance .cmp-tabs::-webkit-scrollbar,
-  #section-clients .cli-view-toggle::-webkit-scrollbar {
+  #section-clients .cli-filter::-webkit-scrollbar {
     display: none;
   }
 
   #section-mileage .mil-tab,
   #section-timesheets .tsh-tab,
   #section-compliance .cmp-tab,
-  #section-clients .cli-vt-btn {
+  #section-clients .cli-fbtn {
     min-height: 40px;
     white-space: nowrap;
     flex: 0 0 auto;
@@ -5214,7 +5150,6 @@ body::before {
 :root[data-theme="light"] .set-badge,
 :root[data-theme="light"] .pnl-month,
 :root[data-theme="light"] .prf-leg-r,
-:root[data-theme="light"] .cli-toolbar-meta,
 :root[data-theme="light"] .tsh-last-sync,
 :root[data-theme="light"] .cmp-last-sync {
   font-weight: 700;
@@ -6385,24 +6320,11 @@ body::before {
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add client
           </button>
-          <div class="cli-view-toggle" role="tablist" aria-label="View mode">
-            <button class="cli-vt-btn active" type="button" data-view="table" onclick="cliSetView('table')" title="Table view">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-              Table
-            </button>
-            <button class="cli-vt-btn" type="button" data-view="cards" onclick="cliSetView('cards')" title="Card view">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-              Cards
-            </button>
-          </div>
           <button class="cli-refresh" id="cliRefresh" type="button" onclick="cliRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="cli-last-sync" id="cliLastSync"></span>
-          <button class="cli-refresh" id="cliCopy" type="button" hidden onclick="cliCopyToSupabase()"
-                  title="One-off, Philip only: copy clients and service lines from SharePoint into the Gecko database and check every field">Copy to Supabase</button>
-          <span class="cli-copy-result" id="cliCopyResult" role="status"></span>
         </div>
       </div>
 
@@ -6412,9 +6334,9 @@ body::before {
           <span class="cli-srch-ic">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </span>
-          <input type="text" id="cliSrchInput" placeholder="Search by name, contact or email…" oninput="cliOnSearch(this.value)" autocomplete="off">
+          <input type="search" id="cliSrchInput" placeholder="Search by name, contact or email…" aria-label="Search clients" oninput="cliOnSearch(this.value)" autocomplete="off">
         </div>
-        <span class="cli-toolbar-meta" id="cliToolbarMeta"></span>
+        <div class="cli-filter" id="cliFilter" role="group" aria-label="Show"></div>
       </div>
 
       <div class="cli-wrap" id="cliWrap">
@@ -14053,7 +13975,7 @@ const CLI = {
   ssaClients:   [],   // [{ id, name, primaryContact, email, hoursPurchased, hoursUsed, hoursRemaining, clientFolder }]
   services:     [],   // [{ clientName, sell }]
   joined:       [],   // computed: union by canonical name (see cliJoin)
-  view:         'table',  // 'table' | 'cards' — session-only, not persisted
+  filter:       'all',    // key from CLI_FILTERS
   search:       '',
   searchTimer:  null,
   sortBy:       'name',   // 'name' | 'status' | 'hours' | 'revenue'
@@ -14107,16 +14029,27 @@ function cliStatusClass(status) {
 }
 function cliStatusLabel(status) {
   const s = (status || 'Active').toLowerCase();
-  if (s === 'winding') return 'Winding Down';
+  if (s === 'winding') return 'Winding down';
   if (s === 'new')     return 'New';
   return 'Active';
 }
 
 
 // ─── SharePoint helpers — resolve site + list IDs ─────────────────────
+/** SSA hours worth a look: under 2h (amber or red pill), ignoring archived SSAs. */
+const cliLowHours = r => !!r.ssa && !r.ssa.archived && /md|lo/.test(cliHoursClass(r.ssa.hoursRemaining) || '');
+const CLI_FILTERS = [
+  ['all',     'All',          () => true],
+  ['active',  'Active',       r => !!r.gecko && cliStatusClass(r.gecko.status) === 'cli-st-active'],
+  ['new',     'New',          r => !!r.gecko && cliStatusClass(r.gecko.status) === 'cli-st-new'],
+  ['winding', 'Winding down', r => !!r.gecko && cliStatusClass(r.gecko.status) === 'cli-st-winding'],
+  ['low',     'Low on hours', cliLowHours],
+  ['nossa',   'No SSA',       r => !r.ssa || r.ssa.archived],
+];
+
 async function cliResolveListIds() {
   if (CLI.siteId && CLI.listIds.geckoClients && CLI.listIds.ssaClients && CLI.listIds.services) return;
-  // List ids unused on the database. Copy to Supabase only runs while clients are on SharePoint.
+  // List ids unused on the database.
   if (dataBackend('clients') === 'supabase' && dataBackend('timesheets') === 'supabase') return;
 
   CLI.siteId = await resolveSiteId();
@@ -14321,7 +14254,8 @@ async function cliRefreshData(silent = false) {
 // ─── Sort + filter helpers ────────────────────────────────────────────
 function cliSortedFiltered() {
   const term = (CLI.search || '').toLowerCase().trim();
-  let rows = CLI.joined.slice();
+  const test = (CLI_FILTERS.find(f => f[0] === CLI.filter) || CLI_FILTERS[0])[2];
+  let rows = CLI.joined.filter(test);
 
   // Filter — name, primaryContact, OR email (case-insensitive substring)
   if (term) {
@@ -14394,32 +14328,33 @@ function cliRenderAll() {
   // Show toolbar once we have data
   if (toolbar) toolbar.style.display = 'flex';
 
-  // Update toolbar meta + view-toggle active state
-  cliRenderToolbarMeta();
-  document.querySelectorAll('#section-clients .cli-vt-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.view === CLI.view);
-  });
-
+  cliRenderFilter();
   const rows = cliSortedFiltered();
 
-  // Empty AFTER filter
+  // Empty AFTER search/filter: say why, and offer the way back.
   if (rows.length === 0) {
+    const why = CLI.search ? `match “${escapeHtml(CLI.search)}”` : 'in this view';
     wrap.innerHTML = `
       <div class="cli-empty">
-        <h3>No clients match “${escapeHtml(CLI.search)}”</h3>
+        <h3>No clients ${why}</h3>
+        <button class="btn btn-sm" type="button" onclick="cliShowAll()">Show all clients</button>
       </div>`;
     return;
   }
 
-  wrap.innerHTML = CLI.view === 'cards' ? cliRenderCards(rows) : cliRenderTable(rows);
+  wrap.innerHTML = cliRenderTable(rows);
 }
 
-function cliRenderToolbarMeta() {
-  const meta = document.getElementById('cliToolbarMeta');
-  if (!meta) return;
-  const total    = CLI.joined.length;
-  const ssaCount = CLI.joined.filter(r => r.ssa).length;
-  meta.textContent = `${total} client${total === 1 ? '' : 's'} · ${ssaCount} on SSA`;
+/** Filter chips with counts. A chip with nothing in it is left out unless it is the one selected. */
+function cliRenderFilter() {
+  const el = document.getElementById('cliFilter');
+  if (!el) return;
+  el.innerHTML = CLI_FILTERS.map(([key, label, test]) => {
+    const n = CLI.joined.filter(test).length;
+    if (!n && key !== CLI.filter) return '';
+    const on = key === CLI.filter;
+    return `<button type="button" class="cli-fbtn${on ? ' active' : ''}" aria-pressed="${on}" onclick="cliSetFilter('${key}')">${label} <span class="cli-fn">${n}</span></button>`;
+  }).join('');
 }
 
 
@@ -14443,11 +14378,11 @@ function cliRenderTable(rows) {
           <tr>
             ${head('name',    'Client')}
             ${head('status',  'Status', 'col-status')}
-            <th class="col-contact">Primary Contact</th>
+            <th class="col-contact">Contact</th>
             <th class="col-contact">Email</th>
-            ${head('hours',   'Hours Remaining', 'num')}
-            ${head('revenue', 'Monthly Revenue', 'num col-revenue')}
-            <th style="text-align:right">Actions</th>
+            ${head('hours',   'SSA hours left', 'num')}
+            ${head('revenue', 'Monthly sell', 'num col-revenue')}
+            <th style="text-align:right"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>${body}</tbody>
@@ -14461,9 +14396,11 @@ function cliRenderTableRow(r) {
   const stLabel  = cliStatusLabel(status);
   const hp       = r.ssa?.hoursRemaining;
   const hpCls    = cliHoursClass(hp);
-  const hpHtml   = hpCls
-    ? `<span class="cli-hp ${hpCls}">${cliFmtHours(hp)}</span>`
-    : `<span class="cli-hp-none">No SSA</span>`;
+  const hpHtml   = r.ssa?.archived
+    ? '<span class="cli-hp-none">SSA archived</span>'
+    : hpCls
+      ? `<span class="cli-hp ${hpCls}">${cliFmtHours(hp)}</span>`
+      : '<span class="cli-hp-none">No SSA</span>';
   const contactRaw = r.ssa?.primaryContact || '';
   const contactHtml = contactRaw
     ? `<span class="cli-contact-name">${escapeHtml(contactRaw)}</span>`
@@ -14476,7 +14413,7 @@ function cliRenderTableRow(r) {
   const inGecko  = !!r.gecko;
 
   return `
-    <tr data-key="${escapeHtml(r.key)}">
+    <tr data-key="${escapeHtml(r.key)}" data-name="${escapeHtml(r.name)}">
       <td>
         <div class="cli-name-cell">
           <div class="cli-cav">${escapeHtml(cliInitials(r.name))}</div>
@@ -14492,90 +14429,19 @@ function cliRenderTableRow(r) {
       <td class="num col-revenue ${revenue === '—' ? 'muted' : ''}">${revenue}</td>
       <td class="actions">
         ${inGecko ? `
-          <button class="cli-iconbtn" type="button" title="View in Profitability" onclick="cliJumpToProfitability('${r.gecko.id}')">
+          <button class="cli-iconbtn" type="button" title="View in Profitability" aria-label="View ${escapeHtml(r.name)} in Profitability" onclick="cliJumpToProfitability('${r.gecko.id}')">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>
           </button>
-          <button class="cli-iconbtn" type="button" title="Edit client" onclick="cliOpenClientModal('${r.gecko.id}')">
+          <button class="cli-iconbtn" type="button" title="Edit client" aria-label="Edit ${escapeHtml(r.name)}" onclick="cliOpenClientModal('${r.gecko.id}')">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
-          <button class="cli-iconbtn danger" type="button" title="Delete client" onclick="cliConfirmDeleteClient('${r.gecko.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
-          </button>
         ` : `
-          <button class="cli-iconbtn" type="button" title="Add to profitability (creates a GeckoClients row)" onclick="cliOpenClientModalFromName('${jsAttr(r.name)}')">
+          <button class="cli-iconbtn" type="button" title="Add to Profitability" aria-label="Add ${escapeHtml(r.name)} to Profitability" onclick="cliOpenClientModalFromName('${jsAttr(r.name)}')">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         `}
       </td>
     </tr>`;
-}
-
-
-// ─── Rendering — card view ────────────────────────────────────────────
-function cliRenderCards(rows) {
-  return `<div class="cli-grid">${rows.map(cliRenderCard).join('')}</div>`;
-}
-
-function cliRenderCard(r) {
-  const status  = r.gecko?.status || 'Active';
-  const stCls   = cliStatusClass(status);
-  const stLabel = cliStatusLabel(status);
-  const hp      = r.ssa?.hoursRemaining;
-  const hpCls   = cliHoursClass(hp);
-  const hpHtml  = hpCls
-    ? `<span class="cli-hp ${hpCls}">${cliFmtHours(hp)}</span>`
-    : `<span class="cli-hp-none">No SSA</span>`;
-  const contact = r.ssa?.primaryContact || '—';
-  const emailRaw = r.ssa?.email || '';
-  const emailHtml = emailRaw
-    ? `<a href="mailto:${escapeHtml(emailRaw)}">${escapeHtml(emailRaw)}</a>`
-    : '—';
-  const revenue = r.monthlyRevenue > 0 ? cliFmt(r.monthlyRevenue) : '—';
-  const inGecko = !!r.gecko;
-
-  return `
-    <div class="cli-card" data-key="${escapeHtml(r.key)}">
-      <div class="cli-card-head">
-        <div class="cli-cav">${escapeHtml(cliInitials(r.name))}</div>
-        <div class="cli-name" title="Open ${escapeHtml(r.name)}">${clientLink(r.name)}</div>
-        ${inGecko ? `<span class="cli-st ${stCls}">${stLabel}</span>` : ''}
-      </div>
-      <div class="cli-card-rows">
-        <div class="cli-card-row">
-          <span class="cli-rl">Contact</span>
-          <span class="cli-rv ${contact === '—' ? 'muted' : ''}">${contact === '—' ? '—' : escapeHtml(contact)}</span>
-        </div>
-        <div class="cli-card-row">
-          <span class="cli-rl">Email</span>
-          <span class="cli-rv ${emailRaw ? '' : 'muted'}">${emailHtml}</span>
-        </div>
-        <div class="cli-card-row">
-          <span class="cli-rl">Hours Remaining</span>
-          <span class="cli-rv">${hpHtml}</span>
-        </div>
-        <div class="cli-card-row">
-          <span class="cli-rl">Monthly Revenue</span>
-          <span class="cli-rv num ${revenue === '—' ? 'muted' : ''}">${revenue}</span>
-        </div>
-      </div>
-      <div class="cli-card-actions">
-        ${inGecko ? `
-          <button class="cli-iconbtn" type="button" title="View in Profitability" onclick="cliJumpToProfitability('${r.gecko.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>
-          </button>
-          <button class="cli-iconbtn" type="button" title="Edit client" onclick="cliOpenClientModal('${r.gecko.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          </button>
-          <button class="cli-iconbtn danger" type="button" title="Delete client" onclick="cliConfirmDeleteClient('${r.gecko.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"/></svg>
-          </button>
-        ` : `
-          <button class="cli-iconbtn" type="button" title="Add to profitability" onclick="cliOpenClientModalFromName('${jsAttr(r.name)}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
-        `}
-      </div>
-    </div>`;
 }
 
 
@@ -14589,6 +14455,18 @@ function cliOnSearch(value) {
   }, 150);
 }
 
+function cliSetFilter(key) {
+  CLI.filter = key;
+  cliRenderAll();
+}
+function cliShowAll() {
+  CLI.filter = 'all';
+  CLI.search = '';
+  const input = document.getElementById('cliSrchInput');
+  if (input) input.value = '';
+  cliRenderAll();
+}
+
 function cliSetSort(key) {
   if (CLI.sortBy === key) {
     CLI.sortDir = CLI.sortDir === 'asc' ? 'desc' : 'asc';
@@ -14599,12 +14477,6 @@ function cliSetSort(key) {
   cliRenderAll();
 }
 
-function cliSetView(view) {
-  if (view !== 'table' && view !== 'cards') return;
-  if (CLI.view === view) return;
-  CLI.view = view;
-  cliRenderAll();
-}
 
 
 // ─── Cross-link to Profitability ──────────────────────────────────────
@@ -14660,7 +14532,7 @@ function cliOpenClientModal(id = null) {
       <label>Status</label>
       <select id="cliClStatus">
         <option value="Active"${client.status === 'Active' ? ' selected' : ''}>Active</option>
-        <option value="Winding"${client.status === 'Winding' ? ' selected' : ''}>Winding Down</option>
+        <option value="Winding"${client.status === 'Winding' ? ' selected' : ''}>Winding down</option>
         <option value="New"${client.status === 'New' ? ' selected' : ''}>New</option>
       </select>
     </div>
@@ -14673,6 +14545,7 @@ function cliOpenClientModal(id = null) {
       <textarea id="cliClNotes" rows="3">${escapeHtml(client.notes || '')}</textarea>
     </div>
     <div class="cli-mm-actions">
+      ${isEdit ? `<button class="btn btn-danger cli-mm-delete" type="button" onclick="cliConfirmDeleteClient('${id}')">Delete client</button>` : ''}
       <button class="btn btn-ghost" type="button" onclick="cliCloseModal()">Cancel</button>
       <button class="btn btn-primary" type="button" onclick="cliSaveClient(${isEdit ? `'${id}'` : 'null'})">${isEdit ? 'Save' : 'Add client'}</button>
     </div>`;
@@ -14803,57 +14676,15 @@ async function cliDoDeleteClient(id) {
 
 
 // ─── Init ─────────────────────────────────────────────────────────────
-/**
- * One-off, Philip only, while SharePoint is still live for clients: copy
- * GeckoClients and GeckoServices into the database, read them back and
- * compare every field, with monthly cost and sell totals side by side.
- * SharePoint is only read. (The SSA `Clients` list is not part of this.)
- */
-async function cliCopyToSupabase() {
-  if (dataBackend('clients') === 'supabase' || !levIsPhilip()) return;
-  if (!confirm('Copy all clients and service lines from SharePoint into the Gecko database?\n\n'
-    + 'This replaces what the database holds for clients and services. SharePoint is not changed.')) return;
-  const btn = document.getElementById('cliCopy');
-  const out = document.getElementById('cliCopyResult');
-  const show = (text, state) => { if (out) { out.textContent = text; out.dataset.state = state || ''; } };
-  if (btn) btn.disabled = true;
-  show('Copying…');
-  try {
-    // Connect first, while this is still the click (a later popup is blocked).
-    await geckoStore().connect({ interactive: true });
-    await cliResolveListIds();
-    const cItems = await spFetchAllItems(CLI.listIds.geckoClients, 500);
-    const sItems = await spFetchAllItems(CLI.listIds.services);
-    const c = await geckoStore().copyFromSharePoint('gecko_clients', cItems, spDateToLocalDateKey);
-    const sv = await geckoStore().copyFromSharePoint('gecko_services', sItems, spDateToLocalDateKey);
-    const money = n => '£' + Number(n).toFixed(2);
-    const summary = `Clients: SharePoint ${c.spCount}, database ${c.dbCount}. `
-      + `Service lines: SharePoint ${sv.spCount}, database ${sv.dbCount}, `
-      + `cost/month ${money(sv.totals.cost_per_month[0])} / ${money(sv.totals.cost_per_month[1])}, `
-      + `sell/month ${money(sv.totals.sell_per_month[0])} / ${money(sv.totals.sell_per_month[1])}.`;
-    const problems = [...c.mismatches.map(m => ['client', m]), ...sv.mismatches.map(m => ['service', m])];
-    if (!problems.length) {
-      show(summary + ' Every field matches.', 'ok');
-      toast('Clients and services copied and checked', 'success');
-    } else {
-      show(`${summary} Not matching (${problems.length}): `
-        + problems.slice(0, 6).map(([kind, m]) => `${kind} ${m.sharepointId} ${m.problem}`.trim()).join('; '), 'bad');
-      toast('Copy finished but does not match', 'error', 7000);
-    }
-  } catch (err) {
-    console.error('Clients copy failed:', err);
-    show('Copy failed: ' + (err.message || err), 'bad');
-    toast('Copy failed: ' + (err.message || err), 'error', 7000);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
 async function initClients() {
   if (CLI.initialised) return;
   CLI.initialised = true;
-  const copy = document.getElementById('cliCopy');
-  if (copy) copy.hidden = !(levIsPhilip() && dataBackend('clients') === 'sharepoint');
+  // The whole row opens the client page; links and buttons in it keep their own job.
+  document.getElementById('cliWrap')?.addEventListener('click', e => {
+    if (e.target.closest('a, button')) return;
+    const tr = e.target.closest('tr[data-name]');
+    if (tr) openClient(tr.dataset.name);
+  });
 
   // Modal: close on ESC (only when this section's modal is open)
   document.addEventListener('keydown', e => {
