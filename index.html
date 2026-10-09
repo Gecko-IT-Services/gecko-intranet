@@ -16001,9 +16001,8 @@ function tshRenderCard() {
   }).join('');
   el.innerHTML = `
     <div class="tsh-card-head tsh-tc-head">
-      <button type="button" class="tsh-wk-arrow" data-tc-step="-1" aria-label="Previous week">‹</button>
       <h3>${escapeHtml(label)}</h3><span>${escapeHtml(W.weekLabel(w.start))}</span>
-      <button type="button" class="tsh-wk-arrow" data-tc-step="1" aria-label="Next week" ${w.isCurrent || w.isFuture ? 'disabled' : ''}>›</button>
+      <span class="tsh-tc-nav"><button type="button" class="tsh-wk-arrow" data-tc-step="-1" aria-label="Previous week">‹</button><button type="button" class="tsh-wk-arrow" data-tc-step="1" aria-label="Next week" ${w.isCurrent || w.isFuture ? 'disabled' : ''}>›</button></span>
       <span class="tsh-tc-hint">${TSH.leaveError ? `Days off not shown: ${escapeHtml(TSH.leaveError)}` : 'Pick a day to log time against it'}</span>
     </div>
     <div class="tsh-tc" role="group" aria-label="Hours logged, ${escapeHtml(label.toLowerCase())}">

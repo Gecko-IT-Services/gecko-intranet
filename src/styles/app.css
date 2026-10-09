@@ -282,7 +282,8 @@
 #section-timesheets .tsh-tc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 #section-timesheets .tsh-tc-head h3 { margin: 0; }
 #section-timesheets .tsh-tc-head > span { font: 500 12px var(--font-mono); color: var(--muted); }
-#section-timesheets .tsh-tc-head .tsh-tc-hint { margin-left: auto; font: 400 12px var(--font-body); }
+#section-timesheets .tsh-tc-head .tsh-tc-hint { flex-basis: 100%; order: 3; font: 400 12px var(--font-body); }
+#section-timesheets .tsh-tc-nav { margin-left: auto; display: inline-flex; gap: 6px; }
 #section-timesheets .tsh-tc { display: grid; gap: 6px; }
 #section-timesheets .tsh-tc-row { display: grid; grid-template-columns: 64px repeat(7, minmax(0, 1fr)) 64px; gap: 6px; align-items: stretch; }
 #section-timesheets .tsh-tc-row.head span { font: 600 10px/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: center; }
@@ -293,7 +294,8 @@
 #section-timesheets .tsh-tc-who { align-self: center; font-size: 13px; font-weight: 700; color: var(--who); }
 #section-timesheets .tsh-tc-tot { align-self: center; text-align: right; font: 500 15px var(--font-mono); color: var(--white); }
 #section-timesheets .tsh-tc-c {
-  position: relative; height: 54px; min-height: 0 !important; padding: 0; overflow: hidden; cursor: pointer;
+  position: relative; height: 54px; min-height: 0 !important; padding: 7px 0 0; overflow: hidden; cursor: pointer;
+  display: flex; align-items: flex-start; justify-content: center;
   border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--card);
   transition: border-color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
 }
@@ -314,9 +316,8 @@
 @keyframes tsh-tc-fill { from { transform: scaleY(0); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { #section-timesheets .tsh-tc-c i { animation: none; } }
 @media (max-width: 640px) {
-  #section-timesheets .tsh-tc-head .tsh-tc-hint { flex-basis: 100%; margin-left: 0; }
   #section-timesheets .tsh-tc-row { grid-template-columns: 44px repeat(7, minmax(0, 1fr)) 40px; gap: 3px; }
-  #section-timesheets .tsh-tc-c { height: 44px; }
+  #section-timesheets .tsh-tc-c { height: 44px; padding-top: 5px; }
   #section-timesheets .tsh-tc-c b { font-size: 10px; letter-spacing: -.02em; }
   #section-timesheets .tsh-tc-c:not(.off) b:not(.s) { display: none; }
   #section-timesheets .tsh-tc-c b.s { display: inline; }
