@@ -49,6 +49,11 @@ rather than by rewriting every template.
 12. **Copy diet** (Jack: "clear and concise … without being bombarded"): no taglines, no text that
     explains the page, restates a heading, names the data source or repeats what a button says.
     Sublines stay only when they carry a fact. Errors, money/safety notes and draft-only warnings stay.
+13. **Phone** (Jack logs time on an iPhone 17, 402pt): `system.css` §8. Under 640px the band drops its
+    h1 (the top bar names the page), dialogs are bottom sheets with sticky actions, inputs are 16px (no
+    iOS zoom) and date inputs fit. Timesheets › Log time: shortcut rows swipe instead of wrapping,
+    engineer + work type share a row, Log time sticks above the thumb. Recent entries are compact rows
+    (client · hours / work / date · who · type · edit, delete) instead of a card per field.
 
 ## Non-goals
 - No new layout, features or IA changes; the Overview "today" tiles keep their words-not-numbers role.

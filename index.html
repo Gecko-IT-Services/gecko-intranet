@@ -3188,6 +3188,7 @@ body {
 }
 #section-timesheets .tsh-modal p { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
 #section-timesheets .tsh-form-grp { margin-bottom: 14px; }
+#section-timesheets .tsh-form-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 #section-timesheets .tsh-form-grp label {
   display: block; font-size: 10px; color: var(--muted);
   text-transform: uppercase; letter-spacing: .07em;
@@ -6979,9 +6980,9 @@ body::before {
 
       <!-- Tab strip -->
       <div class="tsh-tabs" role="tablist">
-        <button class="tsh-tab active" data-tab="log"   onclick="tshTab('log')"   type="button" role="tab">Log Time</button>
-        <button class="tsh-tab"        data-tab="ssa"   onclick="tshTab('ssa')"   type="button" role="tab">SSA Dashboard</button>
-        <button class="tsh-tab"        data-tab="week"  onclick="tshTab('week')"  type="button" role="tab">Weekly Summary</button>
+        <button class="tsh-tab active" data-tab="log"   onclick="tshTab('log')"   type="button" role="tab">Log time</button>
+        <button class="tsh-tab"        data-tab="ssa"   onclick="tshTab('ssa')"   type="button" role="tab">SSA dashboard</button>
+        <button class="tsh-tab"        data-tab="week"  onclick="tshTab('week')"  type="button" role="tab">Weekly summary</button>
       </div>
 
       <!-- ═══ LOG TIME TAB ═══ -->
@@ -7029,7 +7030,7 @@ body::before {
               </div>
             </div>
             <div class="tsh-field">
-              <label for="tshWorkType">Work Type</label>
+              <label for="tshWorkType">Work type</label>
               <select class="tsh-select" id="tshWorkType" required>
                 <option value="Remote Support">Remote Support</option>
                 <option value="Onsite Support">Onsite Support</option>
@@ -7045,7 +7046,7 @@ body::before {
               <datalist id="tshDescList"></datalist>
             </div>
             <div class="tsh-field full" id="tshNotesWrap" style="display:none;">
-              <label for="tshNotes">Detailed Notes</label>
+              <label for="tshNotes">Detailed notes</label>
               <textarea class="tsh-textarea" id="tshNotes" placeholder="Optional longer description, follow-up actions…"></textarea>
             </div>
             <div class="tsh-field full" style="margin-top:-8px;">
@@ -7074,8 +7075,8 @@ body::before {
             <button class="tsh-chip" data-filter="System" onclick="tshFilterEng('System',this)" type="button">System</button>
             <span class="tsh-filter-sep"></span>
             <span class="tsh-filter-label">Period:</span>
-            <button class="tsh-chip" data-range="week" onclick="tshFilterRange('week',this)" type="button">This Week</button>
-            <button class="tsh-chip active" data-range="month" onclick="tshFilterRange('month',this)" type="button">This Month</button>
+            <button class="tsh-chip" data-range="week" onclick="tshFilterRange('week',this)" type="button">This week</button>
+            <button class="tsh-chip active" data-range="month" onclick="tshFilterRange('month',this)" type="button">This month</button>
             <button class="tsh-chip" data-range="all" onclick="tshFilterRange('all',this)" type="button">All</button>
           </div>
           <div id="tshLogWrap"><!-- rendered by tshRenderLog() --></div>
@@ -17194,10 +17195,6 @@ function tshOpenEditModal(entryId) {
 
   const body = `
     <div class="tsh-form-grp">
-      <label>Client</label>
-      <input type="text" value="${escapeHtml(e.clientName)}" disabled style="opacity:.6">
-    </div>
-    <div class="tsh-form-grp">
       <label>Engineer</label>
       <select id="tshEditEng">
         <option value="Philip" ${e.engineer === 'Philip' ? 'selected' : ''}>Philip</option>
@@ -17205,21 +17202,23 @@ function tshOpenEditModal(entryId) {
         <option value="System" ${e.engineer === 'System' ? 'selected' : ''}>System</option>
       </select>
     </div>
-    <div class="tsh-form-grp">
-      <label>Date</label>
-      <input type="date" id="tshEditDate" value="${e.date}">
+    <div class="tsh-form-row">
+      <div class="tsh-form-grp">
+        <label>Date</label>
+        <input type="date" id="tshEditDate" value="${e.date}">
+      </div>
+      <div class="tsh-form-grp">
+        <label>Hours</label>
+        <input type="number" inputmode="decimal" id="tshEditHours" step="0.25" min="0.25" value="${e.hours}">
+      </div>
     </div>
     <div class="tsh-form-grp">
-      <label>Hours</label>
-      <input type="number" id="tshEditHours" step="0.25" min="0.25" value="${e.hours}">
-    </div>
-    <div class="tsh-form-grp">
-      <label>Work Type</label>
+      <label>Work type</label>
       <select id="tshEditWorkType">${wtOpts}</select>
     </div>
     <div class="tsh-form-grp">
       <label>Description</label>
-      <input type="text" id="tshEditDesc" value="${escapeHtml(editDescription)}">
+      <textarea id="tshEditDesc" rows="3" maxlength="250">${escapeHtml(editDescription)}</textarea>
     </div>
     <div class="tsh-form-grp">
       <label>Detailed notes</label>
@@ -17229,7 +17228,7 @@ function tshOpenEditModal(entryId) {
       <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">Cancel</button>
       <button class="btn btn-primary" type="button" onclick="tshSaveEdit('${entryId}', ${e.hours})">Save changes</button>
     </div>`;
-  tshOpenModal('Edit entry', body);
+  tshOpenModal(e.clientName || 'Edit entry', body);
 }
 
 async function tshSaveEdit(entryId, oldHours) {
