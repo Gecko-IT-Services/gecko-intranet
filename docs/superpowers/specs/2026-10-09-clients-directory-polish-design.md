@@ -25,4 +25,4 @@ to Edit, a finished one-off "Copy to Supabase" button, Title Case labels, and no
 ## Not changed
 - Balances, revenue and the join are untouched; "Monthly sell" is the same service-line sum as
   before (not Xero).
-- Filter and sort are not remembered between visits; add if asked.
+- Filter and sort are remembered per browser (`gecko.clients.view` in localStorage); the search is not.

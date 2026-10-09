@@ -14455,16 +14455,31 @@ function cliOnSearch(value) {
   }, 150);
 }
 
+// Filter and sort are remembered in this browser (not the search).
+const CLI_VIEW_KEY = 'gecko.clients.view';
+function cliViewChanged() {
+  try { localStorage.setItem(CLI_VIEW_KEY, JSON.stringify({ filter: CLI.filter, sortBy: CLI.sortBy, sortDir: CLI.sortDir })); } catch {}
+  cliRenderAll();
+}
+function cliRestoreView() {
+  let v = null;
+  try { v = JSON.parse(localStorage.getItem(CLI_VIEW_KEY)); } catch {}
+  if (!v) return;
+  if (CLI_FILTERS.some(f => f[0] === v.filter)) CLI.filter = v.filter;
+  if (['name', 'status', 'hours', 'revenue'].includes(v.sortBy)) CLI.sortBy = v.sortBy;
+  if (v.sortDir === 'asc' || v.sortDir === 'desc') CLI.sortDir = v.sortDir;
+}
+
 function cliSetFilter(key) {
   CLI.filter = key;
-  cliRenderAll();
+  cliViewChanged();
 }
 function cliShowAll() {
   CLI.filter = 'all';
   CLI.search = '';
   const input = document.getElementById('cliSrchInput');
   if (input) input.value = '';
-  cliRenderAll();
+  cliViewChanged();
 }
 
 function cliSetSort(key) {
@@ -14474,7 +14489,7 @@ function cliSetSort(key) {
     CLI.sortBy  = key;
     CLI.sortDir = 'asc';
   }
-  cliRenderAll();
+  cliViewChanged();
 }
 
 
@@ -14679,6 +14694,7 @@ async function cliDoDeleteClient(id) {
 async function initClients() {
   if (CLI.initialised) return;
   CLI.initialised = true;
+  cliRestoreView();
   // The whole row opens the client page; links and buttons in it keep their own job.
   document.getElementById('cliWrap')?.addEventListener('click', e => {
     if (e.target.closest('a, button')) return;
