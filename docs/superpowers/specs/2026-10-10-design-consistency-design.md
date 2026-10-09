@@ -54,6 +54,12 @@ rather than by rewriting every template.
     iOS zoom) and date inputs fit. Timesheets › Log time: shortcut rows swipe instead of wrapping,
     engineer + work type share a row, Log time sticks above the thumb. Recent entries are compact rows
     (client · hours / work / date · who · type · edit, delete) instead of a card per field.
+    Rest of the app (same day): Clients, Mileage, Leave and Alerts get the same compact rows (the
+    secondary columns — email, rate, requested/approved/created, last alert — drop on a phone); figure
+    strips go two across with an odd last figure spanning; Overview's Open buttons become a chevron
+    at the row's end; Jobs' stage totals swipe; Profitability hides CSV drag-and-drop, export and
+    expand-all; the client page keeps its h1 (the client's name); inline client links are exempt from
+    the 44px touch floor. Page heights at 402px: Mileage 26k → 10k px, Clients 10k → 4k, Leave 9k → 4k.
 
 ## Non-goals
 - No new layout, features or IA changes; the Overview "today" tiles keep their words-not-numbers role.
