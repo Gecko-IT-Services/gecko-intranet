@@ -280,7 +280,7 @@
 #section-jobs .js-client { flex: 1; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #section-jobs .js-owner { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 800;
   color: var(--who); background: color-mix(in srgb, var(--who) 14%, transparent); }
-#section-jobs .js-title { font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--white); }
+#section-jobs .js-title { font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--white); overflow-wrap: anywhere; }
 #section-jobs .js-next { font-size: 12px; line-height: 1.35; color: var(--muted); }
 #section-jobs .js-next::before { content: '→ '; color: var(--green); font-weight: 700; }
 #section-jobs .js-foot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }

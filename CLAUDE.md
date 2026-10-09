@@ -150,7 +150,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 
 ## Jobs (from 8 Oct 2026)
 - `src/sections/jobs.js` + `src/core/jobs.js` (tests `tests/jobs.mjs`); design note
-  `2026-10-08-jobs-design.md`. One-off client work with a value, Quoted → Agreed → In progress →
+  `2026-10-08-jobs-design.md`; opens on a **whiteboard** (9 Oct, `2026-10-09-jobs-whiteboard-design.md`: Ideas from
+  Opportunities + stage columns of stickies, drag or arrow to move, drop an idea to make the job). One-off client work with a value, Quoted → Agreed → In progress →
   To invoice → Invoiced (or Lost), in Supabase `jobs`. Invoiced jobs are kept (the record); the Invoiced view
   groups them Awaiting payment / Not matched / Paid (last 90 days, older on request).
   Tabs at the top (Jobs, Month overview, Still to come, Invoiced in <month>, Owed to us, Xero);
