@@ -33,6 +33,7 @@ import * as timesheets from './core/timesheets.js';
 import * as timelog from './core/timelog.js';
 import * as ssa from './core/ssa.js';
 import * as weekly from './core/weekly.js';
+import * as teamCore from './core/team.js';
 
 window.GeckoSections = window.GeckoSections || {};
 window.GeckoSections.projects = { init: projects.init };
@@ -48,6 +49,8 @@ window.GeckoMonitor = { backups: backups.snapshot, alerts: alerts.snapshot };
 window.GeckoClientMatch = sameClient;
 // The shared tab strip (the shell's hub strip uses it too).
 window.GeckoTabs = tabs;
+// Leave (classic script) draws the same holiday tokens, presence and planner bars as Team › Overview.
+window.GeckoTeam = teamCore;
 
 // Pure logic used by the Profitability section, which still lives in
 // index.html's classic script and therefore cannot import modules itself.
