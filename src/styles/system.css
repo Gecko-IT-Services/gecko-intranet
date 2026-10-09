@@ -273,18 +273,15 @@
   #app #section-timesheets .tsh-form > .tsh-field:has(#tshEngineer) { grid-column: 1; order: 1; }
   #app #section-timesheets .tsh-form > .tsh-field:has(#tshWorkType) { grid-column: 2; order: 1; }
   #app #section-timesheets .tsh-form > .tsh-field:has(#tshWorkType) ~ * { order: 2; }
-  #app #section-timesheets .tsh-quick-l { display: none; }
   #app #section-timesheets .tsh-ssa-hint:empty { display: none; }
   #app #section-timesheets .tsh-form-foot { display: none; }
-  /* Recent clients and the date/time shortcuts: one swipeable row each, never a wall of pills. */
-  #app #section-timesheets :is(.tsh-quick, .tsh-presets) {
+  /* The time shortcuts: one swipeable row, never a wall of pills. */
+  #app #section-timesheets .tsh-presets {
     flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px;
     scroll-padding-inline: 16px;
   }
-  #app #section-timesheets :is(.tsh-quick, .tsh-presets)::-webkit-scrollbar { display: none; }
-  #app #section-timesheets .tsh-quick { margin-top: 0; margin-bottom: 14px; }
-  #app #section-timesheets .tsh-quick-today { order: -1; flex: none; margin: 0 8px 0 0; }
-  #portalShell #section-timesheets :is(.tsh-preset, .tsh-quick-c) {
+  #app #section-timesheets .tsh-presets::-webkit-scrollbar { display: none; }
+  #portalShell #section-timesheets .tsh-preset {
     flex: none; min-height: 40px !important; padding: 0 14px; font-size: 14px; white-space: nowrap;
   }
   /* Log time stays under the thumb while the form scrolls. */

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { parseHours, fmtHours, balancePreview, checkEntry, recentClients, clientHistory, dayTotal } from '../src/core/timelog.js';
+import { parseHours, fmtHours, balancePreview, checkEntry, clientHistory, dayTotal } from '../src/core/timelog.js';
 
 // Hours, typed the way people say them
 const h = t => parseHours(t);
@@ -68,8 +68,6 @@ r = checkEntry({ ...ok, hours: h('2') }, { today, entries, client: { hoursPurcha
 assert.match(r.warnings[0].text, /1h over their SSA hours/);
 
 // Suggestions
-assert.deepEqual(recentClients([...entries, { clientName: 'Technix', engineer: 'Jack', date: '2026-10-01', hours: 1 }], 'Jack', today), ['Technix', 'Kingdom Products']);
-assert.deepEqual(recentClients([{ clientName: 'Old', engineer: 'Jack', date: '2026-07-01' }], 'Jack', today), []);
 const hist = clientHistory([
   { id: 1, clientName: 'Technix', date: '2026-10-01', description: 'Backup check', workType: 'Maintenance' },
   { id: 2, clientName: 'Technix', date: '2026-10-05', description: 'backup check', workType: '' },
