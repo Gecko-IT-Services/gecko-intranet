@@ -348,14 +348,14 @@ function render() {
   if (kpis) kpis.innerHTML = renderKpis(BKP.error ? null : BKP.board, BKP.filter);
 
   if (BKP.loading && !BKP.board) {
-    mount.innerHTML = '<p class="bkp-empty">Loading backups…</p>';
+    mount.innerHTML = '<p class="bkp-empty art art-loading">Loading backups…</p>';
     return;
   }
   if (BKP.error === 'CONSENT') { mount.innerHTML = consentMessage(); return; }
   if (BKP.error === 'NO_ACCESS') { mount.innerHTML = noAccessMessage(); return; }
   if (BKP.error) {
     mount.innerHTML = `
-      <div class="bkp-error">
+      <div class="bkp-error art art-offline">
         <strong>Could not load backup emails.</strong>
         ${escapeHtml(BKP.error)}
         <button type="button" class="btn btn-sm" id="bkpRetry">Retry</button>
@@ -368,8 +368,8 @@ function render() {
     .map(c => renderClient(c, { filter: BKP.filter, query: BKP.query }))
     .join('');
   const empty = BKP.board.jobCount
-    ? '<p class="bkp-empty">No matches.</p>'
-    : '<p class="bkp-empty">No backup emails in this window.</p>';
+    ? '<p class="bkp-empty art art-none">No matches.</p>'
+    : '<p class="bkp-empty art art-empty">No backup emails in this window.</p>';
 
   mount.innerHTML = `
     ${BKP.capped ? `<p class="bkp-note">Newest ${SAFETY_LIMIT.toLocaleString('en-GB')} emails only. Pick a shorter window.</p>` : ''}

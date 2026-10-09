@@ -64,11 +64,11 @@ function render() {
   if (!mount) return;
   if (TM.error) {
     mount.innerHTML = TM.error.code === 'DB_SIGNIN_REQUIRED'
-      ? '<div class="tm-error"><strong>Connect to the Gecko database</strong><button type="button" class="btn btn-sm" data-tm-act="connect">Connect</button></div>'
-      : `<div class="tm-error"><strong>Could not load the team.</strong>${escapeHtml(TM.error.message || TM.error)}<button type="button" class="btn btn-sm" data-tm-act="reload">Retry</button></div>`;
+      ? '<div class="tm-error art art-offline"><strong>Connect to the Gecko database</strong><button type="button" class="btn btn-sm" data-tm-act="connect">Connect</button></div>'
+      : `<div class="tm-error art art-offline"><strong>Could not load the team.</strong>${escapeHtml(TM.error.message || TM.error)}<button type="button" class="btn btn-sm" data-tm-act="reload">Retry</button></div>`;
     return;
   }
-  if (!TM.data) { mount.innerHTML = '<p class="tm-empty">Loading…</p>'; return; }
+  if (!TM.data) { mount.innerHTML = '<p class="tm-empty art art-loading">Loading the team…</p>'; return; }
   const t = today(), ty = taxYear(t), d = TM.data;
   const pres = d.requests ? presence(d.requests, t) : null;
   const hrs = d.entries ? hours(d.entries, t) : null;

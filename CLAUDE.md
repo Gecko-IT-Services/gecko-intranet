@@ -58,6 +58,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `.btn` family (`btn-primary` ink, `btn-ghost`, `btn-danger`, `btn-success`, `btn-sm`), hairline figure
   panels, error vs empty boxes and `.badge`. New UI uses these classes; never add a bespoke button,
   pill or KPI card. Sentence case for all labels.
+  Page-level loading/empty/error states carry retro gecko art (9 Oct, `2026-10-09-retro-gecko-states-design.md`):
+  add `art art-loading|art-empty|art-none|art-offline|art-clear` to the state box; never on small inline states.
 - Mobile: tables with ≥4 columns are turned into stacked cards by a container
   query (`syncTableLabels()` marks them `data-rt`); tab strips are scroll rails.
   Anything new inside a card-mode table must be covered too (see the `tfoot`

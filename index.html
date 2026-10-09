@@ -5208,7 +5208,7 @@ body::before {
       </div>
 
       <div class="ovw-wrap" id="ovwWrap">
-        <!-- All content rendered by ovwRenderAll() on first load + after refresh. -->
+        <p class="state-empty art art-loading">Loading…</p><!-- replaced by ovwRenderAll() -->
       </div>
 
     </section>
@@ -5254,7 +5254,7 @@ body::before {
       </div>
 
       <div class="prf-wrap" id="prfWrap">
-        <!-- All content rendered by prfRenderAll() -->
+        <p class="state-empty art art-loading">Loading…</p><!-- replaced by prfRenderAll() -->
       </div>
 
       <!-- ═══ PROFITABILITY MODAL ═══ -->
@@ -5453,7 +5453,7 @@ body::before {
                   </tr>
                 </thead>
                 <tbody id="milLogBody">
-                  <tr><td colspan="10" class="mil-empty">Loading journeys…</td></tr>
+                  <tr><td colspan="10" class="mil-empty art art-loading">Loading journeys…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -5622,7 +5622,7 @@ body::before {
       </div>
 
       <div class="cli-wrap" id="cliWrap">
-        <!-- All content rendered by cliRenderAll() -->
+        <p class="state-empty art art-loading">Loading…</p><!-- replaced by cliRenderAll() -->
       </div>
 
       <!-- ═══ DIRECTORY MODAL ═══ -->
@@ -5787,7 +5787,7 @@ body::before {
 
       <div id="bkpBoard">
         <!-- Rendered by src/sections/backups.js. Shown if that module never loads. -->
-        <p class="bkp-empty">Loading backup status…</p>
+        <p class="bkp-empty art art-loading">Loading backup status…</p>
       </div>
 
     </section>
@@ -5831,7 +5831,7 @@ body::before {
       </div>
 
       <div id="alrBoard">
-        <p class="bkp-empty">Loading alerts…</p>
+        <p class="bkp-empty art art-loading">Loading alerts…</p>
       </div>
 
     </section>
@@ -6712,11 +6712,11 @@ async function clientListDelete(table, siteId, listId, id) {
  */
 function sectionErrorHtml(err, retryFn, cls) {
   if (err?.code === 'DB_SIGNIN_REQUIRED') {
-    return `<div class="${cls}"><h3>Connect to the Gecko database</h3>
+    return `<div class="${cls} art art-offline"><h3>Connect to the Gecko database</h3>
       <p>This section now lives in the database. Connect once with your Microsoft account.<br>
       <button type="button" class="btn btn-sm btn-primary" onclick="dbConnectThen('${retryFn}')">Connect</button></p></div>`;
   }
-  return `<div class="${cls}"><h3>Could not load data</h3>
+  return `<div class="${cls} art art-offline"><h3>Could not load data</h3>
     <p>${escapeHtml(err?.message || 'Unknown error')}</p>
     <button type="button" class="btn btn-sm" onclick="${retryFn}()">Try again</button></div>`;
 }
@@ -8031,7 +8031,7 @@ function ovwAttentionHtml(core, today) {
         <div><strong>${escapeHtml(i.title)}</strong>${detail ? `<p>${detail}</p>` : ''}</div>
         <button type="button" ${go} aria-label="${escapeHtml('Open: ' + i.title)}">Open →</button></li>`; }).join('')}</ul>`
       : missing.length ? `<div class="ovw-clear">Nothing found in what was checked.</div>`
-      : `<div class="ovw-clear"><b>✓</b> Nothing needs you right now.</div>`}
+      : `<div class="ovw-clear art art-clear">Nothing needs you right now.</div>`}
     ${missing.length ? `<p class="ovw-warn-line">Not checked: ${escapeHtml(missing.join(', '))}.</p>` : ''}
   </div>`;
 }
@@ -8438,14 +8438,14 @@ async function ovwRefreshData(silent = false) {
     const wrap = document.getElementById('ovwWrap');
     if (wrap && err.code === 'DB_SIGNIN_REQUIRED') {
       wrap.innerHTML = `
-        <div class="ovw-error">
+        <div class="ovw-error art art-offline">
           <h3>Connect to the Gecko database</h3>
           <p>Overview now reads the database. Connect once with your Microsoft account.<br>
           <button type="button" class="btn btn-sm btn-primary" onclick="ovwConnect()">Connect</button></p>
         </div>`;
     } else if (wrap) {
       wrap.innerHTML = `
-        <div class="ovw-error">
+        <div class="ovw-error art art-offline">
           <h3>Could not load data</h3>
           <p>${escapeHtml(err.message || 'Unknown error')}</p>
           <button type="button" class="btn btn-sm" onclick="ovwRefreshData()">Try again</button>
@@ -8819,7 +8819,7 @@ function prfRenderAll() {
   const wrap = document.getElementById('prfWrap');
   if (!wrap) return;
   if (PRF.clients.length === 0) {
-    wrap.innerHTML = `<div class="state-empty"><h3>No clients yet</h3>
+    wrap.innerHTML = `<div class="state-empty art art-empty"><h3>No clients yet</h3>
       <p>Add them in the Directory.</p>
       <button class="btn btn-sm" type="button" onclick="navTo('clients')">Open the Directory</button></div>`;
     return;
@@ -11265,8 +11265,7 @@ function milRenderLog() {
   if (sorted.length === 0) {
     body.innerHTML = `
       <tr><td colspan="10">
-        <div class="mil-empty">
-          <div class="e-ic"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+        <div class="mil-empty art ${filterParts.length ? 'art-none' : 'art-empty'}">
           <div>${filterParts.length ? 'No journeys match.' : 'No journeys yet.'}</div>
         </div>
       </td></tr>`;
@@ -12609,7 +12608,7 @@ function cliRenderAll() {
   if (CLI.joined.length === 0) {
     if (toolbar) toolbar.style.display = 'none';
     wrap.innerHTML = `
-      <div class="cli-empty">
+      <div class="cli-empty art art-empty">
         <h3>No clients yet</h3>
       </div>`;
     return;
@@ -12625,7 +12624,7 @@ function cliRenderAll() {
   if (rows.length === 0) {
     const why = CLI.search ? `match “${escapeHtml(CLI.search)}”` : 'in this view';
     wrap.innerHTML = `
-      <div class="cli-empty">
+      <div class="cli-empty art art-none">
         <h3>No clients ${why}</h3>
         <button class="btn btn-sm" type="button" onclick="cliShowAll()">Show all clients</button>
       </div>`;
@@ -14233,7 +14232,7 @@ function tshRenderSsa() {
     </details>` : '';
 
   if (!board.rows.length) {
-    wrap.innerHTML = tshSyncHtml() + '<div class="tsh-empty"><h3>No SSA clients</h3></div>' + archivedHtml;
+    wrap.innerHTML = tshSyncHtml() + '<div class="tsh-empty art art-empty"><h3>No SSA clients</h3></div>' + archivedHtml;
     return;
   }
   const attention = board.rows.filter(r => ['over', 'renew', 'low'].includes(r.status)).length;
@@ -15917,7 +15916,7 @@ function levRenderCalendar() {
   const label = document.getElementById('levMonthLabel');
   if (label) label.textContent = LEV.selectedTaxYear;
   const T = window.GeckoTeam;
-  if (!T) { wrap.innerHTML = '<div class="lev-empty">Loading…</div>'; return; }
+  if (!T) { wrap.innerHTML = '<div class="lev-empty art art-loading">Loading leave…</div>'; return; }
   const y = Number(LEV.selectedTaxYear.slice(0, 4));
   const yb = levTaxYearBounds(LEV.selectedTaxYear);
   const reqs = levTeamRequests();
@@ -16044,10 +16043,10 @@ function levRenderError(err) {
   const kpis = document.getElementById('levKpis');
   if (!kpis) return;
   if (err?.code === 'DB_SIGNIN_REQUIRED') {
-    kpis.innerHTML = `<div class="lev-card" style="grid-column:1/-1"><div class="lev-empty">Connect to the database to load leave. <button type="button" class="lev-refresh" onclick="levConnect()">Connect</button></div></div>`;
+    kpis.innerHTML = `<div class="lev-card" style="grid-column:1/-1"><div class="lev-empty art art-offline">Connect to the database to load leave. <button type="button" class="lev-refresh" onclick="levConnect()">Connect</button></div></div>`;
     return;
   }
-  kpis.innerHTML = `<div class="state-error" style="grid-column:1/-1"><strong>Leave could not load</strong><span>${escapeHtml(err.message || err)}</span></div>`;
+  kpis.innerHTML = `<div class="state-error art art-offline" style="grid-column:1/-1"><strong>Leave could not load</strong><span>${escapeHtml(err.message || err)}</span></div>`;
 }
 
 /** The click behind levRenderError's Connect button (may open a Microsoft popup). */

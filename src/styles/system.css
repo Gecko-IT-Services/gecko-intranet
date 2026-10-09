@@ -114,6 +114,7 @@
   gap: 1px; background: var(--hair); border: 1px solid var(--border-dim);
   border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
 }
+#app .job-kpis:empty { display: none; }
 #app :is(.job-kpi, .opp-kpi, .bkp-kpi, .ovw-stat, .prf-sum-s, .pnl-kpi, .cl-kpi, .kpi) {
   background: var(--card); border: 0; border-radius: 0; box-shadow: none; padding: 14px 16px 16px;
 }
@@ -149,6 +150,22 @@
   padding: 28px 22px; border: 1px solid var(--border-dim); border-radius: var(--radius);
   background: var(--card); color: var(--muted); text-align: center;
 }
+
+
+/* Retro gecko art on page-level states (Jack, 9 Oct; src/assets/retro, 240px).
+   art-loading: first load · art-empty: nothing yet · art-none: no matches · art-offline: could not load
+   (the red error box stays) · art-clear: nothing needs you. Small inline states get none. */
+#app .art::before {
+  content: ''; display: block; width: 112px; height: 112px; margin: 0 auto 10px;
+  background: center / contain no-repeat;
+}
+#app .art-loading::before { background-image: url(../assets/retro/loading.png); animation: art-hop 1.2s steps(2, jump-none) infinite alternate; }
+#app .art-empty::before   { background-image: url(../assets/retro/empty.png); }
+#app .art-none::before    { background-image: url(../assets/retro/no-results.png); }
+#app .art-offline::before { background-image: url(../assets/retro/offline.png); }
+#app .art-clear::before   { background-image: url(../assets/retro/all-clear.png); width: 84px; height: 84px; }
+@keyframes art-hop { to { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { #app .art-loading::before { animation: none; } }
 
 
 /* ── 5 · Lists: no coloured side stripes ────────────────────────────── */
