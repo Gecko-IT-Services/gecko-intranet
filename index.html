@@ -8943,26 +8943,68 @@ function ovwAttentionHtml(core, today) {
   </div>`;
 }
 
+/**
+ * This week as a strip of the wall planner (same language as Team, Leave and Timesheets): Mon–Sun columns,
+ * a lane each for Philip and Jack (hours logged that day, or Off from Leave), then jobs due and the
+ * repeating invoices Xero raises, on their days. Names stay in the short lists underneath.
+ */
 function ovwWeekHtml(core, today) {
   const db = OVW.db || { errors: {} };
   const w = core.thisWeek({ leave: db.leave || [], jobs: db.jobs || [], inv: db.inv, rep: db.rep, entries: OVW.tshEntries }, today);
   const range = core.shortRange(w.start, w.end);
-  const away = !db.leave ? `<p class="none">${escapeHtml(db.errors.leave ? 'Leave didn’t load.' : 'Loading…')}</p>`
-    : w.away.length ? `<ul>${w.away.map(l => `<li class="${l.now ? 'now' : ''}"><span>${escapeHtml(l.person)}${l.status === 'Pending' ? ' (pending)' : ''}${l.type && l.type !== 'Annual Leave' ? ` · ${escapeHtml(l.type)}` : ''}</span><span>${l.now ? 'off now · back after ' + escapeHtml(core.shortRange(l.end)) : escapeHtml(core.shortRange(l.start, l.end))}</span></li>`).join('')}</ul>`
-    : '<p class="none">Everyone in for the next two weeks.</p>';
-  const jobsDue = !db.jobs ? '' : `<div><h4>Jobs due</h4>${w.jobsDue.length
-    ? `<ul>${w.jobsDue.map(j => { const late = String(j.target_date).slice(0, 10) < today; return `<li class="${late ? 'late' : ''}"><span>${escapeHtml(j.client_name)}: ${escapeHtml(j.title)}</span><span>${late ? 'late · ' : ''}${escapeHtml(core.shortRange(j.target_date))}</span></li>`; }).join('')}</ul>`
-    : '<p class="none">No job targets this week.</p>'}</div>`;
-  const out = w.goingOut ? `<div><h4>Repeating invoices, next 7 days</h4>${w.goingOut.count
-    ? `<ul>${w.goingOut.list.slice(0, 4).map(r => `<li><span>${escapeHtml(r.name)}</span><span>${escapeHtml(core.shortRange(r.date))} · ${escapeHtml(ovwWhole(r.amount))}</span></li>`).join('')}${w.goingOut.count > 4 ? `<li><span>+ ${w.goingOut.count - 4} more</span><span>${escapeHtml(ovwWhole(w.goingOut.value))} in all</span></li>` : ''}</ul>`
-    : '<p class="none">None due.</p>'}</div>` : '';
-  const max = Math.max(1, ...Object.values(w.hours.byEng));
-  const hours = `<div><h4>Hours logged · ${escapeHtml(ovwHours(w.hours.total))}</h4>${OVW.tshLoaded
-    ? `<div class="ovw-hours">${['Philip', 'Jack'].map(e => { const h = w.hours.byEng[e] || 0; return `<div><span>${e}</span><i style="width:${(h / max * 100).toFixed(1)}%"></i><em>${escapeHtml(ovwHours(h))}</em></div>`; }).join('')}</div>`
-    : '<p class="none">Timesheets didn’t load.</p>'}</div>`;
+  const T = window.GeckoTeam;
+  const days = Array.from({ length: 7 }, (_, i) => T ? T.addDays(w.start, i) : w.start);
+  const dow = k => new Date(k + 'T00:00:00').getDay();
+  const we = k => dow(k) === 0 || dow(k) === 6;
+  const k1 = v => (v >= 1000 ? '£' + (Math.round(v / 100) / 10) + 'k' : '£' + Math.round(v));
+  const off = db.leave && T ? T.bars(db.leave, w.start, w.end) : [];
+  const cell = (k, cls, inner, title) => `<span class="ovw-pc${we(k) ? ' we' : ''}${k === today ? ' today' : ''}${k > today ? ' future' : ''}${cls ? ' ' + cls : ''}"${title ? ` title="${escapeHtml(title)}"` : ''}>${inner}</span>`;
+
+  const people = ['Philip', 'Jack'].map(p => {
+    const byDay = Object.fromEntries(days.map(k => [k, 0]));
+    for (const e of OVW.tshEntries || []) if (e.engineer === p && byDay[e.date] !== undefined) byDay[e.date] = Math.round((byDay[e.date] + (Number(e.hours) || 0)) * 100) / 100;
+    const cells = days.map(k => {
+      const lv = off.find(b => b.person === p && b.from <= k && b.to >= k);
+      const h = byDay[k];
+      if (h) return cell(k, '', `<i style="height:${(Math.min(1, h / 7) * 100).toFixed(1)}%"></i><b>${escapeHtml(String(h))}</b>`, `${p} · ${ovwHours(h)} logged${lv ? ' · off' : ''}`);
+      if (lv) return cell(k, lv.status === 'Pending' ? 'off pending' : 'off', '<b>Off</b>', `${p} off${lv.note ? ' · ' + lv.note : ''}${lv.status === 'Pending' ? ' (requested)' : ''}`);
+      return cell(k, !we(k) && k < today && OVW.tshLoaded ? 'gap' : '', '', '');
+    }).join('');
+    return `<div class="ovw-pr lp-${p.toLowerCase()}"><span class="ovw-pw">${p}</span>${cells}<span class="ovw-pt">${OVW.tshLoaded ? escapeHtml(ovwHours(w.hours.byEng[p] || 0)) : '—'}</span></div>`;
+  }).join('');
+
+  const jobsLane = !db.jobs || !w.jobsDue.length ? '' : (() => {
+    const on = k => w.jobsDue.filter(j => { const d = String(j.target_date).slice(0, 10); return k === (d < w.start ? (today >= w.start && today <= w.end ? today : w.start) : d); });
+    return `<div class="ovw-pr ovw-pr-jobs"><span class="ovw-pw">Jobs</span>${days.map(k => { const js = on(k); const late = js.some(j => String(j.target_date).slice(0, 10) < today);
+      return cell(k, js.length ? (late ? 'mark late' : 'mark') : '', js.length ? `<b>${js.length}</b>` : '', js.map(j => `${j.client_name}: ${j.title}`).join('\n')); }).join('')}<span class="ovw-pt">${w.jobsDue.length || ''}</span></div>`;
+  })();
+  const invLane = !w.goingOut || !w.goingOut.list.some(r => r.date <= w.end) ? '' : (() => {
+    const on = k => w.goingOut.list.filter(r => r.date === k);
+    const inWeek = w.goingOut.list.filter(r => r.date <= w.end);
+    return `<div class="ovw-pr ovw-pr-inv"><span class="ovw-pw">Invoices</span>${days.map(k => { const rs = on(k); const v = rs.reduce((a, r) => a + r.amount, 0);
+      return cell(k, rs.length ? 'mark' : '', rs.length ? `<b>${escapeHtml(k1(v))}</b>` : '', rs.map(r => `${r.name} · ${ovwWhole(r.amount)}`).join('\n')); }).join('')}<span class="ovw-pt">${inWeek.length ? escapeHtml(k1(inWeek.reduce((a, r) => a + r.amount, 0))) : ''}</span></div>`;
+  })();
+
+  const head = `<div class="ovw-pr ovw-ph" aria-hidden="true"><span></span>${days.map(k => `<span class="${k === today ? 'today' : ''}${we(k) ? ' we' : ''}">${escapeHtml(new Date(k + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'narrow' }))}<em>${Number(k.slice(8))}</em></span>`).join('')}<span></span></div>`;
+  const later = (db.leave ? w.away.filter(l => String(l.start).slice(0, 10) > w.end) : []);
+  const none = [db.jobs && !jobsLane ? 'jobs due' : '', w.goingOut && !invLane ? 'repeating invoices' : ''].filter(Boolean);
+  const nextInv = w.goingOut ? w.goingOut.list.filter(r => r.date > w.end) : [];
+  const notes = [
+    !db.leave ? (db.errors.leave ? `Leave didn’t load: ${db.errors.leave}` : '') : later.length ? `Next: ${later.map(l => `${l.person} off ${core.shortRange(l.start, l.end)}${l.status === 'Pending' ? ' (requested)' : ''}`).join(', ')}` : '',
+    !OVW.tshLoaded ? 'Timesheets didn’t load.' : '',
+    none.length ? `No ${none.join(' or ')} this week.` : '',
+    nextInv.length ? `${nextInv.length} repeating invoice${nextInv.length === 1 ? '' : 's'} early next week · ${ovwWhole(nextInv.reduce((a, r) => a + r.amount, 0))}` : ''
+  ].filter(Boolean);
+  const jobsList = db.jobs && w.jobsDue.length ? `<ul>${w.jobsDue.map(j => { const late = String(j.target_date).slice(0, 10) < today; return `<li class="${late ? 'late' : ''}"><span>${escapeHtml(j.client_name)}: ${escapeHtml(j.title)}</span><span>${late ? 'late · ' : ''}${escapeHtml(core.shortRange(j.target_date))}</span></li>`; }).join('')}</ul>` : '';
+  const invList = w.goingOut && w.goingOut.count ? `<ul>${w.goingOut.list.slice(0, 4).map(r => `<li><span>${escapeHtml(r.name)}</span><span>${escapeHtml(core.shortRange(r.date))} · ${escapeHtml(ovwWhole(r.amount))}</span></li>`).join('')}${w.goingOut.count > 4 ? `<li><span>+ ${w.goingOut.count - 4} more</span><span>${escapeHtml(ovwWhole(w.goingOut.value))} in all</span></li>` : ''}</ul>` : '';
   return `<div class="ovw-card">
     <div class="ovw-card-head"><h3>This week</h3><span class="ovw-month-tag">${escapeHtml(range)}</span></div>
-    <div class="ovw-week"><div><h4>Away</h4>${away}</div>${jobsDue}${out}${hours}</div>
+    <div class="ovw-week">
+      <div class="ovw-plan" role="group" aria-label="This week: hours, days off, jobs and invoices by day">${head}${people}${jobsLane}${invLane}</div>
+      ${notes.length ? `<p class="ovw-plan-note">${notes.map(escapeHtml).join('<br>')}</p>` : ''}
+      ${jobsList ? `<div><h4>Jobs due</h4>${jobsList}</div>` : ''}
+      ${invList ? `<div><h4>Repeating invoices, next 7 days</h4>${invList}</div>` : ''}
+    </div>
   </div>`;
 }
 
@@ -9132,7 +9174,7 @@ function ovwReviewHtml(w) {
   const hrs = v => (Number(v) || 0).toFixed(2).replace(/\.?0+$/, '') + 'h';
   const max = Math.max(1, ...Object.values(w.hours).flatMap(x => [x.week, x.last]));
   const hoursCard = `<div class="ovw-card ovw-rv"><div class="ovw-card-head"><h3>Hours logged</h3></div><div class="ovw-rv-body">
-      ${Object.entries(w.hours).map(([p, x]) => `<div class="ovw-rv-hours"><span>${escapeHtml(p)}</span>
+      ${Object.entries(w.hours).map(([p, x]) => `<div class="ovw-rv-hours lp-${escapeHtml(p.toLowerCase())}"><span>${escapeHtml(p)}</span>
         <div class="bars"><i class="now" style="width:${(x.week / max * 100).toFixed(1)}%"></i><i class="prev" style="width:${(x.last / max * 100).toFixed(1)}%"></i></div>
         <strong>${escapeHtml(hrs(x.week))}</strong>${cmp(x.week, x.last, hrs)}</div>`).join('')}
       <p class="ovw-rv-legend"><b class="now"></b>this week <b class="prev"></b>last week</p></div></div>`;

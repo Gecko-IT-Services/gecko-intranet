@@ -59,3 +59,12 @@ Leave requests. The Team strip fits too, numbering Mondays only.
 - Person colours in Timesheets now match Team, Leave and Mileage: Philip blue, Jack purple (they were
   green and blue in Weekly summary and the entry pills).
 - On a phone the card's cells show decimal hours ("1.5"); full text is in each cell's label.
+
+## Overview, the same way (9 Oct)
+- Today › **This week** is a strip of the planner: Mon–Sun, a lane each for Philip and Jack (hours logged that
+  day filling the cell, or "Off" from Leave, weekdays already past with nothing logged outlined), then
+  **Jobs** (count on the target day; late ones on today, red) and **Invoices** (repeating invoices on the day
+  Xero raises them, £). A lane with nothing this week is left out and the note says so. Lane totals on the
+  right replace the hours bars; "Next: Jack off 16–18 Oct" carries leave beyond Sunday; the named lists of
+  jobs due and repeating invoices stay underneath.
+- This week (review tab): hours bars in each person's colour.
