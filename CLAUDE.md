@@ -107,7 +107,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   or the Power App are brought in on Refresh. Design: `2026-10-08-timesheets-on-supabase-design.md`.
   Switched 8 Oct 2026 (copy: 22 clients, 1143 entries, 162.75 h, every balance matched). The feed is moving to the
   `profit_feed` table (`CONFIG.DATA_BACKEND.feed`; see `2026-10-08-feed-on-supabase-design.md`).
-  P&L is not moving; Projects is replaced by Jobs. The Compliance page was removed 9 Oct (its GeckoCompliance list stays in SharePoint and in Settings › Backup).
+  Projects is replaced by Jobs. The Compliance and P&L pages were removed 9 Oct (their GeckoCompliance and GeckoPnLReports lists stay in SharePoint and in Settings › Backup).
 - Access is `public.staff` (philip@, jack@) via `is_gecko_staff()`; every table has RLS
   and a policy (`tests/supabase-migration.mjs` enforces it). Only the publishable key
   is in the site. Sign-in is the Microsoft ID token (`src/core/supabase.js`).
