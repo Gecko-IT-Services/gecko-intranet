@@ -270,3 +270,19 @@ console.log('opportunities: ok');
   assert.deepEqual(cols.map(c => [c.key, c.items.map(o => o.id)]), [['idea', [2, 1]], ['proposed', [3]], ['won', [4]], ['lost', [6]]]);
   console.log('opportunities: pipeline ok');
 }
+
+// Gaps map cells
+{
+  const { mapCell } = await import('../src/core/opportunities.js');
+  assert.equal(mapCell({ gap: { strength: 2 }, deal: { status: 'proposed' } }), 'deal', 'a deal beats the gap');
+  assert.equal(mapCell({ deal: { status: 'won' } }), 'won');
+  assert.equal(mapCell({ gap: { strength: 2 }, deal: { status: 'lost' } }), 'strong', 'a lost deal leaves the gap showing');
+  assert.equal(mapCell({ has: true }), 'has');
+  assert.equal(mapCell({ status: 'has' }), 'has');
+  assert.equal(mapCell({ status: 'not_interested', gap: { strength: 1 } }), 'no');
+  assert.equal(mapCell({ status: 'not_applicable' }), '');
+  assert.equal(mapCell({ gap: { strength: 1 } }), 'some');
+  assert.equal(mapCell({ gap: { strength: 0 } }), 'maybe');
+  assert.equal(mapCell({}), '');
+  console.log('opportunities: map ok');
+}

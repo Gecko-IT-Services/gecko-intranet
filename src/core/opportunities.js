@@ -502,3 +502,18 @@ export function boardColumns(opps, today, days = 90) {
     { key: 'lost', items: opps.filter(o => o.status === 'lost' && recent(o)).sort(byValue) }
   ];
 }
+
+/**
+ * One cell of the Gaps map (client × product), the whitespace grid you would draw on a whiteboard:
+ * 'won' / 'deal' (in the pipeline), 'has' (buys it, or marked so), 'no' (not interested),
+ * 'strong' / 'some' / 'maybe' (a gap: evidence from rule and timesheets, one of them, none), or ''.
+ */
+export function mapCell({ gap = null, deal = null, status = '', has = false } = {}) {
+  if (deal && deal.status === 'won') return 'won';
+  if (deal && (deal.status === 'idea' || deal.status === 'proposed')) return 'deal';
+  if (has || status === 'has') return 'has';
+  if (status === 'not_interested') return 'no';
+  if (status && status !== 'none') return '';
+  if (gap) return gap.strength >= 2 ? 'strong' : gap.strength === 1 ? 'some' : 'maybe';
+  return '';
+}

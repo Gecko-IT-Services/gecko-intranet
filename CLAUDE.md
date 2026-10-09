@@ -113,7 +113,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - `src/sections/opportunities.js` + `src/core/opportunities.js`; design note
   `2026-10-08-opportunities-design.md`. Goal (Philip): grow monthly recurring revenue and never
   miss an opportunity. Gecko is a VoIP Unlimited partner (VoxOne, FTTP, SOGEA, Ethernet).
-- Gaps come from what a client buys (service lines, feed), public email/website checks
+- Gaps (Clients list or a clients × products **Map**, `mapCell`; `2026-10-09-opportunities-whiteboard-design.md`) come from what a client buys (service lines, feed), public email/website checks
   (Cloudflare DoH, Google PageSpeed, no keys) and six months of timesheet descriptions.
   The catalogue (rules, patterns, prices, email text) is data in `opportunity_products`,
   edited on the Products tab. "Draft email" only ever creates an Outlook draft. Emails quote the
@@ -132,7 +132,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Activity has When / How long / Which way. `src/core/profile.js`. Design `2026-10-10-client-details-design.md`.
 - Client page › **+ Opportunity** (9 Oct): add one from the catalogue (quantity × client price) or typed by hand;
   `newOpportunity()` in `src/core/opportunities.js`. Design `2026-10-09-client-new-opportunity-design.md`.
-- Pipeline (9 Oct): follow-up dates, quiet-deal flag (14 days), List/Board views, Won → **Create job** (one-off part, once per
+- Pipeline (9 Oct): follow-up dates, quiet-deal flag (14 days), Board (a whiteboard of stickies, drag between stages; default) / List, Won → **Create job** (one-off part, once per
   deal via `jobs.source_ref = 'opp:<id>'`) and **Mark done** for monthly billing; due follow-ups and won deals to set up show on
   Overview › Today. `dealState`/`jobFromDeal`/`boardColumns`. Design `2026-10-09-sharper-pipeline-design.md`.
 - Opportunities › **Prospects** (9 Oct): new business that isn't a client yet (`prospects`: source, interest, stage New →
