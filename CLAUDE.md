@@ -45,7 +45,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   states. Existing CSS tokens only (`--card`, `--border-dim`, `--green`, `--amber`,
   `--red`, `--muted`, `--radius`; fonts Schibsted Grotesk / JetBrains Mono); section
   CSS scoped under `#section-<key>`. `ponytail:` comments mark accepted ceilings.
-- Sidebar (Philip, 9 Oct, 8 entries): Home (Overview) · Sales (Clients, Opportunities, Jobs) · Operations
+- Sidebar (Philip, 9 Oct, 8 entries; Analytics added under Home 10 Oct, so 9): Home (Overview, Analytics) · Sales (Clients, Opportunities, Jobs) · Operations
   (Timesheets, Monitoring) · Admin (Team, Settings). **Hubs** group sections under one entry with the
   shared tab strip: Clients = Directory + Profitability + Licences + client page; Monitoring = Backups + Alerts;
   Team = Overview (`src/sections/team.js`: who's in, holiday left as day tokens, next four weeks, hours, mileage to claim)
@@ -215,6 +215,16 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Design `2026-10-09-weekly-summary-design.md`.
 - Phase 4 (8 Oct): the SSA renewal box offers **Create draft in Xero** (same function, `source: 'ssa'`,
   n × SSA at £650, account 214, reference Renewal); drafts for that client in the last 45 days are listed.
+
+## Analytics (from 10 Oct 2026)
+- `src/sections/analytics.js` + `src/core/analytics.js` (tests `tests/analytics.mjs`), `src/styles/analytics.css`; design note
+  `2026-10-10-analytics-design.md`. Read only, four tabs, each card one question: **Revenue** (why recurring revenue changed
+  as a sum that must add up, each month with still-to-come, who it rides on), **Clients** (kept per hour worked, worst first),
+  **Time** (26-week logging heatmap, support vs planned work), **Ahead** (SSA run-out wedges, whitespace per product).
+- No new data: Revenue reads Xero the way Jobs does (`xeroHistory` / `xeroMonthSales`), money per client follows
+  Profitability's rules (`monthMoney` mirrors the classic script: change both together), SSA is `ssaBoard` re-drawn, whitespace
+  is `whitespace()` exported from `sections/opportunities.js`. `TARGET_RATE` (£65/h, Philip to confirm) and `DEPENDENCE` (15%)
+  are constants in `core/analytics.js`. Charts are hand-drawn SVG re-drawn at the container width; no chart library.
 
 ## Overview (rebuilt 8 Oct 2026; Today/Business tabs 9 Oct)
 - Tabs: **Today** · **This week** (weekly review vs last week) · **Month-end** (self-ticking close checklist;

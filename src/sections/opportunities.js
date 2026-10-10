@@ -1162,6 +1162,29 @@ export function reload() {
   if (OPP.started && !OPP.loading) load();
 }
 
+/**
+ * Analytics › Ahead: the gaps map as data, every client × product cell with mapCell's state and its
+ * monthly value. Loads this section's data when it hasn't been opened yet (a second load if one is
+ * already running is harmless, just wasteful).
+ */
+export async function whitespace() {
+  if (!OPP.clients.length) await load();
+  if (OPP.error) throw OPP.error;
+  const products = OPP.products.filter(p => p.active);
+  return {
+    products: products.map(p => ({ key: p.key, name: p.name.replace(/\s*\(.*\)$/, '') })),
+    clients: OPP.clients.map(c => {
+      const { client } = analyse(c);
+      const gaps = new Map(clientGaps(client, OPP.products, OPP.statuses[c.name] || {}).map(g => [g.product.key, g]));
+      const deals = OPP.opps.filter(o => o.client_name === c.name && o.status !== 'lost');
+      return { name: c.name, mrr: c.mrr, cells: Object.fromEntries(products.map(p => {
+        const deal = deals.find(o => o.product_key === p.key), gap = gaps.get(p.key);
+        return [p.key, { state: mapCell({ gap, deal, status: (OPP.statuses[c.name] || {})[p.key] || '', has: holds(client, p).has }), mrr: deal ? deal.mrr : gap?.mrr ?? null }];
+      })) };
+    })
+  };
+}
+
 export function init() {
   OPP.started = true;
   try {
