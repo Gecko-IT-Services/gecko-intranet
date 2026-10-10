@@ -9,7 +9,7 @@
    `exact` (case as typed: "Teams" the product, not "teams"; "AV", not the "av" in a sentence).
    Besides its own names a vendor owns the plain word for what Gecko sells of it (Jack, 10 Oct 2026):
    a backup is Acronis, antivirus is Webroot, a password manager is Keeper, SEO is Rank Math, email
-   filtering is Hornetsecurity. Telephony is left alone: it is VoxOne for some clients and VoIP Exchange for others. */
+   filtering is Hornetsecurity, VoIP is VoxOne. */
 
 export const VENDORS = [
   { key: 'microsoft', label: 'Microsoft', file: 'microsoft.svg',
@@ -18,7 +18,7 @@ export const VENDORS = [
   { key: 'google', label: 'Google', file: 'google.svg',
     words: /google|\bg ?suite\b|\bgmail\b|\bchromebooks?\b/i },
   { key: 'voxone', label: 'VoxOne', file: 'voxone.png',
-    words: /\bvox ?one\b/i },
+    words: /\bvox ?one\b|\bvoip\b/i },
   { key: 'hornetsecurity', label: 'Hornetsecurity', file: 'hornetsecurity.png',
     words: /\bhornet ?(security)?\b|\btotal protection\b|\b(e-?mail|spam) ?(security|filter(ing|s)?)\b/i },
   { key: 'acronis', label: 'Acronis', file: 'acronis.svg',
@@ -33,9 +33,10 @@ export const VENDORS = [
     exact: /\bSEO\b/ },
 ];
 
-/* Phrases that hold a vendor's word and are not that vendor's: VoIP Exchange is VoIP Unlimited's
-   platform, not Microsoft Exchange. Blanked out before matching. */
-const NOT_A_VENDOR = /\bvoip exchange\b/gi;
+/* Phrases that hold a vendor's word and are not that vendor's: VoIP Exchange is VoIP Unlimited's older
+   platform (not Microsoft Exchange, and not VoxOne), and VoIP Unlimited is the supplier, whose customers
+   may only have a line from it. Blanked out before matching. */
+const NOT_A_VENDOR = /\bvoip (exchange|unlimited)\b/gi;
 
 /* One name rarely belongs to more than three; past that the logos stop helping. */
 const MOST = 3;

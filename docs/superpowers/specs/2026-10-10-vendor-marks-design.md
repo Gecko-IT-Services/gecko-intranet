@@ -42,13 +42,15 @@ opportunity titles are free text, so the words would have to be read anyway.
 
 ## The matcher, second pass (Jack, same day: "improve the matching logic")
 - **The plain word for what Gecko sells counts**, following the backup and antivirus rule: a password manager
-  is Keeper, SEO is Rank Math, email or spam filtering / email security is Hornetsecurity. Telephony is left
-  alone: "VoIP" is VoxOne for some clients and VoIP Exchange for others, so only "VoxOne" gets the mark.
+  is Keeper, SEO is Rank Math, email or spam filtering / email security is Hornetsecurity, and VoIP is VoxOne
+  (Jack confirmed after seeing it left out). "VoIP Exchange" (the older platform) and "VoIP Unlimited" (the
+  supplier) are not VoxOne.
 - **More of Microsoft's names**: Azure, Intune, Entra, Business Basic / Standard / Premium, any Windows, and
   as properly written Teams, Outlook, Exchange, Defender, Copilot. Google: Gmail, G Suite, Chromebook.
 - **Two kinds of word per vendor**: `words` in any case, and `exact` for words that are only safe as they are
   properly written ("Teams" the product, "AV", "SEO"; "IS" only before + & /).
-- **False friends are blanked out first** (`NOT_A_VENDOR`): "VoIP Exchange" is not Microsoft Exchange.
+- **False friends are blanked out first** (`NOT_A_VENDOR`): "VoIP Exchange" is neither Microsoft Exchange nor
+  VoxOne; "VoIP Unlimited" is not VoxOne.
 - **An opportunity's title is "Product — Client"**; only the product part is read (`productPart`), so a
   client called Google Street Garage does not get a Google mark.
 - **Three marks at most** on one name.
