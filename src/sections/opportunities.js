@@ -958,8 +958,10 @@ function dealerHtml() {
       <div class="opp-form-actions"><button type="button" class="btn btn-sm btn-danger" data-opp-act="deldealer" data-id="${d.id}">Remove</button><button type="submit" class="btn btn-sm">Save</button></div>
     </form>`;
   const c = OPP.commission;
-  const commission = c ? `Dealer commission <strong>${escapeHtml(money(c.net))}</strong>, invoiced ${escapeHtml(new Date(c.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }))}`
-    : 'Dealer commission: not in Xero yet';
+  // Fixed commission per line (the account manager's list) beside what Xero actually invoiced; the gap is call usage.
+  const fixed = OPP.dealer.reduce((t, d) => t + (Number(d.commission) || 0), 0);
+  const commission = (c ? `Dealer commission <strong>${escapeHtml(money(c.net))}</strong>, invoiced ${escapeHtml(new Date(c.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }))}`
+    : 'Dealer commission: not in Xero yet') + (fixed ? ` · fixed commission on the list below <strong>${escapeHtml(money(fixed))}</strong>/month` : '');
   return `<p class="opp-note">${commission}${due ? ` · <strong>${due}</strong> out of contract or ending within 90 days` : ''}.</p>
     <form class="opp-dealer-row opp-dealer-add" data-opp-dealer="new">
       <strong class="opp-dealer-client">Add a dealer service</strong>

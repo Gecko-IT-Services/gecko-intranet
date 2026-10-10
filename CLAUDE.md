@@ -47,7 +47,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   CSS scoped under `#section-<key>`. `ponytail:` comments mark accepted ceilings.
 - Sidebar (Philip, 9 Oct, 8 entries): Home (Overview) · Sales (Clients, Opportunities, Jobs) · Operations
   (Timesheets, Monitoring) · Admin (Team, Settings). **Hubs** group sections under one entry with the
-  shared tab strip: Clients = Directory + Profitability + client page; Monitoring = Backups + Alerts;
+  shared tab strip: Clients = Directory + Profitability + Licences + client page; Monitoring = Backups + Alerts;
   Team = Overview (`src/sections/team.js`: who's in, holiday left as day tokens, next four weeks, hours, mileage to claim)
   + Leave (tax-year wall planner, click two days to book; `2026-10-09-team-wall-planner-design.md`) + Mileage (`HUBS`/`renderHub` in index.html). Older tab strips get the shared look via `geckoInkify()`. Every section uses the same tabs
   (`src/core/tabs.js`, `.app-tabs` in `src/styles/app.css`). Any client name → `clientLink(name)` →
@@ -87,6 +87,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - The manual CSP cost import (CSV → m365 service lines) was removed 9 Oct; TD SYNNEX
   invoices only come in through the feed. Git history has it if ever needed.
 - Months the feed does not cover fall back to the typed service lines.
+- Clients › **Licences** (10 Oct, `2026-10-10-licence-check-design.md`): Microsoft 365, TD SYNNEX invoice (feed `cspInvoices`)
+  vs Xero lines with item code M365 in the same month, per client; seats × rate per product once the feed carries
+  `customers[].skus` (optional; must add up to the customer's cost or `validateFeed` refuses the feed), totals per client until
+  then. Read only, reports differences without pricing advice. `src/core/licences.js`, tests `tests/licences.mjs`.
 - The page (9 Oct, `2026-10-09-simpler-profitability-design.md`): one status line, one line of figures, one
   table with **Needs a look** first (losing money, margin under 40%, Xero £1+ under the lines, not billed in a
   finished month: `src/core/profitability.js`, tests `tests/profitability.mjs`); a row opens its service lines.
@@ -155,9 +159,17 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
   contact "Voip Unlimited" (shown as one line at the top of the VoIP Unlimited tab, never as a client's revenue).
   Dealer services live in `voip_dealer_services` (Opportunities › VoIP Unlimited tab). A dealer
-  customer is never offered VoxOne or connectivity; instead out-of-contract/expiring lines raise
+  customer is never offered VoxOne, nor connectivity they already have there (Philip, 11 Oct: those without it are offered it via the dealer route); instead out-of-contract/expiring lines raise
   a renewal, VoIP Exchange seats raise a VoxOne migration (£4/seat commission), and dealer
   customers who aren't IT clients appear as prospects for IT support.
+- Dealer list refreshed 11 Oct from the account manager's commission sheet (`2026-10-11-dealer-list-design.md`): one row per
+  service with fixed commission (£613.50/month); Cowan and MSA are VoxOne (no migration); call recording = priority VoxOne
+  upgrade (Waterside, Freeston); PSTN lines raise a renewal (switch-off due 31 Jan 2027).
+
+## Ask Gecko HQ (built and removed 11 Oct 2026)
+- A Claude-powered question box (Edge Function `ask`) was built, then removed the same day at Philip's request: the
+  Anthropic API is paid per question and he wants no running cost. Don't re-add without asking. Design note and git
+  history (`2026-10-11-ask-gecko-hq-design.md`) have it.
 
 ## Jobs (from 8 Oct 2026)
 - `src/sections/jobs.js` + `src/core/jobs.js` (tests `tests/jobs.mjs`); design note

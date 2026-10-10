@@ -226,6 +226,32 @@ assert.equal(evaluate(base, prospect, { now: NOW }), null, 'existing IT clients 
 
 console.log('opportunities: ok');
 
+// Dealer list from VoIP Unlimited (11 Oct): call recording = priority upgrade; PSTN lines raise a renewal.
+{
+  const freeston = { ...base, tickets: [], dealer: [{ service: 'voip_exchange', quantity: 12, contract: 'out_of_contract', extras: '12 x maintenance, 1 x call recording', notes: '' }] };
+  const f = evaluate(freeston, ve, { now: NOW });
+  assert.match(f.reasons[0], /^Priority/, 'call recording puts the reason first');
+  assert.ok(f.findings.some(x => /call-recording service/.test(x)), 'and tells the client in their words');
+  assert.ok(!evaluate(cowan, ve, { now: NOW }).reasons.some(x => /^Priority/.test(x)), 'no call recording, no priority');
+  const brazier = { ...base, tickets: [], dealer: [{ service: 'voxone', quantity: 1, contract: 'out_of_contract' }, { service: 'pstn', quantity: 1, contract: 'unknown' }] };
+  const b = evaluate(brazier, renew, { now: NOW });
+  assert.ok(b.reasons.some(x => /1 × PSTN line: .*31 January 2027/.test(x)));
+  assert.ok(b.findings.some(x => /analogue \(PSTN\) phone line/.test(x)));
+  const nowVox = { ...base, tickets: [], dealer: [{ service: 'voxone', quantity: 13, contract: 'in_contract' }] };
+  assert.equal(evaluate(nowVox, ve, { now: NOW }), null, 'moved to VoxOne (Cowan, MSA): no migration');
+  assert.equal(evaluate(nowVox, renew, { now: NOW }), null);
+  // Philip (11 Oct): offer internet to dealer customers whose connectivity isn't with VoIP Unlimited.
+  const connP = { key: 'connectivity', rule: 'missing', keywords: 'fttp|sogea|ethernet|broadband', active: true, sort: 1 };
+  const cutler = { name: 'Cutler Home Solutions', services: [], tickets: [], dealerOnly: true, dealer: [{ service: 'voxone', quantity: 1, contract: 'unknown' }] };
+  const cg = evaluate(cutler, connP, { now: NOW });
+  assert.match(cg.reasons[0], /Buys VoxOne from VoIP Unlimited through us, but their internet isn’t with VoIP Unlimited/);
+  assert.equal(cg.strength, 1, 'ranked as a real gap, not the weak “not something they buy”');
+  const hill = { ...cutler, dealer: [...cutler.dealer, { service: 'fttp', quantity: 1, contract: 'unknown' }] };
+  assert.equal(evaluate(hill, connP, { now: NOW }), null, 'internet already through VoIP Unlimited: no offer');
+  assert.equal(evaluate({ ...base, tickets: [] }, connP, { now: NOW }).strength, 0, 'non-dealer clients unchanged');
+  console.log('opportunities dealer list: ok');
+}
+
 // New opportunity from the client page (9 Oct)
 {
   const { newOpportunity } = await import('../src/core/opportunities.js');

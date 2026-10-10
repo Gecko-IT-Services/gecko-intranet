@@ -19,6 +19,7 @@ import * as jobs from './sections/jobs.js';
 import * as overview from './sections/overview.js';
 import * as client from './sections/client.js';
 import * as team from './sections/team.js';
+import * as licences from './sections/licences.js';
 import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
 import * as icons from './core/icons.js';
@@ -41,6 +42,7 @@ window.GeckoSections.alerts   = { init: alerts.init };
 window.GeckoSections.opportunities = { init: opportunities.init, show: opportunities.show, reload: opportunities.reload };
 window.GeckoSections.jobs = { init: jobs.init, show: jobs.show };
 window.GeckoSections.team = { init: team.init };
+window.GeckoSections.licences = { init: licences.init };
 window.GeckoSections.client = { init: client.init, open: client.open, current: client.current };
 // Overview › Today reads the last day of backups and alerts through these (support@ mailbox).
 window.GeckoMonitor = { backups: backups.snapshot, alerts: alerts.snapshot };

@@ -172,3 +172,14 @@ console.log('profit-feed invoiced: ok');
 { const f = good(); f.cspInvoices = [{ invoice: '1', date: '16/09/2026', netTotal: 5, customers: [{ customer: 'X', cost: 5 }] }];
   assert.match(validateFeed(f).errors.join(), /not YYYY-MM-DD/); }
 console.log('profit-feed csp invoices: ok');
+
+// Seat detail per customer (10 Oct, licence check): optional, and must add up to the customer's cost.
+{ const f = good(); f.cspInvoices = [{ invoice: '1', date: '2026-09-16', netTotal: 25.39, customers: [{ customer: 'X', cost: 25.39,
+    skus: [{ mfpn: 'CFQ7TTC0LDPB:0001', product: 'Business Standard', seats: 3, unitCost: 8.4638, total: 25.39, commitment: 'Annual' }] }] }];
+  assert.equal(validateFeed(f).ok, true, 'seat detail accepted'); }
+{ const f = good(); f.cspInvoices = [{ invoice: '1', date: '2026-09-16', netTotal: 25.39, customers: [{ customer: 'X', cost: 25.39,
+    skus: [{ mfpn: 'CFQ7TTC0LDPB:0001', seats: 3, total: 20 }] }] }];
+  assert.match(validateFeed(f).errors.join(), /products add up to 20.00, cost says 25.39/, 'seat detail that does not add up is refused'); }
+{ const f = good(); f.cspInvoices = [{ invoice: '1', date: '2026-09-16', netTotal: 5, customers: [{ customer: 'X', cost: 5, skus: [{ mfpn: 'A', seats: 'two', total: 5 }] }] }];
+  assert.match(validateFeed(f).errors.join(), /seats "two"/); }
+console.log('profit-feed seat detail: ok');
