@@ -1,0 +1,58 @@
+/* Licences (Clients hub): src/sections/licences.js. Shared figures, badges, buttons and states come from system.css. */
+
+#section-licences .lic-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
+#section-licences .lic-kpis .kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#section-licences .lic-kpis .kpi-sub { overflow-wrap: anywhere; }
+#section-licences .lic-warn { color: var(--amber); }
+#section-licences .lic-good { color: var(--green); }
+
+#section-licences .lic-note {
+  margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--border-dim); border-radius: var(--radius);
+  background: var(--card); color: var(--muted); font-size: 13px; line-height: 1.5;
+}
+#section-licences .lic-note strong { color: var(--white); font-weight: 600; }
+
+#section-licences .lic-group { margin: 0 0 20px; }
+#section-licences .lic-group h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--white); }
+#section-licences .lic-count { font: 500 12px var(--font-mono); color: var(--muted); }
+
+#section-licences .lic-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); overflow: hidden; }
+#section-licences .lic-client + .lic-client { border-top: 1px solid var(--border-dim); }
+#section-licences .lic-row {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.3fr) repeat(3, minmax(72px, .6fr)); align-items: center; gap: 12px;
+  width: 100%; padding: 11px 14px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+#section-licences .lic-row:hover { background: var(--inset); }
+#section-licences .lic-row:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+#section-licences .lic-name { font-weight: 600; color: var(--white); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-licences .lic-badge { min-width: 0; white-space: nowrap; }
+#section-licences .lic-badge small { color: var(--muted); font-size: 11px; }
+#section-licences .lic-fig { font: 500 13px var(--font-mono); color: var(--white); text-align: right; white-space: nowrap; }
+#section-licences .lic-fig small { display: block; font-size: 10px; font-weight: 500; font-family: var(--font-body, inherit); letter-spacing: .04em; text-transform: uppercase; color: var(--faint); }
+#section-licences .lic-margin.low { color: var(--amber); }
+#section-licences .lic-margin.bad { color: var(--red); }
+
+#section-licences .lic-detail { padding: 2px 14px 14px; }
+#section-licences .lic-lines { list-style: none; margin: 0 0 8px; padding: 0; }
+#section-licences .lic-line {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 9px 12px;
+  border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset);
+}
+#section-licences .lic-line + .lic-line { margin-top: 6px; }
+#section-licences .lic-prod { font-weight: 600; color: var(--white); font-size: 13px; }
+#section-licences .lic-seats { font: 500 12px var(--font-mono); color: var(--white); }
+#section-licences .lic-seats small { color: var(--faint); font-size: 10px; }
+#section-licences .lic-cause { font-size: 11px; color: var(--muted); }
+#section-licences .lic-line p { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+#section-licences .lic-sub { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+#section-licences .lic-actions { margin-top: 10px; font-size: 13px; }
+
+@media (max-width: 640px) {
+  #section-licences .lic-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #section-licences .lic-row { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "name name name" "badge badge badge"; gap: 6px 12px; }
+  #section-licences .lic-fig { text-align: left; }
+  #section-licences .lic-name { grid-area: name; white-space: normal; }
+  #section-licences .lic-badge { grid-area: badge; }
+  #section-licences .lic-fig { font-size: 12px; }
+}

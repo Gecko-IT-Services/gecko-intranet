@@ -78,6 +78,7 @@
 <link rel="stylesheet" href="src/styles/leave.css">
 <link rel="stylesheet" href="src/styles/mileage.css">
 <link rel="stylesheet" href="src/styles/profitability.css">
+<link rel="stylesheet" href="src/styles/licences.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -4545,6 +4546,30 @@ body::before {
          — Gaps per client (what they buy, email/website checks, timesheets),
            the pipeline, and the product catalogue. Supabase-backed.
          ═══════════════════════════════════════════════════════════════ -->
+    <!-- ═══ LICENCES ═══ src/sections/licences.js: Microsoft 365, TD SYNNEX cost vs Xero billing per client. Part of the Clients hub. -->
+    <section class="section" id="section-licences">
+      <div class="section-head">
+        <h1>Microsoft <span>Licences</span></h1>
+        <div class="head-actions">
+          <div class="prf-month-sel" id="licMonthSel" hidden>
+            <button class="prf-month-btn" type="button" data-lic-month="-1" aria-label="Previous month" title="Previous month">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span class="prf-month-label" id="licMonthLabel">—</span>
+            <button class="prf-month-btn" type="button" data-lic-month="1" aria-label="Next month" title="Next month">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+          <button class="head-btn" id="licRefresh" type="button" title="Reload">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="licLastSync"></span>
+        </div>
+      </div>
+      <div id="licWrap"><p class="state-empty">Open this section to load the licence check.</p></div>
+    </section>
+
     <!-- ═══ CLIENT PAGE ═══ src/sections/client.js: one client, every section. Part of the Clients hub. -->
     <section class="section" id="section-client">
       <div class="cl-head" id="clHead"></div>
@@ -5119,6 +5144,7 @@ const CONFIG = {
 const SECTION_TITLES = {
   overview:      'OVERVIEW',
   profitability: 'CLIENTS · PROFITABILITY',
+  licences:      'CLIENTS · LICENCES',
   opportunities: 'OPPORTUNITIES',
   jobs:          'JOBS',
   mileage:       'TEAM · MILEAGE',
@@ -5697,7 +5723,7 @@ async function graphFetch(path, options = {}) {
    (.app-tabs) above them. Every old section key still works: navTo('alerts')
    opens Monitoring on its Alerts tab. Design: 2026-10-09-gecko-hq-structure-design.md */
 const HUBS = {
-  clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['client', null]] },
+  clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['licences', 'Licences'], ['client', null]] },
   monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['alerts', 'Alerts']] },
   team:       { label: 'Team',       tabs: [['team', 'Overview'], ['leave', 'Leave'], ['mileage', 'Mileage']] }
 };
