@@ -1,12 +1,12 @@
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   ANALYTICS                                                       ║
    ║                                                                   ║
-   ║   Four tabs, each card one question: Revenue (why recurring       ║
-   ║   revenue moved, each month, who it rides on), Clients (what each ║
-   ║   keeps per hour worked), Time (is every day logged, is support   ║
-   ║   crowding out projects), Ahead (SSA blocks running out, where    ║
-   ║   the next recurring pound is). Read only: every figure comes     ║
-   ║   from data another section owns. Logic: core/analytics.js.       ║
+   ║   Three tabs, each card one question: Revenue (why recurring      ║
+   ║   revenue moved, each month, who it rides on), Time (is client    ║
+   ║   time logged, is support crowding out projects), Ahead (SSA      ║
+   ║   blocks running out, where the next recurring pound is). Read    ║
+   ║   only: every figure comes from data another section owns.        ║
+   ║   Logic: core/analytics.js.                                       ║
    ║   Design: docs/superpowers/specs/2026-10-10-analytics-design.md   ║
    ║                                                                   ║
    ║   NOTE: no top-level `window` access (importable under Node).     ║
@@ -18,13 +18,11 @@ import { selectAllPages } from '../core/store.js';
 import { validateFeed } from '../core/profit-feed.js';
 import { loadAll, rowToClient, rowToEntry } from '../core/timesheets.js';
 import { ssaBoard } from '../core/ssa.js';
-import { previousMonth } from '../core/jobs.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
-import { icon } from '../core/icons.js';
 import * as A from '../core/analytics.js';
 import { whitespace as gapsSnapshot } from './opportunities.js';
 
-const TABS = [{ key: 'revenue', label: 'Revenue' }, { key: 'clients', label: 'Clients' }, { key: 'time', label: 'Time' }, { key: 'ahead', label: 'Ahead' }];
+const TABS = [{ key: 'revenue', label: 'Revenue' }, { key: 'time', label: 'Time' }, { key: 'ahead', label: 'Ahead' }];
 const AN = { tab: 'revenue', d: null, loading: false, error: null, dir: '', syncedAt: null, ws: null, wsError: '', wsLoading: false };
 
 const els = id => document.getElementById(id);
@@ -86,16 +84,12 @@ async function load() {
       d.conc = A.concentration(d.moves.shares);
     } else d.errors.xero = (invoices.e || repeating.e).message;
 
-    // Money per client: the feed and the service lines, counted the way Profitability counts them.
-    let match = null;
+    // The margin strip: the feed and the service lines, counted the way Profitability counts them.
     if (feed.v && gClients.v && gServices.v) {
       const clients = gClients.v.map(c => ({ id: String(c.id), name: c.title }));
       const services = gServices.v.map(s => ({ clientName: s.client_name, category: String(s.category || 'other').toLowerCase(), cost: Number(s.cost_per_month) || 0 }));
-      match = name => window.prfXeroMatchName(name, clients);
-      const money = m => A.monthMoney(feed.v, m, clients, services, match);
-      d.margins = (d.series || []).map(s => money(s.month));
-      const m1 = previousMonth(month), m2 = previousMonth(m1), m3 = previousMonth(m2);
-      d.quarter = [m3, m2, m1].map(money).filter(m => m.split);
+      const match = name => window.prfXeroMatchName(name, clients);
+      d.margins = (d.series || []).map(s => A.monthMoney(feed.v, s.month, clients, services, match));
     } else d.errors.money = (feed.e || gClients.e || gServices.e).message;
 
     // Time and SSA: timesheet entries (deleted ones left out) and the balances as Timesheets holds them.
@@ -106,7 +100,6 @@ async function load() {
       d.grid = A.logGrid(entries, (leave.v || []).map(r => ({ person: r.person, start: r.start_date, end: r.end_date || r.start_date, status: r.status })), { today });
       d.kinds = A.weeklyKinds(entries, { today });
       d.renewals = A.renewals(ssaBoard(ssa, entries, today).rows, today);
-      if (d.quarter?.length) d.earned = A.earnedPerHour(d.quarter, A.hoursByClient(entries, d.quarter.map(m => m.month), match));
       if (leave.e) d.errors.leave = leave.e.message;
     } else d.errors.time = ts.e.message;
 
@@ -176,7 +169,7 @@ function render() {
     return;
   }
   if (!AN.d) { mount.innerHTML = '<p class="state-empty art art-loading">Loading the numbers…</p>'; return; }
-  const pane = { revenue: revenueHtml, clients: clientsHtml, time: timeHtml, ahead: aheadHtml }[AN.tab]();
+  const pane = { revenue: revenueHtml, time: timeHtml, ahead: aheadHtml }[AN.tab]();
   mount.innerHTML = `<div class="app-pane ${AN.dir}">${pane}</div>`;
   AN.dir = '';
   drawCharts(mount);
@@ -285,34 +278,6 @@ const CHARTS = {
     return s + '</svg>';
   },
 
-  // ─── Clients ────────────────────────────────────────────────────────
-  scatter(w) {
-    const e = AN.d.earned, rows = e.rows, target = e.target;
-    const l = 46, r = 12, top = 24, bot = 36, h = Math.round(Math.min(380, Math.max(270, w * .66))), pw = w - l - r, ph = h - top - bot;
-    const X = niceMax(Math.max(1, ...rows.map(c => c.hours))), Y = niceMax(Math.max(1, ...rows.map(c => c.kept)));
-    const ymin = Math.min(0, Math.floor(Math.min(0, ...rows.map(c => c.kept)) / Y.step) * Y.step);
-    const x = v => l + v / X.max * pw, y = v => top + ph - (v - ymin) / (Y.max - ymin) * ph;
-    const xe = Math.min(X.max, Y.max / target);
-    let s = `<svg width="${w}" height="${h}" role="img" aria-label="Money kept against hours logged, per client">`;
-    for (let v = ymin; v <= Y.max; v += Y.step) s += `<line x1="${l}" x2="${w - r}" y1="${y(v)}" y2="${y(v)}" class="grid"/>` + T(l - 8, y(v) + 4, kTick(v), 'ax', 'end');
-    for (let v = 0; v <= X.max; v += X.step) s += T(x(v), top + ph + 18, v + (v === X.max ? ' h' : ''), 'ax', 'middle');
-    s += T(l, 12, 'Kept after suppliers', 'cap') + T(w - r, 12, `£${target} an hour`, 'cap', 'end') + T(w - r, h - 2, 'Hours logged', 'cap', 'end');
-    // Below the line a client pays less than the target for each hour worked.
-    s += `<polygon points="${x(0)},${y(0)} ${x(xe)},${y(xe * target)} ${x(X.max)},${y(xe * target)} ${x(X.max)},${y(ymin)} ${x(0)},${y(ymin)}" class="zone"/><line x1="${x(0)}" y1="${y(0)}" x2="${x(xe)}" y2="${y(xe * target)}" class="line-amber"/>`;
-    const named = new Set(), placed = [];
-    for (const c of rows.filter(c => c.under).sort((a, b) => b.hours - a.hours).slice(0, 3)) {
-      // A label that would sit on another is left to the table.
-      if (placed.some(p => Math.abs(p[0] - x(c.hours)) < 90 && Math.abs(p[1] - y(c.kept)) < 14)) continue;
-      placed.push([x(c.hours), y(c.kept)]); named.add(c.name);
-    }
-    [...rows].reverse().forEach(c => {
-      const px = x(c.hours), py = y(c.kept);
-      s += `<g class="pt" data-c="${escapeHtml(c.name)}" ${tip(`${gbp2(c.rate)} an hour`, c.name, `${gbp2(c.kept)} kept, ${hrs(c.hours)} hours`)}><circle cx="${px}" cy="${py}" r="13" fill="transparent"/><circle cx="${px}" cy="${py}" r="5" class="dot ring ${c.under ? 'f-amber' : 'f-mute'}"/></g>`;
-      if (named.has(c.name)) s += px > w * .62 ? T(px - 10, py + 4, fit(c.name, px - l - 14), 'lb', 'end') : T(px + 10, py + 4, fit(c.name, w - r - px - 12), 'lb');
-    });
-    return s + '</svg>';
-  },
-
   // ─── Time ───────────────────────────────────────────────────────────
   heat(w) {
     const g = AN.d.grid, lab = 32, step = Math.max(10, Math.min(34, Math.floor((w - lab) / g.weeks))), cell = step - 2, rx = Math.min(4, cell / 4), mh = 16;
@@ -386,30 +351,6 @@ const CHARTS = {
     return s + '</svg>';
   }
 };
-
-// ─── Clients ──────────────────────────────────────────────────────────
-
-function clientsHtml() {
-  const d = AN.d;
-  if (d.errors.money) return failed('The feed', d.errors.money);
-  if (d.errors.time) return failed('Timesheets', d.errors.time);
-  const e = d.earned;
-  if (!e || !e.rows.length) return '<p class="state-empty art art-empty">No finished month has both Xero figures in the feed and hours logged yet.</p>';
-  const months = d.quarter.map(m => m.month), t = e.totals;
-  const period = months.length > 1 ? `${monthName(months[0])} to ${fmt(months[months.length - 1], { month: 'long', year: 'numeric' })}` : fmt(months[0], { month: 'long', year: 'numeric' });
-  const kpis = `<div class="kpi-panel an-kpis">
-      <div class="kpi"><span class="kpi-label">Kept per hour</span><span class="kpi-value">${escapeHtml(gbp(t.rate))}</span><span class="kpi-sub">${plural(e.rows.length, 'client')} with hours logged</span></div>
-      <div class="kpi"><span class="kpi-label">Under £${e.target} an hour</span><span class="kpi-value${t.under ? ' an-warn' : ''}">${plural(t.under, 'client')}</span><span class="kpi-sub">${t.hours > 0 ? pct(t.underHours / t.hours) : '0%'} of the hours logged</span></div>
-      <div class="kpi"><span class="kpi-label">Short of £${e.target}</span><span class="kpi-value">${escapeHtml(gbp(t.short))}</span><span class="kpi-sub">over ${plural(months.length, 'month')}</span></div>
-    </div>`;
-  // Three columns on purpose: four or more would turn into stacked cards in this half-width column.
-  const table = `<table class="an-table"><thead><tr><th>Client</th><th class="num">Per hour</th><th class="num">Short of £${e.target}</th></tr></thead><tbody>${e.rows.map(c =>
-    `<tr data-c="${escapeHtml(c.name)}"><td>${clientLink(c.name)}${c.under ? ` <span class="badge badge-amber">${icon('warning', 12)} Under</span>` : ''}<small>${escapeHtml(hrs(c.hours))} h logged, ${escapeHtml(gbp2(c.kept))} kept</small></td><td class="num">${escapeHtml(gbp2(c.rate))}</td><td class="num">${c.short ? escapeHtml(gbp2(c.short)) : ''}</td></tr>`).join('')}</tbody></table>
-    ${e.noHours.length ? `<p class="an-quiet">${plural(e.noHours.length, 'client was', 'clients were')} invoiced with no hours logged, so ${e.noHours.length === 1 ? 'it has' : 'they have'} no rate.</p>` : ''}`;
-  return kpis + card('Which clients earn their keep?', `${escapeHtml(period)}: what was left after supplier costs, against the hours logged`,
-    `<div class="an-split"><div><div class="an-legend"><span><i class="sw amber dot"></i>Under £${e.target} an hour</span><span><i class="sw mute dot"></i>At or above</span></div>${chart('scatter')}</div><div class="an-tw">${table}</div></div>`,
-    goBtn('Profitability', 'profitability'));
-}
 
 // ─── Time ─────────────────────────────────────────────────────────────
 
@@ -518,11 +459,6 @@ export function init() {
   section.addEventListener('pointerleave', hideTip);
   section.addEventListener('focusin', e => { const el = e.target.closest?.('[data-tip]'); if (el) { const r = el.getBoundingClientRect(); showTip(el, r.left + r.width / 2, r.bottom - 8); } });
   section.addEventListener('focusout', hideTip);
-  // A table row points at its dot on the chart beside it.
-  section.addEventListener('pointerover', e => {
-    const tr = e.target.closest?.('.an-table tr[data-c]');
-    section.querySelectorAll('.pt').forEach(p => p.classList.toggle('hot', !!tr && p.dataset.c === tr.dataset.c));
-  });
   window.addEventListener('scroll', hideTip, { passive: true, capture: true });
   window.addEventListener('resize', () => moveInk(tabStrip()));
   els('anRefresh')?.addEventListener('click', async () => {

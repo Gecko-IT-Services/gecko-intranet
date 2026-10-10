@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
-  recurringMoves, monthSeries, concentration, monthMoney, hoursByClient, earnedPerHour,
-  logGrid, workKind, weeklyKinds, supportShare, typedShare, renewals, whitespace, TARGET_RATE, DEPENDENCE
+  recurringMoves, monthSeries, concentration, monthMoney,
+  logGrid, workKind, weeklyKinds, supportShare, typedShare, renewals, whitespace, DEPENDENCE
 } from '../src/core/analytics.js';
 
 const inv = (contact_name, invoice_date, sub_total, rep = 'r', status = 'AUTHORISED') =>
@@ -79,24 +79,7 @@ const rep = (contact_name, next_date, sub_total, extra = {}) => ({ contact_name,
   // A month the feed doesn't cover falls back to the typed lines and has no margin.
   const aug = monthMoney(feed, '2026-08', clients, services, match);
   assert.equal(aug.rows[0].cost, 43.14); assert.equal(aug.margin, null); assert.equal(aug.split, false);
-
-  // earnedPerHour over one month
-  const entries = [
-    { clientName: 'Kingdom', engineer: 'Jack', date: '2026-09-04', hours: 2 }, { clientName: 'Kingdom', engineer: 'Philip', date: '2026-09-18', hours: 1.5 },
-    { clientName: 'Kingdom', engineer: 'System', date: '2026-09-18', hours: 10 }, { clientName: 'Kingdom', engineer: 'Jack', date: '2026-10-01', hours: 9 },
-    { clientName: 'Kingdom', engineer: 'Jack', date: '2026-09-20', hours: 4, deleted_at: '2026-09-21' }, { clientName: 'Stranger', engineer: 'Jack', date: '2026-09-04', hours: 3 }
-  ];
-  const hours = hoursByClient(entries, ['2026-09'], match);
-  assert.deepEqual([...hours], [['1', 3.5]]);
-  const e = earnedPerHour([sep], hours);
-  assert.equal(e.rows.length, 1);
-  assert.equal(e.rows[0].kept, 204.14); assert.ok(Math.abs(e.rows[0].rate - 204.14 / 3.5) < 1e-9);
-  assert.equal(e.rows[0].under, true); assert.equal(e.rows[0].short, round(3.5 * TARGET_RATE - 204.14));
-  assert.deepEqual(e.noHours, ['Technix']);
-  assert.equal(e.totals.under, 1); assert.equal(e.totals.short, e.rows[0].short); assert.equal(e.totals.underHours, 3.5);
-  assert.equal(earnedPerHour([sep], new Map()).totals.rate, null);
 }
-function round(n) { return Math.round(n * 100) / 100; }
 
 // ─── logGrid ───
 {

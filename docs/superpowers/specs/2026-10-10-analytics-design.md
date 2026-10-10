@@ -5,7 +5,7 @@ purpose". Mockups were reviewed in an artifact first (three rounds of comments);
 
 ## What it is
 
-A new section, **Analytics**, under Home in the sidebar, with four tabs. Every card is one question: the heading
+A new section, **Analytics**, under Home in the sidebar, with three tabs. Every card is one question: the heading
 asks it, the sub-line says the window and the source, the graphic answers it. Read only. No new tables, columns,
 scopes or secrets: every figure comes from data another section already owns.
 
@@ -14,7 +14,6 @@ scopes or secrets: every figure comes from data another section already owns.
 | Revenue | Why did recurring revenue change? | A sum (last month + gained − lost = this month), then one bar per client | `xero_invoices`, `xero_repeating_invoices` |
 | Revenue | Is each month on course? | Recurring and one-off columns, stripes for still to come; margin strip beneath | Xero tables, `jobs`; feed + service lines for the margin |
 | Revenue | How much rides on a few clients? | Ranked share bars with a 15% line | the same recurring figures |
-| Clients | Which clients earn their keep? | Money kept against hours logged, one guide line, table worst first | feed, `gecko_clients`, `gecko_services`, `timesheet_entries` |
 | Time | Is every working day logged? | 26-week heatmap per person | `timesheet_entries`, `leave_requests` |
 | Time | Is support crowding out project work? | Weekly hours by kind of work | `timesheet_entries` |
 | Ahead | Which support blocks run out next? | One burn-down wedge per SSA client on a calendar | `ssaBoard` (core/ssa.js) |
@@ -31,14 +30,12 @@ scopes or secrets: every figure comes from data another section already owns.
   else, so it shows as a move. Each move says what kind it is so it is not misread: New (first recurring invoice
   ever), Not monthly (billed before, not last month), Not due this month (still has a repeating invoice, none due),
   Left (no repeating invoice any more). More and less carry no tag.
-- **Money per client is Profitability's model** (`monthMoney`): recurring and one-off from the feed's Xero split;
+- **The margin strip is Profitability's model** (`monthMoney`): recurring and one-off from the feed's Xero split;
   cost = service lines + supplier invoices dated that month; while the feed covers supplier invoices, m365 and
   hosting lines contribute no typed cost. The month total includes shared and unassigned supplier lines, so the
-  margin strip equals Profitability's Margin for that month. The current month's margin is left open until a
-  TD SYNNEX invoice dated in it is in the feed (~16th).
-- **Kept per hour** = (Xero invoiced − cost) ÷ hours logged, over the last three finished months the feed splits,
-  so one SSA block invoice does not swing it. Only clients with hours can have a rate; the rest are counted.
-  It reports the gap to the target and gives no pricing advice.
+  margin strip equals Profitability's Margin for that month (checked on real data 10 Oct: June to September
+  match to the penny). The current month's margin is left open until a TD SYNNEX invoice dated in it is in the
+  feed (~16th).
 - **SSA balances are never recalculated.** The run-out calendar is `ssaBoard`'s rows re-drawn: the wedge starts at
   the hours left today and reaches zero on `runsOut`, which is the same straight-line projection.
 - **Whitespace is the gaps map as data** (`whitespace()` exported from `sections/opportunities.js`, the same
@@ -54,10 +51,23 @@ scopes or secrets: every figure comes from data another section already owns.
   one). The support-versus-planned card therefore draws only when at least half the hours in its window carry a
   work type, and compares only weeks that are at least 80% typed. Until then it says so.
 
-## Two numbers that are assumptions (constants in `src/core/analytics.js`)
+## One number that is an assumption (a constant in `src/core/analytics.js`)
 
-- `TARGET_RATE = 65`: £ kept per hour. Taken from the £650 SSA price over ten hours. **Philip to confirm.**
 - `DEPENDENCE = 0.15`: the share of recurring revenue above which a client is called a dependency. A suggestion.
+
+## Removed before merge: the Clients tab ("which clients earn their keep?")
+
+Built as money kept per hour worked, then removed on 10 Oct (Jack) after the first look at real data: it
+showed figures such as £943 an hour. Three reasons it cannot be right as defined:
+
+- One-off invoices have no cost side in the data, and Jul–Sep 2026 had more one-off (about £31.8k) than recurring
+  (about £21.8k), mixing labour with hardware and software. All of it counted as kept.
+- Timesheets hold SSA time only. About fifteen invoiced clients have no hours at all, so they cannot be rated.
+- Every logged hour is already sold at £65 through an SSA block, so a per-hour rate per client says little.
+
+If it comes back, decide first what it measures. Xero line items carry `item_code` and `account_code` (SSA
+blocks are item `SSA`, account 214; ad hoc support `SUP-STD` / `SUP-ADV` / `SUP-SPEC`), which is the raw material
+for separating labour income from pass-through. The code is in git history (commit a2e8dfe).
 
 ## Charts
 
@@ -91,9 +101,7 @@ map is the heaviest read (it is all of Opportunities), so it loads only when Ahe
 - A waterfall/bridge chart for the revenue change (first mockup): hard to follow. Replaced by the sum.
 - Flat bars for SSA run-out: the wedge carries hours left and pace as well, with no extra labels.
 - A date range picker: each card states its own window, one decision per card.
-- A chart library: eight small charts, no dependency, and the app has no build step.
-- A four-column table beside the scatter: the shared table transform would stack it into cards in a half-width
-  column, so it is three columns with hours and kept as a sub-line.
+- A chart library: a handful of small charts, no dependency, and the app has no build step.
 
 ## Deferred
 

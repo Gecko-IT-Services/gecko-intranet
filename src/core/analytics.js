@@ -1,17 +1,15 @@
 /* Analytics: pure logic (no window). Tested in tests/analytics.mjs.
    Design: docs/superpowers/specs/2026-10-10-analytics-design.md
 
-   Four questions, each answered from data another section already owns:
-   Revenue (Xero invoices, as Jobs reads them), Clients (the feed and service lines, as Profitability
-   counts them, against timesheet hours), Time (timesheet entries and leave), Ahead (SSA run-out dates
-   and the Opportunities gaps). Nothing here changes a figure's meaning: it only lines them up. */
+   Each question is answered from data another section already owns: Revenue (Xero invoices, as Jobs
+   reads them, with Profitability's margin beside them), Time (timesheet entries and leave), Ahead (SSA
+   run-out dates and the Opportunities gaps). Nothing here changes a figure's meaning: it only lines them up. */
 
 import { monthOf, previousMonth, repeatDates, xeroHistory, xeroMonthSales } from './jobs.js';
 import { invoicedCosts, splitByClient, hasSplit, xeroMonths } from './profit-feed.js';
 import { ENGINEERS, addDays, monday } from './weekly.js';
 import { SSA_BLOCK_PRICE } from './ssa-renewal.js';
 
-export const TARGET_RATE = 65;    // £ kept per hour worked: the SSA price (£650) over ten hours. Philip to confirm.
 export const DEPENDENCE = 0.15;   // a client above this share of recurring revenue is a dependency
 export const SOON_DAYS = 30;      // an SSA block running out within this many days is amber
 
@@ -101,7 +99,7 @@ export function concentration(shares, line = DEPENDENCE) {
   return { total, rows, top3: rows.slice(0, 3).reduce((t, s) => t + s.share, 0), over: rows.filter(s => s.over).length };
 }
 
-// ─── Money per client, as Profitability counts it ─────────────────────
+// ─── Margin, as Profitability counts it ───────────────────────────────
 
 /**
  * One month for every client, by Profitability's rules (7 Oct 2026): recurring and one-off from Xero in
@@ -130,45 +128,6 @@ export function monthMoney(feed, month, clients, services, match) {
     margin: split && recurring > 0 ? (recurring - cost) / recurring : null,
     // The TD SYNNEX invoice lands around the 16th: until then a month's margin flatters.
     licenceIn: (feed?.cspInvoices || []).some(c => String(c.date || '').startsWith(month + '-'))
-  };
-}
-
-/** Hours worked per client over `months` (YYYY-MM list): Map(clientId -> hours). `clientOf` maps a timesheet client name to a client. */
-export function hoursByClient(entries, months, clientOf) {
-  const out = new Map(), want = new Set(months);
-  for (const e of entries || []) {
-    if (!isWork(e) || !want.has(monthOf(e.date))) continue;
-    const c = clientOf(e.clientName);
-    if (c) out.set(c.id, round2((out.get(c.id) || 0) + num(e.hours)));
-  }
-  return out;
-}
-
-/**
- * What each client leaves after suppliers, per hour worked, over the given months (monthMoney results).
- * Only clients with hours logged can have a rate; the rest are counted, not ranked. Worst first.
- */
-export function earnedPerHour(months, hours, target = TARGET_RATE) {
-  const by = new Map();
-  for (const m of months) for (const r of m.rows) {
-    const e = by.get(r.client.id) || { name: r.client.name, invoiced: 0, cost: 0 };
-    e.invoiced = round2(e.invoiced + r.total); e.cost = round2(e.cost + r.cost);
-    by.set(r.client.id, e);
-  }
-  const rows = [], noHours = [];
-  for (const [id, e] of by) {
-    const h = hours.get(id) || 0, kept = round2(e.invoiced - e.cost);
-    if (h > 0) rows.push({ name: e.name, hours: h, kept, rate: kept / h, short: round2(Math.max(0, h * target - kept)), under: kept / h < target });
-    else if (e.invoiced > 0) noHours.push(e.name);
-  }
-  rows.sort((a, b) => a.rate - b.rate || a.name.localeCompare(b.name));
-  const under = rows.filter(r => r.under), allH = round2(rows.reduce((t, r) => t + r.hours, 0)), kept = round2(rows.reduce((t, r) => t + r.kept, 0));
-  return {
-    target, rows, noHours: noHours.sort(),
-    totals: {
-      hours: allH, kept, rate: allH > 0 ? kept / allH : null, under: under.length,
-      underHours: round2(under.reduce((t, r) => t + r.hours, 0)), short: round2(under.reduce((t, r) => t + r.short, 0))
-    }
   };
 }
 

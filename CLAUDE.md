@@ -218,13 +218,16 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 
 ## Analytics (from 10 Oct 2026)
 - `src/sections/analytics.js` + `src/core/analytics.js` (tests `tests/analytics.mjs`), `src/styles/analytics.css`; design note
-  `2026-10-10-analytics-design.md`. Read only, four tabs, each card one question: **Revenue** (why recurring revenue changed
-  as a sum that must add up, each month with still-to-come, who it rides on), **Clients** (kept per hour worked, worst first),
-  **Time** (26-week logging heatmap, support vs planned work), **Ahead** (SSA run-out wedges, whitespace per product).
-- No new data: Revenue reads Xero the way Jobs does (`xeroHistory` / `xeroMonthSales`), money per client follows
+  `2026-10-10-analytics-design.md`. Read only, three tabs, each card one question: **Revenue** (why recurring revenue changed
+  as a sum that must add up, each month with still-to-come and Profitability's margin, who it rides on), **Time** (26-week
+  logging heatmap; support vs planned work, which draws once work types are recorded), **Ahead** (SSA run-out wedges,
+  whitespace per product ranked by how many clients could have it). A Clients tab (kept per hour worked) was built and removed
+  the same day: one-off invoices have no cost side and timesheets hold SSA time only, so the measure was wrong. Don't re-add
+  without agreeing what it measures (the design note has the reasons).
+- No new data: Revenue reads Xero the way Jobs does (`xeroHistory` / `xeroMonthSales`), the margin strip follows
   Profitability's rules (`monthMoney` mirrors the classic script: change both together), SSA is `ssaBoard` re-drawn, whitespace
-  is `whitespace()` exported from `sections/opportunities.js`. `TARGET_RATE` (£65/h, Philip to confirm) and `DEPENDENCE` (15%)
-  are constants in `core/analytics.js`. Charts are hand-drawn SVG re-drawn at the container width; no chart library.
+  is `whitespace()` exported from `sections/opportunities.js`. `DEPENDENCE` (15%) is a constant in `core/analytics.js`.
+  Charts are hand-drawn SVG re-drawn at the container width; no chart library.
 
 ## Overview (rebuilt 8 Oct 2026; Today/Business tabs 9 Oct)
 - Tabs: **Today** · **This week** (weekly review vs last week) · **Month-end** (self-ticking close checklist;

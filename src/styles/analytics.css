@@ -28,7 +28,6 @@
 #section-analytics .an-kpis { display: flex; flex-wrap: wrap; }
 #section-analytics .an-kpis .kpi { flex: 1 1 118px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 #section-analytics .an-kpis.flat { box-shadow: none; border-radius: var(--radius-sm); }
-#section-analytics .an-warn { color: var(--amber); }
 
 /* Revenue: the sum, then who moved it */
 #section-analytics .an-sum { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 30px; }
@@ -58,11 +57,9 @@
 /* Legends: a swatch beside plain text, never coloured text */
 #section-analytics .an-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 12px; color: var(--muted); }
 #section-analytics .sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; }
-#section-analytics .sw.dot { border-radius: 50%; }
 #section-analytics .sw.rec { background: var(--viz-rec); }
 #section-analytics .sw.one { background: var(--viz-one); }
 #section-analytics .sw.mute { background: var(--viz-mute); }
-#section-analytics .sw.amber { background: var(--amber); }
 #section-analytics .sw.come { background: repeating-linear-gradient(135deg, var(--viz-rec) 0 2px, color-mix(in srgb, var(--viz-rec) 26%, transparent) 2px 6px); }
 #section-analytics .sw.away { background: repeating-linear-gradient(135deg, var(--viz-mute) 0 1.5px, transparent 1.5px 4px); }
 #section-analytics .sw.blank { border: 1.5px solid var(--faint); }
@@ -97,7 +94,6 @@
 #section-analytics svg .grid { stroke: var(--hair); stroke-width: 1; }
 #section-analytics svg .rule { stroke: var(--faint); stroke-width: 1; }
 #section-analytics svg .line-rec { fill: none; stroke: var(--viz-rec); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-#section-analytics svg .line-amber { fill: none; stroke: var(--amber); stroke-width: 1.5; }
 #section-analytics svg .ring { stroke: var(--card); stroke-width: 2; }
 #section-analytics svg .hollow { fill: var(--card); stroke: var(--viz-mute); stroke-width: 1.5; }
 #section-analytics svg .blank { fill: none; stroke: var(--faint); stroke-width: 1.5; }
@@ -107,8 +103,6 @@
 #section-analytics svg .l-amber { stroke: var(--amber); }
 #section-analytics [data-tip] { outline: none; }
 #section-analytics svg [data-tip]:is(:hover, :focus-visible) { filter: brightness(1.12); }
-#section-analytics svg .pt .dot { transition: r var(--dur-1) var(--ease); }
-#section-analytics svg .pt:is(:hover, :focus-visible, .hot) .dot { r: 7px; stroke: var(--white); }
 
 /* One readout for every chart: the value leads, the labels follow */
 #section-analytics .an-tip {
@@ -117,20 +111,6 @@
 }
 #section-analytics .an-tip b { display: block; font: 600 13px var(--font-mono); letter-spacing: -.02em; }
 #section-analytics .an-tip div { opacity: .78; }
-
-/* Clients: the chart beside its table (three columns, so it stays a table on a phone) */
-#section-analytics .an-split { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-#section-analytics .an-split .an-legend { margin-bottom: 10px; }
-#section-analytics .an-tw { display: grid; gap: 10px; min-width: 0; }
-#section-analytics .an-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-#section-analytics .an-table th { padding: 0 0 8px 10px; text-align: left; font: 600 10px/1.3 var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-#section-analytics .an-table td { padding: 8px 0 8px 10px; border-top: 1px solid var(--hair); vertical-align: top; }
-#section-analytics .an-table :is(th, td):first-child { padding-left: 0; }
-#section-analytics .an-table .num { text-align: right; font-family: var(--font-mono); font-size: 12.5px; letter-spacing: -.02em; white-space: nowrap; }
-#section-analytics .an-table th.num { font: 600 10px/1.3 var(--font-body); letter-spacing: .1em; }
-#section-analytics .an-table td small { display: block; margin-top: 1px; font: 500 11px var(--font-mono); color: var(--muted); }
-#section-analytics .an-table tbody tr:hover { background: var(--row-hover); }
-#section-analytics .an-table .badge { display: inline-flex; align-items: center; gap: 4px; }
 
 /* Ahead: one row per product, one square per client (the hour and day tokens' cousin) */
 #section-analytics .an-ws-row { display: grid; grid-template-columns: minmax(140px, 210px) minmax(0, 1fr) auto; grid-template-areas: "name tok val"; align-items: center; gap: 8px 18px; padding: 11px 0; border-top: 1px solid var(--hair); }
@@ -147,7 +127,6 @@
 #section-analytics .tok.off { background: radial-gradient(circle, var(--viz-mute) 0 2px, transparent 2.5px); }
 #section-analytics .tok:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 
-@media (max-width: 900px) { #section-analytics .an-split { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {
   #section-analytics .an-card { padding: 16px; }
   #section-analytics .an-ws-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name val" "tok tok"; }
