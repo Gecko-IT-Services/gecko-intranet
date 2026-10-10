@@ -19,6 +19,7 @@
 
 import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
+import { icon } from '../core/icons.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
@@ -594,7 +595,7 @@ function gapsHtml() {
 
 const MAP_LABEL = { strong: 'Gap: rule and timesheets agree', some: 'Gap: some evidence', maybe: 'Not bought, no evidence yet',
   deal: 'In the pipeline', won: 'Won', has: 'Has it', no: 'Not interested' };
-const MAP_MARK = { strong: '●', some: '●', maybe: '○', deal: '◆', won: '✓', has: '✓', no: '–' };
+const MAP_MARK = { strong: '●', some: '●', maybe: '○', deal: '◆', won: icon('check', 12), has: icon('check', 12), no: '–' };
 
 /**
  * Gaps as a map: a row per client, a column per product, the whitespace grid you would draw on a
@@ -666,9 +667,9 @@ function pipelineHtml() {
     const st = dealState(o, t);
     if (!st.needsJob && !st.needsBilling && !(o.status === 'won' && (o.job_id || o.billing_set_up_at))) return '';
     return `<div class="opp-won-steps"><strong>Won: next steps</strong><ul>
-      ${Number(o.one_off) > 0 ? `<li class="${o.job_id ? 'done' : ''}">${o.job_id ? '✓ Job created' : `Create a job for the one-off (${escapeHtml(money(o.one_off))})`}
+      ${Number(o.one_off) > 0 ? `<li class="${o.job_id ? 'done' : ''}">${o.job_id ? icon('check') + ' Job created' : `Create a job for the one-off (${escapeHtml(money(o.one_off))})`}
         ${o.job_id ? '<button type="button" class="btn btn-sm btn-ghost" data-opp-act="openjobs">Open Jobs →</button>' : `<button type="button" class="btn btn-sm btn-primary" data-opp-act="mkjob" data-id="${o.id}">Create job</button>`}</li>` : ''}
-      ${Number(o.mrr) > 0 ? `<li class="${o.billing_set_up_at ? 'done' : ''}">${o.billing_set_up_at ? `✓ Monthly billing set up${o.billing_set_up_by ? ' by ' + escapeHtml(o.billing_set_up_by) : ''}` : `Set up billing: Xero repeating invoice (${escapeHtml(money(o.mrr))}/mo + VAT) and service line`}
+      ${Number(o.mrr) > 0 ? `<li class="${o.billing_set_up_at ? 'done' : ''}">${o.billing_set_up_at ? `${icon('check')} Monthly billing set up${o.billing_set_up_by ? ' by ' + escapeHtml(o.billing_set_up_by) : ''}` : `Set up billing: Xero repeating invoice (${escapeHtml(money(o.mrr))}/mo + VAT) and service line`}
         ${o.billing_set_up_at ? '' : `<button type="button" class="btn btn-sm" data-opp-act="billingdone" data-id="${o.id}">Mark done</button>`}</li>` : ''}
     </ul></div>`;
   };
@@ -883,7 +884,7 @@ function prospectsHtml() {
   return `<div class="opp-pipe-head">
       <div class="opp-view" role="group" aria-label="Which prospects">${views.map(([k, l]) => `<button type="button" data-opp-act="pview" data-view="${k}" aria-pressed="${OPP.prospectView === k}">${escapeHtml(l)}</button>`).join('')}</div>
       <div class="opp-flags">${sm.openMrr ? `<span class="badge badge-green">${escapeHtml(money(sm.openMrr))}/mo if they all sign</span>` : ''}${sm.due ? `<span class="badge badge-amber">${sm.due} follow-up${sm.due === 1 ? '' : 's'} due</span>` : ''}</div>
-      ${OPP.prospectEdit === 'new' ? '' : '<button type="button" class="btn btn-primary" data-opp-act="padd">Add prospect</button>'}
+      ${OPP.prospectEdit === 'new' ? '' : '<button type="button" class="btn btn-primary" data-opp-act="padd">' + icon('plus') + 'Add prospect</button>'}
     </div>
     <div class="opp-pstages kpi-panel">${stageStrip}</div>
     ${OPP.prospectEdit === 'new' ? `<article class="opp-prospect editing"><strong class="opp-form-title">New prospect</strong>${prospectFormHtml(null)}</article>` : ''}

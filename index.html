@@ -135,6 +135,10 @@
   --dur-1:        120ms;
   --dur-2:        180ms;
   --dur-3:        260ms;
+  --dur-chart:    600ms;   /* bars and meters filling */
+  /* Hover, focus and press on any control: only the properties that change. */
+  --t-ui: background-color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease),
+          opacity var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
 
   /* Z-index scale */
   --z-sticky:     100;
@@ -422,7 +426,7 @@ body {
   background: var(--green); border: 1px solid var(--green);
   color: var(--on-green); font-weight: 700; font-size: 14px;
   cursor: pointer;
-  transition: background-color .15s ease, border-color .15s ease, color .15s ease, opacity .15s ease;
+  transition: background-color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease), opacity var(--dur-1) var(--ease);
   font-family: var(--font-body);
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
 }
@@ -492,7 +496,7 @@ body {
   font-family: var(--font-body);
   text-align: left;
   font-size: 13px; font-weight: 500;
-  transition: all .15s ease;
+  transition: var(--t-ui);
   user-select: none;
 }
 .sb-link:hover { background: var(--card); color: var(--white); }
@@ -538,7 +542,7 @@ body {
   border: 1px solid var(--border-dim);
   border-radius: var(--radius-sm);
   cursor: pointer; font-family: var(--font-body);
-  transition: all .15s ease;
+  transition: var(--t-ui);
 }
 #signOutBtn:hover { color: var(--red); border-color: var(--red); }
 
@@ -674,11 +678,9 @@ body {
   font-size: 13px; color: var(--white);
   min-width: 240px; max-width: 360px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  animation: toastIn .25s ease;
   pointer-events: auto;
   display: flex; align-items: center; gap: 10px;
 }
-.toast.fade { animation: toastOut .25s ease forwards; }
 .toast .t-ic { font-size: 14px; flex-shrink: 0; }
 .toast.success { border-color: var(--green); }
 .toast.success .t-ic { color: var(--green); }
@@ -689,14 +691,6 @@ body {
 .toast.warning { border-color: var(--amber); }
 .toast.warning .t-ic { color: var(--amber); }
 
-@keyframes toastIn {
-  from { transform: translateX(20px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
-}
-@keyframes toastOut {
-  from { transform: translateX(0); opacity: 1; }
-  to   { transform: translateX(20px); opacity: 0; }
-}
 
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║   RESPONSIVE — slide-over sidebar on narrow screens               ║
@@ -714,7 +708,7 @@ body {
   .sidebar {
     position: fixed; left: 0; top: 0;
     transform: translateX(-100%);
-    transition: transform .25s ease;
+    transition: transform var(--dur-3) var(--ease);
     box-shadow: 6px 0 24px rgba(0,0,0,0.5);
   }
   .sidebar.open { transform: translateX(0); }
@@ -726,7 +720,7 @@ body {
     padding: 0;
     cursor: pointer;
     opacity: 0; pointer-events: none;
-    transition: opacity .2s ease;
+    transition: opacity var(--dur-2) var(--ease);
     z-index: 49;
   }
   .sb-backdrop.show { opacity: 1; pointer-events: auto; }
@@ -767,12 +761,10 @@ body {
   background: var(--card); border: 1px solid var(--border);
   color: var(--muted); font-size: 12px; cursor: pointer;
   font-family: var(--font-body);
-  transition: all .15s ease;
+  transition: var(--t-ui);
 }
 #section-overview .ovw-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
 #section-overview .ovw-refresh:disabled { opacity: .5; cursor: not-allowed; }
-#section-overview .ovw-refresh svg { transition: transform .4s ease; }
-#section-overview .ovw-refresh.spinning svg { animation: spin 1s linear infinite; }
 #section-overview .ovw-last-sync { font-size: 11px; color: var(--muted); margin-left: 4px; }
 
 /* — Wrapper layout (vertical stack, gap matches profitability) — */
@@ -789,7 +781,7 @@ body {
   border: 1px solid var(--border-dim);
   border-radius: var(--radius);
   padding: 16px 18px;
-  transition: border-color .2s ease;
+  transition: border-color var(--dur-2) var(--ease);
   position: relative;
 }
 #section-overview .ovw-kpi:hover { border-color: var(--border); }
@@ -828,7 +820,7 @@ body {
   border: 1px solid var(--border-dim);
   border-radius: var(--radius);
   overflow: hidden;
-  transition: border-color .2s ease;
+  transition: border-color var(--dur-2) var(--ease);
 }
 #section-overview .ovw-card:hover { border-color: var(--border); }
 #section-overview .ovw-card-head {
@@ -896,12 +888,10 @@ body {
   background: var(--card); border: 1px solid var(--border);
   color: var(--muted); font-size: 12px; cursor: pointer;
   font-family: var(--font-body);
-  transition: all .15s ease;
+  transition: var(--t-ui);
 }
 #section-profitability .prf-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
 #section-profitability .prf-refresh:disabled { opacity: .5; cursor: not-allowed; }
-#section-profitability .prf-refresh svg { transition: transform .4s ease; }
-#section-profitability .prf-refresh.spinning svg { animation: spin 1s linear infinite; }
 #section-profitability .prf-last-sync { font-size: 11px; color: var(--muted); margin-left: 4px; }
 
 /* — Wrapper layout — */
@@ -981,7 +971,7 @@ body {
   border: 1px solid var(--border-dim); background: transparent;
   color: var(--muted); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  transition: all .15s; flex-shrink: 0;
+  transition: var(--t-ui); flex-shrink: 0;
 }
 #section-profitability .prf-iconbtn:hover { color: var(--green); border-color: var(--green); background: var(--green-glow); }
 #section-profitability .prf-iconbtn.danger:hover { color: var(--red); border-color: var(--red); background: var(--red-dim); }
@@ -1033,7 +1023,7 @@ body {
   background: var(--dark); color: var(--white);
   border: 1px solid var(--border); border-radius: 6px;
   font-family: var(--font-body); font-size: 12px;
-  outline: none; transition: border-color .15s;
+  outline: none; transition: border-color var(--dur-1) var(--ease);
 }
 .prf-erow input:focus,
 #section-profitability .prf-erow select:focus { border-color: var(--green); }
@@ -1063,7 +1053,7 @@ body {
   width: 26px; height: 26px; border-radius: 6px;
   background: var(--card); border: 1px solid var(--border);
   color: var(--muted); cursor: pointer; font-size: 12px;
-  transition: all .15s; padding: 0;
+  transition: var(--t-ui); padding: 0;
 }
 #section-profitability .prf-month-sel .prf-month-btn:hover { color: var(--green); border-color: var(--green); }
 #section-profitability .prf-month-sel .prf-month-label {
@@ -1079,7 +1069,7 @@ body {
   background: var(--card); border: 1px solid var(--border);
   color: var(--muted); font-size: 12px; cursor: pointer;
   font-family: var(--font-body);
-  transition: all .15s ease;
+  transition: var(--t-ui);
 }
 #section-profitability .prf-export-btn:hover { color: var(--green); border-color: var(--green); }
 
@@ -1087,7 +1077,7 @@ body {
 #section-profitability .prf-modal-bg {
   position: fixed; inset: 0; background: var(--overlay);
   display: none; align-items: center; justify-content: center;
-  z-index: 1500; animation: fadeIn .15s ease;
+  z-index: 1500; animation: gk-fade var(--dur-2) var(--ease) both;
 }
 #section-profitability .prf-modal-bg.show { display: flex; }
 #section-profitability .prf-modal {
@@ -1141,12 +1131,10 @@ body {
   background: var(--card); border: 1px solid var(--border);
   color: var(--muted); font-size: 12px; cursor: pointer;
   font-family: var(--font-body);
-  transition: all .15s ease;
+  transition: var(--t-ui);
 }
 #section-mileage .mil-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
 #section-mileage .mil-refresh:disabled { opacity: .5; cursor: not-allowed; }
-#section-mileage .mil-refresh svg { transition: transform .4s ease; }
-#section-mileage .mil-refresh.spinning svg { animation: spin 1s linear infinite; }
 #section-mileage .mil-last-sync { font-size: 11px; color: var(--muted); margin-left: 4px; }
 
 /* — Summary strip (4 KPI cards across the top) — */
@@ -1170,7 +1158,7 @@ body {
   cursor: pointer;
   font-family: var(--font-body);
   letter-spacing: .03em;
-  transition: all .15s ease;
+  transition: var(--t-ui);
 }
 #section-mileage .mil-tab:hover { color: var(--white); }
 #section-mileage .mil-tab.active {
@@ -1181,7 +1169,7 @@ body {
 
 /* — Tab panels — */
 #section-mileage .mil-panel { display: none; }
-#section-mileage .mil-panel.active { display: block; animation: fadeIn .2s ease; }
+#section-mileage .mil-panel.active { display: block; }
 
 /* — Cards specific to mileage section — */
 #section-mileage .mil-card {
@@ -1230,7 +1218,7 @@ body {
   font-family: var(--font-body);
   font-size: 13px;
   outline: none;
-  transition: border-color .15s ease;
+  transition: border-color var(--dur-1) var(--ease);
 }
 #section-mileage .mil-input:focus, #section-mileage .mil-select:focus {
   border-color: var(--green);
@@ -1270,7 +1258,7 @@ body {
   color: var(--muted);
   cursor: pointer;
   font-family: var(--font-body);
-  transition: all .15s ease;
+  transition: var(--t-ui);
 }
 #section-mileage .mil-chip:hover { color: var(--white); border-color: var(--border); }
 #section-mileage .mil-chip.active {
@@ -1343,7 +1331,7 @@ body {
   display: inline-flex; align-items: center; justify-content: center;
   background: transparent; border: 1px solid var(--border-dim);
   border-radius: 6px; color: var(--muted);
-  cursor: pointer; transition: all .15s ease;
+  cursor: pointer; transition: var(--t-ui);
 }
 #section-mileage .mil-icon-btn:hover { color: var(--white); border-color: var(--border); }
 #section-mileage .mil-icon-btn.danger:hover { color: var(--red); border-color: var(--red); }
@@ -1375,7 +1363,7 @@ body {
   background: none; border: none; padding: 0;
   color: var(--muted); font-size: 11px; font-family: inherit;
   cursor: pointer; text-decoration: underline; text-decoration-color: var(--border-dim);
-  transition: color .15s ease;
+  transition: color var(--dur-1) var(--ease);
 }
 #section-mileage .mil-claimed-link:hover { color: var(--green); text-decoration-color: var(--green); }
 
@@ -1456,7 +1444,7 @@ body {
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   gap: 10px;
-  transition: border-color .15s ease;
+  transition: border-color var(--dur-1) var(--ease);
 }
 #section-mileage .mil-client-row:hover { border-color: var(--border); }
 #section-mileage .mil-client-row .cn {
@@ -1551,7 +1539,7 @@ body {
   background: var(--overlay);
   display: none; align-items: center; justify-content: center;
   z-index: 1500;
-  animation: fadeIn .15s ease;
+  animation: gk-fade var(--dur-2) var(--ease) both;
 }
 #section-mileage .mil-modal-bg.show { display: flex; }
 #section-mileage .mil-modal {
@@ -1625,12 +1613,10 @@ body {
   padding: 7px 12px; border-radius: 999px;
   background: transparent; color: var(--muted);
   border: 1px solid var(--border-dim); font-family: var(--font-body);
-  font-size: 12px; cursor: pointer; transition: all .15s;
+  font-size: 12px; cursor: pointer; transition: var(--t-ui);
 }
 #section-clients .cli-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
 #section-clients .cli-refresh:disabled { opacity: .5; cursor: not-allowed; }
-#section-clients .cli-refresh svg { transition: transform .4s ease; }
-#section-clients .cli-refresh.spinning svg { animation: spin 1s linear infinite; }
 
 #section-clients .cli-last-sync { font-size: 11px; color: var(--muted); margin-left: auto; }
 
@@ -1646,7 +1632,7 @@ body {
   background: var(--dark); color: var(--white);
   border: 1px solid var(--border-dim); border-radius: 999px;
   font-family: var(--font-body); font-size: 12px;
-  outline: none; transition: border-color .15s;
+  outline: none; transition: border-color var(--dur-1) var(--ease);
 }
 #section-clients .cli-srch input::placeholder { color: var(--muted); }
 #section-clients .cli-srch input:focus { border-color: var(--green); }
@@ -1697,7 +1683,7 @@ body {
 #section-clients .cli-iconbtn {
   width: 28px; height: 28px; padding: 0;
   background: transparent; border: 1px solid var(--border-dim); border-radius: 7px;
-  color: var(--muted); cursor: pointer; transition: all .15s;
+  color: var(--muted); cursor: pointer; transition: var(--t-ui);
   display: inline-flex; align-items: center; justify-content: center;
 }
 #section-clients .cli-iconbtn:hover { color: var(--green); border-color: var(--green); background: var(--green-glow); }
@@ -1715,7 +1701,7 @@ body {
   background: rgba(0,0,0,0.25); border-bottom: 1px solid var(--border-dim);
   text-align: left; white-space: nowrap; user-select: none;
 }
-#section-clients .cli-tbl thead th.sortable { cursor: pointer; transition: color .15s; }
+#section-clients .cli-tbl thead th.sortable { cursor: pointer; transition: color var(--dur-1) var(--ease); }
 #section-clients .cli-tbl thead th.sortable:hover { color: var(--green); }
 #section-clients .cli-tbl thead th.num { text-align: right; }
 #section-clients .cli-tbl thead th .sort-ic {
@@ -1775,7 +1761,7 @@ body {
 #section-clients .cli-modal-bg {
   position: fixed; inset: 0; background: var(--overlay);
   display: none; align-items: center; justify-content: center;
-  z-index: 1500; animation: fadeIn .15s ease;
+  z-index: 1500; animation: gk-fade var(--dur-2) var(--ease) both;
 }
 #section-clients .cli-modal-bg.show { display: flex; }
 #section-clients .cli-modal {
@@ -1804,7 +1790,7 @@ body {
   background: var(--dark); color: var(--white);
   border: 1px solid var(--border); border-radius: var(--radius-sm);
   font-family: var(--font-body); font-size: 13px;
-  outline: none; transition: border-color .15s;
+  outline: none; transition: border-color var(--dur-1) var(--ease);
 }
 #section-clients .cli-form-grp input:focus,
 #section-clients .cli-form-grp select:focus,
@@ -1820,7 +1806,7 @@ body {
   padding: 7px 14px; border-radius: 999px;
   background: transparent; color: var(--muted);
   border: 1px solid var(--border-dim); font-family: var(--font-body);
-  font-size: 12px; cursor: pointer; transition: all .15s;
+  font-size: 12px; cursor: pointer; transition: var(--t-ui);
 }
 #section-profitability .prf-manage-link:hover { color: var(--green); border-color: var(--green); background: var(--green-glow); }
 
@@ -1854,13 +1840,11 @@ body {
   padding: 7px 14px; border-radius: 999px;
   background: transparent; border: 1px solid var(--border-dim);
   color: var(--muted); font-family: var(--font-body);
-  font-size: 12px; cursor: pointer; transition: all .15s;
+  font-size: 12px; cursor: pointer; transition: var(--t-ui);
 }
 #section-timesheets .tsh-refresh:hover:not(:disabled) { color: var(--green); border-color: var(--green); }
 #section-timesheets .tsh-refresh:disabled { opacity: .5; cursor: not-allowed; }
 #section-timesheets .tsh-refresh[hidden] { display: none; }
-#section-timesheets .tsh-refresh svg { transition: transform .4s ease; }
-#section-timesheets .tsh-refresh.spinning svg { animation: spin 1s linear infinite; }
 #section-timesheets .tsh-last-sync { font-size: 11px; color: var(--muted); margin-left: auto; }
 
 /* — Tabs (mirrors Mileage .mil-tab) — */
@@ -1875,7 +1859,7 @@ body {
   color: var(--muted); background: transparent; border: none;
   border-radius: var(--radius-sm); cursor: pointer;
   font-family: var(--font-body);
-  letter-spacing: .03em; transition: all .15s ease;
+  letter-spacing: .03em; transition: var(--t-ui);
 }
 #section-timesheets .tsh-tab:hover { color: var(--white); }
 #section-timesheets .tsh-tab.active {
@@ -1883,7 +1867,7 @@ body {
   box-shadow: inset 0 0 0 1px var(--border);
 }
 #section-timesheets .tsh-panel { display: none; }
-#section-timesheets .tsh-panel.active { display: block; animation: fadeIn .2s ease; }
+#section-timesheets .tsh-panel.active { display: block; }
 
 /* — Cards (form, SSA cards) — */
 #section-timesheets .tsh-card {
@@ -1919,7 +1903,7 @@ body {
   background: var(--dark); border: 1px solid var(--border-dim);
   border-radius: var(--radius-sm); color: var(--white);
   font-family: var(--font-body); font-size: 13px;
-  outline: none; transition: border-color .15s ease;
+  outline: none; transition: border-color var(--dur-1) var(--ease);
 }
 #section-timesheets .tsh-input:focus,
 #section-timesheets .tsh-select:focus,
@@ -1953,7 +1937,7 @@ body {
   border-radius: 999px; border: 1px solid var(--border-dim);
   background: transparent; color: var(--muted);
   cursor: pointer; font-family: var(--font-body);
-  transition: all .15s ease;
+  transition: var(--t-ui);
 }
 #section-timesheets .tsh-chip:hover { color: var(--white); border-color: var(--border); }
 #section-timesheets .tsh-chip.active {
@@ -2016,7 +2000,7 @@ body {
   display: inline-flex; align-items: center; justify-content: center;
   background: transparent; border: 1px solid var(--border-dim);
   border-radius: 6px; color: var(--muted);
-  cursor: pointer; transition: all .15s ease;
+  cursor: pointer; transition: var(--t-ui);
 }
 #section-timesheets .tsh-icon-btn:hover { color: var(--white); border-color: var(--border); }
 #section-timesheets .tsh-icon-btn.danger:hover { color: var(--red); border-color: var(--red); }
@@ -2027,7 +2011,7 @@ body {
 }
 #section-timesheets .tsh-ssa-card {
   background: var(--card); border: 1px solid var(--border-dim);
-  border-radius: var(--radius); padding: 18px; transition: border-color .2s;
+  border-radius: var(--radius); padding: 18px; transition: border-color var(--dur-2) var(--ease);
 }
 #section-timesheets .tsh-ssa-card:hover { border-color: var(--border); }
 #section-timesheets .tsh-ssa-card-head {
@@ -2057,7 +2041,7 @@ body {
   background: none; border: none; padding: 0;
   color: var(--muted); font-size: 11px; font-family: inherit;
   cursor: pointer; text-decoration: underline; text-decoration-color: var(--border-dim);
-  transition: color .15s;
+  transition: color var(--dur-1) var(--ease);
 }
 #section-timesheets .tsh-ssa-link:hover { color: var(--green); text-decoration-color: var(--green); }
 #section-timesheets .tsh-ssa-link.muted { color: var(--muted); margin-left: auto; }
@@ -2110,7 +2094,7 @@ body {
 #section-timesheets .tsh-modal-bg {
   position: fixed; inset: 0; background: var(--overlay);
   display: none; align-items: center; justify-content: center;
-  z-index: 1500; animation: fadeIn .15s ease;
+  z-index: 1500; animation: gk-fade var(--dur-2) var(--ease) both;
 }
 #section-timesheets .tsh-modal-bg.show { display: flex; }
 #section-timesheets .tsh-modal {
@@ -2140,7 +2124,7 @@ body {
   background: var(--dark); color: var(--white);
   border: 1px solid var(--border); border-radius: var(--radius-sm);
   font-family: var(--font-body); font-size: 13px;
-  outline: none; transition: border-color .15s;
+  outline: none; transition: border-color var(--dur-1) var(--ease);
 }
 #section-timesheets .tsh-form-grp input:focus,
 #section-timesheets .tsh-form-grp select:focus,
@@ -2205,7 +2189,7 @@ body {
 #section-settings .set-seg-btn {
   min-height: 36px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm);
   background: transparent; color: var(--muted); font-family: var(--font-body); font-size: 12px; font-weight: 700;
-  cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease;
+  cursor: pointer; transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
 #section-settings .set-seg-btn:hover { border-color: var(--border); color: var(--white); }
 #section-settings .set-seg-btn.active { background: var(--green-glow); border-color: var(--green); color: var(--green); }
@@ -2256,8 +2240,6 @@ body {
 #section-leave .lev-refresh:hover:not(:disabled),
 #section-leave .lev-month-btn:hover { color: var(--green); border-color: var(--green); }
 #section-leave .lev-refresh:disabled { opacity: .5; cursor: not-allowed; }
-#section-leave .lev-refresh svg { transition: transform .4s ease; }
-#section-leave .lev-refresh.spinning svg { animation: spin 1s linear infinite; }
 #section-leave .lev-last-sync { font-size: 11px; color: var(--muted); }
 #section-leave .lev-month-sel {
   display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 3px;
@@ -2336,7 +2318,7 @@ body {
 #section-leave .lev-modal-bg {
   position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 1500;
   display: none; align-items: center; justify-content: center; padding: 18px;
-  animation: fadeIn .15s ease;
+  animation: gk-fade var(--dur-2) var(--ease) both;
 }
 #section-leave .lev-modal-bg.show { display: flex; }
 #section-leave .lev-modal {
@@ -4067,7 +4049,7 @@ body::before {
 
       <div class="sb-nav-label">Sales</div>
       <button class="sb-link" type="button" data-section="clients" data-hub="clients" onclick="navHub('clients')">
-        <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span><span class="lbl">Clients</span>
+        <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 012-2h8a2 2 0 012 2v18z"/><path d="M6 12H4a2 2 0 00-2 2v6a2 2 0 002 2h2"/><path d="M18 9h2a2 2 0 012 2v9a2 2 0 01-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg></span><span class="lbl">Clients</span>
       </button>
       <button class="sb-link" type="button" data-section="opportunities" onclick="navTo('opportunities')">
         <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span><span class="lbl">Opportunities</span>
@@ -4102,7 +4084,7 @@ body::before {
         </div>
       </div>
       <button id="signOutBtn" type="button" onclick="signOut()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         <span class="so-label">Sign out</span>
       </button>
     </div>
@@ -4140,7 +4122,7 @@ body::before {
         <div class="ovw-head-actions">
           <button class="btn btn-primary" type="button" onclick="ovwGoLogTime()">Log time</button>
           <button class="ovw-refresh" id="ovwRefresh" type="button" onclick="ovwRefreshData()" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="ovw-last-sync" id="ovwLastSync"></span>
@@ -4166,18 +4148,18 @@ body::before {
                Orphaned functions cleaned up in Phase 9. Service-line
                CRUD (Add/Edit/Delete service rows) remains here. -->
           <button class="prf-manage-link" type="button" onclick="navTo('clients')" title="Add, edit or delete clients in the Directory">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
             Manage clients in Directory
-            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
           <!-- Phase 10: Month selector -->
           <div class="prf-month-sel" id="prfMonthSel">
             <button class="prf-month-btn" type="button" onclick="prfChangeMonth(-1)" aria-label="Previous month" title="Previous month">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             <span class="prf-month-label" id="prfMonthLabel">—</span>
             <button class="prf-month-btn" type="button" onclick="prfChangeMonth(1)" aria-label="Next month" title="Next month">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
           <!-- Phase 10: Export CSV -->
@@ -4186,7 +4168,7 @@ body::before {
             Export CSV
           </button>
           <button class="prf-refresh" id="prfRefresh" type="button" onclick="prfRefreshData()" title="Reload" aria-label="Reload from SharePoint">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="prf-last-sync" id="prfLastSync"></span>
@@ -4221,7 +4203,7 @@ body::before {
         <p>Tax year <span id="milTaxYear">2026/27</span></p>
         <div class="mil-head-actions">
           <button class="mil-refresh" id="milRefresh" type="button" onclick="milRefreshData()" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="mil-last-sync" id="milLastSync"></span>
@@ -4295,7 +4277,7 @@ body::before {
               <div class="mil-form-actions">
                 <span class="mil-rate-note">55p a mile up to 10,000 miles a tax year, then 25p</span>
                 <button type="submit" class="btn btn-primary" id="milAddBtn">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Add journey
                 </button>
               </div>
@@ -4313,7 +4295,7 @@ body::before {
                      - Claim mode:  Counter + "Claim N selected" + "Cancel". -->
               <div class="mil-claim-tools" id="milClaimTools">
                 <button class="btn btn-ghost mil-claim-enter" id="milClaimEnterBtn" type="button" onclick="milEnterClaimMode()" title="Bulk-claim multiple journeys at once">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   Mark claimed…
                 </button>
                 <span class="mil-claim-counter" id="milClaimCounter" style="display:none;">0 selected</span>
@@ -4387,7 +4369,7 @@ body::before {
                 <input class="mil-input" id="milNewClientMiles" type="number" min="0" step="0.1" required placeholder="0.0">
               </div>
               <button type="submit" class="btn btn-primary" id="milAddClientBtn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Add client
               </button>
             </form>
@@ -4501,11 +4483,11 @@ body::before {
         <h1>Client <span>Directory</span></h1>
         <div class="cli-head-actions">
           <button class="btn btn-primary" type="button" onclick="cliOpenClientModal()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add client
           </button>
           <button class="cli-refresh" id="cliRefresh" type="button" onclick="cliRefreshData()" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="cli-last-sync" id="cliLastSync"></span>
@@ -4516,7 +4498,7 @@ body::before {
       <div class="cli-toolbar" id="cliToolbar" style="display:none">
         <div class="cli-srch">
           <span class="cli-srch-ic">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </span>
           <input type="search" id="cliSrchInput" placeholder="Search by name, contact or email…" aria-label="Search clients" oninput="cliOnSearch(this.value)" autocomplete="off">
         </div>
@@ -4557,7 +4539,7 @@ body::before {
         <h1>The <span>Team</span></h1>
         <div class="head-actions">
           <button class="head-btn" id="teamRefresh" type="button" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="head-sync" id="teamLastSync"></span>
@@ -4571,7 +4553,7 @@ body::before {
         <h1>Opportunities</h1>
         <div class="head-actions">
           <button class="head-btn" id="oppRefresh" type="button" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="head-sync" id="oppLastSync"></span>
@@ -4600,9 +4582,9 @@ body::before {
       <div class="section-head">
         <h1>Jobs</h1>
         <div class="head-actions">
-          <button class="btn btn-primary" id="jobAdd" type="button">Add a job</button>
+          <button class="btn btn-primary" id="jobAdd" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add a job</button>
           <button class="head-btn" id="jobRefresh" type="button" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="head-sync" id="jobLastSync"></span>
@@ -4636,7 +4618,7 @@ body::before {
             <button type="button" data-bkp-hours="168" aria-pressed="false">7 days</button>
           </div>
           <button class="bkp-refresh" id="bkpRefresh" type="button" title="Re-read the support mailbox">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="bkp-last-sync" id="bkpLastSync"></span>
@@ -4675,7 +4657,7 @@ body::before {
             <button type="button" data-alr-days="30" aria-pressed="false">30 days</button>
           </div>
           <button class="bkp-refresh" id="alrRefresh" type="button" title="Re-read the support mailbox">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="bkp-last-sync" id="alrLastSync"></span>
@@ -4716,7 +4698,7 @@ body::before {
         <h1>Time<span>sheets</span></h1>
         <div class="tsh-head-actions">
           <button class="tsh-refresh" id="tshRefresh" type="button" onclick="tshRefreshData()" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="tsh-last-sync" id="tshLastSync"></span>
@@ -4852,15 +4834,15 @@ body::before {
         <div class="lev-head-actions">
           <div class="lev-month-sel" role="group" aria-label="Tax year">
             <button class="lev-month-btn" type="button" onclick="levChangeYear(-1)" aria-label="Previous tax year" title="Previous tax year">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
             <span class="lev-month-label" id="levMonthLabel">—</span>
             <button class="lev-month-btn" type="button" onclick="levChangeYear(1)" aria-label="Next tax year" title="Next tax year">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
           <button class="lev-refresh" id="levRefresh" type="button" onclick="levRefreshData()" title="Reload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
           </button>
           <span class="lev-last-sync" id="levLastSync"></span>
@@ -4931,7 +4913,7 @@ body::before {
               <div class="lev-form-actions">
                 <span class="lev-hint" id="levEstimateHint"></span>
                 <button class="btn btn-primary" type="submit" id="levSubmitBtn">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Save leave
                 </button>
               </div>
@@ -5742,6 +5724,18 @@ function geckoGo(section, tab, clientName) {
   }
 }
 
+/* The older tab strips (Timesheets, Mileage) keep their panels in the page: the one being shown
+   slides in from the side its tab is on, like every other strip (.app-pane, src/styles/app.css). */
+function geckoPaneDir(tabSel, from, to) {
+  if (from === to) return '';
+  return window.GeckoTabs.direction([...document.querySelectorAll(tabSel)].map(b => b.dataset.tab), from, to);
+}
+function geckoShowPane(panel, on, dir) {
+  panel.classList.remove('from-left', 'from-right');
+  panel.classList.toggle('active', on);
+  if (on && dir) panel.classList.add(dir);
+}
+
 /** Any client name, anywhere: open that client's page. */
 function openClient(name, tab) {
   if (!name) return;
@@ -6236,6 +6230,9 @@ function escapeHtml(s) {
   }[c]));
 }
 
+/** An icon from the one set (src/core/icons.js); sections render after load, when it is registered. */
+function gkIcon(name, size) { return window.GeckoIcons.icon(name, size); }
+
 /** Pick initials for the user-chip avatar. */
 function initialsFor(name) {
   if (!name) return '—';
@@ -6651,7 +6648,7 @@ function ovwSsaForCore() {
 function ovwMoneyHtml(core, today) {
   const db = OVW.db;
   const go = (section, tab) => ovwGoAttr({ section, tab });
-  const icon = path => `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+  const icon = path => `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   const tile = (attrs, label, svg, body) => `<button type="button" class="ovw-kpi" ${attrs}><div class="k-label">${icon(svg)}${escapeHtml(label)}</div>${body}<span class="k-go">Open →</span></button>`;
   const ICON = {
     sales: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
@@ -6911,7 +6908,7 @@ function ovwMonthEndHtml(me) {
   if (!me) return '<div class="ovw-error"><h3>Could not load</h3><p>Hard-refresh (Cmd+Shift+R).</p></div>';
   const monthName = new Date(me.month + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   const pct = me.total ? me.done / me.total : 0;
-  const icon = { done: '✓', todo: '', check: '?' };
+  const icon = { done: gkIcon('check', 12), todo: '', check: '?' };
   return `<div class="ovw-me-head">
       <div class="ovw-me-ring" style="--done:${(pct * 100).toFixed(1)}"><strong>${me.done}/${me.total}</strong><span>done</span></div>
       <div><h2>Closing ${escapeHtml(monthName)}</h2>
@@ -7624,7 +7621,7 @@ function prfRenderRow(r, cols) {
     <tr class="prf-row${open ? ' open' : ''}" data-client-id="${c.id}" data-client-name="${escapeHtml(c.name.toLowerCase())}"
         onclick="if (!event.target.closest('button,a,input,select')) prfToggleCard('${c.id}')">
       <td><div class="prf-namecell">
-        <button type="button" class="prf-toggle" aria-expanded="${open}" aria-label="Service lines for ${escapeHtml(c.name)}" onclick="prfToggleCard('${c.id}')">▸</button>
+        <button type="button" class="prf-toggle" aria-expanded="${open}" aria-label="Service lines for ${escapeHtml(c.name)}" onclick="prfToggleCard('${c.id}')">${gkIcon('right', 12)}</button>
         ${clientLink(c.name)}${badge}</div></td>
       <td class="num">${prfFmtForce(h.sell)}</td>
       <td class="num">${prfFmtForce(h.cost)}</td>
@@ -7653,7 +7650,7 @@ function prfRenderDetail(r) {
     </tr>`;
   });
   if (!rows) rows = `<tr><td colspan="7" class="prf-none">No service lines yet.</td></tr>`;
-  const addRow = `<tr class="prf-arow"><td colspan="7"><button type="button" class="btn btn-sm" onclick="prfAddServiceInline('${c.id}')">Add service</button></td></tr>`;
+  const addRow = `<tr class="prf-arow"><td colspan="7"><button type="button" class="btn btn-sm" onclick="prfAddServiceInline('${c.id}')">${gkIcon('plus')}Add service</button></td></tr>`;
   const ret = retainers.length
     ? `<p class="prf-ret-notice">Retainers ${prfFmtForce(retainers.reduce((a, s) => a + s.sell, 0))}/mo: labour not costed.</p>` : '';
   return `${ret}
@@ -7701,10 +7698,10 @@ function prfRenderServiceRow(s) {
 function prfRenderRowActions(svcId) {
   return `<div style="display:flex;gap:4px;justify-content:flex-end">
     <button class="prf-iconbtn" type="button" title="Edit service" onclick="event.stopPropagation();prfEditServiceInline('${svcId}')">
-      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      ${gkIcon('edit')}
     </button>
     <button class="prf-iconbtn danger" type="button" title="Delete service" onclick="event.stopPropagation();prfConfirmDeleteService('${svcId}')">
-      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+      ${gkIcon('trash')}
     </button>
   </div>`;
 }
@@ -8142,10 +8139,10 @@ function prfServiceFormRow({ clientId = null, mode, svc = null }) {
       <td>
         <div class="prf-eactions">
           <button class="prf-iconbtn" type="button" title="Save" onclick="prfSaveServiceRow(this,${editing ? `'${sid}'` : 'null'},${cid ? `'${cid}'` : 'null'})">
-            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            ${gkIcon('check')}
           </button>
           <button class="prf-iconbtn danger" type="button" title="Cancel" onclick="prfCancelServiceRow(this)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            ${gkIcon('x')}
           </button>
         </div>
       </td>
@@ -8777,7 +8774,7 @@ function milRenderLog() {
     const isSelected = MIL.selected.has(j.id);
     // Claimed cell — pill with date if claimed, inline "Mark claimed" link if not
     const claimedCell = isClaimed
-      ? `<span class="mil-claimed-pill yes" title="Marked claimed on ${escapeHtml(milFmtDate(j.claimedDate))}">✓ ${escapeHtml(milFmtDate(j.claimedDate))}</span>`
+      ? `<span class="mil-claimed-pill yes" title="Marked claimed on ${escapeHtml(milFmtDate(j.claimedDate))}">${gkIcon('check', 12)} ${escapeHtml(milFmtDate(j.claimedDate))}</span>`
       : `<button class="mil-claimed-link" type="button" onclick="milOpenClaimModal('${j.id}')" title="Mark this journey as claimed">Mark claimed</button>`;
     // Checkbox cell — disabled for already-claimed rows (no point selecting them)
     const checkCell = isClaimed
@@ -8795,7 +8792,7 @@ function milRenderLog() {
       <td>${claimedCell}</td>
       <td class="actions">
         <button class="mil-icon-btn danger" type="button" title="Delete journey" onclick="milConfirmDeleteJourney('${j.id}')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          ${gkIcon('trash')}
         </button>
       </td>
     </tr>`;
@@ -8822,7 +8819,7 @@ function milRenderClients() {
         <span style="color:var(--muted);font-size:11px;">mi</span>
         <div class="ca">
           <button class="mil-icon-btn danger" type="button" title="Delete client" onclick="milConfirmDeleteClient('${c.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/></svg>
+            ${gkIcon('trash')}
           </button>
         </div>
       </div>
@@ -8927,11 +8924,12 @@ function milTab(name) {
   // Leaving claim mode when navigating away from the journey log keeps the
   // toolbar honest — easy to forget you're in select-mode otherwise.
   if (MIL.claimMode && name !== 'log') milExitClaimMode();
+  const dir = geckoPaneDir('#section-mileage .mil-tab', MIL.activeTab, name);
   MIL.activeTab = name;
   document.querySelectorAll('#section-mileage .mil-tab').forEach(b =>
     b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('#section-mileage .mil-panel').forEach(p =>
-    p.classList.toggle('active', p.id === 'milPanel' + name.charAt(0).toUpperCase() + name.slice(1)));
+    geckoShowPane(p, p.id === 'milPanel' + name.charAt(0).toUpperCase() + name.slice(1), dir));
 }
 
 function milFilter(driver, btn) {
@@ -9033,7 +9031,7 @@ function milConfirmDeleteJourney(id) {
   // Phase 5.5: extra-warn when deleting a CLAIMED journey, since records that
   // have been submitted for reimbursement shouldn't be edited carelessly.
   const claimedNote = j.claimedDate
-    ? ` ⚠ This journey was marked CLAIMED on ${milFmtDate(j.claimedDate)} — deleting it may affect your records.`
+    ? ` This journey was marked CLAIMED on ${milFmtDate(j.claimedDate)} — deleting it may affect your records.`
     : '';
   milOpenModal(
     'Delete journey?',
@@ -10215,14 +10213,14 @@ function cliRenderTableRow(r) {
       <td class="actions">
         ${inGecko ? `
           <button class="cli-iconbtn" type="button" title="View in Profitability" aria-label="View ${escapeHtml(r.name)} in Profitability" onclick="cliJumpToProfitability('${r.gecko.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>
           </button>
           <button class="cli-iconbtn" type="button" title="Edit client" aria-label="Edit ${escapeHtml(r.name)}" onclick="cliOpenClientModal('${r.gecko.id}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
         ` : `
           <button class="cli-iconbtn" type="button" title="Add to Profitability" aria-label="Add ${escapeHtml(r.name)} to Profitability" onclick="cliOpenClientModalFromName('${jsAttr(r.name)}')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         `}
       </td>
@@ -10432,7 +10430,7 @@ function cliConfirmDeleteClient(id) {
 
   const body = `
     <p>Delete <strong>${escapeHtml(client.name)}</strong>${linkedCount > 0 ? ` and all <strong>${linkedCount} linked service line${linkedCount === 1 ? '' : 's'}</strong>` : ''}?</p>
-    ${ssaRow ? `<p style="font-size:11px;color:var(--amber)">⚠ Its SSA row in the <strong>Clients</strong> list is <strong>not</strong> deleted; remove it in SharePoint if needed.</p>` : ''}
+    ${ssaRow ? `<p style="font-size:11px;color:var(--amber)">${gkIcon('warning', 12)} Its SSA row in the <strong>Clients</strong> list is <strong>not</strong> deleted; remove it in SharePoint if needed.</p>` : ''}
     <p>This cannot be undone.</p>
     <div class="cli-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="cliCloseModal()">Cancel</button>
@@ -11202,11 +11200,12 @@ async function tshRefreshData(silent = false) {
 
 // ─── Tab switching ───────────────────────────────────────────────────
 function tshTab(name) {
+  const dir = geckoPaneDir('#section-timesheets .tsh-tab', TSH.activeTab, name);
   TSH.activeTab = name;
   document.querySelectorAll('#section-timesheets .tsh-tab').forEach(b =>
     b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('#section-timesheets .tsh-panel').forEach(p =>
-    p.classList.toggle('active', p.id === 'tshPanel' + name.charAt(0).toUpperCase() + name.slice(1)));
+    geckoShowPane(p, p.id === 'tshPanel' + name.charAt(0).toUpperCase() + name.slice(1), dir));
   // Re-render on tab switch to pick up any data changes
   tshRenderAll();
 }
@@ -11367,7 +11366,7 @@ function tshSetButton(state) {
   const btn = tshEl('tshAddBtn');
   if (!btn) return;
   if (state === 'saving') { btn.disabled = true; btn.textContent = 'Logging…'; btn.className = 'btn btn-primary'; return; }
-  if (state === 'done') { btn.disabled = true; btn.textContent = 'Logged ✓'; btn.className = 'btn btn-primary tsh-done'; return; }
+  if (state === 'done') { btn.disabled = true; btn.innerHTML = 'Logged ' + gkIcon('check'); btn.className = 'btn btn-primary tsh-done'; return; }
   if (TSHF.saving) return;
   btn.disabled = false;
   btn.className = TSHF.confirmed ? 'btn tsh-anyway' : 'btn btn-primary';
@@ -11586,8 +11585,8 @@ function tshRenderLog() {
     return;
   }
 
-  const editIc = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-  const delIc = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
+  const editIc = gkIcon('edit');
+  const delIc = gkIcon('trash');
 
   const tbody = rows.map(e => {
     const engCls = tshEngClass(e.engineer);
@@ -11917,7 +11916,7 @@ function tshRenewRender() {
     return;
   }
 
-  const icon = s => s === 'done' ? '✓' : s === 'fail' ? '✕' : s === 'doing' ? '…' : '·';
+  const icon = s => s === 'done' ? gkIcon('check', 12) : s === 'fail' ? gkIcon('x', 12) : s === 'doing' ? '…' : '·';
   const step = (key, label) => {
     const s = r.steps[key] || { state: 'todo' };
     return `<li class="tsh-renew-step ${s.state}"><span class="tsh-renew-ic" aria-hidden="true">${icon(s.state)}</span><span><strong>${escapeHtml(label)}</strong>${s.text ? `<br><span class="tsh-renew-sub">${escapeHtml(s.text)}</span>` : ''}</span></li>`;
@@ -12287,7 +12286,7 @@ function tshRenewXeroHtml(r, inv, money) {
   if (x.state === 'loading') return `<div class="tsh-renew-xero"><div class="tsh-renew-xero-h">Raise in Xero</div><p class="tsh-renew-sub">Getting your Xero contacts…</p></div>`;
   if (x.result) {
     return `<div class="tsh-renew-xero done">
-        <div class="tsh-renew-xero-h">✓ Draft ${escapeHtml(x.result.invoice_number || 'invoice')} created in Xero</div>
+        <div class="tsh-renew-xero-h">${gkIcon('check')} Draft ${escapeHtml(x.result.invoice_number || 'invoice')} created in Xero</div>
         <p class="tsh-renew-sub">${money(inv.net)} + VAT to ${escapeHtml(x.result.contact)}. Approve and send it in Xero.</p>
         <div class="tsh-mm-actions"><a class="btn" href="${escapeHtml(tshXeroLink(x.result.invoice_id))}" target="_blank" rel="noopener">Open ${escapeHtml(x.result.invoice_number || 'the draft')} in Xero</a></div>
       </div>`;
@@ -12445,9 +12444,9 @@ function tshRenderWeekly() {
 
   wrap.innerHTML = `<div class="tsh-wk">
     <div class="tsh-wk-nav">
-      <button type="button" class="tsh-wk-arrow" data-wk-step="-1" aria-label="Previous week">‹</button>
+      <button type="button" class="tsh-wk-arrow" data-wk-step="-1" aria-label="Previous week">${gkIcon('left', 12)}</button>
       <div class="tsh-wk-title"><h3>${escapeHtml(W.weekLabel(w.start))}</h3><span>${w.isCurrent ? 'This week' : w.start === W.addDays(W.monday(t), -7) ? 'Last week' : 'Week of ' + escapeHtml(tshDayLbl(w.start, { day: 'numeric', month: 'long' }))}</span></div>
-      <button type="button" class="tsh-wk-arrow" data-wk-step="1" aria-label="Next week" ${w.isCurrent || w.isFuture ? 'disabled' : ''}>›</button>
+      <button type="button" class="tsh-wk-arrow" data-wk-step="1" aria-label="Next week" ${w.isCurrent || w.isFuture ? 'disabled' : ''}>${gkIcon('right', 12)}</button>
       ${w.isCurrent ? '' : '<button type="button" class="tsh-ssa-btn" data-wk-go="now">This week</button>'}
     </div>
     <div class="tsh-wk-kpis">
@@ -12744,8 +12743,8 @@ const LEV = {
 };
 
 const LEV_ICONS = {
-  check: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-  x: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+  check: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  x: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
 };
 
 function levCurrentTaxYear(date = new Date()) {

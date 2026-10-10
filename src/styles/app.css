@@ -29,8 +29,8 @@
 .app-tabs button[aria-selected="true"] .app-tab-badge { background: rgba(255,255,255,.22); color: var(--on-green); }
 .app-tab-badge.warn { background: var(--red-dim); color: var(--red); }
 
-.app-pane.from-right { animation: app-pane-r var(--dur-3) var(--ease) both; }
-.app-pane.from-left { animation: app-pane-l var(--dur-3) var(--ease) both; }
+:is(.app-pane, #section-mileage .mil-panel.active, #section-timesheets .tsh-panel.active).from-right { animation: app-pane-r var(--dur-3) var(--ease) both; }
+:is(.app-pane, #section-mileage .mil-panel.active, #section-timesheets .tsh-panel.active).from-left { animation: app-pane-l var(--dur-3) var(--ease) both; }
 @keyframes app-pane-r { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
 @keyframes app-pane-l { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
 
@@ -50,7 +50,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .app-tab-ink, .app-tabs button { transition: none; }
-  .app-pane.from-right, .app-pane.from-left { animation: none; }
+  :is(.app-pane, .mil-panel, .tsh-panel):is(.from-right, .from-left) { animation: none !important; }
 }
 
 /* Older sections' tab strips, upgraded to the same look by geckoInkify() (index.html): the strip gets
@@ -62,7 +62,7 @@
 #section-mileage .mil-tabs.app-tabs > button, #section-timesheets .tsh-tabs.app-tabs > button, #section-opportunities .opp-tabs.app-tabs > button {
   position: relative; z-index: 1; flex: 0 0 auto; min-height: 34px; padding: 6px 14px; border: 0; border-radius: var(--radius-pill);
   background: transparent; box-shadow: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 400; letter-spacing: 0;
-  transition: color .2s ease;
+  transition: color var(--dur-2) var(--ease);
 }
 #section-mileage .mil-tabs.app-tabs > button:hover, #section-timesheets .tsh-tabs.app-tabs > button:hover, #section-opportunities .opp-tabs.app-tabs > button:hover { color: var(--white); }
 #section-mileage .mil-tabs.app-tabs > button.active, #section-timesheets .tsh-tabs.app-tabs > button.active,
@@ -77,7 +77,7 @@
 #section-timesheets .tsh-presets { display: flex; flex-wrap: wrap; gap: 5px; }
 #section-timesheets .tsh-preset {
   font: inherit; font-size: 11px; cursor: pointer; min-height: 28px; padding: 3px 10px; border-radius: 999px;
-  border: 1px solid var(--border-dim); background: transparent; color: var(--muted); transition: border-color .15s, color .15s, background .15s;
+  border: 1px solid var(--border-dim); background: transparent; color: var(--muted); transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
 }
 #section-timesheets .tsh-preset:hover, #section-timesheets .tsh-preset:focus-visible { border-color: var(--green); color: var(--green); }
 #section-timesheets .tsh-preset.on { background: var(--green-glow); border-color: var(--green); color: var(--green); font-weight: 600; }
@@ -168,7 +168,7 @@
 #section-timesheets .tsh-ssa-actions { flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-dim); }
 #section-timesheets .tsh-ssa-btn {
   font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; min-height: 30px; padding: 5px 12px; border-radius: 999px;
-  border: 1px solid var(--border-dim); background: transparent; color: var(--white); transition: border-color .15s, color .15s;
+  border: 1px solid var(--border-dim); background: transparent; color: var(--white); transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
 #section-timesheets .tsh-ssa-btn:hover, #section-timesheets .tsh-ssa-btn:focus-visible { border-color: var(--green); color: var(--green); }
 #section-timesheets .tsh-ssa-btn.primary { background: var(--green); border-color: var(--green); color: var(--on-green); }
@@ -184,8 +184,8 @@
 #section-timesheets .tsh-wk { display: flex; flex-direction: column; gap: 14px; }
 #section-timesheets .tsh-wk-nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 #section-timesheets .tsh-wk-arrow {
-  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-dim); background: var(--card);
-  color: var(--white); font-size: 20px; line-height: 1; cursor: pointer; transition: border-color .15s, color .15s;
+  display: inline-grid; place-items: center; padding: 0; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-dim); background: var(--card);
+  color: var(--white); font-size: 20px; line-height: 1; cursor: pointer; transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
 #section-timesheets .tsh-wk-arrow:hover:not(:disabled) { border-color: var(--green); color: var(--green); }
 #section-timesheets .tsh-wk-arrow:disabled { opacity: .35; cursor: default; }
@@ -234,7 +234,7 @@
 #section-timesheets .tsh-wk-trend { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; height: 130px; }
 #section-timesheets .tsh-wk-tr { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; border: 0; background: none; cursor: pointer; padding: 0; font: inherit; }
 #section-timesheets .tsh-wk-tr b { font-family: var(--font-mono); font-weight: 500; font-size: 10.5px; color: var(--muted); }
-#section-timesheets .tsh-wk-tr i { display: block; width: 100%; max-width: 40px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--blue); opacity: .55; transition: opacity .15s; }
+#section-timesheets .tsh-wk-tr i { display: block; width: 100%; max-width: 40px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--blue); opacity: .55; transition: opacity var(--dur-1) var(--ease); }
 #section-timesheets .tsh-wk-tr:hover i { opacity: .85; }
 #section-timesheets .tsh-wk-tr.on i { background: var(--green); opacity: 1; }
 #section-timesheets .tsh-wk-tr.on b { color: var(--white); }

@@ -48,7 +48,7 @@
 #section-client .cl-hist-col { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; min-width: 0; }
 #section-client .cl-hist-col span { font-size: 11px; color: var(--muted); }
 #section-client .cl-hist-col.cur span { color: var(--white); font-weight: 700; }
-#section-client .cl-hist-bar { flex: 1; width: 100%; max-width: 30px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; transform-origin: bottom; animation: cl-grow-y .6s var(--ease) both; }
+#section-client .cl-hist-bar { flex: 1; width: 100%; max-width: 30px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; transform-origin: bottom; animation: cl-grow-y var(--dur-chart) var(--ease) both; }
 #section-client .cl-hist-bar i { display: block; width: 100%; }
 #section-client .cl-hist-bar i:first-child { border-radius: 3px 3px 0 0; }
 #section-client .cl-legend { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
@@ -56,7 +56,7 @@
 #section-client .cl-legend b { width: 10px; height: 10px; border-radius: 3px; }
 
 #section-client .cl-margin { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--border-dim); gap: 2px; }
-#section-client .cl-margin i { display: block; height: 100%; transform-origin: left; animation: cl-grow-x .6s var(--ease) both; }
+#section-client .cl-margin i { display: block; height: 100%; transform-origin: left; animation: cl-grow-x var(--dur-chart) var(--ease) both; }
 
 #section-client .cl-support { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 #section-client .cl-support .cl-mini { flex: 1; min-width: 180px; }
@@ -75,7 +75,7 @@
 #section-client .cl-gauge-text span { font-size: 11px; color: var(--muted); }
 #section-client .cl-bars { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; height: 150px; }
 #section-client .cl-bars div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
-#section-client .cl-bars i { display: block; width: 100%; max-width: 34px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--blue); transform-origin: bottom; animation: cl-grow-y .6s var(--ease) both; }
+#section-client .cl-bars i { display: block; width: 100%; max-width: 34px; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--blue); transform-origin: bottom; animation: cl-grow-y var(--dur-chart) var(--ease) both; }
 #section-client .cl-bars span { font-size: 11px; color: var(--muted); }
 #section-client .cl-bars em { font-style: normal; font-family: var(--font-mono); font-size: 10.5px; color: var(--white); min-height: 14px; }
 
@@ -125,7 +125,7 @@
 #section-client .cl-contact-lines { display: flex; flex-direction: column; gap: 2px; font-size: 13px; min-width: 0; }
 #section-client .cl-contact-lines a { color: var(--green); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #section-client .cl-contact-lines a:hover { text-decoration: underline; }
-#section-client .cl-contact-acts { display: flex; gap: 6px; width: 100%; padding-top: 8px; border-top: 1px solid var(--border-dim); }
+#section-client .cl-contact-acts { display: flex; align-items: center; gap: 6px; width: 100%; padding-top: 8px; border-top: 1px solid var(--border-dim); }
 #section-client .cl-contact-acts .btn-danger { margin-left: auto; }
 #section-client .cl-form .cl-check { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; color: var(--white); }
 #section-client .cl-form .cl-check input { width: auto; min-height: 0; }

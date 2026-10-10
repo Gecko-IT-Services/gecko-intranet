@@ -19,7 +19,7 @@ rather than by rewriting every template.
 ## The standard (what every section does)
 1. **Header**: `.section-head` band; `h1` is two words with the second in `<span>` (green); a `p` only
    when it carries live data (Overview's date, the tax year), never a tagline;
-   then a head-actions row: section actions (primary last-but-one), **Refresh** (13px icon + "Refresh",
+   then a head-actions row: section actions (primary last-but-one), **Refresh** (14px icon + "Refresh",
    default button), then **"Synced HH:MM"** (mono, muted) straight after it. View tabs sit *below* the
    band, never inside it.
 2. **Buttons**: `.btn` (34px pill, 13px). `.btn-primary` = ink (one per view). `.btn-ghost` for low

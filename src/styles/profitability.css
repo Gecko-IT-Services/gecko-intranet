@@ -61,7 +61,7 @@
 #section-profitability .prf-toggle {
   width: 22px; height: 22px; flex: none; display: inline-grid; place-items: center;
   border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer;
-  font-size: 11px; transition: transform .15s ease, color .15s ease;
+  font-size: 11px; transition: transform var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
 #section-profitability .prf-toggle:hover { color: var(--white); background: var(--card-hover); }
 #section-profitability tr.prf-row.open .prf-toggle { transform: rotate(90deg); color: var(--green); }
