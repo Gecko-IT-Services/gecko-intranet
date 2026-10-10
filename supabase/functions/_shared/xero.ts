@@ -37,7 +37,7 @@ function clientCreds() {
  * keys, so the legacy SUPABASE_ANON_KEY Supabase provides is refused ("Invalid API key"):
  * the caller's own key (sent by supabase-js) comes first, then this one.
  */
-const PUBLISHABLE_KEY = 'sb_publishable_9-Krnct-4TD9Ri_ci7Bgpw_tNV0lOrB';
+export const PUBLISHABLE_KEY = 'sb_publishable_9-Krnct-4TD9Ri_ci7Bgpw_tNV0lOrB';
 
 /** Is the caller (by their Supabase session token) Gecko staff? → their email, or null. */
 export async function staffEmail(req: Request): Promise<string | null> {

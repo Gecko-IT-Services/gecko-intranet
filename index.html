@@ -79,6 +79,7 @@
 <link rel="stylesheet" href="src/styles/mileage.css">
 <link rel="stylesheet" href="src/styles/profitability.css">
 <link rel="stylesheet" href="src/styles/licences.css">
+<link rel="stylesheet" href="src/styles/ask.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -4092,6 +4093,10 @@ body::before {
       <button class="sb-link" type="button" data-section="settings" onclick="navTo('settings')">
         <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="lbl">Settings</span>
       </button>
+      <!-- Ask Gecko HQ (src/sections/ask.js): on desktop here; on a phone the top bar's Ask button. Not a section. -->
+      <button class="sb-link sb-ask" id="askOpenSide" type="button" title="Ask a question about the business">
+        <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span><span class="lbl">Ask Gecko HQ</span>
+      </button>
     </nav>
 
     <div class="sb-foot">
@@ -4118,6 +4123,11 @@ body::before {
     <div class="top-bar">
       <button class="sb-toggle" id="sbToggle" type="button" onclick="openSidebar()" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
       <h2 id="topBarTitle">OVERVIEW</h2>
+      <!-- Ask Gecko HQ (src/sections/ask.js): a question about the business, answered from the data (read only). -->
+      <button class="btn btn-sm ask-open" id="askOpen" type="button" title="Ask a question about the business">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Ask
+      </button>
     </div>
 
     <div id="loadingBar"></div>
