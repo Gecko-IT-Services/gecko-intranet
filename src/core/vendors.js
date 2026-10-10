@@ -3,23 +3,53 @@
 
    A vendor is recognised from the words in the name (a service line, a catalogue product, an
    opportunity's title), so a product added or renamed on the Products tab picks its mark up without
-   a code change. The images are in src/assets/vendors/. No top-level window access. */
+   a code change. The images are in src/assets/vendors/. No top-level window access.
+
+   Each vendor has `words` (any case) and, where a word is only safe as it is properly written,
+   `exact` (case as typed: "Teams" the product, not "teams"; "AV", not the "av" in a sentence).
+   Besides its own names a vendor owns the plain word for what Gecko sells of it (Jack, 10 Oct 2026):
+   a backup is Acronis, antivirus is Webroot, a password manager is Keeper, SEO is Rank Math, email
+   filtering is Hornetsecurity. Telephony is left alone: it is VoxOne for some clients and VoIP Exchange for others. */
 
 export const VENDORS = [
-  { key: 'microsoft',      label: 'Microsoft',          file: 'microsoft.svg',      match: /microsoft|\b[mo]365\b|office 365|\bwindows (10|11)\b|sharepoint|onedrive|\bintune\b|\bentra\b/i },
-  { key: 'google',         label: 'Google',             file: 'google.svg',         match: /google|g suite|gmail/i },
-  { key: 'voxone',         label: 'VoxOne',             file: 'voxone.png',         match: /vox ?one/i },
-  { key: 'hornetsecurity', label: 'Hornetsecurity',     file: 'hornetsecurity.png', match: /hornet/i },
-  // Gecko's backups are Acronis and its antivirus is Webroot (Jack, 10 Oct 2026), so the plain words count too.
-  // "AV" and "IS" only in capitals, and "IS" only as it is typed on a service line ("IS + Backup").
-  { key: 'acronis',        label: 'Acronis',            file: 'acronis.svg',        match: /acronis|\bback-?ups?\b/i },
-  { key: 'opentext',       label: 'Webroot (OpenText)', file: 'opentext.png',       match: /[Ww]ebroot|[Oo]pen[Tt]ext|[Aa]nti-?[Vv]irus|[Ii]nternet [Ss]ecurity|\bAV\b|\bIS\b(?=\s*[+&\/])/ },
+  { key: 'microsoft', label: 'Microsoft', file: 'microsoft.svg',
+    words: /microsoft|\b[mo]365\b|\boffice ?365\b|\bwindows\b|sharepoint|onedrive|\bazure\b|\bintune\b|\bentra\b|\bbusiness (basic|standard|premium)\b/i,
+    exact: /\b(Teams|Outlook|Exchange|Defender|Copilot)\b/ },
+  { key: 'google', label: 'Google', file: 'google.svg',
+    words: /google|\bg ?suite\b|\bgmail\b|\bchromebooks?\b/i },
+  { key: 'voxone', label: 'VoxOne', file: 'voxone.png',
+    words: /\bvox ?one\b/i },
+  { key: 'hornetsecurity', label: 'Hornetsecurity', file: 'hornetsecurity.png',
+    words: /\bhornet ?(security)?\b|\btotal protection\b|\b(e-?mail|spam) ?(security|filter(ing|s)?)\b/i },
+  { key: 'acronis', label: 'Acronis', file: 'acronis.svg',
+    words: /acronis|\bback-?ups?\b|\bcyber protect\b/i },
+  { key: 'opentext', label: 'Webroot (OpenText)', file: 'opentext.png',
+    words: /webroot|opentext|\banti-?virus\b|\binternet security\b|\bendpoint (protection|security)\b|\bdns protection\b/i,
+    exact: /\bAV\b|\bIS\b(?=\s*[+&\/])/ },   // "IS" only as a service line has it: "IS + Backup"
+  { key: 'keeper', label: 'Keeper', file: 'keeper.svg',
+    words: /\bkeeper\b|\bpassword (manager|vault)\b/i },
+  { key: 'rankmath', label: 'Rank Math', file: 'rankmath.svg',
+    words: /\brank ?math\b/i,
+    exact: /\bSEO\b/ },
 ];
+
+/* Phrases that hold a vendor's word and are not that vendor's: VoIP Exchange is VoIP Unlimited's
+   platform, not Microsoft Exchange. Blanked out before matching. */
+const NOT_A_VENDOR = /\bvoip exchange\b/gi;
+
+/* One name rarely belongs to more than three; past that the logos stop helping. */
+const MOST = 3;
+
+/** An opportunity's title is "Product — Client": the part to read for a vendor is the product. */
+export function productPart(title) {
+  return String(title ?? '').split(' — ')[0];
+}
 
 /** The vendors named in `text`, in the order they are named. */
 export function vendorsFor(text) {
-  const s = String(text ?? '');
-  return VENDORS.map(v => [s.search(v.match), v]).filter(([at]) => at >= 0).sort((a, b) => a[0] - b[0]).map(([, v]) => v);
+  const s = String(text ?? '').replace(NOT_A_VENDOR, m => ' '.repeat(m.length));
+  const first = v => Math.min(...[v.words, v.exact].filter(Boolean).map(r => s.search(r)).filter(at => at >= 0));   // Infinity when unnamed
+  return VENDORS.map(v => [first(v), v]).filter(([at]) => at < Infinity).sort((a, b) => a[0] - b[0]).slice(0, MOST).map(([, v]) => v);
 }
 
 /**
