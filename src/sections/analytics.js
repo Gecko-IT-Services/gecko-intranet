@@ -332,10 +332,11 @@ const CHARTS = {
     let s = `<svg width="${w}" height="${h}" role="img" aria-label="Each client’s prepaid support hours running down to the day they run out">`;
     s += `<rect x="${x0}" y="${top - 4}" width="${x(t0 + A.SOON_DAYS * DAY) - x0}" height="${h - top + 4}" class="zone"/>`;
     const first = new Date(t0); first.setUTCDate(1); first.setUTCMonth(first.getUTCMonth() + 1);
-    const perMonth = (w - lw - rw) / (span / 30.44), every = perMonth < 26 ? 3 : perMonth < 40 ? 2 : 1;
+    // A month label is about 27px wide ("Sept"): label every month, every second or every third so they never touch.
+    const perMonth = (w - lw - rw) / (span / 30.44), every = perMonth < 17 ? 3 : perMonth < 34 ? 2 : 1;
     for (let m = new Date(first), i = 0; m.getTime() < end; m.setUTCMonth(m.getUTCMonth() + 1), i++) {
       s += `<line x1="${x(m.getTime())}" x2="${x(m.getTime())}" y1="${top - 4}" y2="${h}" class="grid"/>`;
-      if (i % every === 0 && x(m.getTime()) - x0 > 34) s += T(x(m.getTime()) + 4, 10, m.toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short' }), 'ax');
+      if (i % every === 0) s += T(x(m.getTime()) + 4, 10, m.toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short' }), 'ax');
     }
     s += `<line x1="${x0}" x2="${x0}" y1="${top - 4}" y2="${h}" class="rule"/>` + T(x0 - 4, 10, 'Today', 'ax', 'end');
     rows.forEach((c, i) => {
