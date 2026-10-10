@@ -84,6 +84,12 @@
 #app :is(.bkp-window button[aria-pressed="true"], .cli-filter .cli-fbtn.active) {
   background: var(--green); color: var(--on-green); font-weight: 600;
 }
+/* The Clients filter's green is a sliding ink (geckoInkify in index.html), as on the tab strips. */
+#app .cli-filter[data-inked] .cli-fbtn.active { background: transparent; }
+#app .cli-filter .app-tab-ink { top: 3px; bottom: 3px; }
+/* On a phone the chips are wider than the screen: scroll inside the pill, not out of it. */
+#app .cli-filter { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+#app .cli-filter::-webkit-scrollbar { display: none; }
 
 
 /* ── 2 · Buttons ────────────────────────────────────────────────────── */

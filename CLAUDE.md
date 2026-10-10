@@ -53,6 +53,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   (`src/core/tabs.js`, `.app-tabs` in `src/styles/app.css`). Any client name → `clientLink(name)` →
   that client's page (`src/sections/client.js`). Navigate with `geckoGo(section, tab)`.
   Design: `2026-10-09-gecko-hq-structure-design.md` (workflow answers and the stage plan).
+  Sidebar look (Jack, 10 Oct, `2026-10-10-tidy-sidebar-design.md`): one `.sidebar` block near the top of `index.html`'s CSS, flat,
+  34px rows, bare 16px icons, sentence-case group labels, brand is the logo + "Gecko IT Services" with a small green "HQ" badge (Jack's pick), 260px wide, footer is one row (avatar,
+  name, email, sign-out icon). Change it there; do not add another override layer further down the file.
 - Design system (10 Oct 2026, `2026-10-10-design-consistency-design.md`): `src/styles/system.css`
   loads last and is anchored on `#app`; it defines the header actions row (Refresh + "Synced HH:MM"),
   `.btn` family (`btn-primary` ink, `btn-ghost`, `btn-danger`, `btn-success`, `btn-sm`), hairline figure
