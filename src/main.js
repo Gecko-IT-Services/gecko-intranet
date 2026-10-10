@@ -20,6 +20,7 @@ import * as overview from './sections/overview.js';
 import * as client from './sections/client.js';
 import * as team from './sections/team.js';
 import * as licences from './sections/licences.js';
+import * as ask from './sections/ask.js';
 import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
 import * as overviewCore from './core/overview.js';
@@ -42,6 +43,9 @@ window.GeckoSections.opportunities = { init: opportunities.init, show: opportuni
 window.GeckoSections.jobs = { init: jobs.init, show: jobs.show };
 window.GeckoSections.team = { init: team.init };
 window.GeckoSections.licences = { init: licences.init };
+// Ask Gecko HQ: the top bar's Ask button and its dialog (not a section; set up once at load).
+ask.init();
+window.GeckoAsk = { open: ask.open };
 window.GeckoSections.client = { init: client.init, open: client.open, current: client.current };
 // Overview › Today reads the last day of backups and alerts through these (support@ mailbox).
 window.GeckoMonitor = { backups: backups.snapshot, alerts: alerts.snapshot };
