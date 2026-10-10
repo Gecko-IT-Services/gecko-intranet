@@ -20,7 +20,8 @@ export const ATERA_NAMES = {
   'CD Aluminium': 'CDA Ltd',
   'Cutler Solutions': 'Cutler Home Solutions'
 };
-const sameAs = (ateraName, other) => sameClient(ateraName, other) || (ATERA_NAMES[ateraName] ? sameClient(ATERA_NAMES[ateraName], other) : false);
+/** Atera's customer name and a Xero / Gecko HQ name are the same client (spelling differences in ATERA_NAMES). */
+export const sameAteraClient = (ateraName, other) => sameClient(ateraName, other) || (ATERA_NAMES[ateraName] ? sameClient(ATERA_NAMES[ateraName], other) : false);
 
 const DAY = 86400000;
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
@@ -71,7 +72,7 @@ export function deviceSummary(agents, billing = new Map(), today) {
   const clients = [...by.values()].map(e => {
     const list = e.agents.map(a => ({ ...a, server: isServer(a), win10: isWin10(a), days: daysSince(a.last_seen, today) }))
       .sort((x, y) => Number(y.server) - Number(x.server) || String(x.machine_name).localeCompare(String(y.machine_name)));
-    const bill = bills.find(b => sameAs(e.name, b.contact));
+    const bill = bills.find(b => sameAteraClient(e.name, b.contact));
     const win10 = list.filter(a => a.win10).length;
     const stale = list.filter(a => a.days != null && a.days >= STALE_DAYS).length;
     const flags = [];
@@ -99,5 +100,5 @@ export function deviceSummary(agents, billing = new Map(), today) {
 
 /** This client's devices (any spelling of the name) from deviceSummary's clients. */
 export function devicesFor(summary, clientName) {
-  return (summary?.clients || []).find(c => sameAs(c.name, clientName)) || null;
+  return (summary?.clients || []).find(c => sameAteraClient(c.name, clientName)) || null;
 }
