@@ -20,6 +20,7 @@
 import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { icon } from '../core/icons.js';
+import { vendorMarks } from '../core/vendors.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
@@ -535,8 +536,10 @@ function signalLine(c, dnsRow, psRow) {
     parts.push('VoIP Unlimited (dealer): ' + c.dealer.map(d => `${d.quantity > 1 ? d.quantity + ' × ' : ''}${serviceLabel(d.service)}`).join(', '));
   }
   if (!c.domains.length) parts.push('No domain yet.');
+  const marks = {};   // a logo in front of a line: who hosts their email
   if (dnsRow) {
     const d = dnsRow.data;
+    if (!d.error) marks[parts.length] = vendorMarks({ microsoft: 'Microsoft 365', google: 'Google' }[d.provider]);
     parts.push(d.error ? `Email check failed (${d.error})`
       : `Email ${c.emailDomain}: ${({ microsoft: 'Microsoft 365', google: 'Google', filtered: 'filtered', other: 'other provider', none: 'no mail' })[d.provider] || d.provider}${d.filter ? ' via ' + d.filter : ''} · SPF ${d.spf} · DMARC ${d.dmarc}${d.provider === 'microsoft' ? ' · DKIM ' + (d.dkim ? 'on' : 'off') : ''}`);
   } else if (c.emailDomain) parts.push(`Email ${c.emailDomain}: not checked yet`);
@@ -546,7 +549,7 @@ function signalLine(c, dnsRow, psRow) {
       : `Website ${c.webDomain}: speed ${p.performance ?? '—'} · SEO ${p.seo ?? '—'} · accessibility ${p.accessibility ?? '—'}${p.https === false ? ' · no HTTPS' : ''}`);
   } else if (c.webDomain) parts.push(`Website ${c.webDomain}: not checked yet`);
   const when = [dnsRow, psRow].filter(Boolean).map(r => r.checked_at).sort().at(0);
-  return parts.map(p => `<span>${escapeHtml(p)}</span>`).join('') + (when ? `<span class="opp-muted">checked ${escapeHtml(new Date(when).toLocaleDateString('en-GB'))}</span>` : '');
+  return parts.map((p, i) => `<span>${marks[i] || ''}${escapeHtml(p)}</span>`).join('') + (when ? `<span class="opp-muted">checked ${escapeHtml(new Date(when).toLocaleDateString('en-GB'))}</span>` : '');
 }
 
 function gapsHtml() {
@@ -574,7 +577,7 @@ function gapsHtml() {
           <button type="button" class="btn btn-sm" data-opp-act="adddomain" data-client="${escapeHtml(c.name)}">Add &amp; check</button>
           ${c.domains.length ? `<button type="button" class="btn btn-sm" data-opp-act="checkone" data-client="${escapeHtml(c.name)}" ${OPP.checking ? 'disabled' : ''}>Re-check now</button>` : ''}</div>
         ${gaps.length ? gaps.map(g => `<div class="opp-gap">
-            <div class="opp-gap-head"><strong>${escapeHtml(g.product.name)}</strong><span class="badge${['', ' badge-amber', ' badge-green'][g.strength] || ''}">${STRENGTH[g.strength]}</span>
+            <div class="opp-gap-head"><strong>${vendorMarks(g.product.name)}${escapeHtml(g.product.name)}</strong><span class="badge${['', ' badge-amber', ' badge-green'][g.strength] || ''}">${STRENGTH[g.strength]}</span>
               <span class="opp-muted">${g.mrr != null ? escapeHtml(money(g.mrr)) + '/mo' : 'price not set'}${g.oneOff ? ' · ' + escapeHtml(money(g.oneOff)) + ' one-off' : ''}</span></div>
             <ul>${g.reasons.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
             <div class="opp-gap-actions">
@@ -678,7 +681,7 @@ function pipelineHtml() {
     return `<article class="opp-deal st-${escapeHtml(o.status)}">
       <div class="opp-deal-main">
         <div class="opp-deal-client">${clientLink(o.client_name)}</div>
-        <div class="opp-deal-product">${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
+        <div class="opp-deal-product">${vendorMarks(findProduct(o.product_key)?.name || o.title)}${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
         ${o.next_step ? `<div class="opp-deal-next"><span>Next</span> ${escapeHtml(o.next_step)}</div>` : ''}
         <div class="opp-flags">${flags(o)}</div>
       </div>
@@ -733,7 +736,7 @@ function pipelineHtml() {
           data-opp-act="pick" data-id="${o.id}" tabindex="0" style="--tilt:${tilt(o.id)}deg" aria-label="${escapeHtml(`${o.client_name}: ${o.title}, ${label[o.status]}`)}">
         <span class="js-tape" aria-hidden="true"></span>
         <div class="js-top"><span class="js-client">${escapeHtml(o.client_name)}</span>${p ? `<b class="js-owner" title="${escapeHtml(o.owner)}">${p[0].toUpperCase()}</b>` : ''}</div>
-        <div class="js-title">${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
+        <div class="js-title">${vendorMarks(findProduct(o.product_key)?.name || o.title)}${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
         ${o.next_step ? `<div class="js-next">${escapeHtml(o.next_step)}</div>` : ''}
         <div class="js-foot"><strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong>${Number(o.one_off) ? `<span class="js-date">+ ${escapeHtml(money(o.one_off))}</span>` : ''}</div>
         <div class="opp-flags">${flags(o)}${st.needsJob || st.needsBilling ? '<span class="badge badge-green">To set up</span>' : ''}</div>
@@ -1013,7 +1016,7 @@ function dealUnits(o) {
 function productsHtml() {
   return `<p class="opp-note"><strong>Client price</strong> is quoted in emails; <strong>Pipeline £/month</strong> is never quoted. Email fills in {{first_name}}, {{client}}, {{evidence}}, {{price}}, {{sender}}.</p>
     <div class="opp-products">${OPP.products.map(p => `<form class="opp-product" data-opp-product="${escapeHtml(p.key)}">
-      <div class="opp-product-head"><strong>${escapeHtml(p.name)}</strong><span class="opp-muted">${escapeHtml([p.family, p.unit_note].filter(Boolean).join(' · '))}</span>
+      <div class="opp-product-head"><strong>${vendorMarks(p.name)}${escapeHtml(p.name)}</strong><span class="opp-muted">${escapeHtml([p.family, p.unit_note].filter(Boolean).join(' · '))}</span>
         <label class="opp-check"><input type="checkbox" name="active" ${p.active ? 'checked' : ''}> In use</label></div>
       <p class="opp-muted">${escapeHtml(p.pitch)}</p>
       <div class="opp-product-prices">
