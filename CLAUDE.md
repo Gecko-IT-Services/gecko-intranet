@@ -66,8 +66,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   set once in `system.css` §9; never a text character as an icon (☎ ⚠ ↗ turn into emoji on an iPhone). Transitions
   use `--dur-1/2/3` + `--ease` or `--t-ui`, charts `--dur-chart`; `tests/icons.mjs` enforces both.
   Vendor marks (10 Oct, `2026-10-10-vendor-marks-design.md`): `vendorMarks(name, after)` from `src/core/vendors.js`
-  (classic script `gkVendor(serviceLine)`) puts the maker's logo beside a product's name (Microsoft, Google, VoxOne, Hornetsecurity,
-  Acronis = anything called backup, Webroot/OpenText = antivirus, AV, internet security); recognised from the words in the name, images in `src/assets/vendors/`, `after` when the name is in a column.
+  (classic script `gkVendor(serviceLine)`) puts the maker's logo beside a product's name (Microsoft, Google, VoxOne, Hornetsecurity = email filtering,
+  Acronis = anything called backup, Webroot/OpenText = antivirus, AV, internet security, Keeper = password manager, Rank Math = SEO;
+  never plain "VoIP"); recognised from the words in the name (`productPart(title)` first for an opportunity's title), images in `src/assets/vendors/`, `after` when the name is in a column.
   Page-level loading/empty/error states carry retro gecko art (9 Oct, `2026-10-09-retro-gecko-states-design.md`):
   add `art art-loading|art-empty|art-none|art-offline|art-clear` to the state box; never on small inline states.
 - Mobile: tables with ≥4 columns are turned into stacked cards by a container

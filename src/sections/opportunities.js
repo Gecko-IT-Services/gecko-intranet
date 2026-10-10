@@ -20,7 +20,7 @@
 import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { icon } from '../core/icons.js';
-import { vendorMarks } from '../core/vendors.js';
+import { vendorMarks, productPart } from '../core/vendors.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
@@ -681,7 +681,7 @@ function pipelineHtml() {
     return `<article class="opp-deal st-${escapeHtml(o.status)}">
       <div class="opp-deal-main">
         <div class="opp-deal-client">${clientLink(o.client_name)}</div>
-        <div class="opp-deal-product">${vendorMarks(findProduct(o.product_key)?.name || o.title)}${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
+        <div class="opp-deal-product">${vendorMarks(findProduct(o.product_key)?.name || productPart(o.title))}${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
         ${o.next_step ? `<div class="opp-deal-next"><span>Next</span> ${escapeHtml(o.next_step)}</div>` : ''}
         <div class="opp-flags">${flags(o)}</div>
       </div>
@@ -736,7 +736,7 @@ function pipelineHtml() {
           data-opp-act="pick" data-id="${o.id}" tabindex="0" style="--tilt:${tilt(o.id)}deg" aria-label="${escapeHtml(`${o.client_name}: ${o.title}, ${label[o.status]}`)}">
         <span class="js-tape" aria-hidden="true"></span>
         <div class="js-top"><span class="js-client">${escapeHtml(o.client_name)}</span>${p ? `<b class="js-owner" title="${escapeHtml(o.owner)}">${p[0].toUpperCase()}</b>` : ''}</div>
-        <div class="js-title">${vendorMarks(findProduct(o.product_key)?.name || o.title)}${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
+        <div class="js-title">${vendorMarks(findProduct(o.product_key)?.name || productPart(o.title))}${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
         ${o.next_step ? `<div class="js-next">${escapeHtml(o.next_step)}</div>` : ''}
         <div class="js-foot"><strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong>${Number(o.one_off) ? `<span class="js-date">+ ${escapeHtml(money(o.one_off))}</span>` : ''}</div>
         <div class="opp-flags">${flags(o)}${st.needsJob || st.needsBilling ? '<span class="badge badge-green">To set up</span>' : ''}</div>

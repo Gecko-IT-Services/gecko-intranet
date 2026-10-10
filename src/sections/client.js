@@ -20,7 +20,7 @@ import { clientProfile, sameClient } from '../core/client.js';
 import { previousMonth, stageLabel } from '../core/jobs.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { icon } from '../core/icons.js';
-import { vendorMarks } from '../core/vendors.js';
+import { vendorMarks, productPart } from '../core/vendors.js';
 import { newOpportunity } from '../core/opportunities.js';
 import { ROLES, cleanContact, contactsFor, mainContact, duplicateEmail } from '../core/contacts.js';
 import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, addDays, durationText } from '../core/activity.js';
@@ -227,7 +227,7 @@ function summaryHtml(p, errors) {
   const jobs = p.openJobs?.length
     ? `<ul class="cl-mini">${p.openJobs.slice(0, 4).map(j => `<li><span>${escapeHtml(j.title)}</span><span>${escapeHtml(stageLabel(j.status))}${j.value != null ? ' · ' + escapeHtml(whole(j.value)) : ''}</span></li>`).join('')}</ul>` : note('No open jobs.');
   const opps = p.openOpps?.length
-    ? `<ul class="cl-mini">${p.openOpps.slice(0, 4).map(o => `<li><span>${escapeHtml(o.title)}${vendorMarks(o.title, true)}</span><span>${o.status === 'proposed' ? 'proposed' : 'idea'}${Number(o.mrr) ? ' · +' + escapeHtml(whole(o.mrr)) + '/mo' : ''}</span></li>`).join('')}</ul>` : note('No open opportunities.');
+    ? `<ul class="cl-mini">${p.openOpps.slice(0, 4).map(o => `<li><span>${escapeHtml(o.title)}${vendorMarks(productPart(o.title), true)}</span><span>${o.status === 'proposed' ? 'proposed' : 'idea'}${Number(o.mrr) ? ' · +' + escapeHtml(whole(o.mrr)) + '/mo' : ''}</span></li>`).join('')}</ul>` : note('No open opportunities.');
   return `<div class="cl-grid">
       ${panel('Needs attention', flags + (missing.length ? `<p class="cl-warn">Not checked: ${escapeHtml(missing.join(', '))}.</p>` : ''))}
       ${panel('Billed, last 12 months', p.xero ? histHtml(p.xero.history) : failed('Xero', errors.xero || 'not connected'), go('client', 'invoices', 'Invoices →'))}
@@ -281,7 +281,7 @@ function servicesHtml(p, errors) {
       <p class="cl-muted">Licence and hosting costs are on Profitability.</p>`
     : note('No service lines.');
   return panel('What they buy from us', body, go('profitability', '', 'Edit on Profitability →')) +
-    (p.dealer?.length ? panel('With VoIP Unlimited (dealer)', `<table class="cl-table"><thead><tr><th>Service</th><th class="num">Qty</th><th>Contract</th><th>Ends</th></tr></thead><tbody>${p.dealer.map(d => `<tr><td>${escapeHtml(d.service.replace(/_/g, ' '))}${d.extras ? ` <span class="cl-muted">${escapeHtml(d.extras)}</span>` : ''}</td><td class="num">${d.quantity}</td><td>${escapeHtml(d.contract.replace(/_/g, ' '))}</td><td>${escapeHtml(fmtDate(d.contract_end)) || '—'}</td></tr>`).join('')}</tbody></table>`) : '');
+    (p.dealer?.length ? panel('With VoIP Unlimited (dealer)', `<table class="cl-table"><thead><tr><th>Service</th><th class="num">Qty</th><th>Contract</th><th>Ends</th></tr></thead><tbody>${p.dealer.map(d => `<tr><td>${escapeHtml(d.service.replace(/_/g, ' '))}${vendorMarks(d.service.replace(/_/g, ' '), true)}${d.extras ? ` <span class="cl-muted">${escapeHtml(d.extras)}</span>` : ''}</td><td class="num">${d.quantity}</td><td>${escapeHtml(d.contract.replace(/_/g, ' '))}</td><td>${escapeHtml(fmtDate(d.contract_end)) || '—'}</td></tr>`).join('')}</tbody></table>`) : '');
 }
 
 function supportHtml(p, errors) {
@@ -326,7 +326,7 @@ function oppsHtml(p, errors) {
   if (!p.opps.length) return form + panel('Opportunities', note('Nothing in the pipeline.'), (CL.adding ? '' : add) + go('opportunities', 'gaps', 'Find gaps →'));
   const label = { idea: 'Idea', proposed: 'Proposed', won: 'Won', lost: 'Lost' };
   return form + panel('Opportunities', `<table class="cl-table"><thead><tr><th>Opportunity</th><th>Stage</th><th>Next step</th><th class="num">£/month</th><th class="num">One-off</th></tr></thead>
-    <tbody>${p.opps.map(o => `<tr><td>${escapeHtml(o.title)}${vendorMarks(o.title, true)}</td><td><span class="badge ${STAGE_BADGE[o.status] || 'badge-blue'}">${escapeHtml(label[o.status] || o.status)}</span></td><td>${escapeHtml(o.next_step || '—')}</td>
+    <tbody>${p.opps.map(o => `<tr><td>${escapeHtml(o.title)}${vendorMarks(productPart(o.title), true)}</td><td><span class="badge ${STAGE_BADGE[o.status] || 'badge-blue'}">${escapeHtml(label[o.status] || o.status)}</span></td><td>${escapeHtml(o.next_step || '—')}</td>
       <td class="num">${Number(o.mrr) ? escapeHtml(money(o.mrr)) : '—'}</td><td class="num">${Number(o.one_off) ? escapeHtml(money(o.one_off)) : '—'}</td></tr>`).join('')}</tbody></table>`,
     (CL.adding ? '' : add) + go('opportunities', 'pipeline', 'Pipeline →'));
 }
