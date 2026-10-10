@@ -198,3 +198,4 @@
   #section-client .cl-mail li { grid-template-columns: 26px minmax(0, 1fr); }
   #section-client .cl-mail-acts { grid-column: 2; flex-direction: row; align-items: center; }
 }
+#section-client .cl-warn-text { color: var(--amber); }
