@@ -9,7 +9,7 @@ async function getAll(path: string, key: string) {
   const out: any[] = [];
   for (let page = 1; page <= 200; page++) {
     const res = await fetch(`${API}${path}?page=${page}&itemsInPage=50`, { headers: { 'X-API-KEY': key, accept: 'application/json' } });
-    if (res.status === 401 || res.status === 403) throw new Error(`Atera refused the API key (${res.status}). Check ATERA_API_KEY in Supabase › Edge Functions › Secrets.`);
+    if (res.status === 401 || res.status === 403) throw new Error(`Atera refused the API key (${res.status}; the saved key is ${key.length} characters). Copy it again from Atera › Admin › API and update ATERA_API_KEY in Supabase › Edge Functions › Secrets.`);
     if (!res.ok) throw new Error(`Atera ${path} ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const body = await res.json();
     const items = (body?.items || body?.Items || []) as any[];
@@ -26,7 +26,7 @@ const when = (v: unknown) => { if (!v) return null; const d = new Date(String(v)
 const LAST_SEEN = ['LastSeen', 'LastSeenDate', 'LastAvailable', 'LastOnline', 'LastAgentCheckIn', 'Modified'];
 
 export async function syncAtera() {
-  const key = Deno.env.get('ATERA_API_KEY');
+  const key = (Deno.env.get('ATERA_API_KEY') || '').trim().replace(/^["']|["']$/g, '');   // pasted keys often carry a space, line break or quotes
   if (!key) throw new Error('ATERA_API_KEY is not set in Supabase › Edge Functions › Secrets');
   try {
     const customers = await getAll('/customers', key);
