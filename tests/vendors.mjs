@@ -8,7 +8,7 @@ const is = (text, expected, why) => assert.deepEqual(keys(text), expected, why |
 // The whole catalogue as it is seeded, read from the migrations so a new product cannot go unlooked-at.
 const CATALOGUE = {
   voxone: ['voxone'], connectivity: [], email_security: ['hornetsecurity'], email_auth: [],
-  m365_backup: ['microsoft', 'acronis'], endpoint: ['opentext', 'acronis'], exclaimer: [], keeper: ['keeper'],
+  m365_backup: ['microsoft', 'acronis'], endpoint: ['opentext', 'acronis'], exclaimer: ['exclaimer'], keeper: ['keeper'],
   m365: ['microsoft'], hosting: [], seo: ['rankmath'], website: [], support: [], windows11: ['microsoft'],
   ve_migration: ['voxone'], vu_renewal: [], it_services: [],
 };
@@ -28,7 +28,8 @@ is('VoIP Exchange → VoxOne migration', ['voxone'], 'VoIP Exchange is VoIP Unli
 is('voip exchange', [], 'the older platform: not VoxOne, not Microsoft');
 is('Exchange Online mailbox', ['microsoft']);
 is('Email authentication set-up (SPF, DKIM, DMARC)', [], 'email set-up is not email filtering');
-is('Exclaimer email signatures', []);
+is('Exclaimer email signatures', ['exclaimer'], 'one mark, though both words are its');
+is('Email signatures', ['exclaimer']);
 
 // Service lines as they are typed.
 is('M365', ['microsoft']);

@@ -5,7 +5,8 @@ Microsoft related, etc. Add these where appropriate and tasteful… feel free to
 
 ## What it is
 A small logo (14px high, full colour) beside a product's name. Eight vendors: Microsoft, Google, VoxOne,
-Hornetsecurity, Acronis, Webroot (OpenText), and from the second batch the same day Keeper and Rank Math.
+Hornetsecurity, Acronis, Webroot (OpenText), and from later batches the same day Keeper, Rank Math and
+Exclaimer (nine in all).
 
 ## Where
 - **In front of a name that stands alone**: Opportunities › Products (each product), Pipeline (stickies and
@@ -21,8 +22,7 @@ Hornetsecurity, Acronis, Webroot (OpenText), and from the second batch the same 
 - The Gaps map's column heads (the label is turned on its side; a turned logo is worse than none).
 - Clients › Licences: every row is Microsoft, so a mark on each says nothing.
 - Gap chips on a closed client card: six chips with logos is clutter; the open card has them.
-- Vendors with no logo supplied (Exclaimer, Atera, VoIP Unlimited, Clook, Xero): no mark is better
-  than a wrong one.
+- Vendors with no logo supplied (Atera, VoIP Unlimited, Clook, Xero): no mark is better than a wrong one.
 
 ## How a product gets its mark
 `src/core/vendors.js`, from the words in the name (`vendorsFor`), in the order they are named:
@@ -68,6 +68,8 @@ opportunity titles are free text, so the words would have to be read anyway.
 - `hornetsecurity.png`: the hornet only. The supplied file's wordmark is white.
 - `opentext.png`: the blue "ot" tile, scaled to 64px.
 - `keeper.svg`: the round symbol, without the wordmark.
+- `exclaimer.svg`: the symbol in white on its own navy, as a tile. As supplied it is navy on nothing and
+  disappears on the dark theme. "Exclaimer" and "signature(s)" in a name earn it.
 - `rankmath.svg`: the purple tile redrawn as a vector from the wordmark's own bars and arrow (the supplied
   tile was a 97 KB PNG).
 

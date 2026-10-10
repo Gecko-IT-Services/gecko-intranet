@@ -9,7 +9,7 @@
    `exact` (case as typed: "Teams" the product, not "teams"; "AV", not the "av" in a sentence).
    Besides its own names a vendor owns the plain word for what Gecko sells of it (Jack, 10 Oct 2026):
    a backup is Acronis, antivirus is Webroot, a password manager is Keeper, SEO is Rank Math, email
-   filtering is Hornetsecurity, VoIP is VoxOne. */
+   filtering is Hornetsecurity, VoIP is VoxOne, email signatures are Exclaimer. */
 
 export const VENDORS = [
   { key: 'microsoft', label: 'Microsoft', file: 'microsoft.svg',
@@ -28,6 +28,8 @@ export const VENDORS = [
     exact: /\bAV\b|\bIS\b(?=\s*[+&\/])/ },   // "IS" only as a service line has it: "IS + Backup"
   { key: 'keeper', label: 'Keeper', file: 'keeper.svg',
     words: /\bkeeper\b|\bpassword (manager|vault)\b/i },
+  { key: 'exclaimer', label: 'Exclaimer', file: 'exclaimer.svg',
+    words: /exclaimer|\bsignatures?\b/i },
   { key: 'rankmath', label: 'Rank Math', file: 'rankmath.svg',
     words: /\brank ?math\b/i,
     exact: /\bSEO\b/ },
