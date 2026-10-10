@@ -79,6 +79,7 @@
 <link rel="stylesheet" href="src/styles/mileage.css">
 <link rel="stylesheet" href="src/styles/profitability.css">
 <link rel="stylesheet" href="src/styles/licences.css">
+<link rel="stylesheet" href="src/styles/analytics.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -4047,6 +4048,9 @@ body::before {
       <button class="sb-link active" type="button" data-section="overview" aria-current="page" onclick="navTo('overview')">
         <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21"/></svg></span><span class="lbl">Overview</span>
       </button>
+      <button class="sb-link" type="button" data-section="analytics" onclick="navTo('analytics')">
+        <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V7M18 17v-8"/></svg></span><span class="lbl">Analytics</span>
+      </button>
 
       <div class="sb-nav-label">Sales</div>
       <button class="sb-link" type="button" data-section="clients" data-hub="clients" onclick="navHub('clients')">
@@ -4559,6 +4563,33 @@ body::before {
     </section>
 
     <!-- ═══ TEAM OVERVIEW ═══ src/sections/team.js: the first tab of the Team hub (Leave, Mileage). -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         ANALYTICS (src/sections/analytics.js, src/core/analytics.js)
+         Design: docs/superpowers/specs/2026-10-10-analytics-design.md
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="section" id="section-analytics">
+      <div class="section-head">
+        <h1>Analytics</h1>
+        <p>Where the money comes from, where the time goes, and what is coming next.</p>
+        <div class="head-actions">
+          <button class="head-btn" id="anRefresh" type="button" title="Reload">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="anLastSync"></span>
+        </div>
+      </div>
+      <div class="app-tabs"></div>
+      <div id="anWrap" role="tabpanel"><p class="state-empty">Open this section to load the numbers.</p></div>
+      <div class="an-tip" id="anTip" hidden></div>
+      <!-- Stripes = still to come (as on Jobs); hatch = a day away or closed. -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+        <pattern id="an-st-rec" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" class="f-rec" opacity=".2"/><rect width="2" height="6" class="f-rec"/></pattern>
+        <pattern id="an-st-one" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" class="f-one" opacity=".2"/><rect width="2" height="6" class="f-one"/></pattern>
+        <pattern id="an-st-away" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.4" height="4" class="f-mute"/></pattern>
+      </defs></svg>
+    </section>
+
     <section class="section" id="section-team">
       <div class="section-head">
         <h1>The <span>Team</span></h1>
@@ -5125,6 +5156,7 @@ const CONFIG = {
 // — Section labels shown in the top bar (must match section-* IDs) —
 const SECTION_TITLES = {
   overview:      'OVERVIEW',
+  analytics:     'ANALYTICS',
   profitability: 'CLIENTS · PROFITABILITY',
   licences:      'CLIENTS · LICENCES',
   opportunities: 'OPPORTUNITIES',
@@ -5744,6 +5776,7 @@ function geckoGo(section, tab, clientName) {
   if (!tab) return;
   if (section === 'jobs') window.GeckoSections?.jobs?.show?.(tab);
   else if (section === 'opportunities') window.GeckoSections?.opportunities?.show?.(tab);
+  else if (section === 'analytics') window.GeckoSections?.analytics?.show?.(tab);
   else if (section === 'timesheets' && typeof tshTab === 'function') {
     tshTab(tab);
     if (clientName && tab === 'log') tshPreselect(clientName);

@@ -8,7 +8,8 @@ const navButtons = html.match(/<button class="sb-link\b[^>]*data-section=/g) ?? 
 // Compliance and P&L taken off the sidebar on 6 Oct 2026 (their code removed 9 Oct 2026),
 // plus Opportunities (8 Oct 2026). 9 Oct 2026 (Philip): 8 entries, with hubs: Clients (Directory,
 // Profitability, client page), Monitoring (Backups, Alerts), Team (Leave, Mileage).
-assert.equal(navButtons.length, 8, 'every sidebar destination should be a semantic button');
+// 10 Oct 2026: Analytics added under Home (9).
+assert.equal(navButtons.length, 9, 'every sidebar destination should be a semantic button');
 assert.equal((html.match(/<button class="sb-link\b[^>]*data-hub=/g) ?? []).length, 3, 'three hubs');
 assert.doesNotMatch(html, /<div class="sb-link\b[^>]*onclick=/, 'sidebar destinations must not be click-only divs');
 assert.match(html, /id="sbToggle"[^>]*aria-controls="sidebar"[^>]*aria-expanded="false"/, 'the mobile menu control should expose its target and state');
