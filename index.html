@@ -79,6 +79,7 @@
 <link rel="stylesheet" href="src/styles/mileage.css">
 <link rel="stylesheet" href="src/styles/profitability.css">
 <link rel="stylesheet" href="src/styles/licences.css">
+<link rel="stylesheet" href="src/styles/devices.css">
 <link rel="stylesheet" href="src/styles/analytics.css">
 <script type="module" src="src/main.js"></script>
 
@@ -4234,6 +4235,21 @@ body::before {
          — Gaps per client (what they buy, email/website checks, timesheets),
            the pipeline, and the product catalogue. Supabase-backed.
          ═══════════════════════════════════════════════════════════════ -->
+    <!-- ═══ DEVICES ═══ src/sections/devices.js: Atera devices per client (Monitoring hub). Read only. -->
+    <section class="section" id="section-devices">
+      <div class="section-head">
+        <h1>Client <span>Devices</span></h1>
+        <div class="head-actions">
+          <button class="head-btn" id="dvRefresh" type="button" title="Sync from Atera now">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="dvLastSync"></span>
+        </div>
+      </div>
+      <div id="dvWrap"><p class="state-empty">Open this section to load devices.</p></div>
+    </section>
+
     <!-- ═══ LICENCES ═══ src/sections/licences.js: Microsoft 365, TD SYNNEX cost vs Xero billing per client. Part of the Clients hub. -->
     <section class="section" id="section-licences">
       <div class="section-head">
@@ -4871,6 +4887,7 @@ const SECTION_TITLES = {
   leave:         'TEAM · LEAVE',
   backups:       'MONITORING · BACKUPS',
   alerts:        'MONITORING · ALERTS',
+  devices:       'MONITORING · DEVICES',
   settings:      'SETTINGS'
 };
 
@@ -5440,7 +5457,7 @@ async function graphFetch(path, options = {}) {
    opens Monitoring on its Alerts tab. Design: 2026-10-09-gecko-hq-structure-design.md */
 const HUBS = {
   clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['licences', 'Licences'], ['client', null]] },
-  monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['alerts', 'Alerts']] },
+  monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['alerts', 'Alerts'], ['devices', 'Devices']] },
   team:       { label: 'Team',       tabs: [['team', 'Overview'], ['leave', 'Leave'], ['mileage', 'Mileage']] }
 };
 const HUB_OF = Object.fromEntries(Object.entries(HUBS).flatMap(([h, d]) => d.tabs.map(([k]) => [k, h])));

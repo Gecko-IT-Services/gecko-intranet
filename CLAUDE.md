@@ -47,7 +47,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   CSS scoped under `#section-<key>`. `ponytail:` comments mark accepted ceilings.
 - Sidebar (Philip, 9 Oct, 8 entries; Analytics added under Home 10 Oct, so 9): Home (Overview, Analytics) · Sales (Clients, Opportunities, Jobs) · Operations
   (Timesheets, Monitoring) · Admin (Team, Settings). **Hubs** group sections under one entry with the
-  shared tab strip: Clients = Directory + Profitability + Licences + client page; Monitoring = Backups + Alerts;
+  shared tab strip: Clients = Directory + Profitability + Licences + client page; Monitoring = Backups + Alerts + Devices;
   Team = Overview (`src/sections/team.js`: who's in, holiday left as day tokens, next four weeks, hours, mileage to claim)
   + Leave (tax-year wall planner, click two days to book; `2026-10-09-team-wall-planner-design.md`) + Mileage (`HUBS`/`renderHub` in index.html). Older tab strips get the shared look via `geckoInkify()`. Every section uses the same tabs
   (`src/core/tabs.js`, `.app-tabs` in `src/styles/app.css`). Any client name → `clientLink(name)` →
@@ -160,7 +160,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Opportunities › **Prospects** (9 Oct): new business that isn't a client yet (`prospects`: source, interest, stage New →
   Contacted → Meeting → Proposal / Lost, £/month estimate, follow-up); **Make client** adds them to Clients (New) with contact
   and a first activity line. `src/core/prospects.js`. Design `2026-10-09-prospects-design.md`.
-- Windows 10 / device gaps wait for Atera data in the feed (phase 2, with the Atera cost check).
+- Monitoring › **Devices** + client page › Devices (11 Oct, `2026-10-11-atera-devices-design.md`): Atera agents per customer
+  (Edge Function `atera-sync`, secret `ATERA_API_KEY`, 4× a day + Refresh; tables `atera_customers`, `atera_agents` with
+  `raw`, `atera_status`): Windows 10, not seen 30+ days, devices but no Atera billing in Xero this month. Read only.
+  `src/core/devices.js`, tests `tests/devices.mjs`. Windows 10 device gaps in Opportunities are not built yet.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the

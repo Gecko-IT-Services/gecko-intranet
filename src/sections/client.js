@@ -26,11 +26,12 @@ import { ROLES, cleanContact, contactsFor, mainContact, duplicateEmail } from '.
 import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, addDays, durationText } from '../core/activity.js';
 import { cleanProfile, profileFor, addressLine, mapLinks, telHref, mailIdentity, mailSearches, clientMail, stamp, mailboxesFor } from '../core/profile.js';
 import { graphFetch } from '../core/graph.js';
+import { deviceSummary, devicesFor, STALE_DAYS } from '../core/devices.js';
 
 // adding: the New opportunity form is open (with what's been picked so far); saving: one insert at a time.
 // contactEdit: null, 'new' or the id of the contact being edited.
 const CL = { name: '', tab: 'summary', data: null, loading: false, error: null, dir: '', seq: 0, adding: null, saving: false, contactEdit: null };
-const TABS = ['summary', 'activity', 'emails', 'contacts', 'invoices', 'services', 'support', 'jobs', 'opportunities'];
+const TABS = ['summary', 'activity', 'emails', 'contacts', 'invoices', 'services', 'support', 'devices', 'jobs', 'opportunities'];
 
 const els = id => document.getElementById(id);
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
@@ -76,7 +77,7 @@ async function load() {
     let from = today().slice(0, 7);
     for (let i = 0; i < 12; i++) from = previousMonth(from);
     const q = (table, cols = '*') => settle(sb.from(table).select(cols).then(must));
-    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products, contacts, activity, profiles] = await Promise.all([
+    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products, contacts, activity, profiles, agents] = await Promise.all([
       q('gecko_clients', 'title,status,contract_start,notes'),
       q('gecko_services', 'title,client_name,category,cost_per_month,sell_per_month'),
       q('ssa_clients'),
@@ -89,7 +90,8 @@ async function load() {
       q('opportunity_products', 'key,family,name,unit_price,price_unit,default_mrr,default_one_off,unit_note,active,sort'),
       q('client_contacts'),
       q('client_activity'),
-      q('client_profiles')
+      q('client_profiles'),
+      q('atera_agents', 'agent_id,customer_name,machine_name,device_type,os,os_version,online,last_seen,last_user,vendor,model,serial')
     ]);
     // SSA: this client's balance (opening + changes, as Timesheets has it) and its entries
     const ssaRow = ssaClients.v?.find(c => sameClient(c.name, name)) || null;
@@ -116,6 +118,8 @@ async function load() {
       contacts: contacts.v ? contactsFor(contacts.v, name) : null,
       activity: activity.v ? timeline(activity.v, name) : null,
       details: profiles.v ? profileFor(profiles.v, name) : null, detailsLoaded: !!profiles.v,
+      // Atera devices (11 Oct): this client's machines, or null when Atera has none under a matching name.
+      devices: agents.v ? devicesFor(deviceSummary(agents.v, new Map(), today()), name) : null, devicesLoaded: !!agents.v,
       domainList: (domains.v || []).filter(d => sameClient(d.client_name, name)).map(d => d.domain),
       products: (products.v || []).filter(x => x.active !== false).sort((a, b) => String(a.family).localeCompare(String(b.family)) || (a.sort ?? 0) - (b.sort ?? 0)),
       errors: {
@@ -123,6 +127,7 @@ async function load() {
         jobs: jobs.e?.message || '', opps: opps.e?.message || '', dealer: dealer.e?.message || '',
         contacts: contacts.e ? (/client_contacts/.test(contacts.e.message || '') ? 'the contacts table isn’t in the database yet (it arrives with this update)' : contacts.e.message) : '',
         details: profiles.e ? (/client_profiles/.test(profiles.e.message || '') ? 'the client details table isn’t in the database yet (it arrives with this update)' : profiles.e.message) : '',
+        devices: agents.e ? (/atera_agents/.test(agents.e.message || '') ? 'the devices table isn’t in the database yet (it arrives with this update)' : agents.e.message) : '',
         activity: activity.e ? (/client_activity/.test(activity.e.message || '') ? 'the activity table isn’t in the database yet (it arrives with this update)' : activity.e.message) : ''
       }
     };
@@ -155,7 +160,7 @@ function render() {
     return;
   }
   if (!p) { mount.innerHTML = `<p class="cl-empty art art-loading">Loading ${escapeHtml(CL.name)}…</p>`; return; }
-  const pane = { summary: summaryHtml, activity: activityHtml, emails: emailsHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
+  const pane = { summary: summaryHtml, activity: activityHtml, emails: emailsHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, devices: devicesHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
   mount.innerHTML = `<div class="app-pane ${CL.dir}">${pane(p, CL.data.errors)}</div>`;
   CL.dir = '';
   syncTableLabels(mount);
@@ -178,6 +183,7 @@ function headHtml(p) {
     { key: 'invoices', label: 'Invoices', badge: x?.overdue > 0 ? 'overdue' : '', warn: x?.overdue > 0 },
     { key: 'services', label: 'Services & profit' },
     { key: 'support', label: 'Support hours', badge: s && s.remaining < 2 ? hours(s.remaining) : '', warn: s && s.remaining <= 0 },
+    { key: 'devices', label: 'Devices', badge: CL.data?.devices?.win10 ? `${CL.data.devices.win10} on Win 10` : (CL.data?.devices?.devices || ''), warn: !!CL.data?.devices?.win10 },
     { key: 'jobs', label: 'Jobs', badge: p?.openJobs?.length || '' },
     { key: 'opportunities', label: 'Opportunities', badge: p?.openOpps?.length || '' }
   ];
@@ -306,6 +312,25 @@ function supportHtml(p, errors) {
       ${panel('Hours a month', months)}
     </div>
     ${panel('Recent work', rows ? `<table class="cl-table"><thead><tr><th>Date</th><th>Who</th><th>Work</th><th class="num">Hours</th></tr></thead><tbody>${rows}</tbody></table>` : note('No time logged yet.'), go('timesheets', 'log', 'Log time →'))}`;
+}
+
+// ─── Devices (Atera, 11 Oct) ──────────────────────────────────────────
+
+function devicesHtml(p, errors) {
+  if (!CL.data.devicesLoaded) return panel('Devices', failed('Devices', errors.devices || 'unknown error'));
+  const d = CL.data.devices;
+  const open = go('devices', '', 'All clients’ devices →');
+  if (!d) return panel('Devices', note('No devices in Atera under this client’s name. If they’re in Atera under a different name, renaming the customer in Atera to match brings them in at the next sync.'), open);
+  const seen = a => (a.days == null ? '—' : a.days === 0 ? 'today' : a.days === 1 ? 'yesterday' : `${a.days} days ago`);
+  const rows = d.agents.map(a => `<tr>
+      <td><strong>${escapeHtml(a.machine_name || '—')}</strong>${a.last_user ? `<div class="cl-muted">${escapeHtml(a.last_user)}</div>` : ''}</td>
+      <td>${a.server ? '<span class="badge badge-blue">Server</span>' : 'Workstation'}</td>
+      <td>${escapeHtml(a.os || '—')}${a.win10 ? ' <span class="badge badge-amber">Windows 10</span>' : ''}</td>
+      <td class="${a.days != null && a.days >= STALE_DAYS ? 'cl-warn-text' : ''}">${escapeHtml(seen(a))}${a.online === true ? ' · online' : ''}</td>
+      <td>${escapeHtml([a.vendor, a.model].filter(Boolean).join(' ') || '—')}</td></tr>`).join('');
+  const sub = [`${d.devices} device${d.devices === 1 ? '' : 's'}`, d.servers ? `${d.servers} server${d.servers === 1 ? '' : 's'}` : '',
+    d.win10 ? `${d.win10} still on Windows 10 (no longer supported by Microsoft)` : '', d.stale ? `${d.stale} not seen for ${STALE_DAYS}+ days` : ''].filter(Boolean).join(' · ');
+  return panel('Devices', `<p class="cl-muted">${escapeHtml(sub)}</p><table class="cl-table"><thead><tr><th>Device</th><th>Type</th><th>Operating system</th><th>Last seen</th><th>Make / model</th></tr></thead><tbody>${rows}</tbody></table>`, open);
 }
 
 function jobsHtml(p, errors) {

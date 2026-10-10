@@ -1,0 +1,45 @@
+/* Devices (Monitoring hub): src/sections/devices.js. Shared figures, badges, buttons and states come from system.css. */
+
+#section-devices .dv-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
+#section-devices .dv-kpis .kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#section-devices .dv-warn { color: var(--amber); }
+#section-devices .dv-muted { color: var(--muted); }
+#section-devices .dv-note {
+  margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--border-dim); border-radius: var(--radius);
+  background: var(--card); color: var(--muted); font-size: 13px;
+}
+#section-devices .dv-note strong { color: var(--white); }
+#section-devices .state-error { margin-bottom: 16px; }
+#section-devices .dv-filter { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+
+#section-devices .dv-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); overflow: hidden; }
+#section-devices .dv-client + .dv-client { border-top: 1px solid var(--border-dim); }
+#section-devices .dv-row {
+  display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.6fr) repeat(3, minmax(64px, .5fr)); align-items: center; gap: 12px;
+  width: 100%; padding: 11px 14px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+#section-devices .dv-row:hover { background: var(--inset); }
+#section-devices .dv-row:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+#section-devices .dv-name { font-weight: 600; color: var(--white); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-devices .dv-flags { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+#section-devices .dv-fig { font: 500 13px var(--font-mono); color: var(--white); text-align: right; white-space: nowrap; }
+#section-devices .dv-fig small { display: block; font-size: 10px; font-weight: 500; font-family: var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: var(--faint); }
+
+#section-devices .dv-detail { padding: 2px 14px 14px; }
+#section-devices .dv-sub { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+#section-devices .dv-devices { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+#section-devices .dv-devices li {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 12px; font-size: 13px;
+  border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset);
+}
+#section-devices .dv-devices li strong { color: var(--white); }
+#section-devices .dv-actions { margin-top: 10px; font-size: 13px; }
+
+@media (max-width: 640px) {
+  #section-devices .dv-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #section-devices .dv-row { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "name name name" "flags flags flags"; gap: 6px 12px; }
+  #section-devices .dv-name { grid-area: name; white-space: normal; }
+  #section-devices .dv-flags { grid-area: flags; }
+  #section-devices .dv-fig { text-align: left; font-size: 12px; }
+}
