@@ -155,7 +155,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
   contact "Voip Unlimited" (shown as one line at the top of the VoIP Unlimited tab, never as a client's revenue).
   Dealer services live in `voip_dealer_services` (Opportunities › VoIP Unlimited tab). A dealer
-  customer is never offered VoxOne or connectivity; instead out-of-contract/expiring lines raise
+  customer is never offered VoxOne, nor connectivity they already have there (Philip, 11 Oct: those without it are offered it via the dealer route); instead out-of-contract/expiring lines raise
   a renewal, VoIP Exchange seats raise a VoxOne migration (£4/seat commission), and dealer
   customers who aren't IT clients appear as prospects for IT support.
 - Dealer list refreshed 11 Oct from the account manager's commission sheet (`2026-10-11-dealer-list-design.md`): one row per
