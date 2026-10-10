@@ -30,6 +30,16 @@ in the subscription (no running cost).
   figure per client, not seats: it answers "devices in Atera but nothing billed for Atera", which is where the cost check
   starts.
 
+## First live sync (11 Oct 2026)
+- Atera's key is a long token (462 characters), not the old 32-character key, and is accepted only as
+  `Authorization: Bearer <key>`; `X-API-KEY` gets 401. The function tries `X-API-KEY` first and falls back to Bearer, and
+  a refusal message says what kind of key is saved (never the key). 27 customers, 238 devices.
+- The agent record has `LastSeen`, `Online`, `OSType` (Work Station / Server…), `OS`, `OSVersion`, `MachineName`,
+  `CustomerName`, `LastLoginUser`, `Vendor`, `VendorBrandModel`, `VendorSerialNumber` (all picked correctly), plus hardware,
+  Office and disk details kept in `raw`. No antivirus or backup status.
+- Atera names that don't match Xero by spelling are linked in `ATERA_NAMES` (`src/core/devices.js`): P&M Packing → PM Packing,
+  CD Aluminium → CDA Ltd, Cutler Solutions → Cutler Home Solutions.
+
 ## Not done (next)
 - The Atera cost check proper: Atera's own monthly bill (SD-Enterprise + AppCenter usage: Acronis, Webroot, Keeper, EndUser
   Remote) per client against Xero, from the per-client breakdown. Needs the bill's per-client figures (feed or upload).
