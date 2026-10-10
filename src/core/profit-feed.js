@@ -59,6 +59,17 @@ export function validateFeed(feed) {
     }
   }
 
+  // Optional seat detail per customer (10 Oct, licence check): products and seats must add up to the customer's cost.
+  const checkSkus = (r, label) => {
+    if (!Array.isArray(r.skus)) { errors.push(`${label}.skus is not a list`); return; }
+    for (const s of r.skus) {
+      if (!s || !(String(s.mfpn || '').trim() || String(s.product || '').trim())) errors.push(`${label} product with no MFPN or name`);
+      else if (!Number.isFinite(s.seats) || s.seats < 0) errors.push(`${label} ${s.mfpn || s.product}: seats "${s.seats}" is not a number`);
+      else if (!isMoney(s.total)) errors.push(`${label} ${s.mfpn || s.product}: total "${s.total}" is not a number`);
+    }
+    const sum = Math.round(r.skus.reduce((t, s) => t + (Number(s?.total) || 0), 0) * 100) / 100;
+    if (r.skus.length && Math.abs(sum - r.cost) > 0.05) errors.push(`${label} products add up to ${sum.toFixed(2)}, cost says ${r.cost.toFixed(2)}`);
+  };
   const checkCsp = (c, label, needMonth) => {
     if (!c.invoice) errors.push(`${label}.invoice missing`);
     if (needMonth && !MONTH.test(c.month || '')) errors.push(`${label}.month is not YYYY-MM`);
@@ -69,6 +80,7 @@ export function validateFeed(feed) {
       for (const r of c.customers) {
         if (!r || !String(r.customer || '').trim()) errors.push(`${label} customer with no name`);
         else if (!isMoney(r.cost)) errors.push(`${label} ${r.customer}: "${r.cost}" is not a number`);
+        else if (r.skus != null) checkSkus(r, `${label} ${r.customer}`);
       }
       // The job checks this too; checking again here means a mis-read
       // invoice can never reach the page looking plausible.
