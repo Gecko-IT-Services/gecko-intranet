@@ -22,7 +22,11 @@ VoxOne anyway; Cowans already has and MSA are scheduled for the upgrade on the 2
 - Opportunities › VoIP Unlimited: the commission line also shows the fixed commission on the list, beside what Xero
   invoiced (Sep 2026: £638.36 invoiced vs £613.50 fixed; the difference is presumably call usage).
 
+## Connectivity for dealer customers (Philip, 11 Oct: "a good idea to offer Internet connections")
+- A dealer customer with no connectivity through VoIP Unlimited (Cutler, Access Instrumentation, Waterside, Bobby Biggs
+  today) gets the Connectivity gap with a dealer reason (their phones are through us; VoIP Unlimited call it a quick win,
+  for commission; they may be in contract elsewhere, so ask when it ends) and is ranked as a real gap, not the weak
+  "not something they buy from us". Customers whose internet is already through VoIP Unlimited are never offered it.
+
 ## Not done (Philip to decide)
-- Connectivity for dealer customers who don't get it through VoIP Unlimited (Cutler, Access Instrumentation, Waterside,
-  Bobby Biggs): the account manager calls them quick wins; the hub still never suggests connectivity to a dealer customer.
 - Mr and Mrs Hobbs are not on the sheet; left as they were until Philip confirms they have gone.

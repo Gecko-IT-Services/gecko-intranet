@@ -240,6 +240,15 @@ console.log('opportunities: ok');
   const nowVox = { ...base, tickets: [], dealer: [{ service: 'voxone', quantity: 13, contract: 'in_contract' }] };
   assert.equal(evaluate(nowVox, ve, { now: NOW }), null, 'moved to VoxOne (Cowan, MSA): no migration');
   assert.equal(evaluate(nowVox, renew, { now: NOW }), null);
+  // Philip (11 Oct): offer internet to dealer customers whose connectivity isn't with VoIP Unlimited.
+  const connP = { key: 'connectivity', rule: 'missing', keywords: 'fttp|sogea|ethernet|broadband', active: true, sort: 1 };
+  const cutler = { name: 'Cutler Home Solutions', services: [], tickets: [], dealerOnly: true, dealer: [{ service: 'voxone', quantity: 1, contract: 'unknown' }] };
+  const cg = evaluate(cutler, connP, { now: NOW });
+  assert.match(cg.reasons[0], /Buys VoxOne from VoIP Unlimited through us, but their internet isn’t with VoIP Unlimited/);
+  assert.equal(cg.strength, 1, 'ranked as a real gap, not the weak “not something they buy”');
+  const hill = { ...cutler, dealer: [...cutler.dealer, { service: 'fttp', quantity: 1, contract: 'unknown' }] };
+  assert.equal(evaluate(hill, connP, { now: NOW }), null, 'internet already through VoIP Unlimited: no offer');
+  assert.equal(evaluate({ ...base, tickets: [] }, connP, { now: NOW }).strength, 0, 'non-dealer clients unchanged');
   console.log('opportunities dealer list: ok');
 }
 

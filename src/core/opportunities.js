@@ -129,6 +129,10 @@ function dealerLine(d) {
   return `${qty}${serviceLabel(d.service)}${d.extras ? ` ${d.extras}` : ''}: ${CONTRACT_LABEL[d.contract] || d.contract}${end}${d.notes ? `. ${d.notes}` : ''}`;
 }
 
+/** A dealer customer with their phones through VoIP Unlimited but no connectivity there: offer it (dealer route). */
+const dealerConnectivity = (client, product) => product.key === 'connectivity' && (client.dealer || []).length > 0 &&
+  !client.dealer.some(d => DEALER_LINES.has(d.service) || d.service === 'unknown');
+
 /** Does the client already have this product? → { has, via } */
 export function holds(client, product) {
   const dealer = client.dealer || [];
@@ -192,7 +196,12 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
   switch (product.rule) {
     case 'missing':
       ruleHit = true;
-      reasons.push(`Not something they buy from us today.`);
+      // Philip (11 Oct): offer internet to dealer customers whose connectivity isn't with VoIP Unlimited (the account
+      // manager's "quick wins"), through the dealer account for commission. They may be in contract elsewhere.
+      if (dealerConnectivity(client, product)) {
+        const voice = [...new Set(client.dealer.filter(d => DEALER_VOICE.has(d.service)).map(d => serviceLabel(d.service)))].join(', ');
+        reasons.push(`Buys ${voice || 'phones'} from VoIP Unlimited through us, but their internet isn’t with VoIP Unlimited. VoIP Unlimited suggest it as a quick win through the dealer account (commission); they may be in contract elsewhere, so ask when it ends.`);
+      } else reasons.push(`Not something they buy from us today.`);
       break;
     case 'missing_if_m365':
       if (onM365(client)) { ruleHit = true; reasons.push('They use Microsoft 365 and don’t have this from us.'); }
@@ -312,7 +321,7 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
 
   if (!ruleHit && !tickets.length) return null;
   // "Not something they buy" alone is weak; say so in strength, but keep it.
-  const strength = (ruleHit && tickets.length) ? 2 : (product.rule === 'missing' && !tickets.length ? 0 : 1);
+  const strength = (ruleHit && tickets.length) ? 2 : (product.rule === 'missing' && !tickets.length && !dealerConnectivity(client, product) ? 0 : 1);
   const seats = product.rule === 'voip_exchange'
     ? (client.dealer || []).filter(d => d.service === 'voip_exchange').reduce((t, d) => t + (Number(d.quantity) || 0), 0) : 1;
   return {
