@@ -46,7 +46,8 @@ const plural = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 const T = (x, y, s, cls = 'ax', a = 'start') => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" class="${cls}" text-anchor="${a}">${escapeHtml(s)}</text>`;
 const tip = (...lines) => `data-tip="${escapeHtml(lines.filter(Boolean).map(l => String(l).replace(/\|/g, '/')).join('|'))}" tabindex="0"`;
 const fit = (name, px, per = 6.9) => { const m = Math.max(4, Math.floor(px / per)); return name.length > m ? name.slice(0, m - 1).trimEnd() + '…' : name; };
-const niceMax = v => { const step = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000].find(s => s * 4 >= v) || 250000; return { step, max: step * 4 }; };
+// An axis top just above the data, in at most five clean steps (40.75 h → 50, not 100).
+const niceMax = v => { const step = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000].find(s => v / s <= 5) || 250000; return { step, max: Math.max(1, Math.ceil(v / step)) * step }; };
 const kTick = v => (Math.abs(v) >= 1000 ? `£${v / 1000}k` : `£${v}`);
 
 // ─── Data ─────────────────────────────────────────────────────────────
@@ -298,7 +299,12 @@ const CHARTS = {
     s += T(l, 12, 'Kept after suppliers', 'cap') + T(w - r, 12, `£${target} an hour`, 'cap', 'end') + T(w - r, h - 2, 'Hours logged', 'cap', 'end');
     // Below the line a client pays less than the target for each hour worked.
     s += `<polygon points="${x(0)},${y(0)} ${x(xe)},${y(xe * target)} ${x(X.max)},${y(xe * target)} ${x(X.max)},${y(ymin)} ${x(0)},${y(ymin)}" class="zone"/><line x1="${x(0)}" y1="${y(0)}" x2="${x(xe)}" y2="${y(xe * target)}" class="line-amber"/>`;
-    const named = new Set(rows.filter(c => c.under).sort((a, b) => b.hours - a.hours).slice(0, 3).map(c => c.name));
+    const named = new Set(), placed = [];
+    for (const c of rows.filter(c => c.under).sort((a, b) => b.hours - a.hours).slice(0, 3)) {
+      // A label that would sit on another is left to the table.
+      if (placed.some(p => Math.abs(p[0] - x(c.hours)) < 90 && Math.abs(p[1] - y(c.kept)) < 14)) continue;
+      placed.push([x(c.hours), y(c.kept)]); named.add(c.name);
+    }
     [...rows].reverse().forEach(c => {
       const px = x(c.hours), py = y(c.kept);
       s += `<g class="pt" data-c="${escapeHtml(c.name)}" ${tip(`${gbp2(c.rate)} an hour`, c.name, `${gbp2(c.kept)} kept, ${hrs(c.hours)} hours`)}><circle cx="${px}" cy="${py}" r="13" fill="transparent"/><circle cx="${px}" cy="${py}" r="5" class="dot ring ${c.under ? 'f-amber' : 'f-mute'}"/></g>`;
@@ -325,7 +331,7 @@ const CHARTS = {
           if (d.state === 'future') s += `<rect x="${x}" y="${yy}" width="${cell}" height="${cell}" rx="${rx}" class="f-none"/>`;
           else if (d.state === 'away' || d.state === 'closed') s += `<rect x="${x}" y="${yy}" width="${cell}" height="${cell}" rx="${rx}" fill="url(#an-st-away)" ${tip(d.state === 'away' ? 'Away' : 'Nobody logged: closed', when, p.name)}/>`;
           else if (d.state === 'blank') s += `<g ${tip('Nothing logged', when, p.name)}><rect x="${x}" y="${yy}" width="${cell}" height="${cell}" fill="transparent"/><rect x="${x + .75}" y="${yy + .75}" width="${cell - 1.5}" height="${cell - 1.5}" rx="${rx}" class="blank"/></g>`;
-          else s += `<rect x="${x}" y="${yy}" width="${cell}" height="${cell}" rx="${rx}" class="f-h${d.hours < 3 ? 1 : d.hours < 5 ? 2 : d.hours < 7 ? 3 : 4}" ${tip(`${hrs(d.hours)} h`, when, p.name + (d.top ? `, mostly ${d.top}` : ''))}/>`;
+          else s += `<rect x="${x}" y="${yy}" width="${cell}" height="${cell}" rx="${rx}" class="f-h${1 + g.cuts.filter(c => d.hours > c).length}" ${tip(`${hrs(d.hours)} h`, when, p.name + (d.top ? `, mostly ${d.top}` : ''))}/>`;
         });
       });
     });
@@ -413,19 +419,20 @@ function timeHtml() {
   const g = d.grid, k = d.kinds;
   const since = fmt(g.start, { day: 'numeric', month: 'long' });
   const heat = card('Is every working day logged?', `Hours logged each weekday, last ${g.weeks} weeks`,
-    `<p class="an-lead">${g.blanks ? `<b>${g.blanks}</b> working ${g.blanks === 1 ? 'day has' : 'days have'} nothing logged since ${escapeHtml(since)}. At an average day of <b>${g.avgDay.toFixed(1)} h</b> that is about <b>${Math.round(g.missing)} hours</b> not accounted for.`
-      : `Every working day since ${escapeHtml(since)} has hours logged.`}</p>
+`<p class="an-lead">${g.logged ? `Client time was logged on <b>${g.logged}</b> of <b>${g.logged + g.blanks}</b> working days since ${escapeHtml(since)}${g.blanks ? `, leaving <b>${g.blanks}</b> with nothing` : ''}. A typical logged day is <b>${hrs(g.typical)} h</b>.`
+      : `Nothing logged since ${escapeHtml(since)}.`}</p>
      ${chart('heat')}
      <div class="an-legend"><span class="ramp">Fewer<i class="sw h1"></i><i class="sw h2"></i><i class="sw h3"></i><i class="sw h4"></i>more hours</span><span><i class="sw away"></i>Away or closed</span><span><i class="sw blank"></i>Nothing logged</span></div>
      ${d.errors.leave ? `<p class="an-quiet">Leave didn’t load, so days off may show as nothing logged: ${escapeHtml(d.errors.leave)}</p>` : ''}`,
     goBtn('Log time', 'timesheets:log'));
-  const last = A.supportShare(k.slice(-4)), before = A.supportShare(k.slice(-8, -4)), early = A.supportShare(k.slice(0, 4));
-  const lead = last == null ? 'Nothing logged in the last four weeks.'
-    : `Support took <b>${pct(last)}</b> of logged time in the last four weeks${before != null ? `, against <b>${pct(before)}</b> in the four before` : ''}${early != null && k.length >= 12 ? ` and <b>${pct(early)}</b> at the start of the quarter` : ''}.`;
-  const weeks = card('Is support crowding out project work?', `Hours logged per week by kind of work, last ${k.length} weeks`,
-    `<p class="an-lead">${lead}</p>
-     <div class="an-legend"><span><i class="sw rec"></i>Support</span><span><i class="sw one"></i>Planned work</span><span><i class="sw mute"></i>Other</span></div>${chart('weeks')}`,
-    goBtn('Weekly summary', 'timesheets:week'));
+  // Typed weeks only: a mix worked out from the few entries that carry a work type would be a guess.
+  const typed = A.typedShare(k), usable = k.filter(w => w.total > 0 && w.untyped / w.total < .2);
+  const last = A.supportShare(usable.slice(-4)), before = usable.length >= 8 ? A.supportShare(usable.slice(-8, -4)) : null;
+  const body = typed == null ? none(`Nothing logged in the last ${k.length} weeks.`)
+    : typed < .5 ? none(`Only ${pct(typed)} of the hours logged in the last ${k.length} weeks have a work type, so there is nothing to compare yet. This fills in as new entries are logged with one.`)
+    : `<p class="an-lead">${last == null ? 'No week has enough typed entries yet.' : `Support took <b>${pct(last)}</b> of logged time in the last ${plural(Math.min(4, usable.length), 'typed week')}${before != null ? `, against <b>${pct(before)}</b> in the four before` : ''}.`}${typed < .95 ? ` ${pct(1 - typed)} of the hours have no work type and count as other.` : ''}</p>
+     <div class="an-legend"><span><i class="sw rec"></i>Support</span><span><i class="sw one"></i>Planned work</span><span><i class="sw mute"></i>Other or no type</span></div>${chart('weeks')}`;
+  const weeks = card('Is support crowding out project work?', `Hours logged per week by kind of work, last ${k.length} weeks`, body, goBtn('Weekly summary', 'timesheets:week'));
   return heat + weeks;
 }
 
@@ -452,14 +459,14 @@ function aheadHtml() {
   else if (!AN.ws) gaps = none('Reading the gaps map…');
   else if (!AN.ws.rows.length) gaps = none('No products in the catalogue yet. Add them on Opportunities, Products.');
   else {
-    const W = AN.ws, mrr = d.moves?.now || 0, unpriced = W.rows.reduce((t, r) => t + r.unpriced, 0);
+    const W = AN.ws, top = W.rows[0];
     const TIP = t => (t.state === 'has' ? ['Has it', t.client] : t.state === 'deal' ? ['In the pipeline', t.client, t.mrr ? `${gbp2(t.mrr)} a month` : '']
       : t.state === 'gap' ? [t.mrr ? `+${gbp2(t.mrr)} a month` : 'Price not set', t.client, 'Could have it'] : [t.why || 'Not offered', t.client]);
-    gaps = `<p class="an-lead">Filling every gap would add <b>${escapeHtml(gbp(W.total))}</b> a month${mrr > 0 ? `, <b>${pct(W.total / mrr)}</b> on this month’s ${escapeHtml(gbp(mrr))} recurring` : ''}.${W.pipeline > 0 ? ` <b>${escapeHtml(gbp(W.pipeline))}</b> more is already in the pipeline.` : ''}${unpriced ? ` ${plural(unpriced, 'gap has', 'gaps have')} no price yet.` : ''}</p>
+    gaps = `<p class="an-lead"><b>${W.gaps}</b> ${W.gaps === 1 ? 'gap' : 'gaps'} across <b>${W.clients}</b> clients.${top?.gaps ? ` ${escapeHtml(top.name)} has the most room: <b>${top.gaps}</b> could have it.` : ''}${W.total > 0 ? ` The priced gaps add up to <b>${escapeHtml(gbp(W.total))}</b> a month.` : ''}${W.pipeline > 0 ? ` <b>${escapeHtml(gbp(W.pipeline))}</b> a month is already in the pipeline.` : ''}${W.unpriced ? ` ${plural(W.unpriced, 'gap has', 'gaps have')} no monthly value, because the product has none in the catalogue.` : ''}</p>
       <div class="an-legend"><span><i class="sw rec"></i>Has it</span><span><i class="sw one"></i>In the pipeline</span><span><i class="sw gap"></i>Could have it</span><span><i class="sw off"></i>Not offered</span></div>
-      <div class="an-ws">${W.rows.map(r => `<div class="an-ws-row"><div class="an-ws-name">${escapeHtml(r.name)}</div><div class="an-ws-tok">${r.tokens.map(t => `<i class="tok ${t.state}" ${tip(...TIP(t))}></i>`).join('')}</div><div class="an-ws-val">+${escapeHtml(gbp(r.total))}<small>a month</small></div></div>`).join('')}</div>`;
+      <div class="an-ws">${W.rows.map(r => `<div class="an-ws-row"><div class="an-ws-name">${escapeHtml(r.name)}</div><div class="an-ws-tok">${r.tokens.map(t => `<i class="tok ${t.state}" ${tip(...TIP(t))}></i>`).join('')}</div><div class="an-ws-val">${r.gaps}<small>could have it${r.total > 0 ? `, +${escapeHtml(gbp(r.total))} a month` : ''}</small></div></div>`).join('')}</div>`;
   }
-  return ssa + card('Where is the next pound of recurring revenue?', 'One square per client, largest first, from the Opportunities gaps map', gaps, goBtn('Gaps map', 'opportunities:gaps'));
+  return ssa + card('Where is the next pound of recurring revenue?', 'One square per client, largest client first, from the Opportunities gaps map', gaps, goBtn('Gaps map', 'opportunities:gaps'));
 }
 
 // ─── Charts, tooltip, events ──────────────────────────────────────────

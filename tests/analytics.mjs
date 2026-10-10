@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   recurringMoves, monthSeries, concentration, monthMoney, hoursByClient, earnedPerHour,
-  logGrid, workKind, weeklyKinds, supportShare, renewals, whitespace, TARGET_RATE, DEPENDENCE
+  logGrid, workKind, weeklyKinds, supportShare, typedShare, renewals, whitespace, TARGET_RATE, DEPENDENCE
 } from '../src/core/analytics.js';
 
 const inv = (contact_name, invoice_date, sub_total, rep = 'r', status = 'AUTHORISED') =>
@@ -116,7 +116,8 @@ function round(n) { return Math.round(n * 100) / 100; }
   assert.deepEqual(philip.weeks[1].map(d => d.state), ['ok', 'ok', 'ok', 'future', 'future']);
   assert.ok(philip.weeks[0].every(d => d.state === 'closed'), 'a weekday nobody logged is closed, not blank');
   assert.equal(jack.weeks[1][0].hours, 5); assert.equal(jack.weeks[1][0].top, 'B');
-  assert.equal(g.blanks, 1); assert.equal(g.avgDay, 5); assert.equal(g.missing, 5);
+  assert.equal(g.blanks, 1); assert.equal(g.logged, 4);
+  assert.equal(g.typical, 5); assert.deepEqual(g.cuts, [4, 5, 5], 'shade steps at the quartiles of the logged days: 4, 5, 5, 6');
 }
 
 // ─── weeklyKinds ───
@@ -126,11 +127,12 @@ function round(n) { return Math.round(n * 100) / 100; }
   assert.equal(workKind('Misc'), 'other'); assert.equal(workKind(''), 'other');
   const rows = weeklyKinds([
     { engineer: 'Jack', date: '2026-10-05', hours: 3, workType: 'Remote Support' }, { engineer: 'Jack', date: '2026-10-06', hours: 1, workType: 'Project Work' },
-    { engineer: 'Jack', date: '2026-09-29', hours: 2, workType: 'Misc' }, { engineer: 'Jack', date: '2026-09-01', hours: 9, workType: 'Misc' },
+    { engineer: 'Jack', date: '2026-09-29', hours: 2, workType: '' }, { engineer: 'Jack', date: '2026-09-01', hours: 9, workType: 'Misc' },
     { engineer: 'Jack', date: '2026-10-09', hours: 9, workType: 'Misc' }
   ], { today: '2026-10-08', weeks: 2 });
-  assert.deepEqual(rows, [{ start: '2026-09-28', support: 0, planned: 0, other: 2, total: 2 }, { start: '2026-10-05', support: 3, planned: 1, other: 0, total: 4 }]);
+  assert.deepEqual(rows, [{ start: '2026-09-28', support: 0, planned: 0, other: 2, total: 2, untyped: 2 }, { start: '2026-10-05', support: 3, planned: 1, other: 0, total: 4, untyped: 0 }]);
   assert.equal(supportShare(rows), 0.5); assert.equal(supportShare([]), null);
+  assert.ok(Math.abs(typedShare(rows) - 4 / 6) < 1e-9); assert.equal(typedShare([]), null);
 }
 
 // ─── renewals ───
@@ -154,9 +156,9 @@ function round(n) { return Math.round(n * 100) / 100; }
       { name: 'Mid', mrr: 300, cells: { a: { state: 'no' }, b: { state: 'some', mrr: 12.5 } } }
     ]
   });
-  assert.deepEqual(w.rows.map(r => [r.name, r.total, r.pipeline, r.unpriced]), [['Alpha', 30, 90, 0], ['Beta', 12.5, 0, 1]]);
-  assert.deepEqual(w.rows[0].tokens.map(t => [t.client, t.state]), [['Big', 'deal'], ['Mid', 'off'], ['Small', 'gap']]);
-  assert.equal(w.total, 42.5); assert.equal(w.pipeline, 90);
+  assert.deepEqual(w.rows.map(r => [r.name, r.gaps, r.total, r.pipeline, r.unpriced]), [['Beta', 2, 12.5, 0, 1], ['Alpha', 1, 30, 90, 0]], 'most room first, priced or not');
+  assert.deepEqual(w.rows[1].tokens.map(t => [t.client, t.state]), [['Big', 'deal'], ['Mid', 'off'], ['Small', 'gap']]);
+  assert.equal(w.total, 42.5); assert.equal(w.pipeline, 90); assert.equal(w.gaps, 3); assert.equal(w.unpriced, 1); assert.equal(w.clients, 3);
 }
 
 console.log('analytics: ok');

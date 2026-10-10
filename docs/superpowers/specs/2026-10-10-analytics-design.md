@@ -42,8 +42,17 @@ scopes or secrets: every figure comes from data another section already owns.
 - **SSA balances are never recalculated.** The run-out calendar is `ssaBoard`'s rows re-drawn: the wedge starts at
   the hours left today and reaches zero on `runsOut`, which is the same straight-line projection.
 - **Whitespace is the gaps map as data** (`whitespace()` exported from `sections/opportunities.js`, the same
-  `clientGaps` / `mapCell` / `holds` calls the Map makes). Value is the gap's own `mrr` (the pipeline value), so a
-  gap with no price counts as £0 and is said so. A dealer customer who must not be offered a product is a dot.
+  `clientGaps` / `mapCell` / `holds` calls the Map makes). Products are ranked by how many clients could have
+  them. A gap only has a monthly value when the catalogue gives its product a `default_mrr`; the real catalogue
+  mostly does not, so the count leads and the £ figure appears only where it exists, with the unpriced count said.
+  A dealer customer who must not be offered a product is a dot.
+- **Timesheets hold client time, not the whole working day** (real data, 10 Oct: a typical logged day is 1.25 h).
+  So the heatmap's shade steps at the quartiles of the days that have hours, a day with nothing is a quiet hollow
+  square (it may simply be a day with no client work), and the card counts those days without estimating
+  "missing" hours.
+- **Work type is blank on almost every historic entry** (real data, 10 Oct: 2.25 of 190 hours in 13 weeks had
+  one). The support-versus-planned card therefore draws only when at least half the hours in its window carry a
+  work type, and compares only weeks that are at least 80% typed. Until then it says so.
 
 ## Two numbers that are assumptions (constants in `src/core/analytics.js`)
 

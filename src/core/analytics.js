@@ -176,7 +176,8 @@ export function earnedPerHour(months, hours, target = TARGET_RATE) {
 
 /**
  * Every weekday for the last `weeks` weeks, per person: 'ok' (hours logged), 'away' (approved leave),
- * 'closed', 'blank' (a working day with nothing logged) or 'future'. Today is never blank: the day isn't over.
+ * 'closed', 'blank' (a working day with nothing logged, which may simply be a day with no client work) or
+ * 'future'. Today is never blank: the day isn't over.
  * leave: [{ person, start, end, status }].
  */
 export function logGrid(entries, leave, { today, weeks = 26, people = ENGINEERS } = {}) {
@@ -198,20 +199,24 @@ export function logGrid(entries, leave, { today, weeks = 26, people = ENGINEERS 
   // ponytail: a weekday nobody logged counts as closed (bank holidays aren't known here), so a day both
   // forgot is not flagged. Read gov.uk's bank-holiday list if that ever hides real gaps.
   const closed = d => !people.some(p => hrs.get(`${p}|${d}`));
-  let blanks = 0, okDays = 0, okHours = 0;
+  let blanks = 0;
+  const logged = [];
   const grid = people.map(name => ({
     name,
     weeks: Array.from({ length: weeks }, (_, w) => Array.from({ length: 5 }, (_, i) => {
       const date = addDays(start, w * 7 + i), h = hrs.get(`${name}|${date}`) || 0;
       const state = h > 0 ? 'ok' : date >= today ? 'future' : away.has(`${name}|${date}`) ? 'away' : closed(date) ? 'closed' : 'blank';
-      if (state === 'ok') { okDays++; okHours += h; }
+      if (state === 'ok') logged.push(h);
       if (state === 'blank') blanks++;
       const t = top.get(`${name}|${date}`);
       return { date, state, hours: h, top: t ? Object.entries(t).sort((a, b) => b[1] - a[1])[0][0] : '' };
     }))
   }));
-  const avgDay = okDays ? okHours / okDays : 0;
-  return { start, weeks, people: grid, blanks, avgDay, missing: round2(blanks * avgDay) };
+  // Timesheets hold client time, not the whole working day, so "a lot" is read off the data: the shade
+  // steps at the quartiles of the days that have hours.
+  logged.sort((a, b) => a - b);
+  const q = p => (logged.length ? logged[Math.floor(p * (logged.length - 1))] : 0);
+  return { start, weeks, people: grid, blanks, logged: logged.length, typical: q(.5), cuts: [q(.25), q(.5), q(.75)] };
 }
 
 /** Support (remote and on site), planned work (projects, set-ups, maintenance) or other. */
@@ -220,7 +225,7 @@ export const workKind = type => (/support/i.test(type || '') ? 'support' : /proj
 /** Hours per week by kind of work for the last `weeks` weeks, oldest first, the week in progress included. */
 export function weeklyKinds(entries, { today, weeks = 13 } = {}) {
   const first = addDays(monday(today), -7 * (weeks - 1));
-  const rows = Array.from({ length: weeks }, (_, i) => ({ start: addDays(first, i * 7), support: 0, planned: 0, other: 0, total: 0 }));
+  const rows = Array.from({ length: weeks }, (_, i) => ({ start: addDays(first, i * 7), support: 0, planned: 0, other: 0, total: 0, untyped: 0 }));
   for (const e of entries || []) {
     if (!isWork(e)) continue;
     const i = Math.floor((Date.parse(day(e.date) + 'T00:00:00Z') - Date.parse(first + 'T00:00:00Z')) / (7 * 864e5));
@@ -228,8 +233,15 @@ export function weeklyKinds(entries, { today, weeks = 13 } = {}) {
     const k = workKind(e.workType);
     rows[i][k] = round2(rows[i][k] + num(e.hours));
     rows[i].total = round2(rows[i].total + num(e.hours));
+    if (!String(e.workType || '').trim()) rows[i].untyped = round2(rows[i].untyped + num(e.hours));
   }
   return rows;
+}
+
+/** The share of these weeks' hours that carry a work type at all (null when nothing was logged). */
+export function typedShare(rows) {
+  const total = rows.reduce((t, r) => t + r.total, 0);
+  return total > 0 ? 1 - rows.reduce((t, r) => t + r.untyped, 0) / total : null;
 }
 
 /** Support's share of the hours in these weeks (null when nothing was logged). */
@@ -262,7 +274,8 @@ export function renewals(rows, today, price = SSA_BLOCK_PRICE) {
 
 /**
  * Whitespace per product from the Opportunities gaps map: for each product, one token per client
- * ('has' | 'deal' | 'gap' | 'off') and what filling its gaps is worth a month. Largest first.
+ * ('has' | 'deal' | 'gap' | 'off'), how many clients could have it, and what the priced gaps are worth a
+ * month (a gap only has a value when the catalogue gives the product one). Most room first.
  * clients: [{ name, mrr, cells: { [productKey]: { state, mrr } } }], state as mapCell returns it.
  */
 export function whitespace({ products = [], clients = [] } = {}) {
@@ -275,11 +288,12 @@ export function whitespace({ products = [], clients = [] } = {}) {
       return { client: c.name, state, mrr: state === 'gap' || state === 'deal' ? num(cell.mrr) : 0, why: cell.state === 'no' ? 'Not interested' : '' };
     });
     return {
-      key: p.key, name: p.name, tokens,
+      key: p.key, name: p.name, tokens, gaps: tokens.filter(t => t.state === 'gap').length,
       total: round2(tokens.filter(t => t.state === 'gap').reduce((t, x) => t + x.mrr, 0)),
       pipeline: round2(tokens.filter(t => t.state === 'deal').reduce((t, x) => t + x.mrr, 0)),
       unpriced: tokens.filter(t => t.state === 'gap' && !t.mrr).length
     };
-  }).filter(r => r.tokens.some(t => t.state !== 'off')).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
-  return { rows, total: round2(rows.reduce((t, r) => t + r.total, 0)), pipeline: round2(rows.reduce((t, r) => t + r.pipeline, 0)) };
+  }).filter(r => r.tokens.some(t => t.state !== 'off')).sort((a, b) => b.gaps - a.gaps || b.total - a.total || a.name.localeCompare(b.name));
+  const sum = k => rows.reduce((t, r) => t + r[k], 0);
+  return { rows, clients: order.length, gaps: sum('gaps'), unpriced: sum('unpriced'), total: round2(sum('total')), pipeline: round2(sum('pipeline')) };
 }

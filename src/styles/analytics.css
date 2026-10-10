@@ -65,7 +65,7 @@
 #section-analytics .sw.amber { background: var(--amber); }
 #section-analytics .sw.come { background: repeating-linear-gradient(135deg, var(--viz-rec) 0 2px, color-mix(in srgb, var(--viz-rec) 26%, transparent) 2px 6px); }
 #section-analytics .sw.away { background: repeating-linear-gradient(135deg, var(--viz-mute) 0 1.5px, transparent 1.5px 4px); }
-#section-analytics .sw.blank { border: 1.5px solid var(--amber); }
+#section-analytics .sw.blank { border: 1.5px solid var(--faint); }
 #section-analytics .sw.soon { background: var(--amber-dim); }
 #section-analytics .sw.gap { border: 1.5px solid var(--white); }
 #section-analytics .sw.off { background: radial-gradient(circle, var(--viz-mute) 0 2px, transparent 2.5px); }
@@ -100,7 +100,7 @@
 #section-analytics svg .line-amber { fill: none; stroke: var(--amber); stroke-width: 1.5; }
 #section-analytics svg .ring { stroke: var(--card); stroke-width: 2; }
 #section-analytics svg .hollow { fill: var(--card); stroke: var(--viz-mute); stroke-width: 1.5; }
-#section-analytics svg .blank { fill: none; stroke: var(--amber); stroke-width: 1.5; }
+#section-analytics svg .blank { fill: none; stroke: var(--faint); stroke-width: 1.5; }
 #section-analytics svg .w-rec { fill: var(--viz-rec); opacity: .22; }
 #section-analytics svg .w-amber { fill: var(--amber); opacity: .26; }
 #section-analytics svg .l-rec, #section-analytics svg .l-amber { fill: none; stroke: var(--viz-rec); stroke-width: 2; stroke-linecap: round; }
