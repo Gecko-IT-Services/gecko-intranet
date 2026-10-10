@@ -259,6 +259,11 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
       const seats = ve.reduce((t, d) => t + (Number(d.quantity) || 0), 0);
       if (seats) {
         ruleHit = true;
+        // VoIP Unlimited (10 Oct 2026): sites with call recording are priority upgrades; that platform is no longer in use.
+        if (ve.some(d => /call recording/i.test(d.extras || ''))) {
+          reasons.push('Priority (VoIP Unlimited, Oct 2026): they use call recording, and VoIP Exchange’s call-recording platform is no longer in use.');
+          findings.push('The call-recording service on your current phone system is no longer in use, so recordings aren’t being kept.');
+        }
         for (const d of ve) { reasons.push(dealerLine(d) + '.'); findings.push(dealerFinding(d)); }
         reasons.push('VoIP Unlimited report that VoIP Exchange call recordings are not accessible from mid-August 2026 and the mobile app is unreliable; they recommend moving to VoxOne.');
         if (product.default_mrr != null) reasons.push(`${seats} seats × ${money(product.default_mrr)} commission = ${money(seats * Number(product.default_mrr))} a month.`);
@@ -268,6 +273,13 @@ export function evaluate(client, product, { status, now = new Date() } = {}) {
     case 'dealer_renewal': {
       const due = renewalsDue(client.dealer, { now }).filter(d => d.service !== 'voip_exchange');   // VE has its own migration
       if (due.length) { ruleHit = true; for (const d of due) { reasons.push(dealerLine(d) + '.'); findings.push(dealerFinding(d)); } }
+      // Analogue (PSTN) lines go when the UK's copper phone network is switched off, due by 31 Jan 2027.
+      const pstn = (client.dealer || []).filter(d => d.service === 'pstn' && !due.includes(d));
+      if (pstn.length) {
+        ruleHit = true;
+        reasons.push(`${pstn.reduce((t, d) => t + (Number(d.quantity) || 0), 0)} × PSTN line: the analogue phone network is due to be switched off by 31 January 2027, so it needs replacing (VoxOne or a digital line).`);
+        findings.push('Your analogue (PSTN) phone line will stop working when the old phone network is switched off, due by 31 January 2027.');
+      }
       break;
     }
     case 'dealer_prospect':

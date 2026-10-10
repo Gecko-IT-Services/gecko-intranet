@@ -158,6 +158,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   customer is never offered VoxOne or connectivity; instead out-of-contract/expiring lines raise
   a renewal, VoIP Exchange seats raise a VoxOne migration (£4/seat commission), and dealer
   customers who aren't IT clients appear as prospects for IT support.
+- Dealer list refreshed 11 Oct from the account manager's commission sheet (`2026-10-11-dealer-list-design.md`): one row per
+  service with fixed commission (£613.50/month); Cowan and MSA are VoxOne (no migration); call recording = priority VoxOne
+  upgrade (Waterside, Freeston); PSTN lines raise a renewal (switch-off due 31 Jan 2027).
 
 ## Jobs (from 8 Oct 2026)
 - `src/sections/jobs.js` + `src/core/jobs.js` (tests `tests/jobs.mjs`); design note
