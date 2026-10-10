@@ -5993,6 +5993,8 @@ function escapeHtml(s) {
 
 /** An icon from the one set (src/core/icons.js); sections render after load, when it is registered. */
 function gkIcon(name, size) { return window.GeckoIcons.icon(name, size); }
+/** The vendor's logo for a service line (src/core/vendors.js); an m365 line is Microsoft's whatever it is called. */
+function gkVendor(s) { return window.GeckoVendors?.vendorMarks((s.category === 'm365' ? 'm365 ' : '') + s.name, true) || ''; }
 
 /** Pick initials for the user-chip avatar. */
 function initialsFor(name) {
@@ -7430,7 +7432,7 @@ function prfRenderServiceRow(s) {
   if (s.sell === 0 && s.cost === 0) {
     return `<tr data-svc-id="${s.id}">
       <td><span class="prf-ct ${prfCatClass(s.category)}">${escapeHtml(s.category)}</span></td>
-      <td class="prf-sn"><div class="n">${escapeHtml(s.name)}</div><div class="d">${escapeHtml(s.notes || '')}</div></td>
+      <td class="prf-sn"><div class="n">${escapeHtml(s.name)}${gkVendor(s)}</div><div class="d">${escapeHtml(s.notes || '')}</div></td>
       <td colspan="4" class="prf-pend">Pending setup</td>
       <td>${prfRenderRowActions(s.id)}</td>
     </tr>`;
@@ -7443,7 +7445,7 @@ function prfRenderServiceRow(s) {
   const sp  = sell > 0 ? sgm / sell : 0;
   return `<tr data-svc-id="${s.id}">
     <td><span class="prf-ct ${prfCatClass(s.category)}">${escapeHtml(s.category)}</span></td>
-    <td class="prf-sn"><div class="n">${escapeHtml(s.name)}</div><div class="d">${escapeHtml(s.notes || '')}</div></td>
+    <td class="prf-sn"><div class="n">${escapeHtml(s.name)}${gkVendor(s)}</div><div class="d">${escapeHtml(s.notes || '')}</div></td>
     <td class="prf-nr prf-nc">${fromInv
       ? `<span class="prf-isub" title="${s.category === 'm365' ? 'Licence cost is charged from TD SYNNEX (and Exclaimer) invoices in the month they are dated' : 'Hosting cost is charged from Clook invoices in the month they are dated'}; the ${prfFmtForce(s.cost)} on this line is not counted">from invoices</span>`
       : prfFmt(cost)}</td>

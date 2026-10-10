@@ -443,6 +443,13 @@ svg[viewBox="0 0 24 24"][stroke="currentColor"] * { vector-effect: non-scaling-s
 svg.ic { vertical-align: -.15em; }
 #app .btn > svg { width: 14px; height: 14px; }
 
+/* Vendor marks (src/core/vendors.js): the maker's logo in front of a product's name, text height, full colour.
+   The square ones (Acronis, OpenText) are app-icon tiles, hence the small radius. */
+.vendor-mark { height: 14px; width: auto; margin-right: 6px; vertical-align: -2px; border-radius: 3px; flex: none; }
+.vendor-mark + .vendor-mark { margin-left: -2px; }
+.vendor-mark.after { margin: 0 0 0 6px; }
+.vendor-mark.after + .vendor-mark.after { margin-left: 4px; }
+
 /* Row actions (edit, delete, save, cancel): the same quiet square in every table; red only for the one that destroys. */
 #app :is(.prf-iconbtn, .cli-iconbtn, .mil-icon-btn, .tsh-icon-btn) {
   display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0;

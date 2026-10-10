@@ -20,6 +20,7 @@ import { loadAll, rowToClient, rowToEntry } from '../core/timesheets.js';
 import { ssaBoard } from '../core/ssa.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import * as A from '../core/analytics.js';
+import { vendorMarks } from '../core/vendors.js';
 import { whitespace as gapsSnapshot } from './opportunities.js';
 
 const TABS = [{ key: 'revenue', label: 'Revenue' }, { key: 'time', label: 'Time' }, { key: 'ahead', label: 'Ahead' }];
@@ -406,7 +407,7 @@ function aheadHtml() {
       : t.state === 'gap' ? [t.mrr ? `+${gbp2(t.mrr)} a month` : 'Price not set', t.client, 'Could have it'] : [t.why || 'Not offered', t.client]);
     gaps = `<p class="an-lead"><b>${W.gaps}</b> ${W.gaps === 1 ? 'gap' : 'gaps'} across <b>${W.clients}</b> clients.${top?.gaps ? ` ${escapeHtml(top.name)} has the most room: <b>${top.gaps}</b> could have it.` : ''}${W.total > 0 ? ` The priced gaps add up to <b>${escapeHtml(gbp(W.total))}</b> a month.` : ''}${W.pipeline > 0 ? ` <b>${escapeHtml(gbp(W.pipeline))}</b> a month is already in the pipeline.` : ''}${W.unpriced ? ` ${plural(W.unpriced, 'gap has', 'gaps have')} no monthly value, because the product has none in the catalogue.` : ''}</p>
       <div class="an-legend"><span><i class="sw rec"></i>Has it</span><span><i class="sw one"></i>In the pipeline</span><span><i class="sw gap"></i>Could have it</span><span><i class="sw off"></i>Not offered</span></div>
-      <div class="an-ws">${W.rows.map(r => `<div class="an-ws-row"><div class="an-ws-name">${escapeHtml(r.name)}</div><div class="an-ws-tok">${r.tokens.map(t => `<i class="tok ${t.state}" ${tip(...TIP(t))}></i>`).join('')}</div><div class="an-ws-val">${r.gaps}<small>could have it${r.total > 0 ? `, +${escapeHtml(gbp(r.total))} a month` : ''}</small></div></div>`).join('')}</div>`;
+      <div class="an-ws">${W.rows.map(r => `<div class="an-ws-row"><div class="an-ws-name">${escapeHtml(r.name)}${vendorMarks(r.name, true)}</div><div class="an-ws-tok">${r.tokens.map(t => `<i class="tok ${t.state}" ${tip(...TIP(t))}></i>`).join('')}</div><div class="an-ws-val">${r.gaps}<small>could have it${r.total > 0 ? `, +${escapeHtml(gbp(r.total))} a month` : ''}</small></div></div>`).join('')}</div>`;
   }
   return ssa + card('Where is the next pound of recurring revenue?', 'One square per client, largest client first, from the Opportunities gaps map', gaps, goBtn('Gaps map', 'opportunities:gaps'));
 }

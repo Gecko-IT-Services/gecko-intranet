@@ -24,6 +24,7 @@ import * as analytics from './sections/analytics.js';
 import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
 import * as icons from './core/icons.js';
+import * as vendors from './core/vendors.js';
 import * as overviewCore from './core/overview.js';
 import * as review from './core/review.js';
 import * as profitFeed from './core/profit-feed.js';
@@ -54,6 +55,8 @@ window.GeckoClientMatch = sameClient;
 window.GeckoTabs = tabs;
 // The one icon set (classic script reaches it through gkIcon()).
 window.GeckoIcons = icons;
+// Vendor logos beside product names (classic script reaches them through gkVendor()).
+window.GeckoVendors = vendors;
 // Leave (classic script) draws the same holiday tokens, presence and planner bars as Team › Overview.
 window.GeckoTeam = teamCore;
 
