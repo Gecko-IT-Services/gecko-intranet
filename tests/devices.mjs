@@ -51,4 +51,10 @@ assert.equal(devicesFor(s, 'Kingdom Products'), null);
 const noBill = deviceSummary([a(9, 'Haus Coast Ltd', 'HC-1', 'Work Station', 'Microsoft Windows 11 Pro', '2026-10-11T07:00:00Z')], bill, today);
 assert.deepEqual(noBill.clients[0].flags, ['not_billed'], 'a client with devices and no Atera billing is flagged');
 
+// Atera spells some customers differently from Xero (live data, 11 Oct).
+const pm = deviceSummary([a(10, 'P&M Packing', 'PM-1', 'Work Station', 'Microsoft Windows 11 Pro', '2026-10-11T07:00:00Z')],
+  ateraBilling([{ contact_name: 'PM Packing', invoice_date: '2026-10-01', status: 'PAID', line_items: [{ item_code: 'Atera - Internet Security', line_amount: 111.33 }] }], '2026-10'), today);
+assert.deepEqual([pm.clients[0].billed, pm.clients[0].flags], [111.33, []], 'P&M Packing in Atera is PM Packing in Xero');
+assert.equal(devicesFor(pm, 'PM Packing').devices, 1, 'and its client page finds the devices');
+
 console.log('devices: all tests passed');

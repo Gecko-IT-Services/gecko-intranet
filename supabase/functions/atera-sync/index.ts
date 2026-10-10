@@ -5,11 +5,24 @@ import { cors, json, sql, staffEmail } from '../_shared/xero.ts';
 
 const API = 'https://app.atera.com/api/v3';
 
+/** What kind of key was saved, without revealing it: a classic 32-character key, a token (JWT), or something else. */
+const keyShape = (k: string) => (/^[0-9a-f]{32}$/i.test(k) ? 'a 32-character key' : /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(k) ? `a ${k.length}-character token (JWT)` : `${k.length} characters, not the usual 32-character key`);
+
+// Atera's classic keys go in X-API-KEY; newer tokens may need Authorization: Bearer. Try the first, then the second.
+const AUTH = [(k: string) => ({ 'X-API-KEY': k }), (k: string) => ({ Authorization: `Bearer ${k}` })];
+let authStyle = 0;
+
 async function getAll(path: string, key: string) {
   const out: any[] = [];
   for (let page = 1; page <= 200; page++) {
-    const res = await fetch(`${API}${path}?page=${page}&itemsInPage=50`, { headers: { 'X-API-KEY': key, accept: 'application/json' } });
-    if (res.status === 401 || res.status === 403) throw new Error(`Atera refused the API key (${res.status}; the saved key is ${key.length} characters). Copy it again from Atera › Admin › API and update ATERA_API_KEY in Supabase › Edge Functions › Secrets.`);
+    const url = `${API}${path}?page=${page}&itemsInPage=50`;
+    let res = await fetch(url, { headers: { ...AUTH[authStyle](key), accept: 'application/json' } });
+    if ((res.status === 401 || res.status === 403) && authStyle === 0) {
+      authStyle = 1;
+      res = await fetch(url, { headers: { ...AUTH[authStyle](key), accept: 'application/json' } });
+      if (res.status === 401 || res.status === 403) authStyle = 0;
+    }
+    if (res.status === 401 || res.status === 403) throw new Error(`Atera refused the API key (${res.status}; the saved key is ${keyShape(key)}). Copy it again from Atera › Admin › API and update ATERA_API_KEY in Supabase › Edge Functions › Secrets.`);
     if (!res.ok) throw new Error(`Atera ${path} ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const body = await res.json();
     const items = (body?.items || body?.Items || []) as any[];
@@ -60,7 +73,7 @@ export async function syncAtera() {
       await tx`update public.atera_status set last_sync_at = now(), last_sync_ok = true, last_error = '',
                customers = ${customers.length}, agents = ${agents.length} where id = 1`;
     });
-    return { ok: true, customers: customers.length, agents: agents.length };
+    return { ok: true, customers: customers.length, agents: agents.length, auth: authStyle ? 'bearer' : 'x-api-key' };
   } catch (err) {
     const message = String((err as Error).message || err).slice(0, 500);
     await sql`update public.atera_status set last_sync_at = now(), last_sync_ok = false, last_error = ${message} where id = 1`;
