@@ -58,6 +58,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `.btn` family (`btn-primary` ink, `btn-ghost`, `btn-danger`, `btn-success`, `btn-sm`), hairline figure
   panels, error vs empty boxes and `.badge`. New UI uses these classes; never add a bespoke button,
   pill or KPI card. Sentence case for all labels.
+  Icons and motion (10 Oct, `2026-10-10-icons-and-motion-design.md`): icons come from `src/core/icons.js`
+  (`icon(name, size)`; classic script `gkIcon`), sizes 16 nav · 14 buttons and row actions · 12 in text, line weight
+  set once in `system.css` §9; never a text character as an icon (☎ ⚠ ↗ turn into emoji on an iPhone). Transitions
+  use `--dur-1/2/3` + `--ease` or `--t-ui`, charts `--dur-chart`; `tests/icons.mjs` enforces both.
   Page-level loading/empty/error states carry retro gecko art (9 Oct, `2026-10-09-retro-gecko-states-design.md`):
   add `art art-loading|art-empty|art-none|art-offline|art-clear` to the state box; never on small inline states.
 - Mobile: tables with ≥4 columns are turned into stacked cards by a container

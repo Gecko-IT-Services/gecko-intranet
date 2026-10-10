@@ -30,7 +30,7 @@
 
 /* Sales tile: invoiced so far against what the month is on course for */
 #section-overview .ovw-bar { display: flex; gap: 2px; height: 8px; margin-top: 10px; border-radius: var(--radius-pill); background: var(--border-dim); overflow: hidden; }
-#section-overview .ovw-bar > i { display: block; height: 100%; transform-origin: left; animation: ovw-grow-x .6s var(--ease) both; }
+#section-overview .ovw-bar > i { display: block; height: 100%; transform-origin: left; animation: ovw-grow-x var(--dur-chart) var(--ease) both; }
 
 /* — Two columns: Needs attention (wider) + This week — */
 #section-overview .ovw-split { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -92,7 +92,7 @@
 #section-overview .ovw-hist-col .t { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
 #section-overview .ovw-hist-col .m { font-size: 12px; color: var(--muted); }
 #section-overview .ovw-hist-col.cur .m { color: var(--white); font-weight: 700; }
-#section-overview .ovw-hist-bar { flex: 1; width: 100%; max-width: 44px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; transform-origin: bottom; animation: ovw-grow-y .6s var(--ease) both; }
+#section-overview .ovw-hist-bar { flex: 1; width: 100%; max-width: 44px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; transform-origin: bottom; animation: ovw-grow-y var(--dur-chart) var(--ease) both; }
 #section-overview .ovw-hist-bar i { display: block; width: 100%; }
 #section-overview .ovw-hist-bar i:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
 #section-overview .ovw-legend { list-style: none; margin: 0; padding: 10px 18px 14px; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
@@ -203,7 +203,7 @@
 #section-overview .ovw-rv-hours small { grid-column: 2 / 4; }
 #section-overview .ovw-rv-hours strong { font-family: var(--font-mono); font-weight: 500; text-align: right; color: var(--who, var(--blue)); }
 #section-overview .ovw-rv-hours .bars { display: grid; gap: 3px; }
-#section-overview .ovw-rv-hours .bars i, #section-overview .ovw-rv-legend b { display: block; height: 7px; border-radius: var(--radius-pill); min-width: 2px; transform-origin: left; animation: ovw-grow-x .6s var(--ease) both; }
+#section-overview .ovw-rv-hours .bars i, #section-overview .ovw-rv-legend b { display: block; height: 7px; border-radius: var(--radius-pill); min-width: 2px; transform-origin: left; animation: ovw-grow-x var(--dur-chart) var(--ease) both; }
 #section-overview .ovw-rv .now { background: var(--blue); }
 #section-overview .ovw-rv .prev { background: color-mix(in srgb, var(--blue) 35%, transparent); }
 #section-overview .ovw-rv-legend { margin: 0; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }

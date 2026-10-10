@@ -18,6 +18,7 @@ import { graphFetch } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
+import { icon } from '../core/icons.js';
 import { STAGES, OPEN_STAGES, stageLabel, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
   nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt } from '../core/jobs.js';
@@ -484,9 +485,9 @@ function boardHtml() {
       <div class="job-col-body">${body}</div>${add}</section>`;
   const ideas = col('ideas', 'Ideas', b.ideasValue, `${b.ideas.length} from Opportunities`,
     JOB.oppsError ? `<p class="job-col-note bad">Opportunities didn’t load: ${escapeHtml(JOB.oppsError)}</p>` : b.ideas.map(ideaSticky).join('') || '<p class="job-col-note">One-off ideas show here.</p>',
-    '<button type="button" class="job-col-add" data-job-act="addidea">+ Idea</button>');
+    `<button type="button" class="job-col-add" data-job-act="addidea">${icon('plus', 12)}Idea</button>`);
   const lanes = b.lanes.map(l => col(l.key, stageLabel(l.key), l.value, count(l.items.length), l.items.map(jobSticky).join(''),
-    `<button type="button" class="job-col-add" data-job-act="add" data-stage="${l.key}">+ Add</button>`)).join('');
+    `<button type="button" class="job-col-add" data-job-act="add" data-stage="${l.key}">${icon('plus', 12)}Add</button>`)).join('');
   const sel = JOB.jobs.find(j => j.id === JOB.selected);
   return `${clientOptions()}
     ${JOB.adding ? jobForm(null) : ''}${JOB.addingIdea ? ideaForm() : ''}

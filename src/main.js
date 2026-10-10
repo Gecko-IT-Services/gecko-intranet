@@ -22,6 +22,7 @@ import * as team from './sections/team.js';
 import * as licences from './sections/licences.js';
 import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
+import * as icons from './core/icons.js';
 import * as overviewCore from './core/overview.js';
 import * as review from './core/review.js';
 import * as profitFeed from './core/profit-feed.js';
@@ -49,6 +50,8 @@ window.GeckoMonitor = { backups: backups.snapshot, alerts: alerts.snapshot };
 window.GeckoClientMatch = sameClient;
 // The shared tab strip (the shell's hub strip uses it too).
 window.GeckoTabs = tabs;
+// The one icon set (classic script reaches it through gkIcon()).
+window.GeckoIcons = icons;
 // Leave (classic script) draws the same holiday tokens, presence and planner bars as Team › Overview.
 window.GeckoTeam = teamCore;
 

@@ -13,8 +13,9 @@
    4  Error state      red-tinted box; never the empty state's look
    5  Lists            full 1px borders; status shown by a dot or badge, not a side stripe
    6  Badges           .badge (status, small caps)
-   7  Motion           one curve (--ease), three speeds (--dur-1/2/3)
-   8  Phone            sheets for dialogs, date inputs that fit, Timesheets built for one thumb */
+   7  Motion           one curve (--ease), three speeds (--dur-1/2/3), --dur-chart for bars filling
+   8  Phone            sheets for dialogs, date inputs that fit, Timesheets built for one thumb
+   9  Icons            one set (src/core/icons.js), one line weight, three sizes */
 
 
 /* ── 1 · Header actions ─────────────────────────────────────────────── */
@@ -38,7 +39,7 @@
                        .cli-refresh, .tsh-refresh, .lev-refresh, .bkp-refresh, .head-btn):hover {
   background: var(--card-hover); border-color: var(--border); color: var(--white);
 }
-#app .section-head :is(.ovw-refresh, .prf-refresh, .mil-refresh, .cli-refresh, .tsh-refresh, .lev-refresh, .bkp-refresh, .head-btn) svg { width: 13px; height: 13px; flex: none; }
+#app .section-head :is(.ovw-refresh, .prf-refresh, .mil-refresh, .cli-refresh, .tsh-refresh, .lev-refresh, .bkp-refresh, .head-btn) svg { width: 14px; height: 14px; flex: none; }
 
 /* These rules set display, which would beat the hidden attribute (Connect, Copy to Supabase…). */
 #app [hidden] { display: none !important; }
@@ -159,7 +160,7 @@
 }
 /* Loading waits 0.3s then fades in, so a quick load shows only its text instead of a flash of gecko. */
 #app .art-loading::before { background-image: url(../assets/retro/loading.png); opacity: 0;
-  animation: art-in .2s ease .3s forwards, art-hop 1.2s steps(2, jump-none) .3s infinite alternate; }
+  animation: art-in var(--dur-2) var(--ease) .3s forwards, art-hop 1.2s steps(2, jump-none) .3s infinite alternate; }
 #app .art-empty::before   { background-image: url(../assets/retro/empty.png); }
 #app .art-none::before    { background-image: url(../assets/retro/no-results.png); }
 #app .art-offline::before { background-image: url(../assets/retro/offline.png); }
@@ -184,7 +185,9 @@
 
 /* Every press gives the same small push. */
 #app :is(.section-head .head-btn, .section-head [class$="-refresh"], .app-tabs button,
-         .bkp-window button, .cli-filter button):active:not(:disabled) { transform: translateY(1px); }
+         .bkp-window button, .cli-filter button, .prf-iconbtn, .cli-iconbtn, .mil-icon-btn, .tsh-icon-btn, .lev-iconbtn,
+         .prf-month-btn, .lev-month-btn, .tsh-wk-arrow, .mil-chip, .tsh-chip, .tsh-preset, .job-col-add,
+         .set-seg-btn):active:not(:disabled) { transform: translateY(1px); }
 
 /* Dialogs: the backdrop fades, the panel rises into place. */
 #app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .lev-modal-bg, .alr-backdrop) {
@@ -421,3 +424,25 @@
 }
 
 @keyframes gk-sheet { from { transform: translateY(24px); opacity: 0; } }
+
+
+/* ── 9 · Icons ──────────────────────────────────────────────────────── */
+/* One family (src/core/icons.js: Feather/Lucide outlines), drawn at one line weight whatever the
+   size: the stroke is set in screen pixels here, so the stroke-width on each <svg> is only a fallback.
+   Not anchored on #app: the sidebar, the sign-in screen and toasts carry icons too.
+   Sizes: 16 navigation and toasts · 14 in buttons and row actions · 12 chevrons and marks in text.
+   Never a text glyph for an icon (the phone, warning and arrow characters turn into emoji on an iPhone). */
+svg[viewBox="0 0 24 24"][stroke="currentColor"] { stroke-width: 1.5px; flex: none; }
+svg[viewBox="0 0 24 24"][stroke="currentColor"] * { vector-effect: non-scaling-stroke; }
+svg.ic { vertical-align: -.15em; }
+#app .btn > svg { width: 14px; height: 14px; }
+
+/* Row actions (edit, delete, save, cancel): the same quiet square in every table; red only for the one that destroys. */
+#app :is(.prf-iconbtn, .cli-iconbtn, .mil-icon-btn, .tsh-icon-btn) {
+  display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: transparent; color: var(--muted);
+  cursor: pointer; transition: var(--t-ui);
+}
+#app :is(.prf-iconbtn, .cli-iconbtn, .mil-icon-btn, .tsh-icon-btn):hover { background: var(--card-hover); border-color: var(--border); color: var(--white); }
+#app :is(.prf-iconbtn, .cli-iconbtn, .mil-icon-btn, .tsh-icon-btn).danger:hover { background: var(--red-dim); border-color: var(--red-border); color: var(--red); }
+#app :is(.prf-iconbtn, .cli-iconbtn, .mil-icon-btn, .tsh-icon-btn) svg { width: 14px; height: 14px; }
