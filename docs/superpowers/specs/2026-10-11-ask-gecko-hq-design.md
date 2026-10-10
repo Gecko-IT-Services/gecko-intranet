@@ -1,5 +1,10 @@
 # Ask Gecko HQ
 
+**Status: removed 11 Oct 2026.** Philip, on hearing it costs roughly 5–20p a question through the Anthropic API:
+"I don't want that then, please remove that part unless there is a free version." There is no free API tier, and a
+Claude subscription can't be used by the site. The button, dialog, Edge Function and `ask_log` table were removed;
+the design below is kept for reference.
+
 Philip, 11 Oct 2026: "build the Ask Gecko HQ box" (after asking whether Claude was worth having inside the app; the
 answer was yes, narrowly: read only, drafts at most, key on the server).
 
