@@ -79,6 +79,7 @@
 <link rel="stylesheet" href="src/styles/mileage.css">
 <link rel="stylesheet" href="src/styles/profitability.css">
 <link rel="stylesheet" href="src/styles/licences.css">
+<link rel="stylesheet" href="src/styles/atera.css">
 <link rel="stylesheet" href="src/styles/devices.css">
 <link rel="stylesheet" href="src/styles/analytics.css">
 <script type="module" src="src/main.js"></script>
@@ -4274,6 +4275,31 @@ body::before {
       <div id="licWrap"><p class="state-empty">Open this section to load the licence check.</p></div>
     </section>
 
+    <!-- ═══ ATERA ═══ src/sections/atera.js: Atera's bill (seats + add-ons) vs what clients pay, by feature and client; leaks. Part of the Clients hub. -->
+    <section class="section" id="section-atera">
+      <div class="section-head">
+        <h1>Atera <span>Costs</span></h1>
+        <div class="head-actions">
+          <div class="prf-month-sel" id="atMonthSel" hidden>
+            <button class="prf-month-btn" type="button" data-at-month="-1" aria-label="Previous month" title="Previous month">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span class="prf-month-label" id="atMonthLabel">—</span>
+            <button class="prf-month-btn" type="button" data-at-month="1" aria-label="Next month" title="Next month">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+          <button class="head-btn" id="atRefresh" type="button" title="Reload">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="atLastSync"></span>
+        </div>
+      </div>
+      <input type="file" id="atFile" accept=".csv,.xlsx,.xls,text/csv" hidden>
+      <div id="atWrap"><p class="state-empty">Open this section to load Atera costs.</p></div>
+    </section>
+
     <!-- ═══ CLIENT PAGE ═══ src/sections/client.js: one client, every section. Part of the Clients hub. -->
     <section class="section" id="section-client">
       <div class="cl-head" id="clHead"></div>
@@ -4877,6 +4903,7 @@ const SECTION_TITLES = {
   analytics:     'ANALYTICS',
   profitability: 'CLIENTS · PROFITABILITY',
   licences:      'CLIENTS · LICENCES',
+  atera:         'CLIENTS · ATERA',
   opportunities: 'OPPORTUNITIES',
   jobs:          'JOBS',
   mileage:       'TEAM · MILEAGE',
@@ -5456,7 +5483,7 @@ async function graphFetch(path, options = {}) {
    (.app-tabs) above them. Every old section key still works: navTo('alerts')
    opens Monitoring on its Alerts tab. Design: 2026-10-09-gecko-hq-structure-design.md */
 const HUBS = {
-  clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['licences', 'Licences'], ['client', null]] },
+  clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['licences', 'Licences'], ['atera', 'Atera'], ['client', null]] },
   monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['alerts', 'Alerts'], ['devices', 'Devices']] },
   team:       { label: 'Team',       tabs: [['team', 'Overview'], ['leave', 'Leave'], ['mileage', 'Mileage']] }
 };
