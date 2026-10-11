@@ -138,6 +138,60 @@ export function usageLines(rows, cols) {
   return { lines, skipped, total: r2(lines.reduce((t, l) => t + l.usd, 0)) };
 }
 
+/**
+ * Atera's App Center invoice breakdown (Admin › Subscription › Invoices › the AppCenter invoice › breakdown, .xlsx): a summary
+ * sheet (Product Family, Product name, Qty, Unit price, Amount before tax) adding up to the invoice, and one sheet per product
+ * that Atera splits by customer (Customer, Product name, … with a "Total" row). As of Oct 2026 only Acronis is split; Webroot,
+ * Keeper and EndUser Remote are totals only. sheets: [{ name, rows }] → null when it isn't this layout, else
+ * { lines, total, split: [product], notSplit: [{ family, product, usd }], unallocated } where lines without a customer carry the
+ * products Atera doesn't split and any gap between a product's customer lines and its summary line, so the lines add up to
+ * the invoice exactly.
+ */
+export function ateraBreakdown(sheets) {
+  const headed = (rows, ...need) => {
+    const h = (rows[0] || []).map(c => lc(c).trim());
+    return need.every(n => h.includes(n)) ? h : null;
+  };
+  const summary = (sheets || []).find(s => headed(s.rows, 'product family', 'product name') && !headed(s.rows, 'customer'));
+  if (!summary) return null;
+  const col = (h, re) => h.findIndex(x => re.test(x));
+  const sh = headed(summary.rows, 'product family', 'product name');
+  const [fI, pI, qI, aI] = [col(sh, /^product family$/), col(sh, /^product name$/), col(sh, /^qty|quantity/), col(sh, /amount|total/)];
+  if (aI < 0) return null;
+  const perCustomer = new Map();
+  for (const s of sheets) {
+    const h = headed(s.rows, 'customer', 'product name');
+    if (!h) continue;
+    const [cI, ppI, cqI, caI] = [col(h, /^customer$/), col(h, /^product name$/), col(h, /^qty|quantity/), col(h, /amount|total/)];
+    for (const r of s.rows.slice(1)) {
+      const customer = String(r[cI] ?? '').trim(), product = String(r[ppI] ?? '').trim(), usd = money(r[caI]);
+      if (!customer || /^(grand\s*)?(sub)?total$/i.test(customer) || !Number.isFinite(usd)) continue;
+      const q = money(r[cqI]);
+      const list = perCustomer.get(product) || [];
+      list.push({ customer, quantity: Number.isFinite(q) ? q : null, usd: r2(usd) });
+      perCustomer.set(product, list);
+    }
+  }
+  const lines = [], split = [], notSplit = [];
+  let unallocated = 0;
+  const add = (customer, family, product, quantity, usd) => {
+    const name = `${family} ${product}`.trim();
+    lines.push({ row_no: lines.length + 1, customer, product: name, feature: costFeature(name), quantity, usd: r2(usd) });
+  };
+  for (const r of summary.rows.slice(1)) {
+    const family = String(r[fI] ?? '').trim(), product = String(r[pI] ?? '').trim(), usd = money(r[aI]);
+    if (!product || !Number.isFinite(usd)) continue;
+    const q = money(r[qI]);
+    const per = perCustomer.get(product);
+    if (!per?.length) { add('', family, product, Number.isFinite(q) ? q : null, usd); notSplit.push({ family, product, usd: r2(usd) }); continue; }
+    split.push(product);
+    for (const c of per) add(c.customer, family, product, c.quantity, c.usd);
+    const gap = r2(usd - per.reduce((t, c) => t + c.usd, 0));
+    if (Math.abs(gap) >= 0.005) { add('', family, `${product} (not allocated to a customer)`, null, gap); unallocated = r2(unallocated + gap); }
+  }
+  return { lines, total: r2(lines.reduce((t, l) => t + l.usd, 0)), split, notSplit, unallocated };
+}
+
 /** Does a report's total match the add-ons charge? → { ok, diff } (diff = file − charge, USD). */
 export function reconcile(totalUsd, billUsd) {
   if (billUsd == null) return { ok: false, diff: null };
@@ -216,7 +270,7 @@ export function salesByMonth(invoices, months) {
  * month (or null when no report). invoices: xero_invoices. agents: atera_agents. today: 'YYYY-MM-DD'. fallbackRate: GBP
  * per USD when the month has no paid amount. lastSeats: the latest seats charge ({ usd, techs }), so the seat offer shows in a month
  * whose seats charge hasn't come yet.
- * → { hasUsage, rate, cost, sale, margin, features, clients, own, leaks, leakTotal, changes, unmatched }
+ * → { hasUsage, rate, cost, sale, margin, features, clients, own, leaks, leakTotal, changes, unmatched, notSplit }
  */
 export function ateraMonth({ month, bill, usage, prevUsage, invoices, agents, today, fallbackRate = null, lastSeats = null }) {
   const rate = bill?.rate || fallbackRate;
@@ -242,7 +296,10 @@ export function ateraMonth({ month, bill, usage, prevUsage, invoices, agents, to
   const contactFor = ateraName => contacts.find(x => sameAteraClient(ateraName, x)) || '';
 
   for (const s of sales.values()) entry('', s.contact).saleLines.push(...s.lines);
+  // Lines without a customer (products Atera's invoice doesn't split, e.g. Webroot) count by feature but belong to no client.
+  const pooledUsd = Object.fromEntries(FEATURES.map(f => [f.key, 0]));
   for (const u of usage || []) {
+    if (!String(u.customer || '').trim()) { pooledUsd[u.feature] = r2((pooledUsd[u.feature] || 0) + Number(u.usd)); continue; }
     const c = entry(u.customer, contactFor(u.customer));
     c.costUsd[u.feature] = r2((c.costUsd[u.feature] || 0) + Number(u.usd));
     c.products.push(u);
@@ -285,8 +342,8 @@ export function ateraMonth({ month, bill, usage, prevUsage, invoices, agents, to
     const sale = r2(clientsOut.reduce((t, c) => t + c.saleByFeature[f.key], 0));
     let cost = null;
     if (f.key === 'management') cost = bill ? (bill.seats.gbp || gbp(bill.seats.usd)) : null;
-    else if (hasUsage) cost = gbp(list.reduce((t, c) => t + (c.costUsd?.[f.key] || 0), 0));
-    return { ...f, cost, sale, margin: cost != null ? r2(sale - cost) : null };
+    else if (hasUsage) cost = gbp(list.reduce((t, c) => t + (c.costUsd?.[f.key] || 0), 0) + pooledUsd[f.key]);
+    return { ...f, cost, sale, margin: cost != null ? r2(sale - cost) : null, notSplitUsd: pooledUsd[f.key] || 0 };
   }).filter(f => f.cost || f.sale);
 
   const sale = r2(clientsOut.reduce((t, c) => t + c.sale, 0));
@@ -333,7 +390,8 @@ export function ateraMonth({ month, bill, usage, prevUsage, invoices, agents, to
   const leakTotal = r2(leaks.filter(l => l.sure && l.perMonth).reduce((t, l) => t + l.perMonth, 0));
 
   return { month, hasUsage, rate, cost, sale, margin: cost != null ? r2(sale - cost) : null, features, clients: clientsOut, own,
-    leaks, leakTotal, changes: usageChanges(usage, prevUsage, gbp), unmatched: clientsOut.filter(c => !c.contact && c.costUsdTotal > 0).map(c => c.name) };
+    leaks, leakTotal, changes: usageChanges(usage, prevUsage, gbp), unmatched: clientsOut.filter(c => !c.contact && c.costUsdTotal > 0).map(c => c.name),
+    notSplit: hasUsage ? { usd: r2(Object.values(pooledUsd).reduce((t, v) => t + v, 0)), gbp: gbp(Object.values(pooledUsd).reduce((t, v) => t + v, 0)), byFeature: pooledUsd } : null };
 }
 
 const fmt = n => '£' + (Number(n) || 0).toFixed(2);

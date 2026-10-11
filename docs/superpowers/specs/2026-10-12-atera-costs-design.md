@@ -51,6 +51,20 @@ and leaner". Framework built 10 Oct; Philip downloads Atera's usage report the n
 - Atera names that differ from Xero use `ATERA_NAMES` in `src/core/devices.js` (shared with Devices), and every contact ever
   charged for Atera is matched, so a client with nothing invoiced this month still shows under its Xero name.
 
+## Atera's invoice breakdown (11 Oct, Philip's first file)
+
+Atera › Admin › Subscription › Invoices › the AppCenter invoice (10th of the month) › breakdown (.xlsx,
+`Invoice_<number>_Breakdown.xlsx`). Layout: a summary sheet (Product Family, Product name, Qty, Unit price, Amount before tax)
+that adds up to the invoice, plus one sheet per product that Atera splits by customer, each with a "Total" row. In October 2026
+only Acronis was split ($408.14 across 15 customers); Webroot ($181.20), Keeper ($51.89) and EndUser Remote ($80.00) were
+totals only, and $0.20 of hosted storage was given to no customer.
+
+`ateraBreakdown()` reads it: the customer lines for split products, one line without a customer for each unsplit product and
+for any gap between a product's customer lines and its summary line, so the lines add up to the invoice exactly and the usual
+check applies. Lines without a customer count in the bill and by feature, never against a client, and the page says that
+client costs and margins are before them. The invoice number in the file name picks the month (`atera_bills.ref`). Atera's
+short names (Cowans, Regals, Daron Ford Motors) are in `ATERA_NAMES`.
+
 ## Not done / later
 
 - The exact report layout is unknown until Philip downloads one (11 Oct); the heading rules in `detectColumns` may need a

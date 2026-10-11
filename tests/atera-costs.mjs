@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   saleFeatures, costFeature, parseCsv, money, detectColumns, usageLines, reconcile,
-  billMonths, billsFromFeed, ateraSales, salesByMonth, ateraMonth, usageChanges, SEAT_OFFER_USD
+  billMonths, billsFromFeed, ateraSales, salesByMonth, ateraMonth, usageChanges, SEAT_OFFER_USD, ateraBreakdown
 } from '../src/core/atera-costs.js';
 
 // — Features from Xero descriptions (real lines, Sep 2026). —
@@ -147,5 +147,40 @@ assert.deepEqual([cw.qtyBefore, cw.qtyAfter, cw.diff, cw.state], [15, 17, 2.4, '
 assert.equal(ch.lines.find(l => l.customer === 'Old Client').state, 'gone');
 assert.equal(ch.total.usd, Math.round((107.56 - 82.8) * 100) / 100);
 assert.equal(usageChanges(usage, null), null);
+
+// — Atera's App Center invoice breakdown (Invoice_449265387_Breakdown.xlsx, 10 Oct 2026, cut down): a summary sheet adding up to
+//   the invoice, per-customer sheets for Acronis only, a "Total" row on each, and storage Atera leaves $0.20 unallocated. —
+const H = ['Customer', 'Product name', 'Qty', 'Unit price', 'Amount before tax'];
+const sheetsIn = [
+  { name: 'Invoice_Breakdown', rows: [['Product Family', 'Product name', 'Qty', 'Unit price', 'Amount before tax'],
+    ['Acronis', 'Acronis-PerWorkLoadWorkstationLicense-M', '2', '3.9', '7.8'],
+    ['Acronis', 'Acronis-AcronisHostedStorageWL-M', '76', '0.04', '3.04'],
+    ['Webroot', 'Webroot-Endpoint-1M', '139', '1.2', '166.8'],
+    ['Keeper', 'MSP-base-license-M', '2', '3.96', '7.92'],
+    ['EndUser Remote', 'EndUser-Remote-M', '16', '5', '80']] },
+  { name: 'Acronis-PerWorkLoadWorkstationLicense-M', rows: [H,
+    ['Total', 'Acronis-PerWorkLoadWorkstationLicense-M', '2', '3.9', '7.8'],
+    ['Cowans', 'Acronis-PerWorkLoadWorkstationLicense-M', '1', '3.9', '3.9'],
+    ['Regals', 'Acronis-PerWorkLoadWorkstationLicense-M', '1', '3.9', '3.9']] },
+  { name: 'Acronis-AcronisHostedStorageWL-M', rows: [H,
+    ['Total', 'Acronis-AcronisHostedStorageWL-M', '71', '0.04', '2.84'],
+    ['Cowans', 'Acronis-AcronisHostedStorageWL-M', '71', '0.04', '2.84']] }
+];
+const bd = ateraBreakdown(sheetsIn);
+assert.equal(bd.total, 265.56, 'the lines add up to the invoice: nothing dropped, nothing doubled');
+assert.equal(bd.unallocated, 0.2, 'storage Atera didn’t give a customer is kept, without a customer');
+assert.deepEqual(bd.notSplit.map(x => x.family), ['Webroot', 'Keeper', 'EndUser Remote']);
+assert.deepEqual(bd.lines.filter(l => l.customer).map(l => [l.customer, l.feature, l.usd]), [['Cowans', 'backup', 3.9], ['Regals', 'backup', 3.9], ['Cowans', 'backup', 2.84]]);
+assert.deepEqual(bd.lines.filter(l => !l.customer).map(l => l.feature), ['backup', 'security', 'passwords', 'remote'], 'the family names the feature (Keeper MSP-base-license, EndUser-Remote)');
+assert.equal(ateraBreakdown([{ name: 'x', rows: rows }]), null, 'any other report is not this layout');
+
+const octBill = { ...bm[0], addons: { usd: 265.56, gbp: 200 }, usd: 265.56, gbp: 200, rate: 200 / 265.56 };
+const octInv = [inv('Cowan Consultancy', '2026-10-01', [line('Atera - Internet Security & Backup & Work from Home (x5)', 323.05)]),
+  inv('Regal Autosport', '2026-10-01', [line('Atera - Cloud Management', 104.42)])];
+const mo = ateraMonth({ month: '2026-10', bill: octBill, usage: bd.lines, invoices: octInv, agents: [], today: '2026-10-11', lastSeats: { usd: 378, techs: 2 } });
+assert.deepEqual(mo.clients.map(c => c.name).sort(), ['Cowan Consultancy', 'Regal Autosport'], 'Atera’s “Cowans” and “Regals” are the Xero contacts');
+assert.equal(mo.notSplit.usd, 254.92);
+assert.equal(mo.features.find(f => f.key === 'security').cost, 125.62, 'Webroot counts in the feature cost though no client carries it');
+assert.equal(mo.clients.find(c => c.name === 'Cowan Consultancy').costUsdTotal, 6.74, 'a client’s cost holds only what Atera split');
 
 console.log('atera-costs: all tests passed');

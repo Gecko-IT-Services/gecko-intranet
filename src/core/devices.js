@@ -18,7 +18,11 @@ export const isInternal = name => /^gecko\b/i.test(String(name || '').trim());
 export const ATERA_NAMES = {
   'P&M Packing': 'PM Packing',
   'CD Aluminium': 'CDA Ltd',
-  'Cutler Solutions': 'Cutler Home Solutions'
+  'Cutler Solutions': 'Cutler Home Solutions',
+  // Atera's App Center invoice breakdown (Oct 2026) uses its own short names.
+  'Cowans': 'Cowan Consultancy',
+  'Regals': 'Regal Autosport',
+  'Daron Ford Motors': 'Daron Motors'
 };
 /** Atera's customer name and a Xero / Gecko HQ name are the same client (spelling differences in ATERA_NAMES). */
 export const sameAteraClient = (ateraName, other) => sameClient(ateraName, other) || (ATERA_NAMES[ateraName] ? sameClient(ATERA_NAMES[ateraName], other) : false);
