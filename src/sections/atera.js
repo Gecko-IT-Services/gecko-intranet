@@ -17,7 +17,7 @@ import { toast, escapeHtml, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   FEATURES, featureLabel, billMonths, billsFromFeed, salesByMonth, ateraMonth,
-  parseCsv, detectColumns, usageLines, reconcile
+  parseCsv, detectColumns, usageLines, reconcile, ateraBreakdown
 } from '../core/atera-costs.js';
 
 const AT = { bills: null, files: [], usage: [], invoices: [], agents: [], month: '', error: null, open: new Set(), pending: null, saving: false, syncedAt: null };
@@ -170,6 +170,7 @@ function featuresHtml(m) {
   const bundled = m.clients.filter(c => c.split).length;
   const note = [
     !m.hasUsage ? 'Add-on cost per feature arrives with the usage report; the bill’s add-ons total is above.' : '',
+    m.notSplit?.usd ? `${notSplitText(m)} count here in full.` : '',
     bundled ? `${bundled} client${bundled === 1 ? ' is' : 's are'} charged a bundle (e.g. “Internet Security & Backup & Work from Home”): its price is split ${m.hasUsage ? 'by what each part costs that client' : 'evenly until the costs are known'}. Separate Xero lines would make this exact.` : '',
     'Management is what the technician seats pay for, set against cloud management and retainer lines.'
   ].filter(Boolean).join(' ');
@@ -222,8 +223,16 @@ function clientsHtml(m) {
       ${open ? clientDetail(m, c, leaks) : ''}
     </li>`;
   }).join('');
-  return `<section class="at-group"><h2>By client <span class="at-count">${m.clients.length}</span></h2><ul class="at-list">${rows}</ul>
+  const partial = m.notSplit?.usd ? `<p class="at-sub at-warn-text">${escapeHtml(`${notSplitText(m)} aren’t in any client’s cost below, so each client’s margin is before those.`)}</p>` : '';
+  return `<section class="at-group"><h2>By client <span class="at-count">${m.clients.length}</span></h2>${partial}<ul class="at-list">${rows}</ul>
     ${m.unmatched.length ? `<p class="at-sub">In the usage report but not matched to a Xero contact: ${escapeHtml(m.unmatched.join(', '))}. If one is a client under another name, add it to ATERA_NAMES in src/core/devices.js.</p>` : ''}</section>`;
+}
+
+/** "Security, Passwords and Work from home ($313.09, not split by customer on Atera's invoice)" */
+function notSplitText(m) {
+  const names = FEATURES.filter(f => (m.notSplit.byFeature[f.key] || 0) >= 0.5).map(f => f.label);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0] || 'Some add-ons';
+  return `${list} (${usd(m.notSplit.usd)}, not split by customer on Atera’s invoice)`;
 }
 
 function clientDetail(m, c, leaks) {
@@ -257,10 +266,11 @@ function fileHtml(file, bill) {
 function pendingHtml(all) {
   const p = AT.pending;
   const target = all.find(b => b.month === p.month);
+  if (p.mode === 'breakdown') return breakdownHtml(all, p, target);
   const { lines, skipped, total } = usageLines(p.rows, p.cols);
   const rec = reconcile(total, target?.addons.usd ?? null);
   const opts = (k, allowNone) => `<select data-at-col="${k}">${allowNone ? `<option value="-1"${p.cols[k] < 0 ? ' selected' : ''}>(none)</option>` : ''}${p.cols.headings.map((h, i) => `<option value="${i}"${p.cols[k] === i ? ' selected' : ''}>${escapeHtml(h || `Column ${i + 1}`)}</option>`).join('')}</select>`;
-  const months = all.filter(b => b.addons.usd).map(b => `<option value="${b.month}"${b.month === p.month ? ' selected' : ''}>${escapeHtml(`${monthLabel(b.month)}: ${usd(b.addons.usd)} on ${b.charges.find(c => c.kind === 'addons')?.charged_on || ''}`)}</option>`).join('');
+  const months = monthOptions(all, p);
   const byFeature = FEATURES.map(f => [f, lines.filter(l => l.feature === f.key).reduce((t, l) => t + l.usd, 0)]).filter(([, v]) => v);
   const sample = lines.slice(0, 6).map(l => `<li>${escapeHtml(`${l.customer} · ${l.product}${l.quantity != null ? ` × ${l.quantity}` : ''} · ${usd(l.usd)} → ${featureLabel(l.feature)}`)}</li>`).join('');
   const verdict = p.cols.header < 0
@@ -284,8 +294,36 @@ function pendingHtml(all) {
   </div>`;
 }
 
+function monthOptions(all, p) {
+  return all.filter(b => b.addons.usd).map(b => `<option value="${b.month}"${b.month === p.month ? ' selected' : ''}>${escapeHtml(`${monthLabel(b.month)}: ${usd(b.addons.usd)} on ${b.charges.find(c => c.kind === 'addons')?.charged_on || ''}`)}</option>`).join('');
+}
+
+/** Preview of Atera's own invoice breakdown: what's split by customer, what isn't, and whether it adds up. */
+function breakdownHtml(all, p, target) {
+  const b = p.breakdown;
+  const rec = reconcile(b.total, target?.addons.usd ?? null);
+  const splitUsd = b.lines.filter(l => l.customer).reduce((t, l) => t + l.usd, 0);
+  const customers = new Set(b.lines.filter(l => l.customer).map(l => l.customer)).size;
+  const verdict = rec.ok ? `<p class="at-good"><strong>Adds up:</strong> ${escapeHtml(usd(b.total))} against the ${escapeHtml(usd(target.addons.usd))} charge.</p>`
+    : `<p class="at-bad"><strong>Doesn’t add up:</strong> ${escapeHtml(usd(b.total))} against the ${escapeHtml(usd(target?.addons.usd))} charge (${rec.diff > 0 ? '+' : ''}${escapeHtml(usd(rec.diff))}). Is it the right month’s invoice? It can’t be saved like this.</p>`;
+  const notSplit = b.notSplit.reduce((t, x) => t + x.usd, 0);
+  return `<div class="at-upload">
+    <h2>Atera invoice breakdown: ${escapeHtml(p.name)}</h2>
+    <label>For the add-ons charge <select data-at-pmonth>${monthOptions(all, p)}</select></label>
+    ${verdict}
+    <p class="at-sub">${escapeHtml(`Split by customer: ${usd(splitUsd)} across ${customers} customers (${[...new Set(b.split.map(x => x.split('-')[0]))].join(', ')}).`)}</p>
+    ${b.notSplit.length ? `<p class="at-sub">${escapeHtml(`Not split by customer on Atera’s invoice: ${usd(notSplit)} (${b.notSplit.map(x => `${x.family} ${x.product} ${usd(x.usd)}`).join(' · ')}). These count in the bill and by feature, not against a client.`)}</p>` : ''}
+    ${b.unallocated ? `<p class="at-sub">${escapeHtml(`${usd(b.unallocated)} of a split product isn’t allocated to any customer by Atera.`)}</p>` : ''}
+    <div class="at-actions">
+      <button type="button" class="btn btn-sm btn-primary" data-at-act="save"${rec.ok && !AT.saving ? '' : ' disabled'}>${AT.saving ? 'Saving…' : 'Save'}</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-at-act="cancel">Cancel</button>
+    </div>
+  </div>`;
+}
+
+/** The file's sheets as [{ name, rows }] (a CSV is one sheet). */
 async function readFile(file) {
-  if (/\.csv$/i.test(file.name) || file.type === 'text/csv') return parseCsv(await file.text());
+  if (/\.csv$/i.test(file.name) || file.type === 'text/csv') return [{ name: file.name, rows: parseCsv(await file.text()) }];
   if (!window.XLSX) {
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
@@ -294,34 +332,46 @@ async function readFile(file) {
     });
   }
   const wb = window.XLSX.read(await file.arrayBuffer(), { type: 'array' });
-  // The sheet with the most rows that has customer and amount columns.
-  const sheets = wb.SheetNames.map(n => window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }));
-  return sheets.filter(r => detectColumns(r).header >= 0).sort((a, b) => b.length - a.length)[0] || sheets[0] || [];
+  return wb.SheetNames.map(n => ({ name: n, rows: window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' })
+    .filter(r => r.some(c => String(c).trim() !== '')) }));
 }
 
 async function chooseFile(file) {
   try {
-    const rows = await readFile(file);
-    if (!rows.length) throw new Error('The file is empty.');
-    AT.pending = { name: file.name, rows, cols: detectColumns(rows), month: AT.month };
-    if (AT.pending.cols.header < 0) AT.pending.cols = { ...AT.pending.cols, header: 0, customer: 0, amount: Math.max(0, (rows[0] || []).length - 1) };
+    const sheets = await readFile(file);
+    if (!sheets.some(x => x.rows.length)) throw new Error('The file is empty.');
+    // The month whose add-ons charge has this invoice number (Atera names the file Invoice_<number>_Breakdown).
+    const ref = (file.name.match(/(\d{6,})/) || [])[1];
+    const byRef = ref && (AT.bills || []).find(b => b.kind === 'addons' && String(b.ref).includes(ref));
+    const month = byRef ? byRef.month : AT.month;
+    const breakdown = ateraBreakdown(sheets);
+    if (breakdown) AT.pending = { name: file.name, mode: 'breakdown', breakdown, month };
+    else {
+      // Any other report: the sheet with the most rows that has customer and amount columns.
+      const rows = sheets.map(x => x.rows).filter(r => detectColumns(r).header >= 0).sort((a, b) => b.length - a.length)[0] || sheets[0].rows;
+      AT.pending = { name: file.name, mode: 'columns', rows, cols: detectColumns(rows), month };
+      if (AT.pending.cols.header < 0) AT.pending.cols = { ...AT.pending.cols, header: 0, customer: 0, amount: Math.max(0, (rows[0] || []).length - 1) };
+    }
   } catch (err) {
     toast(`Couldn’t read ${file.name}: ${err.message || err}`, 'error', 9000);
   }
   render();
 }
 
+const pendingLines = p => (p.mode === 'breakdown' ? p.breakdown.lines : usageLines(p.rows, p.cols).lines);
+
 async function save() {
   const p = AT.pending;
   if (!p || AT.saving) return;
-  const { lines } = usageLines(p.rows, p.cols);
+  const lines = pendingLines(p);
   AT.saving = true; render();
   try {
     const sb = await connectSupabase({ interactive: true });
-    const h = p.cols.headings;
+    const h = p.cols?.headings || [];
     const { data, error } = await sb.rpc('save_atera_usage', {
       p_month: p.month, p_file_name: p.name,
-      p_columns: { customer: h[p.cols.customer] || '', product: h[p.cols.product] || '', quantity: h[p.cols.quantity] || '', amount: h[p.cols.amount] || '' },
+      p_columns: p.mode === 'breakdown' ? { layout: 'Atera App Center invoice breakdown', split: p.breakdown.split }
+        : { customer: h[p.cols.customer] || '', product: h[p.cols.product] || '', quantity: h[p.cols.quantity] || '', amount: h[p.cols.amount] || '' },
       p_rows: lines
     });
     if (error) throw new Error(error.message || 'Not saved');

@@ -164,7 +164,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Jun–Oct from receipts, later months from the feed's `atera`) against Xero "Atera…" lines, by feature (Backup, Security, Passwords,
   Work from home, Management = seats) and client; why it moved; leaks (seat offer $143.10, add-ons not billed, below cost, old devices).
   Cost per client needs Atera's usage report uploaded on the page (`atera_usage`, saved by `save_atera_usage` only when it adds up to
-  the add-ons charge ±$1). `src/core/atera-costs.js`, tests `tests/atera-costs.mjs`.
+  the add-ons charge ±$1). The report is Atera › Admin › Subscription › Invoices › AppCenter invoice › breakdown .xlsx (`ateraBreakdown`;
+  only Acronis is split by customer, Webroot/Keeper/EndUser Remote are totals). `src/core/atera-costs.js`, tests `tests/atera-costs.mjs`.
 - Monitoring › **Devices** + client page › Devices (11 Oct, `2026-10-11-atera-devices-design.md`): Atera agents per customer
   (Edge Function `atera-sync`, secret `ATERA_API_KEY`, 4× a day + Refresh; tables `atera_customers`, `atera_agents` with
   `raw`, `atera_status`): Windows 10, not seen 30+ days, devices but no Atera billing in Xero this month. Read only.
