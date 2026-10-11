@@ -86,6 +86,15 @@
 #section-atera .at-change .at-prod { font-weight: 400; color: var(--muted); }
 #section-atera .at-qty { font: 500 12px var(--font-mono); color: var(--muted); }
 
+/* Bill in Xero (a draft for a leak) */
+#section-atera .at-leak .at-actions { flex-basis: 100%; margin-top: 4px; }
+#section-atera .at-bill { flex-basis: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset); }
+#section-atera .at-bill-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+#section-atera .at-bill-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); min-width: 0; }
+#section-atera .at-bill-grid .wide { grid-column: 1 / -1; }
+#section-atera .at-bill-grid select, #section-atera .at-bill-grid input { width: 100%; min-width: 0; }
+#section-atera .at-bill p { margin: 8px 0 0; }
+
 /* Upload */
 #section-atera .at-upload label { display: inline-flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
 #section-atera .at-upload select { min-width: 0; max-width: 100%; }
@@ -104,4 +113,5 @@
   #section-atera .at-row .at-badge { grid-area: badge; }
   #section-atera .at-fig { text-align: left; font-size: 12px; }
   #section-atera .at-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #section-atera .at-bill-grid { grid-template-columns: minmax(0, 1fr); }
 }

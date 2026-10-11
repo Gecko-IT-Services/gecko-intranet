@@ -10,10 +10,10 @@ assert.deepEqual(saleFeatures('Atera - Internet Security & Backup & Work from Ho
 assert.deepEqual(saleFeatures('Acronis/M365 - Cloud Backup'), ['backup']);
 assert.deepEqual(saleFeatures('Keeper Password Manager - per user'), ['passwords']);
 assert.deepEqual(saleFeatures('OpenText PC Security (Andrew, Spencer & Richard) PC\'s.'), ['security']);
-assert.deepEqual(saleFeatures('Atera - Cloud Management'), ['management']);
-assert.deepEqual(saleFeatures('Atera - Internet Security & Cloud Management'), ['security', 'management']);
-assert.deepEqual(saleFeatures('Remote IT Support, Defender AV, Windows Backup, Remote Management, Monthly Maintenance Schedules'), ['management'],
-  'Technix’s retainer: Windows Backup and Defender are not Atera add-ons');
+assert.deepEqual(saleFeatures('Atera - Cloud Management'), ['backup', 'security', 'management'], 'Regal: cloud management is their IS + backup bundle');
+assert.deepEqual(saleFeatures('Atera - Internet Security & Cloud Management'), ['security', 'backup', 'management']);
+assert.deepEqual(saleFeatures('Remote IT Support, Defender AV, Windows Backup, Remote Management, Monthly Maintenance Schedules'), ['backup', 'security', 'management'],
+  'Technix’s retainer covers their Acronis backup (Pricing Dashboard, May 2026)');
 assert.deepEqual(saleFeatures('Atera - Work From Home (Beckie)'), ['remote']);
 
 // — Features of Atera usage products (names as Atera's App Center shows them). —
@@ -182,5 +182,31 @@ assert.deepEqual(mo.clients.map(c => c.name).sort(), ['Cowan Consultancy', 'Rega
 assert.equal(mo.notSplit.usd, 254.92);
 assert.equal(mo.features.find(f => f.key === 'security').cost, 125.62, 'Webroot counts in the feature cost though no client carries it');
 assert.equal(mo.clients.find(c => c.name === 'Cowan Consultancy').costUsdTotal, 6.74, 'a client’s cost holds only what Atera split');
+
+// — Billed per seat for fewer seats than Atera charges (MSA, Oct 2026: 9 Microsoft 365 backups, Xero 6 × £8.95), with what a
+//   "Bill in Xero" draft starts from. A flat-price line (Onsite's £65) is never read as seats. —
+const seatUsage = [
+  { customer: 'MSA Safety', product: 'Acronis Acronis-PerWorkLoadM365seatAcronisHostedStorage-M', feature: 'backup', quantity: 9, usd: 23.4 },
+  { customer: 'Onsite Commercial', product: 'Acronis Acronis-PerWorkLoadM365seatAcronisHostedStorage-M', feature: 'backup', quantity: 18, usd: 46.8 },
+  { customer: 'Onsite Commercial', product: 'Acronis Acronis-AcronisHostedStorageWL-M', feature: 'backup', quantity: 167, usd: 6.68 },
+  { customer: 'Technix Rubber', product: 'Acronis Acronis-PerWorkLoadWorkstationLicense-M', feature: 'backup', quantity: 2, usd: 7.8 },
+  { customer: 'Wired Services', product: 'Acronis Acronis-PerWorkLoadWorkstationLicense-M', feature: 'backup', quantity: 1, usd: 3.9 }
+];
+const seatInv = [
+  inv('MSA Safety', '2026-10-01', [{ item_code: 'Atera - Cloud Backup', description: 'Acronis/M365 - Cloud Backup', quantity: 6, unit_amount: 8.95, line_amount: 53.7 }]),
+  inv('Onsite Commercial Services', '2026-10-01', [{ item_code: 'Atera - Cloud Backup', description: 'Atera - Cloud Backup - Office365 & Sharepoint', quantity: 1, unit_amount: 65, line_amount: 65 }]),
+  inv('Technix Rubber & Plastics Ltd', '2026-10-01', [{ item_code: 'Atera - Internet Security', description: 'Remote IT Support, Defender AV, Windows Backup, Remote Management, Monthly Maintenance Schedules', quantity: 1, unit_amount: 194.1, line_amount: 194.1 }])
+];
+const sm = ateraMonth({ month: '2026-10', bill: octBill, usage: seatUsage, invoices: seatInv, agents: [], today: '2026-10-11' });
+const msa = sm.leaks.find(l => l.kind === 'short_qty');
+assert.equal(msa.client, 'MSA Safety');
+assert.equal(msa.perMonth, 26.85, '3 more × £8.95');
+assert.deepEqual(msa.bill, { client: 'MSA Safety', item_code: 'Atera - Cloud Backup', description: 'Acronis/M365 - Cloud Backup', quantity: 3, unit: 8.95, costPerMonth: null });
+assert.equal(msa.ref, '2026-10|MSA Safety|short_qty|backup');
+assert.ok(!sm.leaks.some(l => l.kind === 'short_qty' && l.client.startsWith('Onsite')), 'a flat £65 line is not 1 seat');
+assert.ok(!sm.leaks.some(l => l.client.startsWith('Technix') && l.bill), 'Technix’s retainer already covers their backup: nothing to bill');
+const wired = sm.leaks.find(l => l.kind === 'unbilled' && l.client === 'Wired Services');
+assert.deepEqual([wired.bill.description, wired.bill.quantity], ['Backup (Acronis)', 1]);
+assert.ok(!sm.leaks.find(l => l.kind === 'seat_offer')?.bill, 'Atera’s own discount is not something to bill a client');
 
 console.log('atera-costs: all tests passed');

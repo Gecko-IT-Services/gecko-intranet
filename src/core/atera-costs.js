@@ -28,12 +28,13 @@ export const RECONCILE_USD = 1.00;
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
 const lc = s => String(s || '').toLowerCase();
 
-// — Features from words. A retainer line ("Remote IT Support, Defender AV, Windows Backup, Remote Management…") is
-//   management only: its backup and antivirus are Windows' own, not Atera add-ons. —
+// — Features from words. A "cloud management" line or a retainer ("Remote IT Support, Defender AV, Windows Backup, Remote
+//   Management…") is a bundle: management plus the backup and security it looks after (Philip's pricing workbook, May 2026,
+//   counts Regal's, West Country Fires' and Technix's Acronis and antivirus against those lines). —
 const RETAINER = /remote it support|monthly maintenance|remote management|cloud management/;
 const PATTERNS = [
-  ['backup', /acronis|cloud backup|hosted storage|workload|(?<!windows )\bbackup\b/],
-  ['security', /webroot|opentext|internet security|pc security|endpoint|dns protection|antivirus/],
+  ['backup', /acronis|cloud backup|hosted storage|workload|\bbackup\b/],
+  ['security', /webroot|opentext|internet security|pc security|endpoint|dns protection|antivirus|\bav\b/],
   ['passwords', /keeper|password|breachwatch/],
   ['remote', /work from home|\bwfh\b|enduser remote|end user remote|splashtop|remote access/]
 ];
@@ -42,7 +43,7 @@ const PATTERNS = [
 export function saleFeatures(text) {
   const t = lc(text);
   const found = PATTERNS.filter(([, re]) => re.test(t)).map(([k]) => k);
-  if (RETAINER.test(t)) return t.includes('cloud management') ? [...new Set([...found, 'management'])] : ['management'];
+  if (RETAINER.test(t)) return [...new Set([...found, 'backup', 'security', 'management'])];
   return found;
 }
 
@@ -249,7 +250,8 @@ export function ateraSales(invoices, month) {
       if (!features.length) features = saleFeatures(code);
       const e = out.get(inv.contact_name) || { contact: inv.contact_name, total: 0, lines: [] };
       e.total = r2(e.total + amount);
-      e.lines.push({ text, amount, features });
+      const quantity = Number(l.quantity) || 1;
+      e.lines.push({ text, amount, features, code, quantity, unit: r2(l.unit_amount != null ? l.unit_amount : amount / quantity) });
       out.set(inv.contact_name, e);
     }
   }
@@ -350,6 +352,15 @@ export function ateraMonth({ month, bill, usage, prevUsage, invoices, agents, to
   const cost = bill ? (bill.gbp || gbp(bill.usd)) : null;
 
   // — Leaks: money going out that no client pays for, largest first. —
+  // Seats Atera charges per client and feature (workstations, Microsoft 365 seats, servers; storage GB isn't a seat).
+  const units = c => {
+    const o = {};
+    for (const p of c.products) if (p.quantity != null && !/storage\s*wl|hostedstoragewl|\bgb\b/i.test(p.product.replace(/M365seatAcronisHostedStorage/i, ''))) o[p.feature] = (o[p.feature] || 0) + Number(p.quantity);
+    return o;
+  };
+  const ref = (kind, client, feature = '') => `${month}|${client}|${kind}|${feature}`;
+  // What a "Bill in Xero" draft starts with: the client's own line when they have one, else the usual Atera item.
+  const ITEM = { backup: 'Atera - Cloud Backup', security: 'Atera - Internet Security', passwords: 'Atera - Internet Security', remote: 'Atera - Internet Security' };
   const leaks = [];
   const seats = bill?.seats?.usd ? { usd: bill.seats.usd, techs: bill.techs } : lastSeats;
   if (seats?.usd) {
@@ -360,7 +371,11 @@ export function ateraMonth({ month, bill, usage, prevUsage, invoices, agents, to
   }
   for (const c of clientsOut) {
     if (hasUsage && c.cost > 0 && c.sale === 0) {
-      leaks.push({ kind: 'unbilled', client: c.name, perMonth: c.cost, sure: true, text: `Add-ons cost ${fmt(c.cost)} a month; no Atera line in Xero this month.` });
+      const u = units(c);
+      const main = FEATURES.filter(f => c.costByFeature[f.key] > 0).sort((a, b) => c.costByFeature[b.key] - c.costByFeature[a.key])[0]?.key || 'other';
+      leaks.push({ kind: 'unbilled', client: c.name, perMonth: c.cost, sure: true, ref: ref('unbilled', c.name),
+        text: `Add-ons cost ${fmt(c.cost)} a month; no Atera line in Xero this month.`,
+        bill: { client: c.name, item_code: ITEM[main] || ITEM.security, description: `${featureLabel(main)} (${FEATURES.find(f => f.key === main)?.maker || 'Atera'})`, quantity: u[main] || 1, unit: null, costPerMonth: c.cost } });
       continue;
     }
     if (hasUsage && c.sale > 0 && c.cost > c.sale) leaks.push({ kind: 'below_cost', client: c.name, perMonth: r2(c.cost - c.sale), sure: true, text: `Charged ${fmt(c.sale)} but the add-ons cost ${fmt(c.cost)}.` });
@@ -369,7 +384,22 @@ export function ateraMonth({ month, bill, usage, prevUsage, invoices, agents, to
       for (const f of FEATURES) {
         const v = c.costByFeature[f.key];
         if (f.key === 'management' || f.key === 'other' || !(v >= 0.5) || sold.has(f.key)) continue;
-        leaks.push({ kind: 'unbilled_feature', client: c.name, perMonth: v, sure: true, text: `${f.label} (${f.maker}) costs ${fmt(v)} a month; no Xero line mentions it.` });
+        leaks.push({ kind: 'unbilled_feature', client: c.name, perMonth: v, sure: true, ref: ref('unbilled_feature', c.name, f.key),
+          text: `${f.label} (${f.maker}) costs ${fmt(v)} a month; no Xero line mentions it.`,
+          bill: { client: c.name, item_code: ITEM[f.key] || ITEM.security, description: `${f.label} (${f.maker})`, quantity: units(c)[f.key] || 1, unit: null, costPerMonth: v } });
+      }
+      // Billed per seat, but for fewer seats than Atera charges for (e.g. 6 × £8.95 for 9 Microsoft 365 backups).
+      const u = units(c);
+      for (const f of FEATURES) {
+        const perSeat = c.saleLines.filter(l => l.features.length === 1 && l.features[0] === f.key && l.quantity >= 2);
+        if (!perSeat.length || !u[f.key]) continue;
+        const billed = perSeat.reduce((t, l) => t + l.quantity, 0);
+        const short = u[f.key] - billed;
+        if (short < 1) continue;
+        const line = perSeat[0];
+        leaks.push({ kind: 'short_qty', client: c.name, perMonth: r2(short * line.unit), sure: true, ref: ref('short_qty', c.name, f.key),
+          text: `${f.label}: Atera charges for ${u[f.key]}, Xero bills ${billed} × ${fmt(line.unit)} (“${line.text}”).`,
+          bill: { client: c.name, item_code: line.code, description: line.text, quantity: short, unit: line.unit, costPerMonth: null } });
       }
     }
     if (!hasUsage && c.devices && c.sale === 0) {
@@ -385,7 +415,7 @@ export function ateraMonth({ month, bill, usage, prevUsage, invoices, agents, to
     if (hasUsage && o.cost > 0) leaks.push({ kind: 'own', client: o.name, perMonth: o.cost, sure: false, text: `Gecko’s own machines: add-ons ${fmt(o.cost)} a month (not billed to anyone).` });
     if (o.stale) leaks.push({ kind: 'stale', client: o.name, perMonth: null, sure: false, text: `${o.stale} of Gecko’s own devices not seen for ${STALE_DAYS}+ days. Remove them in Atera.` });
   }
-  const ORDER = { seat_offer: 0, unbilled: 1, below_cost: 2, unbilled_feature: 3, stale: 4, devices_unbilled: 5, own: 6 };
+  const ORDER = { seat_offer: 0, unbilled: 1, below_cost: 2, short_qty: 3, unbilled_feature: 4, stale: 5, devices_unbilled: 6, own: 7 };
   leaks.sort((a, b) => (b.perMonth ?? -1) - (a.perMonth ?? -1) || ORDER[a.kind] - ORDER[b.kind]);
   const leakTotal = r2(leaks.filter(l => l.sure && l.perMonth).reduce((t, l) => t + l.perMonth, 0));
 

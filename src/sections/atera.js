@@ -20,7 +20,7 @@ import {
   parseCsv, detectColumns, usageLines, reconcile, ateraBreakdown
 } from '../core/atera-costs.js';
 
-const AT = { bills: null, files: [], usage: [], invoices: [], agents: [], month: '', error: null, open: new Set(), pending: null, saving: false, syncedAt: null };
+const AT = { bills: null, files: [], usage: [], invoices: [], agents: [], pushes: [], month: '', error: null, open: new Set(), pending: null, saving: false, billing: null, syncedAt: null };
 const els = id => document.getElementById(id);
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
@@ -31,7 +31,7 @@ const shortMonth = m => new Date(m + '-01T00:00:00').toLocaleDateString('en-GB',
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : null);
 const LEAK = {
   seat_offer: ['amber', 'Atera discount'], unbilled: ['red', 'Not billed'], below_cost: ['red', 'Below cost'],
-  unbilled_feature: ['amber', 'Feature not billed'], stale: ['blue', 'Old devices'], devices_unbilled: ['amber', 'No Atera billing'], own: ['purple', 'Gecko’s own']
+  unbilled_feature: ['amber', 'Feature not billed'], short_qty: ['red', 'Billed short'], stale: ['blue', 'Old devices'], devices_unbilled: ['amber', 'No Atera billing'], own: ['purple', 'Gecko’s own']
 };
 // SheetJS for .xlsx usage reports, loaded only when one is chosen.
 const XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
@@ -51,13 +51,16 @@ async function load() {
       }
     } catch { /* the feed is optional here: the receipts already in atera_bills still show */ }
     const first = bills.length ? bills[0].month : today().slice(0, 7);
-    const [files, usage, invoices, agents] = await Promise.all([
+    const [files, usage, invoices, agents, pushes] = await Promise.all([
       sb.from('atera_usage_files').select('*').order('month', { ascending: false }).then(must),
       sb.from('atera_usage').select('month,customer,product,feature,quantity,usd').then(must),
       sb.from('xero_invoices').select('contact_name,invoice_number,invoice_date,status,line_items').gte('invoice_date', first + '-01').in('status', ['AUTHORISED', 'PAID']).then(must),
-      sb.from('atera_agents').select('customer_name,machine_name,device_type,os,last_seen').then(must)
+      sb.from('atera_agents').select('customer_name,machine_name,device_type,os,last_seen').then(must),
+      // Drafts already raised from a leak here ("Bill in Xero"); before that update the column isn't there, so none.
+      sb.from('xero_pushes').select('leak_ref,invoice_number,quantity,amount,created_at').eq('source', 'atera').eq('state', 'done')
+        .then(({ data, error }) => (error ? [] : data || []))
     ]);
-    Object.assign(AT, { bills, files, usage, invoices, agents, syncedAt: new Date() });
+    Object.assign(AT, { bills, files, usage, invoices, agents, pushes, syncedAt: new Date() });
     const months = billMonths(bills).map(b => b.month);
     if (!AT.month || !months.includes(AT.month)) AT.month = months[0] || '';
   } catch (err) {
@@ -179,13 +182,115 @@ function featuresHtml(m) {
 
 function leaksHtml(m) {
   if (!m.leaks.length) return '<section class="at-group"><h2>Leaks and savings</h2><p class="state-empty art art-clear">No leaks found this month.</p></section>';
-  const rows = m.leaks.map(l => `<li class="at-leak">
+  const rows = m.leaks.map(l => {
+    const raised = l.ref ? AT.pushes.filter(p => p.leak_ref === l.ref) : [];
+    const action = !l.bill ? '' : raised.length
+      ? `<span class="badge badge-green">${escapeHtml(`Draft ${raised.map(p => p.invoice_number || 'invoice').join(', ')} in Xero`)}</span>`
+      : AT.billing?.ref === l.ref ? '' : `<button type="button" class="btn btn-sm" data-at-bill="${escapeHtml(l.ref)}">Bill in Xero</button>`;
+    return `<li class="at-leak">
       <span class="badge badge-${LEAK[l.kind][0]}">${escapeHtml(LEAK[l.kind][1])}</span>
       ${l.client ? `<strong>${escapeHtml(l.client)}</strong>` : ''}
       <span class="at-leak-fig">${l.perMonth != null ? `${l.sure ? '' : 'about '}${escapeHtml(gbp(l.perMonth))}<small>/month</small>` : '<small>cost unknown</small>'}</span>
       <p>${escapeHtml(l.text)}</p>
-    </li>`).join('');
+      ${action ? `<div class="at-actions">${action}</div>` : ''}
+      ${l.bill && AT.billing && AT.billing.ref === l.ref ? billFormHtml(l) : ''}
+    </li>`;
+  }).join('');
   return `<section class="at-group"><h2>Leaks and savings <span class="badge badge-amber">${m.leaks.length}</span></h2><ul class="at-leaks">${rows}</ul></section>`;
+}
+
+/** The "Bill in Xero" form under a leak: a DRAFT sales invoice for this month, approved and sent by Philip in Xero. */
+function billFormHtml(l) {
+  const b = AT.billing, o = b.opts, f = b.form;
+  if (b.error && !o) return `<div class="at-bill"><p class="at-bad">${escapeHtml(b.error)}</p><div class="at-actions"><button type="button" class="btn btn-sm btn-ghost" data-at-act="bill-cancel">Close</button></div></div>`;
+  if (!o) return '<div class="at-bill"><p class="at-sub">Loading Xero contacts and items…</p></div>';
+  const opt = (v, label, sel) => `<option value="${escapeHtml(v)}"${sel ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+  const contacts = `<option value="">Choose the Xero contact…</option>${o.contacts.map(c => opt(c.id, c.name, c.id === f.contact_id)).join('')}`;
+  const items = o.items.length ? o.items.map(i => opt(i.code, i.code, i.code === f.item_code)).join('') : '<option value="">No Atera items in Xero yet</option>';
+  const total = (Number(f.quantity) || 0) * (Number(f.unit) || 0);
+  return `<div class="at-bill">
+    <div class="at-bill-grid">
+      <label>Xero contact <select data-at-bf="contact_id">${contacts}</select></label>
+      <label>Item <select data-at-bf="item_code">${items}</select></label>
+      <label class="wide">Description <input type="text" data-at-bf="description" value="${escapeHtml(f.description)}" maxlength="400"></label>
+      <label>Quantity <input type="number" data-at-bf="quantity" min="1" max="100" step="1" value="${escapeHtml(f.quantity)}"></label>
+      <label>Price each (£, net) <input type="number" data-at-bf="unit" min="0" step="0.01" value="${escapeHtml(f.unit)}" placeholder="0.00"></label>
+      <label class="wide">Reference <input type="text" data-at-bf="reference" value="${escapeHtml(f.reference)}" maxlength="255"></label>
+    </div>
+    <p class="at-sub">${l.bill.costPerMonth != null ? `${escapeHtml(`Costs you about ${gbp(l.bill.costPerMonth)} a month from Atera.`)} ` : ''}Total <strong>${escapeHtml(gbp(total))}</strong> + VAT.
+      Creates a <strong>draft</strong> in Xero for this month only; you approve and send it there. To bill it every month, add the same line to ${escapeHtml(l.client)}’s repeating invoice in Xero.</p>
+    ${o.recent?.length ? `<p class="at-sub">${escapeHtml(`Already drafted for this client from here: ${o.recent.map(r => `${r.invoice_number || 'draft'} ${gbp(r.amount)} (${r.description})`).join(' · ')}`)}</p>` : ''}
+    ${b.error ? `<p class="at-bad">${escapeHtml(b.error)}</p>` : ''}
+    <div class="at-actions">
+      <button type="button" class="btn btn-sm btn-primary" data-at-act="bill-create"${b.busy ? ' disabled' : ''}>${b.busy ? 'Creating…' : 'Create draft in Xero'}</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-at-act="bill-cancel">Cancel</button>
+    </div>
+  </div>`;
+}
+
+/** The leak a "Bill in Xero" button belongs to, from this month's figures. */
+function leakByRef(ref) {
+  const all = billMonths(AT.bills);
+  const bill = all.find(b => b.month === AT.month);
+  const last = all.find(b => b.seats.usd);
+  return ateraMonth({ month: AT.month, bill, usage: usageFor(AT.month), prevUsage: null, invoices: AT.invoices, agents: AT.agents, today: today(),
+    fallbackRate: all.find(b => b.rate)?.rate || null, lastSeats: last ? { usd: last.seats.usd, techs: last.techs } : null }).leaks.find(l => l.ref === ref);
+}
+
+async function startBilling(ref) {
+  const l = leakByRef(ref);
+  if (!l?.bill) return;
+  AT.billing = { ref, key: crypto.randomUUID(), opts: null, busy: false, error: '',
+    form: { contact_id: '', item_code: l.bill.item_code, description: l.bill.description, quantity: l.bill.quantity,
+      unit: l.bill.unit ?? '', reference: `Atera ${monthLabel(AT.month)}` } };
+  render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const { data, error } = await sb.functions.invoke('xero-invoice', { body: { action: 'atera-options', client_name: l.client } });
+    if (error) throw new Error(error.message || 'Couldn’t reach Xero');
+    if (data?.error) throw new Error(data.error);
+    if (AT.billing?.ref !== ref) return;
+    AT.billing.opts = data;
+    AT.billing.form.contact_id = data.suggested || '';
+    if (!data.items.some(i => i.code === AT.billing.form.item_code)) AT.billing.form.item_code = data.items[0]?.code || '';
+  } catch (err) {
+    if (AT.billing?.ref === ref) AT.billing.error = err.message || String(err);
+  }
+  render();
+}
+
+function readBillForm() {
+  const f = AT.billing.form;
+  document.querySelectorAll('#section-atera [data-at-bf]').forEach(el => { f[el.dataset.atBf] = el.value; });
+  return f;
+}
+
+async function createBill() {
+  const b = AT.billing;
+  if (!b || b.busy) return;
+  const f = readBillForm();
+  const l = leakByRef(b.ref);
+  const quantity = Number(f.quantity), unit = Number(f.unit);
+  const problem = !f.contact_id ? 'Choose the Xero contact.' : !f.item_code ? 'Choose the item.' : !String(f.description).trim() ? 'Describe what’s being billed.'
+    : !(Number.isInteger(quantity) && quantity >= 1 && quantity <= 100) ? 'Quantity must be a whole number from 1 to 100.'
+    : !(unit > 0) ? 'Enter the price each (net).' : '';
+  if (problem) { b.error = problem; render(); return; }
+  b.busy = true; b.error = ''; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const { data, error } = await sb.functions.invoke('xero-invoice', { body: {
+      action: 'create', source: 'atera', client_name: l?.client || '', leak_ref: b.ref, request_key: b.key,
+      contact_id: f.contact_id, item_code: f.item_code, description: String(f.description).trim(), quantity, amount: Math.round(unit * 100) / 100,
+      reference: String(f.reference || '').trim() } });
+    if (error) throw new Error(error.message || 'Xero didn’t create the draft');
+    if (data?.error) throw new Error(data.error);
+    AT.pushes = AT.pushes.concat({ leak_ref: b.ref, invoice_number: data.invoice_number, quantity, amount: data.total });
+    toast(`Draft ${data.invoice_number || 'invoice'} created in Xero for ${gbp(data.total)} + VAT. Approve and send it in Xero.`, 'success', 9000);
+    AT.billing = null;
+  } catch (err) {
+    b.busy = false; b.error = err.message || String(err);
+  }
+  render();
 }
 
 function changesHtml(m) {
@@ -404,9 +509,14 @@ function onClick(e) {
   if (a === 'upload') els('atFile')?.click();
   if (a === 'cancel') { AT.pending = null; render(); }
   if (a === 'save') save();
+  if (a === 'bill-cancel') { AT.billing = null; render(); }
+  if (a === 'bill-create') createBill();
+  const bl = e.target.closest('[data-at-bill]');
+  if (bl) startBilling(bl.dataset.atBill);
 }
 
 function onChange(e) {
+  if (AT.billing && e.target.closest('[data-at-bf]')) { readBillForm(); render(); return; }
   if (e.target.id === 'atFile') { const f = e.target.files?.[0]; e.target.value = ''; if (f) chooseFile(f); return; }
   if (!AT.pending) return;
   const col = e.target.closest('[data-at-col]');
