@@ -65,6 +65,23 @@ check applies. Lines without a customer count in the bill and by feature, never 
 client costs and margins are before them. The invoice number in the file name picks the month (`atera_bills.ref`). Atera's
 short names (Cowans, Regals, Daron Ford Motors) are in `ATERA_NAMES`.
 
+## Bill in Xero (11 Oct, Philip: "if the customer should be paying for it then there should be a prompt to do so that takes it through to Xero")
+
+A leak a client should pay for carries **Bill in Xero**: a short form filled in from the leak (Xero contact, item, description,
+quantity, price each) that creates a **DRAFT** sales invoice through `xero-invoice` (`source: 'atera'`, action `atera-options` for
+the contacts and the Atera item codes, repeating invoices included). Same rules as Jobs and SSA: drafts only, once per request key,
+contacts and items already used in Xero; Philip approves and sends it in Xero. `xero_pushes.leak_ref` ("YYYY-MM|client|kind|feature")
+ties the draft to the leak, which then shows "Draft INV-… in Xero" instead of the button.
+
+- Billable leaks: **Billed short** (new: a per-seat Xero line, quantity 2+, for fewer seats than Atera charges; MSA Oct 2026: 9
+  Microsoft 365 backups, Xero 6 × £8.95, prefilled 3 × £8.95), **Not billed** and **Feature not billed** (price left to fill in, with
+  what it costs from Atera). Not billable: the seat offer, old devices, Gecko's own.
+- A draft covers this month only; the form says to add the line to the client's repeating invoice in Xero for later months.
+  Repeating invoices are not changed from Gecko HQ.
+- "Cloud management" lines and retainers count as covering backup and security as well as management (Philip's pricing workbook,
+  May 2026: Regal, West Country Fires, Technix), so those clients aren't prompted to pay twice.
+- Checked against the real October data: every Atera client matched its Xero contact; the only billable leak was MSA's.
+
 ## Not done / later
 
 - The exact report layout is unknown until Philip downloads one (11 Oct); the heading rules in `detectColumns` may need a
