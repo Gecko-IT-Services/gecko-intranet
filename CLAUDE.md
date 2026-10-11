@@ -47,7 +47,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   CSS scoped under `#section-<key>`. `ponytail:` comments mark accepted ceilings.
 - Sidebar (Philip, 9 Oct, 8 entries; Analytics added under Home 10 Oct, so 9): Home (Overview, Analytics) · Sales (Clients, Opportunities, Jobs) · Operations
   (Timesheets, Monitoring) · Admin (Team, Settings). **Hubs** group sections under one entry with the
-  shared tab strip: Clients = Directory + Profitability + Licences + client page; Monitoring = Backups + Alerts + Devices;
+  shared tab strip: Clients = Directory + Profitability + Licences + Atera + client page; Monitoring = Backups + Alerts + Devices;
   Team = Overview (`src/sections/team.js`: who's in, holiday left as day tokens, next four weeks, hours, mileage to claim)
   + Leave (tax-year wall planner, click two days to book; `2026-10-09-team-wall-planner-design.md`) + Mileage (`HUBS`/`renderHub` in index.html). Older tab strips get the shared look via `geckoInkify()`. Every section uses the same tabs
   (`src/core/tabs.js`, `.app-tabs` in `src/styles/app.css`). Any client name → `clientLink(name)` →
@@ -160,6 +160,11 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Opportunities › **Prospects** (9 Oct): new business that isn't a client yet (`prospects`: source, interest, stage New →
   Contacted → Meeting → Proposal / Lost, £/month estimate, follow-up); **Make client** adds them to Clients (New) with contact
   and a first activity line. `src/core/prospects.js`. Design `2026-10-09-prospects-design.md`.
+- Clients › **Atera** (10 Oct, `2026-10-12-atera-costs-design.md`): Atera's bill (seats + AppCenter add-ons, `atera_bills`, seeded
+  Jun–Oct from receipts, later months from the feed's `atera`) against Xero "Atera…" lines, by feature (Backup, Security, Passwords,
+  Work from home, Management = seats) and client; why it moved; leaks (seat offer $143.10, add-ons not billed, below cost, old devices).
+  Cost per client needs Atera's usage report uploaded on the page (`atera_usage`, saved by `save_atera_usage` only when it adds up to
+  the add-ons charge ±$1). `src/core/atera-costs.js`, tests `tests/atera-costs.mjs`.
 - Monitoring › **Devices** + client page › Devices (11 Oct, `2026-10-11-atera-devices-design.md`): Atera agents per customer
   (Edge Function `atera-sync`, secret `ATERA_API_KEY`, 4× a day + Refresh; tables `atera_customers`, `atera_agents` with
   `raw`, `atera_status`): Windows 10, not seen 30+ days, devices but no Atera billing in Xero this month. Read only.
