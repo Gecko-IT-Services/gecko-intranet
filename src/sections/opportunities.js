@@ -56,6 +56,7 @@ const OPP = {
   gapView: 'map',          // Gaps: map (clients × products) or list (client cards); remembered per browser
   selected: null,          // the board sticky whose full deal shows under the board
   found: null,             // a prospect opened from quick find: outlined and scrolled to on the next draw
+  revealPicked: false,     // a deal opened from quick find: its detail panel (under the board) is scrolled into view on the next draw
   dragging: ''
 };
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -507,6 +508,7 @@ function render() {
   // A prospect opened from quick find: bring its card into view (it stays outlined until the next redraw).
   const found = OPP.found && mount.querySelector('.opp-prospect.found');
   if (found) { found.scrollIntoView({ block: 'center' }); OPP.found = null; }
+  if (OPP.revealPicked && OPP.tab === 'pipeline') { OPP.revealPicked = false; mount.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' }); }
 }
 
 function renderKpis() {
@@ -1166,10 +1168,8 @@ export function show(tab) {
 
 /** From elsewhere (quick find): the pipeline board with one deal picked, the same as clicking its sticky. */
 export function open(id) {
-  OPP.tab = 'pipeline'; OPP.view = 'board'; OPP.selected = Number(id);
-  if (OPP.loading) return;                       // load() draws when it finishes, with the deal picked
-  render();
-  els('oppWrap')?.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' });
+  OPP.tab = 'pipeline'; OPP.view = 'board'; OPP.selected = Number(id); OPP.revealPicked = true;
+  if (!OPP.loading) render();                    // while loading, load() draws when it finishes, with the deal picked and in view
 }
 
 /** From elsewhere (quick find): the Prospects tab, scrolled to one prospect and outlined until the next redraw. */

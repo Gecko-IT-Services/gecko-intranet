@@ -41,6 +41,8 @@ const JOB = {
   dir: 'from-right', animate: false,  // tab change: which way the new pane slides in
   opps: [], oppsError: '',      // opportunities with one-off work: the board's Ideas column
   selected: null,               // the sticky whose full card shows under the board
+  revealPicked: false,          // a job opened from quick find: its card (under the board) is scrolled into view on the next draw
+  focusNewForm: false,          // Add a job from quick find: the new-job form's first field takes the focus on the next draw
   addStage: 'quoted', addingIdea: false, dragging: ''
 };
 
@@ -222,6 +224,10 @@ function render() {
     mount.firstElementChild?.classList.add('job-enter', JOB.dir);
   }
   syncTableLabels(mount);
+  if (JOB.tab === 'jobs') {                       // one-shot, from quick find: only once the board is actually drawn
+    if (JOB.revealPicked) { JOB.revealPicked = false; mount.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' }); }
+    if (JOB.focusNewForm) { JOB.focusNewForm = false; mount.querySelector('[data-job-form="new"] [name="client_name"]')?.focus(); }
+  }
 }
 
 function renderKpis() {
@@ -957,20 +963,17 @@ function addFromHeader() {
 /** From elsewhere (quick find): the whiteboard with one job picked, the same as clicking its sticky. */
 export function open(id) {
   JOB.selected = Number(id);
-  JOB.stage = null;
+  JOB.stage = null; JOB.revealPicked = true;
   if (JOB.tab !== 'jobs') { show('jobs'); return; }
-  if (JOB.loading) return;                       // load() draws when it finishes, with the job picked
-  render();
-  els('jobWrap')?.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' });
+  if (!JOB.loading) render();                    // while loading, load() draws when it finishes, with the job picked and in view
 }
 
 /** From elsewhere (quick find): the Add a job form, also while Jobs is still loading (it shows once loaded). */
 export function add() {
-  JOB.addStage = 'quoted'; JOB.addingIdea = false; JOB.adding = true;
+  if (JOB.error) return;                         // nothing to add to; a later Retry must not open a blank form
+  JOB.addStage = 'quoted'; JOB.addingIdea = false; JOB.adding = true; JOB.focusNewForm = true;
   if (JOB.tab !== 'jobs') { show('jobs'); return; }
-  if (JOB.loading || JOB.error) return;
-  render();
-  els('jobWrap')?.querySelector('[data-job-form="new"] [name="client_name"]')?.focus();
+  if (!JOB.loading) render();
 }
 
 /** Arrow keys move along the tab strip (ARIA tabs pattern). */
