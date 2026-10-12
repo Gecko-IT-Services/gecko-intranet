@@ -56,6 +56,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Sidebar look (Jack, 10 Oct, `2026-10-10-tidy-sidebar-design.md`): one `.sidebar` block near the top of `index.html`'s CSS, flat,
   34px rows, bare 16px icons, sentence-case group labels, brand is the logo + "Gecko IT Services" with a small green "HQ" badge (Jack's pick), 260px wide, footer is one row (avatar,
   name, email, sign-out icon). Change it there; do not add another override layer further down the file.
+  A Find row (quick find, ⌘K) sits above Home since 12 Oct; it is not a page.
 - Design system (10 Oct 2026, `2026-10-10-design-consistency-design.md`): `src/styles/system.css`
   loads last and is anchored on `#app`; it defines the header actions row (Refresh + "Synced HH:MM"),
   `.btn` family (`btn-primary` ink, `btn-ghost`, `btn-danger`, `btn-success`, `btn-sm`), hairline figure
@@ -194,6 +195,19 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   yet" / "seen Mon 12 Oct" under Waiting on. Nobody is emailed (Jack's choice), so tasks are re-read on coming back to the tab.
 - Deal follow-ups and prospect chase dates are not tasks and are unchanged.
 - Left out on purpose: a board, emails, steps inside a job, repeating tasks, priorities (reasons in the design note).
+
+## Quick find (from 12 Oct 2026)
+- `src/sections/find.js` + `src/core/find.js` (tests `tests/find.mjs`), styles `system.css` "11 · Quick find"; design note
+  `2026-10-12-quick-find-design.md`. One box for the whole app: ⌘K / Ctrl+K, the sidebar's Find row, the phone's top-bar
+  search button (any element with `data-find-open`). A native `<dialog>`; `window.GeckoFind.open()`.
+- Finds clients, people (contacts), jobs and deals, prospects, open tasks, pages and three actions (Log time, Add task, Add a
+  job) from lists read once and filtered in the browser; invoices and timesheet entries are asked of the database as you type
+  (from 3 characters, newest 50, 250ms after the last key). One rule: every word typed must start a word of the row.
+- A new page or tab must be added to `PAGES` in `core/find.js` (the test fails if a listed one disappears, not if a new one
+  is missing). A new action is one entry in `ACTIONS` plus its line in `openRow`.
+- Opening a result uses `geckoGo` (which also switches Overview's tabs now) and the hooks `jobs.open(id)` / `jobs.add()`,
+  `opportunities.open(id)` / `openProspect(id)`, `tasks.openTask(id)` / `newTask()`.
+- Left out on purpose: recent items, typo tolerance, searching notes, activity or emails (reasons in the design note).
 
 ## Ask Gecko HQ (built and removed 11 Oct 2026)
 - A Claude-powered question box (Edge Function `ask`) was built, then removed the same day at Philip's request: the
