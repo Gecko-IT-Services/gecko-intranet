@@ -3828,6 +3828,7 @@ body::before {
         <p><span id="ovwHeadMonth">—</span></p>
         <div class="ovw-head-actions">
           <button class="btn btn-primary" type="button" onclick="ovwGoLogTime()">Log time</button>
+          <button class="head-btn" type="button" data-tk="add">Add task</button>
           <button class="ovw-refresh" id="ovwRefresh" type="button" onclick="ovwRefreshData()" title="Reload">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
@@ -6476,24 +6477,30 @@ function ovwPipelineTile(tile, go, svg, p) {
 
 function ovwAttentionHtml(core, today) {
   const db = OVW.db || { errors: {} };
+  const TK = window.GeckoTasks;
+  const tk = TK ? TK.state() : { loaded: false, error: 'the page’s modules didn’t load', everyone: false };
   const items = core.attention({
     xero: db.xero, inv: db.inv, rep: db.rep, jobs: db.jobs, opps: db.opps, leave: db.leave,
-    ssa: OVW.ssaLoaded ? ovwSsaForCore() : null, journeys: OVW.journeys, followUps: db.followUps, prospects: db.prospects
+    ssa: OVW.ssaLoaded ? ovwSsaForCore() : null, journeys: OVW.journeys, prospects: db.prospects,
+    tasks: TK ? TK.view() : null, me: TK ? TK.me() : '', everyone: tk.everyone
   }, today);
   // A source that didn't load is said, so a short list never passes for an all-clear.
   const missing = [];
   if (!OVW.db) missing.push(OVW.dbError ? `the database (${OVW.dbError})` : 'the database');
-  for (const [k, label] of [['jobs', 'jobs'], ['opps', 'opportunities'], ['leave', 'leave'], ['followUps', 'follow-ups'], ['prospects', 'prospects']]) if (db.errors[k]) missing.push(`${label} (${db.errors[k]})`);
+  for (const [k, label] of [['jobs', 'jobs'], ['opps', 'opportunities'], ['leave', 'leave'], ['prospects', 'prospects']]) if (db.errors[k]) missing.push(`${label} (${db.errors[k]})`);
+  if (OVW.db && tk.error) missing.push(`tasks (${tk.error})`);
   if (!OVW.ssaLoaded) missing.push('SSA balances');
-  // One list: monitoring first within each colour, red → amber → info.
-  const rank = { red: 0, amber: 1, info: 2 };
-  const all = [...ovwMonitorItems(), ...items].sort((x, y) => rank[x.level] - rank[y.level]);
-  const red = all.filter(i => i.level === 'red').length;
-  const act = all.filter(i => i.level !== 'info').length;
+  // One list: red → new handoffs → amber → info. Within a colour: tasks, then monitoring, then the rest.
+  const rank = { red: 0, new: 1, amber: 2, info: 3 };
+  const all = [...items.filter(i => i.task), ...ovwMonitorItems(), ...items.filter(i => !i.task)].sort((x, y) => rank[x.level] - rank[y.level]);
+  const live = all.filter(i => !i.task?._done);   // ticked a moment ago: still drawn (with Undo), no longer counted
+  const red = live.filter(i => i.level === 'red').length;
+  const act = live.filter(i => i.level !== 'info').length;
   return `<div class="ovw-card">
-    <div class="ovw-card-head"><h3>Needs attention</h3>
+    <div class="ovw-card-head"><h3>Needs attention</h3>${TK ? TK.switchHtml() : ''}
       <span class="ovw-count ${red ? 'red' : act || missing.length ? '' : 'good'}">${act ? act : missing.length ? '—' : 'All clear'}</span></div>
     ${all.length ? `<ul class="ovw-attn">${all.map(i => {
+        if (i.task) return TK.rowHtml(i.task, { showWho: tk.everyone });
         const detail = [i.who ? clientLink(i.who) : '', i.detail ? escapeHtml(i.detail) : ''].filter(Boolean).join(' · ');
         const go = i.goKey ? `data-ovw-go="${i.goKey}"` : ovwGoAttr(i.go);
         return `<li class="${i.level}"><span class="dot" aria-hidden="true"></span>
@@ -6501,6 +6508,7 @@ function ovwAttentionHtml(core, today) {
         <button type="button" ${go} aria-label="${escapeHtml('Open: ' + i.title)}">Open →</button></li>`; }).join('')}</ul>`
       : missing.length ? `<div class="ovw-clear">Nothing found in what was checked.</div>`
       : `<div class="ovw-clear art art-clear">Nothing needs you right now.</div>`}
+    ${TK ? TK.todayHtml() : ''}
     ${missing.length ? `<p class="ovw-warn-line">Not checked: ${escapeHtml(missing.join(', '))}.</p>` : ''}
   </div>`;
 }
@@ -6772,6 +6780,8 @@ function ovwTodayRedCount(core, today) {
   const db = OVW.db;
   if (db?.inv && core.money({ inv: db.inv, rep: db.rep || [], jobs: db.jobs || [], opps: [] }, today).owed.overdue > 0) n += 1;
   n += OVW.ssaClients.filter(c => !c.archived && c.hoursRemaining != null && c.hoursRemaining <= 0).length;
+  const TK = window.GeckoTasks;
+  if (TK?.state().loaded) n += core.attention({ tasks: TK.view(), me: TK.me(), everyone: TK.state().everyone }, today).filter(i => i.level === 'red' && !i.task._done).length;
   return n;
 }
 
@@ -6852,6 +6862,11 @@ document.addEventListener('keydown', e => {
     window.GeckoTabs.keyNav(e, 'data-ovw-tab', k => { if (k !== OVW.tab) { OVW.tab = k; ovwRenderAll(); } });
   }
 });
+
+/** Tasks changed (ticked, added, re-read): redraw. Called from src/main.js; a no-op until Overview has loaded. */
+function ovwTasksChanged() {
+  if (OVW.db && document.getElementById('ovwWrap')) ovwRenderAll();
+}
 
 /** Every Open button and tile carries data-ovw-go="section[:tab[:client name]]". */
 function ovwGo(target) {
