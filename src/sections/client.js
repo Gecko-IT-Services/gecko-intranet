@@ -23,7 +23,9 @@ import { icon } from '../core/icons.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { newOpportunity } from '../core/opportunities.js';
 import { ROLES, cleanContact, contactsFor, mainContact, duplicateEmail } from '../core/contacts.js';
-import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, addDays, durationText } from '../core/activity.js';
+import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, durationText } from '../core/activity.js';
+import { PEOPLE, titleFromNote } from '../core/tasks.js';
+import { read as readTasks, put as putTasks, subscribe as onTasksChanged, me as taskMe, clientTasks, noteTask, addTask } from './tasks.js';
 import { cleanProfile, profileFor, addressLine, mapLinks, telHref, mailIdentity, mailSearches, clientMail, stamp, mailboxesFor } from '../core/profile.js';
 import { graphFetch } from '../core/graph.js';
 
@@ -76,7 +78,7 @@ async function load() {
     let from = today().slice(0, 7);
     for (let i = 0; i < 12; i++) from = previousMonth(from);
     const q = (table, cols = '*') => settle(sb.from(table).select(cols).then(must));
-    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products, contacts, activity, profiles] = await Promise.all([
+    const [gecko, services, ssaClients, recent, unpaid, jobs, opps, dealer, domains, products, contacts, activity, profiles, tasks] = await Promise.all([
       q('gecko_clients', 'title,status,contract_start,notes'),
       q('gecko_services', 'title,client_name,category,cost_per_month,sell_per_month'),
       q('ssa_clients'),
@@ -89,8 +91,10 @@ async function load() {
       q('opportunity_products', 'key,family,name,unit_price,price_unit,default_mrr,default_one_off,unit_note,active,sort'),
       q('client_contacts'),
       q('client_activity'),
-      q('client_profiles')
+      q('client_profiles'),
+      settle(readTasks(sb))
     ]);
+    putTasks(tasks.v || null, tasks.e);
     // SSA: this client's balance (opening + changes, as Timesheets has it) and its entries
     const ssaRow = ssaClients.v?.find(c => sameClient(c.name, name)) || null;
     let ssa = null, entries = null, ssaError = ssaClients.e;
@@ -167,12 +171,12 @@ function headHtml(p) {
   const main = mainContact(CL.data?.contacts, { name: s?.contact || '', email: s?.email || '' });
   const last = lastContact(CL.data?.activity?.items);
   const addr = addressLine(CL.data?.details), maps = mapLinks(CL.data?.details), office = telHref(CL.data?.details?.office_phone);
-  const due = (CL.data?.activity?.open || []).filter(a => String(a.follow_up_on) <= today());
+  const tk = clientTasks(CL.name);
   const contact = main ? [main.name, main.role && `(${main.role})`].filter(Boolean).join(' ') : '', email = main?.email || '', phone = main?.phone || '';
   const kpi = (label, value, sub, cls = '') => `<div class="cl-kpi ${cls}"><span>${escapeHtml(label)}</span><strong>${value}</strong>${sub ? `<small>${sub}</small>` : ''}</div>`;
   const tabs = [
     { key: 'summary', label: 'Summary', badge: p?.flags.filter(f => f.level !== 'info').length || '' , warn: p?.flags.some(f => f.level === 'red') },
-    { key: 'activity', label: 'Activity', badge: due.length || '', warn: due.some(a => String(a.follow_up_on) < today()) },
+    { key: 'activity', label: 'Activity', badge: tk.due || '', warn: tk.late },
     { key: 'emails', label: 'Emails' },
     { key: 'contacts', label: 'Details & contacts', badge: CL.data?.contacts?.length || '' },
     { key: 'invoices', label: 'Invoices', badge: x?.overdue > 0 ? 'overdue' : '', warn: x?.overdue > 0 },
@@ -341,6 +345,9 @@ function activityHtml() {
   const t = today();
   const contacts = CL.data.contacts || [];
   const draft = CL.actDraft || { kind: 'call', follow: '' };
+  const tk = clientTasks(CL.name);
+  const tasks = panel(`Tasks${tk.loaded ? ` (${tk.count})` : ''}`,
+    (tk.error ? failed('Tasks', tk.error) : '') + (tk.html || (tk.loaded ? note('No open tasks for this client.') : '')), tk.addButton);
   const calling = CL.actDraft?.callStarted ? `<p class="cl-calling">${icon('phone')} Calling${CL.actDraft.callWith ? ' ' + escapeHtml(CL.actDraft.callWith) : ''} since ${escapeHtml(new Date(CL.actDraft.callStarted).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))}.</p>` : '';
   const add = calling + panel('Log activity', `<form class="cl-form cl-act-form" data-cl-form="activity" novalidate>
       <div class="cl-kinds wide" role="radiogroup" aria-label="What kind">${KINDS.map(([k, l]) => `<label class="cl-kind"><input type="radio" name="kind" value="${k}"${draft.kind === k ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
@@ -354,22 +361,27 @@ function activityHtml() {
         ${followUpChoices(t).map(([l, d]) => `<button type="button" class="cl-chip-btn${draft.follow === d ? ' on' : ''}" data-cl-follow="${d}" title="${escapeHtml(fmtDate(d))}">${l}</button>`).join('')}
         <input type="date" name="follow_up_on" min="${t}" value="${escapeHtml(draft.follow || '')}" aria-label="Follow-up date">
       </div>
+      <div class="cl-follow-task wide"${draft.follow ? '' : ' hidden'}>
+        <label>What needs doing <input name="task_title" maxlength="140" value="${escapeHtml(draft.task_title || '')}" placeholder="Left empty, it is the first line above" autocomplete="off"></label>
+        <label>Who <select name="task_who">${PEOPLE.map(p => `<option${(draft.task_who || taskMe() || PEOPLE[0]) === p ? ' selected' : ''}>${p}</option>`).join('')}</select></label>
+      </div>
       <div class="cl-form-actions wide"><button type="submit" class="btn btn-primary"${CL.saving ? ' disabled' : ''}>${CL.saving ? 'Saving…' : 'Save'}</button></div>
     </form>`);
-  const fu = a.open.length ? panel(`Follow-ups (${a.open.length})`, `<ul class="cl-fu">${a.open.map(x => {
-    const late = String(x.follow_up_on) < t, now = String(x.follow_up_on) === t;
-    return `<li class="${late ? 'late' : now ? 'now' : ''}">
-      <span class="cl-due">${escapeHtml(dueText(x.follow_up_on, t))}<small>${escapeHtml(fmtDate(x.follow_up_on))}</small></span>
-      <span class="cl-fu-body">${escapeHtml(x.body)}<small>${escapeHtml(KIND_LABEL[x.kind] || x.kind)}${x.contact_name ? ' with ' + escapeHtml(x.contact_name) : ''} · ${escapeHtml(x.created_by || '')} ${escapeHtml(fmtDate(x.created_at))}</small></span>
-      <span class="cl-fu-acts"><button type="button" class="btn btn-sm btn-success" data-cl-act="fu-done" data-id="${x.id}">Done</button><button type="button" class="btn btn-sm btn-ghost" data-cl-act="fu-snooze" data-id="${x.id}">+1 week</button></span>
-    </li>`;
-  }).join('')}</ul>`) : '';
   const items = a.items.length ? `<ol class="cl-tl">${a.items.map(x => `<li class="k-${escapeHtml(x.kind)}">
       <span class="cl-tl-kind">${escapeHtml(KIND_LABEL[x.kind] || x.kind)}</span>
-      <div><p>${escapeHtml(x.body)}</p><small>${escapeHtml(stamp(x.happened_at || x.created_at))}${x.direction ? ' · ' + (x.direction === 'in' ? icon('incoming', 12) + ' incoming' : icon('outgoing', 12) + ' outgoing') : ''}${x.duration_min ? ' · ' + escapeHtml(durationText(x.duration_min)) : ''}${x.created_by ? ' · ' + escapeHtml(x.created_by) : ''}${x.contact_name ? ' · with ' + escapeHtml(x.contact_name) : ''}${x.follow_up_on ? ` · follow up ${escapeHtml(fmtDate(x.follow_up_on))}${x.follow_up_done_at ? ' ✓ done' : ''}` : ''}</small></div>
+      <div><p>${escapeHtml(x.body)}</p><small>${escapeHtml(stamp(x.happened_at || x.created_at))}${x.direction ? ' · ' + (x.direction === 'in' ? icon('incoming', 12) + ' incoming' : icon('outgoing', 12) + ' outgoing') : ''}${x.duration_min ? ' · ' + escapeHtml(durationText(x.duration_min)) : ''}${x.created_by ? ' · ' + escapeHtml(x.created_by) : ''}${x.contact_name ? ' · with ' + escapeHtml(x.contact_name) : ''}${noteTask(x.id)}</small></div>
       <button type="button" class="btn btn-sm btn-danger" data-cl-act="act-del" data-id="${x.id}" aria-label="Delete this entry">Delete</button>
     </li>`).join('')}</ol>` : note('Nothing logged yet.');
-  return add + fu + panel(`Timeline (${a.items.length})`, items);
+  return tasks + add + panel(`Timeline (${a.items.length})`, items);
+}
+
+const activityDraft = f => ({ kind: f.kind.value, body: f.body.value, contact_id: f.contact_id?.value || '', follow: f.follow_up_on.value, when: f.happened_at.value,
+  duration: f.duration_min.value, direction: f.direction.value, task_title: f.task_title.value, task_who: f.task_who.value });
+
+/** What is typed in Log activity survives a redraw (a task ticked above it, tasks re-read on coming back to the tab). */
+function keepActivityDraft() {
+  const f = els('clWrap')?.querySelector('[data-cl-form="activity"]')?.elements;
+  if (f) CL.actDraft = { ...(CL.actDraft || {}), ...activityDraft(f) };
 }
 
 async function saveActivity(form) {
@@ -380,17 +392,26 @@ async function saveActivity(form) {
   const started = CL.actDraft?.callStarted;
   let duration = f.duration_min.value;
   if (duration === '' && started && f.kind.value === 'call') duration = String(Math.max(1, Math.round((Date.now() - started) / 60000)));
-  CL.actDraft = { ...(CL.actDraft || {}), kind: f.kind.value, body: f.body.value, contact_id: cid, follow: f.follow_up_on.value, when: f.happened_at.value, duration, direction: f.direction.value };
+  CL.actDraft = { ...(CL.actDraft || {}), ...activityDraft(f), duration };
   const { row, error } = cleanActivity({ kind: f.kind.value, body: f.body.value, contact_id: cid, contact_name: c ? (c.name || c.email) : '', follow_up_on: f.follow_up_on.value,
     happened_at: f.happened_at.value ? new Date(f.happened_at.value).toISOString() : '', duration_min: duration, direction: f.direction.value, now: new Date().toISOString() }, CL.name, today());
   if (error) { toast(error, 'warning'); return; }
+  // The follow-up is a task (12 Oct): the note is saved without a date, then the task is made and linked to it.
+  const { follow_up_on: due, ...noteRow } = row;
+  const who = f.task_who.value, title = f.task_title.value || titleFromNote(row.body);
   CL.saving = true; render();
   try {
     const sb = await connectSupabase({ interactive: true });
-    must(await sb.from('client_activity').insert({ ...row, created_by: (els('userName')?.textContent || '').trim() }));
+    const saved = must(await sb.from('client_activity').insert({ ...noteRow, created_by: (els('userName')?.textContent || '').trim() }).select('id').single());
+    let taskError = '';
+    if (due) {
+      try { await addTask({ title, client_name: CL.name, assigned_to: who, due_on: due }, { activity_id: saved.id }); }
+      catch (err) { taskError = err.message || String(err); }
+    }
     await reloadActivity(sb);
     CL.actDraft = null;
-    toast(row.follow_up_on ? `Logged · follow up ${dueText(row.follow_up_on, today())}` : 'Logged', 'success');
+    if (taskError) toast(`Note saved. The task was not: ${taskError}. Add it from Tasks above.`, 'error', 9000);
+    else toast(due ? `Logged · task for ${who} (${dueText(due, today())})` : 'Logged', 'success');
   } catch (err) {
     toast('Could not save: ' + (err.message || err), 'error', 7000);
   } finally { CL.saving = false; render(); }
@@ -411,11 +432,9 @@ async function activityAct(act, id) {
   if (act === 'act-del' && !confirm('Remove this entry from the timeline?')) return;
   try {
     const sb = await connectSupabase({ interactive: true });
-    if (act === 'fu-done') must(await sb.from('client_activity').update({ follow_up_done_at: new Date().toISOString(), follow_up_done_by: (els('userName')?.textContent || '').trim() }).eq('id', id));
-    if (act === 'fu-snooze') must(await sb.from('client_activity').update({ follow_up_on: addDays(String(x.follow_up_on) < today() ? today() : String(x.follow_up_on), 7) }).eq('id', id));
     if (act === 'act-del') must(await sb.from('client_activity').delete().eq('id', id));
     await reloadActivity(sb);
-    toast(act === 'fu-done' ? 'Follow-up done' : act === 'fu-snooze' ? 'Moved on a week' : 'Removed', 'success');
+    toast('Removed', 'success');
   } catch (err) {
     toast('Could not update: ' + (err.message || err), 'error', 7000);
   } finally { render(); }
@@ -778,6 +797,7 @@ function onClick(event) {
     const form = fb.closest('form');
     form.elements.follow_up_on.value = fb.dataset.clFollow;
     form.querySelectorAll('[data-cl-follow]').forEach(b => b.classList.toggle('on', b === fb));
+    form.querySelector('.cl-follow-task').hidden = !fb.dataset.clFollow;
     return;
   }
   const act = event.target.closest('[data-cl-act]')?.dataset.clAct;
@@ -796,7 +816,7 @@ function onClick(event) {
   if (act === 'contact-add') { CL.contactEdit = 'new'; render(); els('clWrap')?.querySelector('[data-cl-form="contact"] [name="name"]')?.focus(); }
   if (act === 'contact-edit') { CL.contactEdit = Number(event.target.closest('[data-id]').dataset.id); render(); }
   if (act === 'contact-cancel') { CL.contactEdit = null; render(); }
-  if (['fu-done', 'fu-snooze', 'act-del'].includes(act)) activityAct(act, Number(event.target.closest('[data-id]').dataset.id));
+  if (act === 'act-del') activityAct(act, Number(event.target.closest('[data-id]').dataset.id));
   if (act === 'contact-main' || act === 'contact-del') contactAct(act, Number(event.target.closest('[data-id]').dataset.id));
   if (act === 'connect') connectSupabase({ interactive: true }).then(load, err => toast(err.message || 'Could not connect', 'error'));
 }
@@ -804,6 +824,11 @@ function onClick(event) {
 export function init() {
   const section = els('section-client');
   section?.addEventListener('click', onClick);
+  // A follow-up date typed by hand shows the task fields too.
+  section?.addEventListener('change', e => {
+    if (e.target.name === 'follow_up_on') { const box = e.target.form?.querySelector('.cl-follow-task'); if (box) box.hidden = !e.target.value; }
+  });
+  onTasksChanged(() => { if (CL.data && !CL.loading) { keepActivityDraft(); render(); } });
   section?.addEventListener('submit', e => {
     if (e.target.dataset.clForm === 'new-opp') { e.preventDefault(); saveOpp(e.target); }
     if (e.target.dataset.clForm === 'contact') { e.preventDefault(); saveContact(e.target); }

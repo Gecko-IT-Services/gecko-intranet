@@ -177,7 +177,7 @@
 
 
 /* ── 5 · Lists: no coloured side stripes ────────────────────────────── */
-#app :is(.job-card, .opp-deal, .opp-prospect, .bkp-client, .cl-fu li) { border-left-width: 1px; border-left-color: var(--border-dim); }
+#app :is(.job-card, .opp-deal, .opp-prospect, .bkp-client) { border-left-width: 1px; border-left-color: var(--border-dim); }
 
 
 /* ── 6 · Badges ─────────────────────────────────────────────────────── */
