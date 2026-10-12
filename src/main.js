@@ -37,6 +37,7 @@ import * as supabase from './core/supabase.js';
 import * as store from './core/store.js';
 import * as timesheets from './core/timesheets.js';
 import * as timelog from './core/timelog.js';
+import * as timesheetFiles from './core/timesheet-files.js';
 import * as ssa from './core/ssa.js';
 import * as weekly from './core/weekly.js';
 import * as teamCore from './core/team.js';
@@ -83,6 +84,8 @@ window.GeckoOverview = { ...overviewCore, loadDb: overview.loadDb, tick: overvie
 window.GeckoTimesheets = timesheets;
 // Timesheets › Log Time: reading typed time, the SSA preview and the checks before saving.
 window.GeckoTimelog = timelog;
+// Timesheets: files attached to an entry (the file is in Gecko Docs, its record in the database).
+window.GeckoTimesheetFiles = timesheetFiles;
 // Timesheets › SSA Dashboard: use per month, run-out dates and what needs renewing.
 window.GeckoSsa = ssa;
 // Timesheets › Weekly Summary: one week of work, by day, client and type, with an eight-week trend.

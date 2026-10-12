@@ -4591,6 +4591,10 @@ body::before {
               <label for="tshDesc">Description</label>
               <textarea class="tsh-textarea tsh-desc" id="tshDesc" rows="2" maxlength="250" placeholder="What was done" required></textarea>
             </div>
+            <div class="tsh-field full" id="tshFilesField" hidden>
+              <input type="file" id="tshFiles" multiple hidden>
+              <div class="tsh-files" id="tshFilesBox"><!-- rendered by tshRenderPicked() --></div>
+            </div>
             <div class="tsh-checks" id="tshChecks" role="alert" hidden></div>
             <div class="tsh-form-actions">
               <div class="tsh-summary" id="tshSummary" aria-live="polite"></div>
@@ -10389,6 +10393,8 @@ const TSH = {
   sortBy:      'date',
   sortDir:     'desc',
   lastSync:    null,
+  files:       new Map(),     // entry id → its timesheet_files rows (database backend only)
+  filesError:  '',            // why they could not be read; never shown as "no files"
   // Phase 9 fix: discovered internal column names for write operations.
   // SharePoint mangles display names with spaces into _x0020_ variants,
   // but the exact internal name depends on how/when the column was created.
@@ -10830,6 +10836,7 @@ async function tshDbLoad() {
     TSH.sync.listsOk = false;
     TSH.sync.listsError = err.message || String(err);
   }
+  await tshLoadFiles();
   tshDbApply(db);
 }
 
@@ -10886,6 +10893,138 @@ async function tshDbDelete(entryId) {
     deleted_at: new Date().toISOString(), sp_state: 'pending', sp_delta: Number(row.sp_delta || 0) + delta
   });
   return tshPush(updated);
+}
+
+// ─── Files on an entry (12 Oct 2026) ─────────────────────────────────
+/* The file goes into the Gecko Docs library in SharePoint; the database keeps where it is
+   (timesheet_files). Rules: src/core/timesheet-files.js (window.GeckoTimesheetFiles).
+   Design: docs/superpowers/specs/2026-10-12-timesheet-files-design.md */
+function tshTF() {
+  if (!window.GeckoTimesheetFiles) throw new Error('The files module did not load. Hard-refresh the page.');
+  return window.GeckoTimesheetFiles;
+}
+const tshFilesOf = entryId => TSH.files.get(String(entryId)) || [];
+
+/** Never fails the page: Timesheets works without its attachments, and says they were not read. */
+async function tshLoadFiles() {
+  try {
+    const map = new Map();
+    for (const f of await tshTF().loadFiles()) map.set(String(f.entry_id), [...(map.get(String(f.entry_id)) || []), f]);
+    TSH.files = map;
+    TSH.filesError = '';
+  } catch (err) {
+    console.error('Timesheet files not read:', err);
+    TSH.files = new Map();
+    TSH.filesError = err.message || String(err);
+  }
+}
+
+async function tshDocsDrive() {
+  if (TSH.docsDriveId) return TSH.docsDriveId;
+  TSH.siteId ||= await resolveSiteId();
+  const drives = (await graphFetch(`/sites/${TSH.siteId}/drives?$select=id,name`)).value || [];
+  const docs = drives.find(d => d.name === 'Gecko Docs');
+  if (!docs) throw new Error('no "Gecko Docs" library on the portal site');
+  return (TSH.docsDriveId = docs.id);
+}
+
+/** Upload files to a saved entry ({ id, date, clientId }). Each file stands alone; returns those that did not go up. */
+async function tshAttach(entry, files, onProgress) {
+  const F = tshTF();
+  const c = TSH.db?.clients.find(x => String(x.id) === String(entry.clientId));
+  const failed = [];
+  for (const [i, file] of files.entries()) {
+    onProgress?.(i + 1, files.length);
+    try {
+      const driveId = await tshDocsDrive();
+      const path = F.pathFor({ clientFolder: c?.client_folder, name: c?.name }, entry, file.name).map(encodeURIComponent).join('/');
+      const item = await graphFetch(`/drives/${driveId}/root:/${path}:/content?@microsoft.graph.conflictBehavior=rename`,
+        { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+      let saved;
+      try {
+        saved = await F.insertFile(F.fileRow(entry.id, item, file, msalInstance?.getActiveAccount?.()?.name || ''));
+      } catch (err) {
+        // The file went up but its record did not: take it back, so nothing sits in SharePoint unlisted.
+        if (item?.id) await graphFetch(`/drives/${driveId}/items/${item.id}`, { method: 'DELETE' }).catch(() => {});
+        throw err;
+      }
+      TSH.files.set(String(entry.id), [...tshFilesOf(entry.id), saved]);
+    } catch (err) {
+      console.error('File not attached:', file.name, err);
+      failed.push(`${file.name} (${err.message || 'unknown error'})`);
+    }
+  }
+  return failed;
+}
+
+/** Log time form: the files picked for the entry about to be logged (they go up after it is saved). */
+function tshPickFiles(list) {
+  const res = tshTF().checkFiles([...list], TSHF.files.length);
+  TSHF.files.push(...res.ok);
+  if (res.errors.length) toast(res.errors.join(' '), 'warning', 8000);
+  tshRenderPicked();
+}
+function tshRenderPicked() {
+  const box = tshEl('tshFilesBox');
+  if (!box) return;
+  tshEl('tshFilesField').hidden = !tshOnDb();
+  const off = TSH.filesError ? 'disabled' : '';
+  box.innerHTML = `<button class="btn btn-ghost btn-sm" type="button" data-tsh-act="attach" ${off}>${gkIcon('paperclip', 14)} Attach files</button>`
+    + (TSH.filesError ? `<span class="tsh-files-err">Files are unavailable: ${escapeHtml(TSH.filesError)}</span>` : '')
+    + (TSHF.files.length ? `<ul class="tsh-file-list">${TSHF.files.map((f, i) => `<li>
+        <span class="tsh-file-name">${escapeHtml(f.name)}</span><span class="tsh-file-size">${tshTF().fmtSize(f.size)}</span>
+        <button class="tsh-icon-btn" type="button" data-tsh-unpick="${i}" title="Remove" aria-label="Remove ${escapeHtml(f.name)}">${gkIcon('x', 14)}</button>
+      </li>`).join('')}</ul>` : '');
+}
+
+/** Edit dialog: the files already on the entry, each a link to SharePoint, and a button to add more. */
+function tshRenderEditFiles(entryId, busy = '') {
+  const box = tshEl('tshEditFiles');
+  if (!box || box.dataset.entry !== String(entryId)) return;
+  if (TSH.filesError) { box.innerHTML = `<span class="tsh-files-err">Files could not be read: ${escapeHtml(TSH.filesError)}. Press Refresh.</span>`; return; }
+  const F = tshTF();
+  const files = tshFilesOf(entryId);
+  box.innerHTML = (files.length ? `<ul class="tsh-file-list">${files.map(f => {
+      const url = F.safeUrl(f.web_url);
+      return `<li>
+        ${url ? `<a class="tsh-file-name" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(f.name)}</a>` : `<span class="tsh-file-name">${escapeHtml(f.name)}</span>`}
+        <span class="tsh-file-size">${F.fmtSize(f.size)}</span>
+        <button class="tsh-icon-btn danger" type="button" data-tsh-file-del="${escapeHtml(f.id)}" title="Remove" aria-label="Remove ${escapeHtml(f.name)}" ${busy ? 'disabled' : ''}>${gkIcon('trash', 14)}</button>
+      </li>`;
+    }).join('')}</ul>` : '')
+    + `<button class="btn btn-ghost btn-sm" type="button" data-tsh-act="attach-edit" ${busy ? 'disabled' : ''}>${gkIcon('paperclip', 14)} ${escapeHtml(busy || 'Attach files')}</button>`;
+}
+async function tshEditAttach(list) {
+  const entryId = tshEl('tshEditFiles')?.dataset.entry;
+  const e = TSH.entries.find(x => String(x.id) === String(entryId));
+  if (!e) return;
+  const res = tshTF().checkFiles([...list], tshFilesOf(entryId).length);
+  if (res.errors.length) toast(res.errors.join(' '), 'warning', 8000);
+  if (!res.ok.length) return;
+  const failed = await tshAttach({ id: e.dbId ?? e.id, date: e.date, clientId: e.clientLookupId }, res.ok,
+    (i, n) => tshRenderEditFiles(entryId, `Uploading ${i} of ${n}…`));
+  tshRenderEditFiles(entryId);
+  tshRenderLog();
+  if (failed.length) toast(`Not attached: ${failed.join('; ')}`, 'error', 10000);
+  else toast(`Attached ${res.ok.length} file${res.ok.length === 1 ? '' : 's'}`, 'success');
+}
+async function tshRemoveFile(fileId) {
+  const entryId = tshEl('tshEditFiles')?.dataset.entry;
+  const f = tshFilesOf(entryId).find(x => String(x.id) === String(fileId));
+  if (!f || !confirm(`Remove ${f.name} from this entry? It goes to the SharePoint recycle bin.`)) return;
+  try {
+    // Already gone from SharePoint (404) is as good as removed.
+    await graphFetch(`/drives/${encodeURIComponent(f.drive_id)}/items/${encodeURIComponent(f.item_id)}`, { method: 'DELETE' })
+      .catch(err => { if (!/^Graph 404/.test(err.message)) throw err; });
+    await tshTF().deleteFile(f.id);
+    TSH.files.set(String(entryId), tshFilesOf(entryId).filter(x => x.id !== f.id));
+    toast(`Removed ${f.name}`, 'success');
+  } catch (err) {
+    console.error('File not removed:', err);
+    toast(`Not removed: ${err.message || 'unknown error'}`, 'error', 6000);
+  }
+  tshRenderEditFiles(entryId);
+  tshRenderLog();
 }
 
 /** The status line on the SSA tab: is the Lists backup complete? */
@@ -11024,6 +11163,7 @@ async function tshRefreshData(silent = false) {
     TSH.lastSync = new Date();
     TSH.loadError = null;
     tshPopulateClientDropdown();
+    tshRenderPicked();
     tshRenderAll();
     const last = document.getElementById('tshLastSync');
     if (last) {
@@ -11105,7 +11245,7 @@ function tshPopulateClientDropdown() {
  *   Kept to one short form (Jack, 9 Oct: 2026-10-09-simpler-timesheets-design.md).
  */
 // restoring: no draft is written until init has offered the saved one back (a reload must not wipe it).
-const TSHF = { saving: false, confirmed: '', wtTouched: false, checksShown: false, restoring: true };
+const TSHF = { saving: false, confirmed: '', wtTouched: false, checksShown: false, restoring: true, files: [] };
 const TSH_DRAFT_KEY = 'gecko.tsh.draft';
 const TSH_FIELD_IDS = { client: 'tshClient', engineer: 'tshEngineer', date: 'tshDate', hours: 'tshHours', desc: 'tshDesc' };
 const tshTL = () => {
@@ -11264,6 +11404,8 @@ function tshResetForm({ keepClient = true } = {}) {
   TSHF.confirmed = '';
   tshShowChecks({ errors: [], warnings: [] });
   const note = tshEl('tshDraftNote'); if (note) note.innerHTML = '';
+  TSHF.files = [];
+  tshRenderPicked();
   tshClearDraft();
   tshClientPicked();
 }
@@ -11272,10 +11414,19 @@ function tshResetForm({ keepClient = true } = {}) {
 document.addEventListener('click', e => {
   const hb = e.target.closest?.('#tshForm [data-tsh-hours]');
   if (hb) { tshEl('tshHours').value = tshTL().fmtHours(Number(hb.dataset.tshHours)); tshFormChanged(); tshEl('tshDesc')?.focus(); return; }
-  if (e.target.closest?.('#tshForm [data-tsh-act="discard"]')) tshResetForm({ keepClient: false });
+  if (e.target.closest?.('#tshForm [data-tsh-act="discard"]')) { tshResetForm({ keepClient: false }); return; }
+  if (e.target.closest?.('#tshForm [data-tsh-act="attach"]')) { tshEl('tshFiles').click(); return; }
+  const unpick = e.target.closest?.('#tshForm [data-tsh-unpick]');
+  if (unpick) { TSHF.files.splice(Number(unpick.dataset.tshUnpick), 1); tshRenderPicked(); return; }
+  if (e.target.closest?.('#tshModal [data-tsh-act="attach-edit"]')) { tshEl('tshEditFilesInput')?.click(); return; }
+  const del = e.target.closest?.('#tshModal [data-tsh-file-del]');
+  if (del) tshRemoveFile(del.dataset.tshFileDel);
 });
 document.addEventListener('input', e => { if (e.target?.closest?.('#tshForm')) tshFormChanged(); });
 document.addEventListener('change', e => {
+  // The same file can be picked again after it is removed, so the input is emptied each time.
+  if (e.target?.id === 'tshFiles') { tshPickFiles(e.target.files); e.target.value = ''; return; }
+  if (e.target?.id === 'tshEditFilesInput') { const picked = [...e.target.files]; e.target.value = ''; tshEditAttach(picked); return; }
   if (!e.target?.closest?.('#tshForm')) return;
   if (e.target.id === 'tshWorkType') TSHF.wtTouched = true;
   if (e.target.id !== 'tshClient') tshFormChanged();   // the client has its own handler
@@ -11341,13 +11492,24 @@ async function tshAddEntry(ev) {
     return;
   }
 
+  // The entry is logged whatever happens next; files that do not go up are named and can be added from Edit.
+  const picked = TSHF.files;
+  let notAttached = [];
+  if (picked.length && created?.id != null) {
+    notAttached = await tshAttach({ id: created.id, date: v.date, clientId: v.clientId }, picked,
+      (i, n) => { const b = tshEl('tshAddBtn'); if (b) b.textContent = `Uploading ${i} of ${n}…`; });
+  }
+  const attached = picked.length - notAttached.length;
+
   // Counted straight away (duplicate check, today's total) until the reload brings the saved row.
   TSH.entries.unshift({ id: created?.id ?? 'new', clientName: v.clientName, clientLookupId: v.clientId, engineer: v.engineer, date: v.date,
     hours: v.hours.hours, workType: v.workType, description: v.description, workDescription: v.description, internalNotes: '' });
   const bal = tshTL().balancePreview(v.ssa, v.hours.hours);
   toast(`Logged ${tshTL().fmtHours(v.hours.hours)} for ${v.clientName}`
-    + (bal ? ` · ${bal.after < 0 ? tshTL().fmtHours(-bal.after) + ' over SSA hours' : (bal.after ? tshTL().fmtHours(bal.after) : '0h') + ' SSA left'}` : ''),
+    + (bal ? ` · ${bal.after < 0 ? tshTL().fmtHours(-bal.after) + ' over SSA hours' : (bal.after ? tshTL().fmtHours(bal.after) : '0h') + ' SSA left'}` : '')
+    + (attached ? ` · ${attached} file${attached === 1 ? '' : 's'} attached` : ''),
     bal && bal.after < 0 ? 'warning' : 'success', 5000);
+  if (notAttached.length) toast(`The entry is logged, but not attached: ${notAttached.join('; ')}. Add ${notAttached.length === 1 ? 'it' : 'them'} from the entry's Edit.`, 'error', 12000);
   tshSetButton('done');
   tshResetForm({ keepClient: true });
   tshRenderLog();
@@ -11450,11 +11612,13 @@ function tshRenderLog() {
     const descText = e.workDescription || e.description || '';
     // Truncate long descriptions for the table
     const descShort = descText.length > 80 ? descText.substring(0, 80) + '…' : descText;
+    const nFiles = tshFilesOf(e.id).length;
+    const clip = nFiles ? `<button class="tsh-clip" type="button" onclick="tshOpenEditModal('${e.id}')" title="${nFiles} file${nFiles === 1 ? '' : 's'} attached" aria-label="${nFiles} file${nFiles === 1 ? '' : 's'} attached">${gkIcon('paperclip', 12)}${nFiles}</button>` : '';
     return `<tr>
       <td>${fmtDate(e.date)}</td>
       <td><span class="tsh-eng-pill ${engCls}">${escapeHtml(e.engineer)}</span></td>
       <td>${escapeHtml(e.clientName)}</td>
-      <td class="col-desc">${escapeHtml(descShort)}${ateraStr}</td>
+      <td class="col-desc">${escapeHtml(descShort)}${ateraStr}${clip}</td>
       <td class="col-cat"><span class="tsh-wt-pill ${wtCls}">${escapeHtml(e.workType)}</span></td>
       <td class="num">${tshFmtHours(e.hours)}</td>
       <td class="actions">
@@ -11990,9 +12154,7 @@ async function tshRenewSend(fromGo = false) {
     // The copy the flow keeps in Gecko Docs/clients/<folder>/. The email is made; a failure here is reported, not retried.
     try {
       if (!client.clientFolder) throw new Error('the Clients list has no Client Folder for this client');
-      const drives = (await graphFetch(`/sites/${TSH.siteId}/drives?$select=id,name`)).value || [];
-      const docs = drives.find(d => d.name === 'Gecko Docs');
-      if (!docs) throw new Error('no "Gecko Docs" library on the portal site');
+      const docs = { id: await tshDocsDrive() };
       const name = R.archiveFileName(client.name, new Date());
       const path = ['clients', client.clientFolder, name].map(encodeURIComponent).join('/');
       const file = await graphFetch(`/drives/${docs.id}/root:/${path}:/content`, { method: 'PUT', headers: { 'Content-Type': 'text/html' }, body: html });
@@ -12399,11 +12561,17 @@ function tshOpenEditModal(entryId) {
       <label>Detailed notes</label>
       <textarea id="tshEditWorkDesc">${escapeHtml(e.internalNotes || '')}</textarea>
     </div>
+    ${tshOnDb() ? `<div class="tsh-form-grp">
+      <label>Files</label>
+      <div class="tsh-files" id="tshEditFiles" data-entry="${escapeHtml(entryId)}"></div>
+      <input type="file" id="tshEditFilesInput" multiple hidden>
+    </div>` : ''}
     <div class="tsh-mm-actions">
       <button class="btn btn-ghost" type="button" onclick="tshCloseModal()">Cancel</button>
       <button class="btn btn-primary" type="button" onclick="tshSaveEdit('${entryId}', ${e.hours})">Save changes</button>
     </div>`;
   tshOpenModal(e.clientName || 'Edit entry', body);
+  tshRenderEditFiles(entryId);
 }
 
 async function tshSaveEdit(entryId, oldHours) {
@@ -13555,7 +13723,7 @@ async function setExportBackup() {
         mileage_journeys: 'id', mileage_clients: 'id', voip_dealer_services: 'id', profit_feed: 'id', opportunity_products: 'key',
         client_product_status: 'client_name', client_domains: 'id', client_signals: 'domain', opportunities: 'id', xero_pushes: 'id',
         xero_status: 'id', ssa_clients: 'id', timesheet_entries: 'id', alert_resolutions: 'id', jobs: 'id', client_contacts: 'id',
-        payment_nudges: 'id', month_end_checks: 'id', client_profiles: 'id', prospects: 'id', client_activity: 'id', tasks: 'id' };
+        payment_nudges: 'id', month_end_checks: 'id', client_profiles: 'id', prospects: 'id', client_activity: 'id', tasks: 'id', timesheet_files: 'id' };
       for (const [table, key] of Object.entries(tables)) {
         backup.database[table] = await geckoStore().selectAllPages((from, to) => sb.from(table).select('*').order(key).range(from, to));
       }
