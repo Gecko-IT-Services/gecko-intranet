@@ -44,14 +44,15 @@ async function loadIndex() {
   QF.loading = true; QF.needsConnect = false;
   render();
   try {
+    const needTasks = !taskState().loaded;
     const sb = await connectSupabase();
     const q = (table, cols) => settle(sb.from(table).select(cols).then(must));
     const [gecko, ssa, contacts, jobs, deals, prospects, tasks] = await Promise.all([
       q('gecko_clients', 'title'), q('ssa_clients', 'id,name'), q('client_contacts', 'client_name,name,email,role'),
       q('jobs', 'id,client_name,title,status,value'), q('opportunities', 'id,client_name,title,status,mrr'),
-      q('prospects', 'id,company,contact_name,stage'), settle(readTasks(sb))
+      q('prospects', 'id,company,contact_name,stage'), needTasks ? settle(readTasks(sb)) : null
     ]);
-    putTasks(tasks.v || null, tasks.e);
+    if (tasks) putTasks(tasks.v || null, tasks.e);   // only when the tasks module has not loaded them: putting them again would clear Undo on a task ticked a moment ago
     QF.index = {
       clients: gecko.v || ssa.v ? clientNames(gecko.v, ssa.v) : null,
       contacts: contacts.v || null, jobs: jobs.v || null, deals: deals.v || null, prospects: prospects.v || null
@@ -59,8 +60,9 @@ async function loadIndex() {
     QF.clientsById = new Map((ssa.v || []).map(c => [String(c.id), c.name]));
     QF.errors = {};
     for (const [k, r] of Object.entries({ gecko, ssa, contacts, jobs, deals, prospects })) if (r.e) QF.errors[k] = r.e.message || String(r.e);
-    QF.at = Date.now();
+    QF.at = Object.keys(QF.errors).length ? 0 : Date.now();   // a partial failure is read again on the next opening
   } catch (err) {
+    QF.at = 0;
     if (err.code === 'DB_SIGNIN_REQUIRED') QF.needsConnect = true;
     else QF.errors = { all: err.message || String(err) };
   } finally { QF.loading = false; render(); }
@@ -139,10 +141,10 @@ function render() {
   QF.rows = groups.flatMap(g => g.rows);
   QF.sel = Math.min(QF.sel, Math.max(0, QF.rows.length - 1));
   let n = 0;
-  const list = groups.map(g => `<div class="qf-group" role="presentation">${escapeHtml(g.label)}</div>` + g.rows.map(r => {
+  const list = groups.map(g => `<div role="group" aria-label="${escapeHtml(g.label)}"><div class="qf-group" aria-hidden="true">${escapeHtml(g.label)}</div>` + g.rows.map(r => {
     const i = n++;
     return `<div class="qf-row" role="option" id="qfOpt${i}" data-qf-row="${i}" aria-selected="${i === QF.sel}">${icon(GROUP_ICON[g.key], 14)}<span class="qf-text"><span class="qf-title">${escapeHtml(r.title)}</span>${r.sub ? `<span class="qf-sub">${escapeHtml(r.sub)}</span>` : ''}</span></div>`;
-  }).join('')).join('');
+  }).join('') + '</div>').join('');
   const r = QF.remote, waiting = r.busy || (QF.loading && !QF.index);
   const unsure = QF.needsConnect || Object.keys(QF.errors).length || taskState().error || r.errors.invoices || r.errors.entries;   // something could not be searched: the foot says what, and "no matches" would be a guess
   d.querySelector('#qfList').innerHTML = list || (QF.q.trim() && !waiting && !unsure ? `<p class="qf-empty">Nothing matches “${escapeHtml(QF.q.trim())}”.</p>` : '');
@@ -151,12 +153,12 @@ function render() {
 }
 
 /** Mark one row as the selected one (the field keeps the focus; aria-activedescendant tells a screen reader). */
-function select(i) {
+function select(i, scroll = true) {
   const d = dialog();
   QF.sel = Math.max(0, Math.min(i, QF.rows.length - 1));
   d.querySelectorAll('[data-qf-row]').forEach(el => el.setAttribute('aria-selected', String(Number(el.dataset.qfRow) === QF.sel)));
   const on = d.querySelector('[aria-selected="true"]');
-  on?.scrollIntoView({ block: 'nearest' });
+  if (scroll) on?.scrollIntoView({ block: 'nearest' });
   const input = d.querySelector('#qfInput');
   if (on) input.setAttribute('aria-activedescendant', on.id); else input.removeAttribute('aria-activedescendant');
 }
@@ -197,13 +199,16 @@ function build() {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); select(QF.sel + (e.key === 'ArrowDown' ? 1 : -1)); }
     else if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); openRow(QF.sel); }
   });
+  d.addEventListener('mousemove', e => {                          // the pointer moves the selection (mousemove, so a list redrawn under a still pointer does not steal it)
+    const row = e.target.closest?.('[data-qf-row]');
+    if (row && Number(row.dataset.qfRow) !== QF.sel) select(Number(row.dataset.qfRow), false);
+  });
   d.addEventListener('click', e => {
     if (e.target === d) { d.close(); return; }                     // the backdrop
     const row = e.target.closest('[data-qf-row]');
     if (row) { openRow(Number(row.dataset.qfRow)); return; }
-    if (e.target.closest('[data-qf="connect"]')) connectSupabase({ interactive: true }).then(loadIndex, () => {});
+    if (e.target.closest('[data-qf="connect"]')) connectSupabase({ interactive: true }).then(() => loadIndex()).then(() => { scheduleRemote(); render(); }, () => {});   // then search the database for what is already typed
   });
-  d.addEventListener('close', () => { if (d.open) return; clearTimeout(QF.timer); QF.seq++; });   // a close event can arrive after the box was opened again: that must not cancel the new search
   document.getElementById('app').append(d);
   return d;
 }
@@ -212,6 +217,7 @@ function build() {
 export function open() {
   if (!signedIn() || document.querySelector('dialog[open]')) return;
   const d = dialog() || build();
+  clearTimeout(QF.timer); QF.seq++;            // whatever a previous opening still had in flight is dropped
   QF.q = ''; QF.sel = 0; QF.remote = NO_REMOTE();
   d.querySelector('#qfInput').value = '';
   window.closeSidebar?.();                     // on a phone the Find row sits in the slide-over menu

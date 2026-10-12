@@ -605,9 +605,8 @@ svg.ic { vertical-align: -.15em; }
 #app .qf-text { flex: 1; min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 #app .qf-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 14px/1.35 var(--font-body); color: var(--white); }
 #app .qf-sub { flex: 0 1 auto; min-width: 0; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1.35; color: var(--muted); }
-#app .qf-row[aria-selected="true"] { background: color-mix(in srgb, var(--green) 9%, var(--card)); box-shadow: inset 2px 0 0 var(--green); }   /* card-hover alone is nearly white on white in the light theme */
+#app .qf-row[aria-selected="true"] { background: var(--green-glow); }   /* card-hover alone is nearly white on white in the light theme */
 #app .qf-row[aria-selected="true"] .ic { color: var(--green); }
-@media (hover: hover) { #app .qf-row:hover { background: var(--card-hover); } }
 #app .qf-empty { margin: 0; padding: 18px 16px; font-size: 13px; color: var(--muted); }
 
 #app .qf-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 9px 16px; border-top: 1px solid var(--border-dim); font-size: 12px; line-height: 1.4; color: var(--faint); }
