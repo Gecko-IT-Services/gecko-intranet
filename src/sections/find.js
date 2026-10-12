@@ -65,7 +65,7 @@ async function loadIndex() {
     QF.at = 0;
     if (err.code === 'DB_SIGNIN_REQUIRED') QF.needsConnect = true;
     else QF.errors = { all: err.message || String(err) };
-  } finally { QF.loading = false; render(); }
+  } finally { QF.loading = false; render('lists'); }
 }
 
 /** Invoices and timesheet entries: asked for as you type, once there is enough to ask with. */
@@ -100,7 +100,7 @@ async function runRemote(q, seq) {
   }
   if (seq !== QF.seq) return;                // a reply to an older query
   QF.remote = out;
-  render();
+  render('remote');
 }
 
 
@@ -133,14 +133,16 @@ function footHtml(count) {
   return notes.map(n => `<span>${n}</span>`).join('');
 }
 
-function render() {
+/** Draw the results. `arrive` says which groups have only just come in ('lists' on first open, 'remote' for a database reply): they fade in. */
+function render(arrive = '') {
   const d = dialog();
   if (!d?.open) return;
+  const arriving = key => (arrive === 'remote' ? key === 'invoices' || key === 'entries' : arrive === 'lists' && key !== 'pages' && key !== 'actions');
   const groups = groupsNow();
   QF.rows = groups.flatMap(g => g.rows.map(r => ({ ...r, key: g.key })));
   QF.sel = Math.max(0, QF.keep ? QF.rows.findIndex(r => rowId(r) === QF.keep) : 0);   // typing clears `keep`: the first row
   let n = 0;
-  const list = groups.map(g => `<div role="group" aria-label="${escapeHtml(g.label)}"><div class="qf-group" aria-hidden="true">${escapeHtml(g.label)}</div>` + g.rows.map(r => {
+  const list = groups.map(g => `<div role="group"${arriving(g.key) ? ' class="qf-arrive"' : ''} aria-label="${escapeHtml(g.label)}"><div class="qf-group" aria-hidden="true">${escapeHtml(g.label)}</div>` + g.rows.map(r => {
     const i = n++;
     return `<div class="qf-row" role="option" id="qfOpt${i}" data-qf-row="${i}" aria-selected="${i === QF.sel}">${icon(GROUP_ICON[g.key], 14)}<span class="qf-text"><span class="qf-title">${escapeHtml(r.title)}</span>${r.sub ? `<span class="qf-sub">${escapeHtml(r.sub)}</span>` : ''}</span></div>`;
   }).join('') + '</div>').join('');
@@ -163,6 +165,10 @@ function select(i, scroll = true) {
   if (scroll) on?.scrollIntoView({ block: 'nearest' });
   const input = d.querySelector('#qfInput');
   if (on) input.setAttribute('aria-activedescendant', on.id); else input.removeAttribute('aria-activedescendant');
+  // The tint behind the selected row: moved, not redrawn, so it slides (system.css .qf-ink).
+  const ink = d.querySelector('.qf-ink');
+  ink.hidden = !on;
+  if (on) { ink.style.transform = `translateY(${on.offsetTop}px)`; ink.style.height = on.offsetHeight + 'px'; }
 }
 
 
@@ -193,7 +199,7 @@ function build() {
       <input id="qfInput" type="text" role="combobox" aria-expanded="true" aria-controls="qfList" aria-autocomplete="list" aria-label="Find"
         placeholder="Find a client, job, task, invoice…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">
       <kbd class="qf-kbd">Esc</kbd><button type="button" class="qf-close" data-qf="close" aria-label="Close">${icon('x', 16)}</button></div>
-    <div id="qfList" class="qf-list" role="listbox" aria-label="Results"></div>
+    <div class="qf-list"><div class="qf-ink" aria-hidden="true"></div><div id="qfList" role="listbox" aria-label="Results"></div></div>
     <div id="qfFoot" class="qf-foot" aria-live="polite"></div>`;
   const input = d.querySelector('#qfInput');
   input.addEventListener('input', () => { QF.q = input.value; QF.sel = 0; QF.keep = ''; scheduleRemote(); render(); });
