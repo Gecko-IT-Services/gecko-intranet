@@ -20,6 +20,8 @@ import * as overview from './sections/overview.js';
 import * as client from './sections/client.js';
 import * as team from './sections/team.js';
 import * as licences from './sections/licences.js';
+import * as atera from './sections/atera.js';
+import * as devices from './sections/devices.js';
 import * as analytics from './sections/analytics.js';
 import * as tasks from './sections/tasks.js';
 import { sameClient } from './core/client.js';
@@ -46,6 +48,8 @@ window.GeckoSections.opportunities = { init: opportunities.init, show: opportuni
 window.GeckoSections.jobs = { init: jobs.init, show: jobs.show };
 window.GeckoSections.team = { init: team.init };
 window.GeckoSections.licences = { init: licences.init };
+window.GeckoSections.atera = { init: atera.init };
+window.GeckoSections.devices = { init: devices.init };
 window.GeckoSections.analytics = { init: analytics.init, show: analytics.show };
 window.GeckoSections.client = { init: client.init, open: client.open, current: client.current };
 // Overview › Today reads the last day of backups and alerts through these (support@ mailbox).

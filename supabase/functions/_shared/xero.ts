@@ -343,9 +343,28 @@ export async function ssaOptions(clientName: string, ssaClientId: number | null)
   return { contacts, suggested, items, recent };
 }
 
+/**
+ * For "Bill in Xero" on an Atera leak: the contacts, the Atera item codes Gecko bills (repeating invoices included, since
+ * that's where they live), and drafts already made for this client from Clients › Atera in the last 60 days.
+ */
+export async function ateraOptions(clientName: string) {
+  const { contacts, suggested } = await contactsAndItems(clientName);
+  const items = await sql`select li->>'item_code' as code, mode() within group (order by li->>'account_code') as account,
+                                 count(*)::int as uses
+                          from public.xero_invoices, jsonb_array_elements(line_items) li
+                          where status in ('AUTHORISED','PAID') and li->>'item_code' ilike 'atera%'
+                            and coalesce(li->>'account_code', '') <> ''
+                          group by 1 order by 3 desc, 1`;
+  const recent = suggested ? await sql`select p.invoice_number, p.quantity::float, p.amount::float, p.description, p.leak_ref, p.created_at, i.status
+                       from public.xero_pushes p left join public.xero_invoices i on i.invoice_id = p.invoice_id
+                       where p.source = 'atera' and p.contact_id = ${suggested} and p.state = 'done'
+                         and p.created_at > now() - interval '60 days' order by p.created_at desc` : [];
+  return { contacts, suggested, items, recent };
+}
+
 export interface DraftRequest {
-  source?: 'job' | 'ssa';
-  job_id?: number; ssa_client_id?: number | null; client_name?: string;
+  source?: 'job' | 'ssa' | 'atera';
+  job_id?: number; ssa_client_id?: number | null; client_name?: string; leak_ref?: string;
   request_key: string; contact_id: string; item_code: string;
   description: string; amount: number; quantity?: number; reference?: string;
 }
@@ -353,7 +372,9 @@ export interface DraftRequest {
 /** Checks a draft request; returns the problem in words, or ''. */
 export function draftProblem(r: Partial<DraftRequest>) {
   const source = r.source || 'job';
-  if (source !== 'job' && source !== 'ssa') return 'Unknown source';
+  if (source !== 'job' && source !== 'ssa' && source !== 'atera') return 'Unknown source';
+  if (source === 'atera' && !String(r.client_name || '').trim()) return 'Which client?';
+  if (source === 'atera' && !/^\d{4}-\d{2}\|.{1,200}$/.test(String(r.leak_ref || ''))) return 'Which leak?';
   if (source === 'job' && !Number.isInteger(r.job_id)) return 'Which job?';
   if (source === 'ssa' && !String(r.client_name || '').trim()) return 'Which SSA client?';
   if (source === 'ssa' && r.ssa_client_id != null && !Number.isInteger(r.ssa_client_id)) return 'Which SSA client?';
@@ -395,7 +416,8 @@ export async function createDraft(r: DraftRequest, email: string) {
     throw new Error('Xero was connected read-only. Reconnect Xero (Jobs › Sales this month › Reconnect) to allow draft invoices.');
   }
   const source = r.source || 'job';
-  const opts = source === 'job' ? await invoiceOptions(r.job_id!) : await contactsAndItems(String(r.client_name));
+  const opts = source === 'job' ? await invoiceOptions(r.job_id!)
+    : source === 'atera' ? await ateraOptions(String(r.client_name)) : await contactsAndItems(String(r.client_name));
   const contact = opts.contacts.find((c: any) => c.id === r.contact_id);
   if (!contact) throw new Error('That contact has no invoices in Xero yet; create the first invoice in Xero');
   const item = opts.items.find((i: any) => i.code === r.item_code);
@@ -406,11 +428,12 @@ export async function createDraft(r: DraftRequest, email: string) {
   const jobId = source === 'job' ? r.job_id! : null;
   const ssaId = source === 'ssa' ? (r.ssa_client_id ?? null) : null;
   const description = String(r.description).trim();
+  const leakRef = source === 'atera' ? String(r.leak_ref).slice(0, 300) : '';
   const reference = String(r.reference || '').trim();
 
   // Claim the request key first: a double click finds the claim and stops here.
-  const claimed = await sql`insert into public.xero_pushes (request_key, source, job_id, ssa_client_id, contact_id, contact_name, item_code, account_code, description, quantity, amount, created_by)
-                            values (${r.request_key}, ${source}, ${jobId}, ${ssaId}, ${contact.id}, ${contact.name}, ${item.code}, ${item.account}, ${description}, ${quantity}, ${amount}, ${email})
+  const claimed = await sql`insert into public.xero_pushes (request_key, source, job_id, ssa_client_id, leak_ref, contact_id, contact_name, item_code, account_code, description, quantity, amount, created_by)
+                            values (${r.request_key}, ${source}, ${jobId}, ${ssaId}, ${leakRef}, ${contact.id}, ${contact.name}, ${item.code}, ${item.account}, ${description}, ${quantity}, ${amount}, ${email})
                             on conflict (request_key) do nothing returning id`;
   if (!claimed.length) {
     const [prev] = await sql`select state, invoice_id, invoice_number, error from public.xero_pushes where request_key = ${r.request_key}`;
