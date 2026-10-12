@@ -197,6 +197,7 @@
 #section-opportunities .opp-prospect { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; padding: 14px 16px; background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius); }
 #section-opportunities .opp-prospect.st-lost { opacity: .7; }
 #section-opportunities .opp-prospect.editing { display: block; }
+#section-opportunities .opp-prospect.found { outline: 2px solid var(--green); outline-offset: 2px; }
 #section-opportunities .opp-prospect .opp-deal-actions { grid-column: 1 / -1; }
 #section-opportunities .opp-prospect-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 #section-opportunities .opp-prospect-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

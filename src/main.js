@@ -24,6 +24,7 @@ import * as atera from './sections/atera.js';
 import * as devices from './sections/devices.js';
 import * as analytics from './sections/analytics.js';
 import * as tasks from './sections/tasks.js';
+import * as find from './sections/find.js';
 import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
 import * as icons from './core/icons.js';
@@ -90,6 +91,9 @@ window.GeckoWeekly = weekly;
 window.GeckoTasks = tasks;
 tasks.init();
 tasks.subscribe(() => window.ovwTasksChanged?.());
+// Quick find (⌘K, the sidebar's Find row, the phone's search button): part of the shell.
+window.GeckoFind = find;
+find.init();
 
 // Back from Xero's consent screen (supabase/functions/xero-callback): keep the result for the
 // Jobs section, tidy the address bar, and open Jobs once the portal is signed in.
