@@ -34,19 +34,23 @@ The card reads top to bottom, in this order:
 2. **Later**: your tasks due after today that you have already seen, by date. No colour. The first five, then
    "Show all 9".
 3. **Waiting on Philip**: open tasks you gave him. Each says "not seen yet" or "seen Mon 12 Oct", and its due
-   date, in red text once overdue. This is how you know a handoff was picked up.
+   date, coloured like any other task. This is how you know a handoff was picked up.
 4. **Done**: a link at the foot, "Done · 6 in the last 30 days". It opens the list with who ticked it and when,
    and **Reopen**.
 
 With **Everyone**, the list and Later hold both people's tasks, each with the person's initial in their
 colour (`--who`, as on the job stickies), and the Waiting group is hidden because everything is already shown.
 
-**Add task** opens a short form at the top of the card: What (one line, 140 characters) · Client (the client
-list, or "No client") · Who (Philip | Jack, defaults to you) · Due (Today · Tomorrow · Next week · a date) ·
-Note (optional, one line). Enter saves, Esc closes.
+**Add task** opens a small dialog: What (one line, 140 characters) · Client (the client list, or "No
+client") · Who (Philip | Jack, defaults to you) · Due (Today · Tomorrow · Next week · a date) · Note
+(optional, one line). Enter saves, Esc closes.
 
-**Clicking a task** opens it in place with the same fields, **Save** and **Delete** (asks once). Opening a
+**Clicking a task** opens the same dialog with its fields, **Save** and **Delete** (asks once). Opening a
 task that was given to you marks it seen. Changing Who hands it over: it becomes new for the other person.
+
+The dialog is a native `<dialog>`, not a form inside the card. Overview redraws itself when the backup and
+alert check comes back a few seconds after the page loads; a form inside the card would lose what was being
+typed.
 
 **Ticking** a task strikes it through and leaves it where it is with **Undo** until the page is next
 refreshed, so a slip of the thumb on the phone costs nothing.
@@ -60,7 +64,7 @@ The card's count and the red figure on the Today tile include tasks the same way
   Picking a date shows two more fields: **Who** (defaults to you) and **What needs doing** (one line; left
   empty, it is the first line of the note, cut at 140 characters). Saving the note then makes the task, linked
   to the note.
-- The timeline shows the linked task on its note: "task for Jack, due 16 Oct", then "done 14 Oct by Jack".
+- The timeline shows the linked task on its note: "task for Jack (Fri 16 Oct)", then "done Wed 14 Oct by Jack".
 - The Activity tab's badge counts this client's tasks due by today (red when any are overdue), as it counted
   follow-ups.
 
@@ -106,8 +110,8 @@ RLS on, staff policy, `touch_modified_at` trigger, an index on open tasks by due
 - `src/core/tasks.js` (pure, tested in `tests/tasks.mjs`): `cleanTask` (what was typed → a row or an error),
   `level` (red / new / amber / none), `groups(tasks, me, today, everyone)` → `{ now, later, waiting }`,
   `dueLabel`, `titleFromNote`. It reuses `dueText` and `followUpChoices` from `core/activity.js`.
-- `src/sections/tasks.js`: the reads and writes (open tasks, done in the last 30 days, add, save, done,
-  reopen, delete, seen) and the one row and one form used on both pages. Registered as `window.GeckoTasks`
+- `src/sections/tasks.js`: the reads and writes (add, save, done, reopen, delete, seen) and the one row and
+  one dialog used on both pages. It reads the whole table (`ponytail:` a few hundred rows a year). Registered as `window.GeckoTasks`
   for Overview's classic script; imported by `sections/client.js`.
 - `src/core/overview.js` `attention()` takes `tasks` and `me` and returns task rows among its items, so the
   counts stay in one place. Its `follow_up` rows go, with `dueFollowUps` and the client page's Done / +1 week.
@@ -119,10 +123,11 @@ RLS on, staff policy, `touch_modified_at` trigger, an index on open tasks by due
 
 ## When things go wrong
 - **Tasks can't be read**: Overview says "Not checked: tasks (reason)" under the list, as it does for every
-  other source; the client page's panel shows the red error box with Retry. Neither ever reads as "no tasks".
+  other source; the client page's Tasks panel says "Tasks didn't load: reason" (the page's Refresh reads them
+  again). Neither ever reads as "no tasks".
   If the table is not there yet (the site went live before the migration), the message says so.
-- **A save fails**: a toast gives the reason and the form stays open with what was typed. A tick that fails
-  is un-ticked and says why.
+- **A save fails**: the reason is shown in the dialog, which stays open with what was typed. A tick that
+  fails is un-ticked and a toast says why.
 - **The note saved but its task didn't**: the toast says exactly that ("Note saved. The task was not:
   reason"), and the task can be added from the Tasks panel above.
 - **Both edit one task**: last save wins. Two people, short rows.
