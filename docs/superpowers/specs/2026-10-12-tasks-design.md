@@ -133,9 +133,21 @@ RLS on, staff policy, `touch_modified_at` trigger, an index on open tasks by due
 - **Both edit one task**: last save wins. Two people, short rows.
 - **The page was left open**: tasks are re-read when you come back to the tab, if the last read is more than
   five minutes old. Without this, an in-app-only handoff can sit unseen behind a stale page all day.
-- **Going live**: a follow-up logged from a cached copy of the old site after the migration has run would
-  write to the old columns and not appear as a task. Merge when neither of you is logging, then both
-  hard-refresh. `ponytail:` accepted for a ten-minute window and two users.
+- **Going live**: a follow-up logged from an old copy of the site after the migration has run would write to
+  the old columns and not appear as a task. The old copy is not only GitHub Pages' ten-minute cache: a tab or
+  the iPhone app left open keeps the old code until it is closed and reopened. So: merge when neither of you
+  is logging, check the migration has applied, then both close and reopen the app (the iPhone app too).
+  `ponytail:` accepted for two users. To find a straggler afterwards, run this in the Supabase SQL editor; any
+  row it returns is a follow-up that never became a task (a follow-up migration repeating the copy's
+  `insert … on conflict do nothing` brings it across):
+  ```sql
+  select a.id, a.client_name, a.follow_up_on from public.client_activity a
+  where a.follow_up_on is not null and not exists (select 1 from public.tasks t where t.activity_id = a.id);
+  ```
+- **The site arrives before the table**: Today says "Not checked: tasks (the tasks table isn't in the database
+  yet…)", existing follow-ups are not shown anywhere until the migration runs, and a note saved with a
+  follow-up date keeps the note and says the task was not made. Nothing breaks; Refresh once the migration
+  has run.
 
 ## Not now
 - A Tasks page or board. Tasks are promises and handoffs, not projects; a board adds a "Doing" column nobody
