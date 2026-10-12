@@ -18,6 +18,10 @@ for (const t of live) {
   assert.ok(new RegExp(`create policy \\w+ on ${t.replace('.', '\\.')}`).test(sql), `${t} has a policy`);
 }
 
+// — Tasks (12 Oct): the table exists, and the follow-ups already on client notes are copied into it. —
+assert.ok(live.includes('public.tasks'), 'tasks table exists');
+assert.ok(/insert into public\.tasks[\s\S]+from public\.client_activity[\s\S]+on conflict \(activity_id\) do nothing/.test(sql), 'existing follow-ups are copied into tasks, once');
+
 // — Every store mapping points at a live table and at columns that exist. —
 for (const [table, { columns }] of Object.entries(TABLES)) {
   assert.ok(live.includes(`public.${table}`), `${table} is created by a migration`);
