@@ -258,6 +258,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `2026-10-09-ssa-dashboard-design.md`. Weekly Summary (9 Oct): one week at a time with ‹ ›, totals vs the week before, by
   day/client/work type, weekdays with nothing logged, 8-week trend, entries (`src/core/weekly.js`; work only, no System entries).
   Design `2026-10-09-weekly-summary-design.md`.
+- Timesheets › **files on an entry** (12 Oct, `2026-10-12-timesheet-files-design.md`): Attach files on Log time and in the Edit
+  dialog; a paperclip with the count in Recent entries. The file goes into Gecko Docs (`clients/<Client Folder>/Timesheet files/`,
+  or `Timesheet files/<client>/` without a folder), its record into `timesheet_files`; never Supabase Storage (1 GB free limit).
+  25 MB a file, 10 an entry; a failed upload never undoes the entry. `src/core/timesheet-files.js`, tests `tests/timesheet-files.mjs`.
 - Phase 4 (8 Oct): the SSA renewal box offers **Create draft in Xero** (same function, `source: 'ssa'`,
   n × SSA at £650, account 214, reference Renewal); drafts for that client in the last 45 days are listed.
 

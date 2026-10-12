@@ -107,6 +107,17 @@
 #section-timesheets #tshAddBtn.tsh-done { opacity: 1; }
 #section-timesheets .tsh-form-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 10px; margin: -4px 0 0; font-size: 11px; color: var(--muted); }
 #section-timesheets .tsh-linkbtn { font: inherit; color: var(--green); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+/* Files on an entry (12 Oct): the Log time form's picked files, the Edit dialog's saved ones, the paperclip in the table */
+#section-timesheets .tsh-files { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+#section-timesheets .tsh-files-err { font-size: 12px; color: var(--red); }
+#section-timesheets .tsh-file-list { flex: 1 0 100%; list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+#section-timesheets .tsh-file-list li { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 4px 4px 4px 10px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); font-size: 13px; }
+#section-timesheets .tsh-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--white); }
+#section-timesheets a.tsh-file-name { text-decoration: underline; text-underline-offset: 2px; }
+#section-timesheets .tsh-file-size { flex: none; font: 11px var(--font-mono); color: var(--muted); }
+#section-timesheets .tsh-file-list .tsh-icon-btn { flex: none; }
+#section-timesheets .tsh-clip { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 0 2px; background: none; border: 0; color: var(--muted); font: 11px var(--font-mono); cursor: pointer; vertical-align: middle; }
+#section-timesheets .tsh-clip:hover { color: var(--white); }
 @media (max-width: 600px) {
   #section-timesheets #tshAddBtn { width: 100%; }
 }
