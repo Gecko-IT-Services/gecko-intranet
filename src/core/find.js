@@ -112,7 +112,7 @@ export function search(index, query, today) {
     ['prospects', 'Prospects', best(ix.prospects || [], query, p => ({
       title: p.company, sub: join([p.contact_name, PROSPECT_LABEL[p.stage] || p.stage]), match: p.contact_name, open: { kind: 'prospect', id: p.id }
     }))],
-    ['tasks', 'Tasks', best((ix.tasks || []).filter(t => !t.done_at), query, t => ({
+    ['tasks', 'Tasks', best((ix.tasks || []).filter(t => !t.done_at && !t._done), query, t => ({
       title: t.title, sub: join([t.client_name, t.assigned_to, t.due_on ? dueLabel(t.due_on, today) : '']), match: join([t.note, t.client_name]), open: { kind: 'task', id: t.id }
     }))],
     ['pages', 'Pages', best(PAGES, query, p => ({ title: p.label, sub: '', open: p.open }))],
@@ -121,12 +121,24 @@ export function search(index, query, today) {
   return groups.filter(([, , rows]) => rows.length).map(([key, label, rows]) => ({ key, label, rows }));
 }
 
-/** Words safe to send to the database: letters, digits and hyphens only, at most four, each at most 40 characters. */
-export const remoteWords = query => String(query || '').toLowerCase().replace(/[^\p{L}\p{N}\s-]+/gu, ' ').split(/\s+/).filter(w => w.replace(/-/g, '')).map(w => w.slice(0, 40)).slice(0, 4);
+/** Words safe to send to the database: letters and digits only (as `words()` splits them), at most four, each at most 40 characters. */
+export const remoteWords = query => words(query).map(w => w.slice(0, 40)).slice(0, 4);
 
-/** Is there enough typed to ask the database? One word of three characters, or of two digits (an invoice number). Hyphens do not count. */
+/** Is there enough typed to ask the database? One word of three characters, or of two digits (an invoice number). */
 export function remoteReady(query) {
-  return remoteWords(query).some(w => { const core = w.replace(/-/g, ''); return core.length >= REMOTE_MIN || /^\d{2,}$/.test(core); });
+  return remoteWords(query).some(w => w.length >= REMOTE_MIN || /^\d{2,}$/.test(w));
+}
+
+/**
+ * The PostgREST `or` filters for one query: one string per word, each an OR across the columns searched (the strings
+ * are ANDed by the database). Words are letters and digits only (`words()`), so nothing typed can change a filter.
+ */
+export function remoteFilters(query) {
+  const ws = remoteWords(query);
+  return {
+    invoices: ws.map(w => `invoice_number.ilike.%${w}%,contact_name.ilike.%${w}%,reference.ilike.%${w}%`),
+    entries: ws.map(w => `title.ilike.%${w}%,work_description.ilike.%${w}%`)
+  };
 }
 
 /** paid / draft / overdue / due, the same reading as the client page's Invoices tab. */

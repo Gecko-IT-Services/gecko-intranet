@@ -2501,6 +2501,7 @@ body::before {
 .btn,
 #signInBtn,
 .sb-toggle,
+.tb-find,
 #section-overview .ovw-refresh,
 #section-profitability .prf-refresh,
 #section-profitability .prf-manage-link,
@@ -2818,12 +2819,15 @@ body::before {
     white-space: nowrap;
   }
 
-  .sb-toggle {
+  .sb-toggle,
+  .tb-find {
     width: 40px;
     height: 40px;
     flex: 0 0 40px;
     margin-right: 10px;
   }
+
+  .tb-find { margin-right: 0; }
 
   .section {
     width: 100%;
@@ -3113,7 +3117,8 @@ body::before {
   font-weight: 700;
 }
 
-:root[data-theme="light"] .sb-toggle {
+:root[data-theme="light"] .sb-toggle,
+:root[data-theme="light"] .tb-find {
   background: #ffffff;
   border-color: rgba(23,32,27,0.14);
   color: #17201b;
@@ -5547,9 +5552,10 @@ function geckoGo(section, tab, clientName) {
     if (clientName && tab === 'log') tshPreselect(clientName);
   }
   else if (section === 'overview' && tab !== OVW.tab && ['today', 'week', 'monthend', 'business'].includes(tab)) {
-    OVW.dir = window.GeckoTabs ? window.GeckoTabs.direction(['today', 'week', 'monthend', 'business'], OVW.tab, tab) : '';
+    const drawn = !!document.querySelector('#ovwWrap .ovw-tabbar');   // not while loading or showing its error box
+    OVW.dir = drawn && window.GeckoTabs ? window.GeckoTabs.direction(['today', 'week', 'monthend', 'business'], OVW.tab, tab) : '';
     OVW.tab = tab;
-    ovwRenderAll();
+    if (drawn) ovwRenderAll();
   }
 }
 

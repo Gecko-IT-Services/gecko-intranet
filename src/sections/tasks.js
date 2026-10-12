@@ -185,7 +185,7 @@ async function openDialog(t, preset = {}) {
 const closeDialog = () => document.getElementById('tkDialog')?.close();
 
 /** From elsewhere (quick find): open one task's dialog, or a new one. */
-export const openTask = id => { const t = byId(Number(id)); if (t) openDialog(t); };
+export const openTask = id => { const t = byId(Number(id)); if (t) openDialog(t); return !!t; };   // false: the task is no longer there
 export const newTask = () => openDialog(null);
 
 function formError(form, message) {

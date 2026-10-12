@@ -11,10 +11,10 @@
    ║   NOTE: no top-level `window` access (importable under Node).     ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
-import { escapeHtml } from '../core/ui.js';
+import { escapeHtml, toast } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { icon } from '../core/icons.js';
-import { search, clientNames, remoteWords, remoteReady, invoiceRows, entryRows, REMOTE_ROWS } from '../core/find.js';
+import { search, clientNames, remoteFilters, remoteReady, invoiceRows, entryRows, REMOTE_ROWS } from '../core/find.js';
 import { read as readTasks, put as putTasks, view as taskView, state as taskState, openTask, newTask } from './tasks.js';
 import { open as openJob, add as addJob } from './jobs.js';
 import { open as openDeal, openProspect } from './opportunities.js';
@@ -26,13 +26,13 @@ const SOURCE_LABEL = { gecko: 'clients', ssa: 'support clients', contacts: 'peop
 const NO_REMOTE = () => ({ q: '', invoices: null, entries: null, errors: {}, busy: false });
 
 // index: the small lists, read once ({ clients, contacts, jobs, deals, prospects }; a list that failed is null).
-// rows: the results on screen, flat, in order; sel: the selected one. seq: discards a reply to an older query.
-const QF = { index: null, clientsById: new Map(), at: 0, loading: false, errors: {}, needsConnect: false, q: '', rows: [], sel: 0, seq: 0, timer: 0, remote: NO_REMOTE() };
+// rows: the results on screen, flat, in order; sel: the selected one, keep: which row that is (so a list redrawn by data arriving keeps the selection on the same row). seq: discards a reply to an older query.
+const QF = { index: null, clientsById: new Map(), at: 0, loading: false, errors: {}, needsConnect: false, q: '', rows: [], sel: 0, keep: '', seq: 0, timer: 0, remote: NO_REMOTE() };
 
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
 const settle = p => p.then(v => ({ v }), e => ({ e }));
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const signedIn = () => { const n = (document.getElementById('userName')?.textContent || '').trim(); return !!n && n !== 'Not signed in'; };
+const signedIn = () => { const shell = document.getElementById('portalShell'); return !!shell && !shell.classList.contains('hidden'); };   // showLogin() hides the shell, showPortal() shows it
 const dialog = () => document.getElementById('qfDialog');
 
 
@@ -60,7 +60,7 @@ async function loadIndex() {
     QF.clientsById = new Map((ssa.v || []).map(c => [String(c.id), c.name]));
     QF.errors = {};
     for (const [k, r] of Object.entries({ gecko, ssa, contacts, jobs, deals, prospects })) if (r.e) QF.errors[k] = r.e.message || String(r.e);
-    QF.at = Object.keys(QF.errors).length ? 0 : Date.now();   // a partial failure is read again on the next opening
+    QF.at = Object.keys(QF.errors).length || (tasks && tasks.e) ? 0 : Date.now();   // a partial failure (tasks included) is read again on the next opening
   } catch (err) {
     QF.at = 0;
     if (err.code === 'DB_SIGNIN_REQUIRED') QF.needsConnect = true;
@@ -84,13 +84,12 @@ async function runRemote(q, seq) {
     const sb = await connectSupabase();
     // ponytail: "contains" on the server (the newest 50 rows), "start of a word" here (core/find.js); a very common word needs a second word typed.
     let inv = sb.from('xero_invoices').select('invoice_id,invoice_number,contact_name,reference,invoice_date,due_date,status,total,amount_due')
-      .not('status', 'in', '(VOIDED,DELETED)').order('invoice_date', { ascending: false }).limit(REMOTE_ROWS);
+      .not('status', 'in', '(VOIDED,DELETED)').order('invoice_date', { ascending: false, nullsFirst: false }).limit(REMOTE_ROWS);
     let ent = sb.from('timesheet_entries').select('id,client_id,engineer,entry_date,hours,title,work_description,deleted_at')
-      .is('deleted_at', null).order('entry_date', { ascending: false }).limit(REMOTE_ROWS);
-    for (const w of remoteWords(q)) {      // letters, digits and hyphens only: nothing typed can change the filter
-      inv = inv.or(`invoice_number.ilike.%${w}%,contact_name.ilike.%${w}%,reference.ilike.%${w}%`);
-      ent = ent.or(`title.ilike.%${w}%,work_description.ilike.%${w}%`);
-    }
+      .is('deleted_at', null).neq('engineer', 'System').order('entry_date', { ascending: false, nullsFirst: false }).limit(REMOTE_ROWS);   // work rows only (the column is not null)
+    const f = remoteFilters(q);              // letters and digits only: nothing typed can change a filter
+    for (const x of f.invoices) inv = inv.or(x);
+    for (const x of f.entries) ent = ent.or(x);
     const [i, e] = await Promise.all([settle(inv.then(must)), settle(ent.then(must))]);
     out.invoices = i.v || null; out.entries = e.v || null;
     if (i.e) out.errors.invoices = i.e.message || String(i.e);
@@ -138,8 +137,8 @@ function render() {
   const d = dialog();
   if (!d?.open) return;
   const groups = groupsNow();
-  QF.rows = groups.flatMap(g => g.rows);
-  QF.sel = Math.min(QF.sel, Math.max(0, QF.rows.length - 1));
+  QF.rows = groups.flatMap(g => g.rows.map(r => ({ ...r, key: g.key })));
+  QF.sel = Math.max(0, QF.keep ? QF.rows.findIndex(r => rowId(r) === QF.keep) : 0);   // typing clears `keep`: the first row
   let n = 0;
   const list = groups.map(g => `<div role="group" aria-label="${escapeHtml(g.label)}"><div class="qf-group" aria-hidden="true">${escapeHtml(g.label)}</div>` + g.rows.map(r => {
     const i = n++;
@@ -152,10 +151,13 @@ function render() {
   select(QF.sel);
 }
 
+const rowId = r => `${r.key}\n${r.title}\n${JSON.stringify(r.open)}`;
+
 /** Mark one row as the selected one (the field keeps the focus; aria-activedescendant tells a screen reader). */
 function select(i, scroll = true) {
   const d = dialog();
   QF.sel = Math.max(0, Math.min(i, QF.rows.length - 1));
+  QF.keep = QF.rows[QF.sel] ? rowId(QF.rows[QF.sel]) : '';
   d.querySelectorAll('[data-qf-row]').forEach(el => el.setAttribute('aria-selected', String(Number(el.dataset.qfRow) === QF.sel)));
   const on = d.querySelector('[aria-selected="true"]');
   if (scroll) on?.scrollIntoView({ block: 'nearest' });
@@ -171,12 +173,12 @@ function openRow(i) {
   if (!row) return;
   dialog().close();
   const o = row.open;
-  if (o.kind === 'client') window.geckoGo('client', o.tab || 'summary', o.name);
+  if (o.kind === 'client') { if (String(o.name || '').trim()) window.geckoGo('client', o.tab || 'summary', o.name); else toast('That row has no client to open.', 'warning'); }
   else if (o.kind === 'page') window.geckoGo(o.section, o.tab || undefined);
   else if (o.kind === 'job') { window.navTo('jobs'); openJob(o.id); }
   else if (o.kind === 'deal') { window.navTo('opportunities'); openDeal(o.id); }
   else if (o.kind === 'prospect') { window.navTo('opportunities'); openProspect(o.id); }
-  else if (o.kind === 'task') openTask(o.id);
+  else if (o.kind === 'task') { if (!openTask(o.id)) toast('That task is no longer there.', 'warning'); }
   else if (o.kind === 'action' && o.run === 'task') newTask();
   else if (o.kind === 'action' && o.run === 'job') { window.navTo('jobs'); addJob(); }
 }
@@ -189,22 +191,27 @@ function build() {
   d.id = 'qfDialog'; d.className = 'qf-dialog'; d.setAttribute('aria-label', 'Quick find');
   d.innerHTML = `<div class="qf-head">${icon('search', 16)}
       <input id="qfInput" type="text" role="combobox" aria-expanded="true" aria-controls="qfList" aria-autocomplete="list" aria-label="Find"
-        placeholder="Find a client, job, task, invoice…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">
-      <kbd class="qf-kbd">Esc</kbd></div>
+        placeholder="Find a client, job, task, invoice…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">
+      <kbd class="qf-kbd">Esc</kbd><button type="button" class="qf-close" data-qf="close" aria-label="Close">${icon('x', 16)}</button></div>
     <div id="qfList" class="qf-list" role="listbox" aria-label="Results"></div>
     <div id="qfFoot" class="qf-foot" aria-live="polite"></div>`;
   const input = d.querySelector('#qfInput');
-  input.addEventListener('input', () => { QF.q = input.value; QF.sel = 0; scheduleRemote(); render(); });
+  input.addEventListener('input', () => { QF.q = input.value; QF.sel = 0; QF.keep = ''; scheduleRemote(); render(); });
   input.addEventListener('keydown', e => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); select(QF.sel + (e.key === 'ArrowDown' ? 1 : -1)); }
     else if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); openRow(QF.sel); }
   });
+  let px = -1, py = -1, down = null;
   d.addEventListener('mousemove', e => {                          // the pointer moves the selection (mousemove, so a list redrawn under a still pointer does not steal it)
+    if (e.clientX === px && e.clientY === py) return;             // a list scrolled under a parked pointer sends mousemove too
+    px = e.clientX; py = e.clientY;
     const row = e.target.closest?.('[data-qf-row]');
     if (row && Number(row.dataset.qfRow) !== QF.sel) select(Number(row.dataset.qfRow), false);
   });
+  d.addEventListener('mousedown', e => { down = e.target; });
   d.addEventListener('click', e => {
-    if (e.target === d) { d.close(); return; }                     // the backdrop
+    if (e.target === d) { if (down === d) d.close(); return; }     // the backdrop, when the press started there too (a drag out of the field does not close the box)
+    if (e.target.closest('[data-qf="close"]')) { d.close(); return; }
     const row = e.target.closest('[data-qf-row]');
     if (row) { openRow(Number(row.dataset.qfRow)); return; }
     if (e.target.closest('[data-qf="connect"]')) connectSupabase({ interactive: true }).then(() => loadIndex()).then(() => { scheduleRemote(); render(); }, () => {});   // then search the database for what is already typed
@@ -213,15 +220,22 @@ function build() {
   return d;
 }
 
-/** Open the box (⌘K, the sidebar's Find row, the phone's search button). Nothing happens when signed out or while another dialog is open. */
+/** On a phone the keyboard covers part of the screen: the list is sized from the visible viewport (CSS var --qf-vh). */
+function fitViewport() {
+  const d = dialog();
+  if (d?.open && window.visualViewport) d.style.setProperty('--qf-vh', Math.round(window.visualViewport.height) + 'px');
+}
+
+/** Open the box (⌘K, the sidebar's Find row, the phone's search button). Nothing happens when signed out or while another dialog or modal is open. */
 export function open() {
-  if (!signedIn() || document.querySelector('dialog[open]')) return;
+  if (!signedIn() || document.querySelector('dialog[open], [aria-modal="true"].show, .alr-backdrop:not([hidden])')) return;   // the older modals are divs that get `show` (Alerts: lose `hidden`)
   const d = dialog() || build();
   clearTimeout(QF.timer); QF.seq++;            // whatever a previous opening still had in flight is dropped
-  QF.q = ''; QF.sel = 0; QF.remote = NO_REMOTE();
+  QF.q = ''; QF.sel = 0; QF.keep = ''; QF.remote = NO_REMOTE();
   d.querySelector('#qfInput').value = '';
   window.closeSidebar?.();                     // on a phone the Find row sits in the slide-over menu
   d.showModal();
+  fitViewport();
   d.querySelector('#qfInput').focus();
   render();
   if (!QF.index || Date.now() - QF.at > STALE_MS) loadIndex();
@@ -234,8 +248,10 @@ export function init() {
   const mac = /Mac|iPhone|iPad/.test(navigator.platform || '');
   document.querySelectorAll('[data-find-kbd]').forEach(k => { k.textContent = mac ? '⌘K' : 'Ctrl K'; });
   document.addEventListener('click', e => { if (e.target.closest?.('[data-find-open]')) open(); });
+  window.visualViewport?.addEventListener('resize', fitViewport);
   document.addEventListener('keydown', e => {
-    if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || String(e.key).toLowerCase() !== 'k' || !signedIn()) return;
+    const chord = mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey;   // ⌘K on Apple, Ctrl+K elsewhere (on a Mac Ctrl+K is a text field's "delete to end of line")
+    if (!chord || e.altKey || e.shiftKey || String(e.key).toLowerCase() !== 'k' || !signedIn()) return;
     e.preventDefault();                        // the browser's own Ctrl+K (address bar search)
     if (dialog()?.open) dialog().close(); else open();
   });

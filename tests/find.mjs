@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PAGES, ACTIONS, PER_GROUP, words, matchLevel, clientNames, search, remoteWords, remoteReady, invoiceState, invoiceRows, entryRows } from '../src/core/find.js';
+import { PAGES, ACTIONS, PER_GROUP, words, matchLevel, clientNames, search, remoteWords, remoteReady, remoteFilters, invoiceState, invoiceRows, entryRows } from '../src/core/find.js';
 
 const today = '2026-10-08';   // Thursday
 
@@ -82,7 +82,7 @@ assert.equal(search(index, 'proposed', today).some(x => x.key === 'jobs'), false
 assert.deepEqual(search({ tasks: [{ id: 1, title: 'No date', client_name: '', assigned_to: 'Jack', due_on: null, done_at: null }] }, 'date', today)[0].rows[0].sub, 'Jack', 'a task with no date shows no date, never NaN');
 
 // What is sent to the database
-assert.deepEqual(remoteWords('  INV-0131, (harbour) 50% _x_ '), ['inv-0131', 'harbour', '50', 'x']);
+assert.deepEqual(remoteWords('  INV-0131, (harbour) 50% _x_ '), ['inv', '0131', 'harbour', '50'], 'split as words() splits; four at most');
 assert.deepEqual(remoteWords('a b c d e f'), ['a', 'b', 'c', 'd']);
 assert.deepEqual(remoteWords('- -- %'), []);
 assert.equal(remoteWords('x'.repeat(100))[0].length, 40, 'a word is cut to 40 characters');
@@ -94,6 +94,15 @@ assert.equal(remoteReady('%%%'), false);
 assert.equal(remoteReady('ab cd'), false, 'one word must be long enough, not the words added together');
 assert.equal(remoteReady('a--'), false, 'hyphens do not count');
 assert.equal(remoteReady('1 3'), false);
+assert.deepEqual(remoteFilters('inv-0131'), {
+  invoices: ['invoice_number.ilike.%inv%,contact_name.ilike.%inv%,reference.ilike.%inv%', 'invoice_number.ilike.%0131%,contact_name.ilike.%0131%,reference.ilike.%0131%'],
+  entries: ['title.ilike.%inv%,work_description.ilike.%inv%', 'title.ilike.%0131%,work_description.ilike.%0131%']
+}, 'one OR filter per word');
+assert.deepEqual(remoteFilters(''), { invoices: [], entries: [] });
+for (const w of remoteWords('a%b_c,(d)\'e"f\\g*h:i;j.k')) assert.match(w, /^[\p{L}\p{N}]+$/u, 'nothing typed can change a filter');
+
+// A task ticked a moment ago (done_at not yet set) is not open
+assert.deepEqual(search({ tasks: [{ id: 1, title: 'Ticked just now', done_at: null, _done: true }, { id: 2, title: 'Ticked later', done_at: null }] }, 'ticked', today)[0].rows.map(r => r.title), ['Ticked later']);
 
 // Invoices
 assert.equal(invoiceState({ status: 'PAID', amount_due: 0 }, today), 'paid');
@@ -151,6 +160,12 @@ for (const { label, open } of PAGES) {
   }
 }
 assert.equal(new Set(PAGES.map(p => p.label)).size, PAGES.length, 'no page listed twice');
+{   // every hub tab that has a label is a page: a tab added to HUBS must be added to PAGES
+  const hubs = html.match(/const HUBS = \{([\s\S]*?)\n\};/)[1];
+  const labelled = [...hubs.matchAll(/\['([a-z]+)', '([^']+)'\]/g)].map(m => m[1]);
+  assert.ok(labelled.length >= 8, 'the HUBS literal was read');
+  for (const key of labelled) assert.ok(PAGES.some(p => p.open.section === key), `hub tab "${key}" is not in PAGES`);
+}
 
 // The ways in that quick find calls exist (each does what a click on the thing already does)
 {
