@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { personOf, titleFromNote, isNew, level, dueLabel, cleanTask, groups, forClient, doneRecently } from '../src/core/tasks.js';
+import { personOf, titleFromNote, isNew, level, lateness, dueLabel, cleanTask, groups, forClient, doneRecently } from '../src/core/tasks.js';
 
 const today = '2026-10-08';   // Thursday
 const now = '2026-10-08T09:00:00.000Z';
@@ -46,6 +46,13 @@ assert.equal(level(T(1, { due_on: '2026-10-01' }), today), 'amber', '7 days over
 assert.equal(level(T(1, { due_on: '2026-09-30' }), today), 'red', '8 days overdue is red');
 assert.equal(level(T(1, { due_on: '2026-10-20', assigned_by: 'Philip', seen_at: null }), today), 'new', 'a handoff shows whatever its date');
 assert.equal(level(T(1, { due_on: '2026-09-30', assigned_by: 'Philip', seen_at: null }), today), 'red', 'red wins over new');
+assert.equal(lateness(T(1, { due_on: '2026-10-09' }), today), '', 'later');
+assert.equal(lateness(T(1), today), 'amber', 'today');
+assert.equal(lateness(T(1, { due_on: '2026-10-01' }), today), 'amber', '7 days overdue');
+assert.equal(lateness(T(1, { due_on: '2026-09-30' }), today), 'red', '8 days overdue');
+const unseenLate = T(1, { due_on: '2026-10-06', assigned_by: 'Philip', seen_at: null });
+assert.equal(level(unseenLate, today), 'new', 'an unseen handoff 2 days overdue is new');
+assert.equal(lateness(unseenLate, today), 'amber', 'and still amber underneath');
 
 assert.equal(dueLabel('2026-10-06', today), '2 days overdue');
 assert.equal(dueLabel('2026-10-08', today), 'today');

@@ -27,12 +27,17 @@ export const titleFromNote = body => oneLine(String(body || '').split('\n').find
 /** Given to someone else and not opened by them yet. */
 export const isNew = t => !t.done_at && !t.seen_at && !!t.assigned_by && t.assigned_by !== t.assigned_to;
 
+/** How late, whoever has seen it: 'red' more than a week overdue · 'amber' due today or overdue · '' later. */
+export function lateness(t, today) {
+  const late = daysBetween(day(t.due_on), today);
+  return late > RED_AFTER_DAYS ? 'red' : late >= 0 ? 'amber' : '';
+}
+
 /** 'red' more than a week overdue · 'new' a handoff not opened yet · 'amber' due today or overdue · '' later. */
 export function level(t, today) {
-  const late = daysBetween(day(t.due_on), today);
-  if (late > RED_AFTER_DAYS) return 'red';
-  if (isNew(t)) return 'new';
-  return late >= 0 ? 'amber' : '';
+  const late = lateness(t, today);
+  if (late === 'red') return 'red';
+  return isNew(t) ? 'new' : late;
 }
 
 /** "2 days overdue", "today", "tomorrow", otherwise "Fri 16 Oct". */

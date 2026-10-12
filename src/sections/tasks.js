@@ -12,10 +12,11 @@
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
 import { toast, escapeHtml, clientLink } from '../core/ui.js';
+import { selectAllPages } from '../core/store.js';
 import { connectSupabase } from '../core/supabase.js';
 import { followUpChoices } from '../core/activity.js';
 import { sameClient } from '../core/client.js';
-import { PEOPLE, TITLE_MAX, NOTE_MAX, LATER_SHOWN, DONE_DAYS, personOf, isNew, level, dueLabel, cleanTask, groups, forClient, doneRecently } from '../core/tasks.js';
+import { PEOPLE, TITLE_MAX, NOTE_MAX, LATER_SHOWN, DONE_DAYS, personOf, isNew, level, lateness, dueLabel, cleanTask, groups, forClient, doneRecently } from '../core/tasks.js';
 
 const STALE_MS = 5 * 60000;          // re-read on coming back to the tab after this long
 const WHO_KEY = 'gecko.tasks.who';   // Mine / Everyone, remembered per browser
@@ -29,7 +30,8 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 const shortDate = d => new Date(day(d) + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 const byId = id => (TK.tasks || []).find(t => t.id === id);
 const emit = () => TK.subs.forEach(fn => { try { fn(); } catch (err) { console.error('Tasks: a page failed to redraw', err); } });
-const readError = err => {
+// A database failure as a sentence: the missing table (before the migration) is named, anything else is passed on.
+const dbError = err => {
   const m = err?.message || String(err);
   return /tasks/.test(m) && /find the table|does not exist|schema cache/i.test(m) ? 'the tasks table isn’t in the database yet (it arrives with this update)' : m;
 };
@@ -40,14 +42,16 @@ export const me = () => personOf(document.getElementById('userName')?.textConten
 /** A page asks to be redrawn whenever tasks change. */
 export const subscribe = fn => { TK.subs.push(fn); };
 
-// ponytail: reads the whole table (a few hundred rows a year for two people); read open + recent + by client when it is slow.
-export const read = async sb => must(await sb.from('tasks').select('*'));
+// ponytail: reads the whole table, a page of 1,000 rows at a time (a few hundred rows a year for two people);
+// narrow to open + recent + by client when it is slow.
+export const read = sb => selectAllPages((from, to) => sb.from('tasks').select('*').order('id').range(from, to));
 
 /** Hand in what a page read. A failed re-read keeps the last good list and records why. */
 export function put(rows, err) {
   if (rows) { TK.tasks = rows; TK.justDone.clear(); }
-  TK.error = err ? readError(err) : '';
+  TK.error = err ? dbError(err) : '';
   TK.at = Date.now();
+  emit();
 }
 
 export const state = () => ({ loaded: !!TK.tasks, error: TK.error, everyone: TK.everyone || !me() });
@@ -58,7 +62,6 @@ export const view = () => TK.tasks && TK.tasks.map(t => (TK.justDone.has(t.id) ?
 export async function reload() {
   try { put(await read(await connectSupabase())); }
   catch (err) { put(null, err); }
-  emit();
 }
 
 
@@ -75,7 +78,8 @@ export function rowHtml(t, { showWho = false } = {}) {
     t.note ? escapeHtml(t.note) : ''
   ].filter(Boolean).join(' · ');
   const who = showWho && t.assigned_to ? `<b class="tk-who lp-${escapeHtml(t.assigned_to.toLowerCase())}" title="${escapeHtml(t.assigned_to)}">${escapeHtml(t.assigned_to[0])}</b>` : '';
-  return `<li class="tk-row${lv ? ' ' + lv : ''}${t._done ? ' done' : ''}">
+  // A handoff not opened yet is 'new', and keeps the colour of how late it is.
+  return `<li class="tk-row${lv ? ' ' + lv : ''}${lv === 'new' && lateness(t, td) ? ' ' + lateness(t, td) : ''}${t._done ? ' done' : ''}">
     <input type="checkbox" class="tk-tick" data-tk="tick" data-id="${t.id}"${t._done ? ' checked' : ''} aria-label="${escapeHtml('Done: ' + t.title)}">
     <div class="tk-main"><button type="button" class="tk-title" data-tk="open" data-id="${t.id}">${escapeHtml(t.title)}</button>${sub ? `<p class="tk-sub">${sub}</p>` : ''}</div>
     ${!t._done && mine && isNew(t) ? `<span class="badge badge-blue">New from ${escapeHtml(t.assigned_by)}</span>` : ''}${who}
@@ -101,7 +105,7 @@ export function todayHtml() {
   const td = today(), all = state().everyone, g = groups(view(), me(), td, all);
   const list = (rows, opts) => `<ul class="tk-list">${rows.map(t => rowHtml(t, opts)).join('')}</ul>`;
   const later = TK.allLater ? g.later : g.later.slice(0, LATER_SHOWN);
-  const done = doneRecently(TK.tasks, td);
+  const done = doneRecently(view(), td);
   const waitingOn = [...new Set(g.waiting.map(t => t.assigned_to))].join(' and ');
   return (g.later.length ? `<h4 class="tk-group">Later <span>${g.later.length}</span></h4>${list(later, { showWho: all })}${g.later.length > later.length ? `<button type="button" class="tk-more" data-tk="later">Show all ${g.later.length}</button>` : ''}` : '')
     + (g.waiting.length ? `<h4 class="tk-group">Waiting on ${escapeHtml(waitingOn)} <span>${g.waiting.length}</span></h4>${list(g.waiting)}` : '')
@@ -192,15 +196,18 @@ async function markSeen(t) {
   const at = new Date().toISOString();
   t.seen_at = at; emit();
   try { const sb = await connectSupabase(); must(await sb.from('tasks').update({ seen_at: at }).eq('id', t.id)); }
-  catch (err) { t.seen_at = null; emit(); toast('Could not mark the task as seen: ' + (err.message || err), 'error', 7000); }
+  catch (err) { t.seen_at = null; emit(); toast('Could not mark the task as seen: ' + dbError(err), 'error', 7000); }
 }
 
 /** Add a task from somewhere other than the dialog (a client note's follow-up). Throws with the reason. */
 export async function addTask(input, extra = {}) {
   const { row, error } = cleanTask(input, { me: me(), today: today() });
   if (error) throw new Error(error);
-  const sb = await connectSupabase({ interactive: true });
-  const saved = must(await sb.from('tasks').insert({ ...row, ...extra }).select('*').single());
+  let saved;
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    saved = must(await sb.from('tasks').insert({ ...row, ...extra }).select('*').single());
+  } catch (err) { throw new Error(dbError(err)); }
   if (TK.tasks) TK.tasks.push(saved); else await reload();
   emit();
   return saved;
@@ -224,14 +231,14 @@ async function saveForm(form) {
     closeDialog(); emit();
     toast(id ? 'Task saved' : saved.assigned_to !== me() ? `Given to ${saved.assigned_to}` : 'Task added', 'success');
   } catch (err) {
-    formError(form, 'Could not save: ' + (err.message || err));
+    formError(form, 'Could not save: ' + dbError(err));
   } finally { TK.saving = false; submit.disabled = false; }
 }
 
 /** Tick or untick. The row changes at once; a write that fails puts it back and says why. */
 async function setDone(id, on) {
   const t = byId(id);
-  if (!t) return;
+  if (!t) { emit(); return; }   // gone since the page was drawn: redraw so the box shows how things really are
   const before = { done_at: t.done_at, done_by: t.done_by }, wasJust = TK.justDone.has(id);
   const patch = on ? { done_at: new Date().toISOString(), done_by: me() } : { done_at: null, done_by: '' };
   Object.assign(t, patch);
@@ -242,7 +249,7 @@ async function setDone(id, on) {
     Object.assign(t, before);
     if (wasJust) TK.justDone.add(id); else TK.justDone.delete(id);
     emit();
-    toast('Could not update the task: ' + (err.message || err), 'error', 7000);
+    toast('Could not update the task: ' + dbError(err), 'error', 7000);
   }
 }
 
@@ -254,7 +261,7 @@ async function remove(id, form) {
     TK.tasks = (TK.tasks || []).filter(t => t.id !== id);
     closeDialog(); emit();
     toast('Task deleted', 'success');
-  } catch (err) { formError(form, 'Could not delete: ' + (err.message || err)); }
+  } catch (err) { formError(form, 'Could not delete: ' + dbError(err)); }
 }
 
 

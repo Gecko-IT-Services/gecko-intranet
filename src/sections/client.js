@@ -24,7 +24,7 @@ import { vendorMarks, productPart } from '../core/vendors.js';
 import { newOpportunity } from '../core/opportunities.js';
 import { ROLES, cleanContact, contactsFor, mainContact, duplicateEmail } from '../core/contacts.js';
 import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, durationText } from '../core/activity.js';
-import { PEOPLE, titleFromNote } from '../core/tasks.js';
+import { PEOPLE, titleFromNote, cleanTask } from '../core/tasks.js';
 import { read as readTasks, put as putTasks, subscribe as onTasksChanged, me as taskMe, clientTasks, noteTask, addTask } from './tasks.js';
 import { cleanProfile, profileFor, addressLine, mapLinks, telHref, mailIdentity, mailSearches, clientMail, stamp, mailboxesFor } from '../core/profile.js';
 import { graphFetch } from '../core/graph.js';
@@ -149,9 +149,7 @@ function render() {
     return;
   }
   const p = CL.data?.profile;
-  if (head) head.innerHTML = headHtml(p);
-  const strip = head?.querySelector('.app-tabs');
-  if (strip) moveInk(strip);
+  renderHead();
   if (CL.error) {
     mount.innerHTML = CL.error.code === 'DB_SIGNIN_REQUIRED'
       ? '<div class="cl-error art art-offline"><strong>Connect to the Gecko database</strong>Client pages read the database. <button type="button" class="btn btn-sm" data-cl-act="connect">Connect</button></div>'
@@ -163,6 +161,15 @@ function render() {
   mount.innerHTML = `<div class="app-pane ${CL.dir}">${pane(p, CL.data.errors)}</div>`;
   CL.dir = '';
   syncTableLabels(mount);
+}
+
+/** Draw the page head (name, figures, tab strip). Alone, it is what a change elsewhere needs: the Activity badge. */
+function renderHead() {
+  const head = els('clHead');
+  if (!head) return;
+  head.innerHTML = headHtml(CL.data?.profile);
+  const strip = head.querySelector('.app-tabs');
+  if (strip) moveInk(strip);
 }
 
 function headHtml(p) {
@@ -375,7 +382,7 @@ function activityHtml() {
   return tasks + add + panel(`Timeline (${a.items.length})`, items);
 }
 
-const activityDraft = f => ({ kind: f.kind.value, body: f.body.value, contact_id: f.contact_id?.value || '', follow: f.follow_up_on.value, when: f.happened_at.value,
+const activityDraft = f => ({ kind: f.kind.value, body: f.body.value, contact_id: f.contact_id?.value || '', follow: f.follow_up_on.value, when: f.happened_at.value !== f.happened_at.defaultValue ? f.happened_at.value : (CL.actDraft?.when || ''),   // untouched: stays "now" (an edit already kept stays kept)
   duration: f.duration_min.value, direction: f.direction.value, task_title: f.task_title.value, task_who: f.task_who.value });
 
 /** What is typed in Log activity survives a redraw (a task ticked above it, tasks re-read on coming back to the tab). */
@@ -398,7 +405,12 @@ async function saveActivity(form) {
   if (error) { toast(error, 'warning'); return; }
   // The follow-up is a task (12 Oct): the note is saved without a date, then the task is made and linked to it.
   const { follow_up_on: due, ...noteRow } = row;
-  const who = f.task_who.value, title = f.task_title.value || titleFromNote(row.body);
+  const who = f.task_who.value, title = f.task_title.value.trim() || titleFromNote(row.body);
+  // Check the task before anything is saved, so a note is never stored whose task is then refused.
+  if (due) {
+    const { error: taskProblem } = cleanTask({ title, client_name: CL.name, assigned_to: who, due_on: due }, { me: taskMe(), today: today() });
+    if (taskProblem) { toast(taskProblem, 'warning'); return; }
+  }
   CL.saving = true; render();
   try {
     const sb = await connectSupabase({ interactive: true });
@@ -408,10 +420,13 @@ async function saveActivity(form) {
       try { await addTask({ title, client_name: CL.name, assigned_to: who, due_on: due }, { activity_id: saved.id }); }
       catch (err) { taskError = err.message || String(err); }
     }
-    await reloadActivity(sb);
+    // The save has happened: a failed re-read must not look like a failed save (it would invite a duplicate).
+    let refreshError = '';
+    try { await reloadActivity(sb); } catch (err) { refreshError = err.message || String(err); }
     CL.actDraft = null;
-    if (taskError) toast(`Note saved. The task was not: ${taskError}. Add it from Tasks above.`, 'error', 9000);
+    if (taskError) toast(`Note saved. The task was not: ${taskError.replace(/\.$/, '')}. Add it from Tasks above.`, 'error', 9000);
     else toast(due ? `Logged · task for ${who} (${dueText(due, today())})` : 'Logged', 'success');
+    if (refreshError) toast('Saved. The page could not refresh: ' + refreshError, 'warning', 7000);
   } catch (err) {
     toast('Could not save: ' + (err.message || err), 'error', 7000);
   } finally { CL.saving = false; render(); }
@@ -586,10 +601,11 @@ async function logMail(i) {
   const c = (CL.data.contacts || []).find(k => k.email && [x.from, ...x.to].map(a => String(a).toLowerCase()).includes(k.email));
   const { row, error } = cleanActivity({ kind: 'email', body: `Email: ${x.subject}`, happened_at: x.received, direction: x.direction, contact_id: c?.id || '', contact_name: c ? (c.name || c.email) : '' }, CL.name, today());
   if (error) { toast(error, 'warning'); return; }
+  const { follow_up_on: _unused, ...noteRow } = row;   // follow-ups are tasks now; the column is no longer written
   CL.saving = true;
   try {
     const sb = await connectSupabase({ interactive: true });
-    must(await sb.from('client_activity').insert({ ...row, created_by: (els('userName')?.textContent || '').trim() }));
+    must(await sb.from('client_activity').insert({ ...noteRow, created_by: (els('userName')?.textContent || '').trim() }));
     await reloadActivity(sb);
     toast('Logged in Activity', 'success');
   } catch (err) { toast('Could not log it: ' + (err.message || err), 'error', 7000); }
@@ -828,7 +844,11 @@ export function init() {
   section?.addEventListener('change', e => {
     if (e.target.name === 'follow_up_on') { const box = e.target.form?.querySelector('.cl-follow-task'); if (box) box.hidden = !e.target.value; }
   });
-  onTasksChanged(() => { if (CL.data && !CL.loading) { keepActivityDraft(); render(); } });
+  onTasksChanged(() => {
+    if (!CL.data || CL.loading) return;
+    // Only the Activity tab draws tasks; a redraw of any other tab would wipe a half-typed contact or address form.
+    if (CL.tab === 'activity') { keepActivityDraft(); render(); } else renderHead();
+  });
   section?.addEventListener('submit', e => {
     if (e.target.dataset.clForm === 'new-opp') { e.preventDefault(); saveOpp(e.target); }
     if (e.target.dataset.clForm === 'contact') { e.preventDefault(); saveContact(e.target); }

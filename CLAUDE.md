@@ -144,10 +144,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   products) and is never quoted.
 - Client page › **Contacts** (9 Oct): several people per client in `client_contacts` (role, email, phone, one main contact,
   seeded from the SSA list); header shows the main one. `src/core/contacts.js`. Design `2026-10-09-client-contacts-design.md`.
-- Client page › **Activity** (9 Oct): log notes/calls/emails/meetings/visits with an optional follow-up date (`client_activity`);
-  due follow-ups appear in Overview › Today › Needs attention and open the client's Activity tab. `src/core/activity.js`.
-  Design `2026-10-09-client-activity-design.md`.
-  Since 12 Oct a follow-up date makes a task (see Tasks); `client_activity.follow_up_*` is no longer read or written.
+- Client page › **Activity** (9 Oct): log notes/calls/emails/meetings/visits (`client_activity`). `src/core/activity.js`.
+  Design `2026-10-09-client-activity-design.md`. Since 12 Oct a follow-up date makes a task (see Tasks), shown in
+  Overview › Today › Needs attention; `client_activity.follow_up_*` is no longer read or written.
 - Client page › **Details & contacts / Emails** (10 Oct): address + postcode map (postcodes.io → OpenStreetMap embed), office
   number as `tel:+44…` (VoxOne dials; a click readies a call log with duration), website, visiting notes (no passwords/codes);
   Emails tab = read-only Graph search of your mailbox, the rest of the team's (`TEAM_MAILBOXES`; needs Read and manage on
