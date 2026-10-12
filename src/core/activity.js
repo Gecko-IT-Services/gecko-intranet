@@ -50,13 +50,10 @@ export function cleanActivity(input, clientName, today) {
     ...(happened ? { happened_at: happened } : {}), duration_min: mins || null, direction } };
 }
 
-/** This client's activity, newest first; open follow-ups (soonest first) separately. */
+/** This client's activity, newest first. (Follow-ups are tasks since 12 Oct: core/tasks.js.) */
 export function timeline(all, clientName) {
-  const mine = (all || []).filter(a => sameClient(a.client_name, clientName));
-  const open = mine.filter(a => a.follow_up_on && !a.follow_up_done_at).sort((a, b) => day(a.follow_up_on).localeCompare(day(b.follow_up_on)));
   const when = a => String(a.happened_at || a.created_at || '');
-  const items = mine.slice().sort((a, b) => when(b).localeCompare(when(a)));
-  return { open, items };
+  return { items: (all || []).filter(a => sameClient(a.client_name, clientName)).sort((a, b) => when(b).localeCompare(when(a))) };
 }
 
 /** "15 min", "1 h 5 min" (calls and meetings). */
@@ -73,13 +70,6 @@ export function dueText(due, today) {
   if (n === 1) return 'tomorrow';
   if (n > 1) return `in ${n} days`;
   return `${-n} day${n === -1 ? '' : 's'} overdue`;
-}
-
-/** Follow-ups due by today (not done), soonest first, with how late they are: for Overview › Today. */
-export function dueFollowUps(all, today) {
-  return (all || []).filter(a => a.follow_up_on && !a.follow_up_done_at && day(a.follow_up_on) <= today)
-    .map(a => ({ ...a, late: daysBetween(day(a.follow_up_on), today) }))
-    .sort((a, b) => day(a.follow_up_on).localeCompare(day(b.follow_up_on)) || String(a.client_name).localeCompare(String(b.client_name)));
 }
 
 /** When the client was last in touch (a call, email, meeting or visit), for the client header. */

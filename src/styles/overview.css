@@ -58,18 +58,18 @@
 #section-overview .ovw-attn strong { display: block; font-size: 14px; color: var(--white); font-weight: 600; }
 #section-overview .ovw-attn p { margin: 2px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; overflow-wrap: anywhere; }
 /* Row buttons look exactly like .btn.btn-sm (the markup is index.html's). */
-#section-overview :is(.ovw-attn button:not(.client-link), .ovw-me-acts button) {
+#section-overview :is(.ovw-attn button:not(.client-link, .tk-title), .ovw-me-acts button) {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 30px; padding: 5px 12px; border-radius: var(--radius-pill);
   border: 1px solid var(--border-dim); background: var(--panel); color: var(--white);
   font: 500 12px/1.2 var(--font-body); white-space: nowrap; cursor: pointer;
   transition: background-color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
-#section-overview :is(.ovw-attn button:not(.client-link), .ovw-me-acts button):hover {
+#section-overview :is(.ovw-attn button:not(.client-link, .tk-title), .ovw-me-acts button):hover {
   background: var(--card-hover); border-color: var(--border); color: var(--white);
 }
-#section-overview :is(.ovw-attn button:not(.client-link), .ovw-me-acts button):focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-#section-overview :is(.ovw-attn button:not(.client-link), .ovw-me-acts button):disabled { opacity: .5; cursor: not-allowed; }
+#section-overview :is(.ovw-attn button:not(.client-link, .tk-title), .ovw-me-acts button):focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+#section-overview :is(.ovw-attn button:not(.client-link, .tk-title), .ovw-me-acts button):disabled { opacity: .5; cursor: not-allowed; }
 #section-overview .ovw-clear { padding: 22px 18px; display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 13px; }
 #section-overview .ovw-clear.art::before { width: 64px; height: 64px; margin: 0; flex: none; }
 #section-overview .ovw-warn-line { margin: 0; padding: 10px 18px; font-size: 12px; color: var(--amber); border-top: 1px solid var(--border-dim); }
@@ -117,6 +117,9 @@
   #section-overview .ovw-bar > i, #section-overview .ovw-hist-bar, #section-overview .ovw-attn li { animation: none; }
 }
 
+/* A redraw caused by tasks changing (a tick, Undo, a switch) is not an arrival: nothing replays its entrance. */
+#section-overview .ovw-pane.still, #section-overview .ovw-pane.still * { animation: none; }
+
 /* Phones: index.html's phone rules stack the KPI panel one per row (!important); left as is. */
 @media (max-width: 1100px) {
   #section-overview .ovw-kpis.ovw-money { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -126,7 +129,7 @@
 }
 @media (max-width: 520px) {
   #section-overview .ovw-attn li { grid-template-columns: 10px minmax(0, 1fr); }
-  #section-overview .ovw-attn button:not(.client-link) { grid-column: 2; justify-self: start; }
+  #section-overview .ovw-attn button:not(.client-link, .tk-title) { grid-column: 2; justify-self: start; }
   #section-overview .ovw-hist { gap: 6px; padding: 10px 12px 0; }
   #section-overview .ovw-hist-col .t { font-size: 10px; }
 }

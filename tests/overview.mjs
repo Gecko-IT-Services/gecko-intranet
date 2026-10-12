@@ -125,20 +125,31 @@ assert.equal(late.goingOut.value, 75);
 
 console.log('overview: all tests passed');
 
-// Follow-ups due (client page › Activity, 9 Oct)
+// Tasks in Needs attention (12 Oct; they replaced client follow-ups)
 {
   const { attention } = await import('../src/core/overview.js');
-  const fu = [
-    { client_name: 'Cowan Consultancy', body: 'Quote for 3 Hornet licences', contact_name: 'Chris', follow_up_on: '2026-10-08', follow_up_done_at: null },
-    { client_name: 'Technix', body: 'Chase server decision', contact_name: '', follow_up_on: '2026-09-28', follow_up_done_at: null },
-    { client_name: 'Later Ltd', body: 'Not yet', follow_up_on: '2026-10-20', follow_up_done_at: null },
-    { client_name: 'Done Ltd', body: 'Done', follow_up_on: '2026-10-01', follow_up_done_at: '2026-10-02T09:00:00Z' }
+  const T = (id, o) => ({ id, title: 't' + id, note: '', client_name: '', assigned_to: 'Jack', assigned_by: 'Jack', seen_at: '2026-10-01T09:00:00Z', due_on: '2026-10-08', done_at: null, ...o });
+  const tasks = [
+    T(1, { title: 'Quote for 3 Hornet licences', client_name: 'Cowan Consultancy', note: 'Chris asked' }),
+    T(2, { title: 'Chase server decision', client_name: 'Technix', due_on: '2026-09-28' }),
+    T(3, { title: 'Set up laptop', due_on: '2026-10-20', assigned_by: 'Philip', seen_at: null }),
+    T(4, { title: 'Later', due_on: '2026-10-20' }),
+    T(5, { title: 'Done', done_at: '2026-10-02T09:00:00Z' }),
+    T(6, { title: 'Philip’s own', assigned_to: 'Philip', assigned_by: 'Philip' })
   ];
-  const items = attention({ followUps: fu }, '2026-10-08').filter(i => i.key === 'follow_up');
-  assert.deepEqual(items.map(i => [i.level, i.title]), [['red', 'Follow up Technix (10 days overdue)'], ['amber', 'Follow up Cowan Consultancy today']]);
-  assert.equal(items[1].detail, 'Quote for 3 Hornet licences · with Chris');
-  assert.deepEqual(items[1].go, { section: 'client', tab: 'activity', client: 'Cowan Consultancy' });
-  console.log('overview: follow-ups ok');
+  const mine = attention({ tasks, me: 'Jack' }, '2026-10-08');
+  assert.deepEqual(mine.map(i => [i.key, i.level, i.title]), [['task', 'red', 'Chase server decision'], ['task', 'new', 'Set up laptop'], ['task', 'amber', 'Quote for 3 Hornet licences']]);
+  assert.deepEqual([mine[2].who, mine[2].detail, mine[2].task.id], ['Cowan Consultancy', 'Chris asked', 1], 'the client is linked, the note is the detail, the row carries its task');
+  assert.equal(attention({ tasks, me: 'Jack', everyone: true }, '2026-10-08').length, 4, 'everyone adds Philip’s');
+  assert.deepEqual(attention({ tasks: null, me: 'Jack' }, '2026-10-08'), [], 'tasks not read: no rows (the page says "Not checked")');
+  assert.deepEqual(attention({ followUps: [{ client_name: 'X', body: 'old', follow_up_on: '2026-10-01', follow_up_done_at: null }] }, '2026-10-08'), [], 'client follow-ups are no longer read');
+  // Tasks mixed with rows from other sources: red, then new handoffs, then amber, then info; tasks lead each colour.
+  const mixed = attention({ tasks, me: 'Jack',
+    ssa: [{ name: 'Out Ltd', remaining: 0 }],
+    leave: [{ person: 'Philip', start: '2026-10-20', end: '2026-10-21', status: 'Pending' }],
+    journeys: [{ date: '2026-09-10', amount: 9, claimedDate: '' }] }, '2026-10-08');
+  assert.deepEqual(mixed.map(i => [i.level, i.key]), [['red', 'task'], ['red', 'ssa'], ['new', 'task'], ['amber', 'task'], ['amber', 'leave'], ['info', 'mileage']]);
+  console.log('overview: tasks ok');
 }
 
 // Sharper pipeline on Overview (9 Oct)

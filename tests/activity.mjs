@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { cleanActivity, timeline, dueText, dueFollowUps, lastContact, followUpChoices } from '../src/core/activity.js';
+import { cleanActivity, timeline, dueText, lastContact, followUpChoices } from '../src/core/activity.js';
 
 const today = '2026-10-08';   // Thursday
 assert.deepEqual(followUpChoices(today), [['Tomorrow', '2026-10-09'], ['Next week', '2026-10-12'], ['In 2 weeks', '2026-10-22'], ['In a month', '2026-11-07']]);
@@ -21,13 +21,12 @@ const all = [
 ];
 const t = timeline(all, 'Cowan Consultancy');
 assert.deepEqual(t.items.map(a => a.id), [2, 3, 1], 'newest first, any spelling');
-assert.deepEqual(t.open.map(a => a.id), [1, 2], 'open follow-ups, soonest first; done ones left out');
+assert.equal('open' in t, false, 'follow-ups are tasks now (tests/tasks.mjs)');
 assert.equal(dueText('2026-10-08', today), 'today');
 assert.equal(dueText('2026-10-09', today), 'tomorrow');
 assert.equal(dueText('2026-10-11', today), 'in 3 days');
 assert.equal(dueText('2026-10-07', today), '1 day overdue');
 assert.equal(dueText('2026-10-06', today), '2 days overdue');
-assert.deepEqual(dueFollowUps(all, today).map(a => [a.id, a.late]), [[1, 2], [2, 0]], 'due by today only, not done, not future');
 assert.deepEqual(lastContact(t.items), { kind: 'call', at: '2026-10-07', by: 'Philip', with: 'Chris' });
 assert.equal(lastContact([{ kind: 'note', created_at: '2026-10-01' }]), null, 'a note is not contact');
 
