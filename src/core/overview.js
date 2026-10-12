@@ -13,7 +13,8 @@ export const LOW_SSA_HOURS = 2;       // the Timesheets "at risk" line
 export const STALE_SYNC_HOURS = 3;    // the sync runs hourly; three missed runs is worth saying
 const DRAFTS = new Set(['DRAFT', 'SUBMITTED']);
 
-import { dueFollowUps, dueText } from './activity.js';
+import { dueText } from './activity.js';
+import { groups } from './tasks.js';
 import { dealState } from './opportunities.js';
 const round2 = n => Math.round((Number(n) || 0) * 100) / 100;
 const num = v => (v == null || v === '' ? 0 : Number(v) || 0);
@@ -81,6 +82,9 @@ export function attention(d, today, now = new Date()) {
   const money2 = v => '£' + round2(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const plural = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 
+  // Tasks (12 Oct): red, new handoffs and due ones. They lead the list; the page draws them with a tick.
+  if (d.tasks) for (const t of groups(d.tasks, d.me || '', today, !!d.everyone).now) out.push({ key: 'task', level: t.level, title: t.title, detail: t.note || '', who: t.client_name || '', task: t });
+
   const x = d.xero;
   if (x && !x.connected) add('xero', 'red', 'Xero isn’t connected', 'Sales, owed and job matching need it.', { section: 'jobs', tab: 'xero' });
   else if (x && x.last_sync_ok === false) add('xero', 'red', 'The last Xero sync failed', x.last_error || 'No error message.', { section: 'jobs', tab: 'xero' });
@@ -115,17 +119,6 @@ export function attention(d, today, now = new Date()) {
     const late = d.jobs.filter(j => (j.status === 'agreed' || j.status === 'in_progress') && j.target_date && day(j.target_date) < today);
     if (late.length) add('late_jobs', 'amber', `${plural(late.length, 'job')} past its target date`,
       names(late.map(j => `${j.client_name}: ${j.title}`)), { section: 'jobs', tab: 'jobs' });
-  }
-
-  if (d.followUps) {
-    // Client follow-ups due (client page › Activity): one line each, oldest first; overdue by a week is red.
-    const due = dueFollowUps(d.followUps, today);
-    for (const f of due.slice(0, 5)) {
-      add('follow_up', f.late > 7 ? 'red' : 'amber', `Follow up ${f.client_name}${f.late ? ` (${dueText(f.follow_up_on, today)})` : ' today'}`,
-        `${f.body}${f.contact_name ? ` · with ${f.contact_name}` : ''}`, { section: 'client', tab: 'activity', client: f.client_name });
-    }
-    if (due.length > 5) add('follow_up_more', 'amber', `${plural(due.length - 5, 'more follow-up')} due`,
-      names(due.slice(5).map(f => f.client_name)), { section: 'client', tab: 'activity', client: due[5].client_name });
   }
 
   if (d.opps) {
