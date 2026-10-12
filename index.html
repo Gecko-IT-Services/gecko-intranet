@@ -5528,6 +5528,11 @@ function geckoGo(section, tab, clientName) {
     tshTab(tab);
     if (clientName && tab === 'log') tshPreselect(clientName);
   }
+  else if (section === 'overview' && tab !== OVW.tab && ['today', 'week', 'monthend', 'business'].includes(tab)) {
+    OVW.dir = window.GeckoTabs ? window.GeckoTabs.direction(['today', 'week', 'monthend', 'business'], OVW.tab, tab) : '';
+    OVW.tab = tab;
+    ovwRenderAll();
+  }
 }
 
 /* The older tab strips (Timesheets, Mileage) keep their panels in the page: the one being shown

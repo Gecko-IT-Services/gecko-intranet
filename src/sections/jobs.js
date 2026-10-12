@@ -954,6 +954,25 @@ function addFromHeader() {
   f?.focus({ preventScroll: true });
 }
 
+/** From elsewhere (quick find): the whiteboard with one job picked, the same as clicking its sticky. */
+export function open(id) {
+  JOB.selected = Number(id);
+  JOB.stage = null;
+  if (JOB.tab !== 'jobs') { show('jobs'); return; }
+  if (JOB.loading) return;                       // load() draws when it finishes, with the job picked
+  render();
+  els('jobWrap')?.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' });
+}
+
+/** From elsewhere (quick find): the Add a job form, also while Jobs is still loading (it shows once loaded). */
+export function add() {
+  JOB.addStage = 'quoted'; JOB.addingIdea = false; JOB.adding = true;
+  if (JOB.tab !== 'jobs') { show('jobs'); return; }
+  if (JOB.loading || JOB.error) return;
+  render();
+  els('jobWrap')?.querySelector('[data-job-form="new"] [name="client_name"]')?.focus();
+}
+
 /** Arrow keys move along the tab strip (ARIA tabs pattern). */
 const onKey = event => {
   const st = event.target.closest?.('.job-sticky[data-job-act="pick"]');

@@ -152,4 +152,13 @@ for (const { label, open } of PAGES) {
 }
 assert.equal(new Set(PAGES.map(p => p.label)).size, PAGES.length, 'no page listed twice');
 
+// The ways in that quick find calls exist (each does what a click on the thing already does)
+{
+  const { ICONS } = await import('../src/core/icons.js');
+  for (const name of ['search', 'building', 'user', 'briefcase', 'file', 'clock', 'check', 'right', 'plus']) assert.ok(ICONS[name], `icon "${name}" exists`);
+  const tasks = await import('../src/sections/tasks.js'), jobs = await import('../src/sections/jobs.js'), opps = await import('../src/sections/opportunities.js');
+  for (const [mod, fn] of [[tasks, 'openTask'], [tasks, 'newTask'], [jobs, 'open'], [jobs, 'add'], [opps, 'open'], [opps, 'openProspect']]) assert.equal(typeof mod[fn], 'function', `${fn} is exported`);
+  assert.ok(/else if \(section === 'overview'/.test(html), 'geckoGo switches Overview tabs');
+}
+
 console.log('find: all tests passed');

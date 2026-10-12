@@ -55,6 +55,7 @@ const OPP = {
   view: 'board',           // pipeline: board (the whiteboard) or list; remembered per browser, read in init
   gapView: 'map',          // Gaps: map (clients × products) or list (client cards); remembered per browser
   selected: null,          // the board sticky whose full deal shows under the board
+  found: null,             // a prospect opened from quick find: outlined and scrolled to on the next draw
   dragging: ''
 };
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -503,6 +504,9 @@ function render() {
   mount.innerHTML = (OPP.feedNote ? `<p class="opp-note">${escapeHtml(OPP.feedNote)}</p>` : '') + progressHtml() +
     (OPP.tab === 'gaps' ? gapsHtml() : OPP.tab === 'pipeline' ? pipelineHtml() : OPP.tab === 'prospects' ? prospectsHtml() : OPP.tab === 'voip' ? dealerHtml() : productsHtml());
   syncTableLabels(mount);
+  // A prospect opened from quick find: bring its card into view (it stays outlined until the next redraw).
+  const found = OPP.found && mount.querySelector('.opp-prospect.found');
+  if (found) { found.scrollIntoView({ block: 'center' }); OPP.found = null; }
 }
 
 function renderKpis() {
@@ -864,7 +868,7 @@ function prospectsHtml() {
     const due = p.follow_up_on && P_OPEN.includes(p.stage) ? dueText(p.follow_up_on, t) : '';
     // Same colours as the pipeline and Overview: amber when due, red once more than a week late.
     const late = p.follow_up_on && (Date.parse(t) - Date.parse(String(p.follow_up_on).slice(0, 10))) > 7 * 86400000;
-    return `<article class="opp-prospect st-${escapeHtml(p.stage)}">
+    return `<article class="opp-prospect st-${escapeHtml(p.stage)}${OPP.found === p.id ? ' found' : ''}">
       <div class="opp-prospect-main">
         <div class="opp-prospect-top"><strong>${escapeHtml(p.company)}</strong><span class="badge${({ meeting: ' badge-amber', proposal: ' badge-amber', won: ' badge-green' })[p.stage] || ''}">${escapeHtml(P_LABEL[p.stage] || p.stage)}</span></div>
         <div class="opp-prospect-who">${[p.contact_name && escapeHtml(p.contact_name), p.email && `<a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a>`, p.phone && `<a href="tel:${escapeHtml(p.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(p.phone)}</a>`].filter(Boolean).join(' · ') || '<span class="opp-muted">No contact yet</span>'}</div>
@@ -1157,6 +1161,20 @@ function onKeydown(event) {
 export function show(tab) {
   if (!tab || !['gaps', 'pipeline', 'prospects', 'voip', 'products'].includes(tab)) return;
   OPP.tab = tab;
+  if (!OPP.loading) render();
+}
+
+/** From elsewhere (quick find): the pipeline board with one deal picked, the same as clicking its sticky. */
+export function open(id) {
+  OPP.tab = 'pipeline'; OPP.view = 'board'; OPP.selected = Number(id);
+  if (OPP.loading) return;                       // load() draws when it finishes, with the deal picked
+  render();
+  els('oppWrap')?.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' });
+}
+
+/** From elsewhere (quick find): the Prospects tab, scrolled to one prospect and outlined until the next redraw. */
+export function openProspect(id) {
+  OPP.tab = 'prospects'; OPP.prospectView = 'all'; OPP.prospectEdit = null; OPP.found = Number(id);
   if (!OPP.loading) render();
 }
 
