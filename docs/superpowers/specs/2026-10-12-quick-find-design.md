@@ -36,7 +36,7 @@ Up to five results per group, groups in this order.
 | Pages | page and tab names | "Clients › Licences" | that page on that tab |
 | Actions | the action's words | "Log time" | Log time: Timesheets › Log time. Add task: the task dialog. Add a job: Jobs with the add form open |
 | Invoices | invoice number, contact, reference | number · contact · date · total · paid / due / overdue / draft | that client › Invoices |
-| Timesheet entries | title, work description | description · date · engineer · hours | that client › Support hours |
+| Timesheet entries | title, work description | description · client · date · engineer · hours | that client › Support hours |
 
 Timesheet entries are work only: deleted entries and System entries (renewal credits, adjustments) are left
 out, as Weekly Summary leaves them out. Internal notes are not searched or shown.
