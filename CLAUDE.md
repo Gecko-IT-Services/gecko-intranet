@@ -207,6 +207,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   is missing). A new action is one entry in `ACTIONS` plus its line in `openRow`.
 - Opening a result uses `geckoGo` (which also switches Overview's tabs now) and the hooks `jobs.open(id)` / `jobs.add()`,
   `opportunities.open(id)` / `openProspect(id)`, `tasks.openTask(id)` / `newTask()`.
+- Motion (12 Oct): the two native dialogs (a task, quick find) rise in and fade out like the older pop-ups (`system.css` §7);
+  quick find's selection is one sliding tint (`.qf-ink`, placed by `select()`), and late results fade in (`.qf-arrive`).
 - Left out on purpose: recent items, typo tolerance, searching notes, activity or emails (reasons in the design note).
 
 ## Ask Gecko HQ (built and removed 11 Oct 2026)

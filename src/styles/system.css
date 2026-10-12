@@ -202,6 +202,15 @@
 #app :is(.prf-modal, .mil-modal, .cli-modal, .tsh-modal, .lev-modal, .alr-modal) {
   animation: gk-rise var(--dur-3) var(--ease) both;
 }
+/* The native dialogs (a task, quick find) arrive the same way. Where the browser can keep a closing dialog on
+   screen (allow-discrete), they also fade out, a little faster than they came; elsewhere they close at once. */
+#app :is(.tk-dialog, .qf-dialog), #app :is(.tk-dialog, .qf-dialog)::backdrop {
+  opacity: 0;
+  transition: opacity var(--dur-1) var(--ease), overlay var(--dur-1) allow-discrete, display var(--dur-1) allow-discrete;
+}
+/* `backwards`, not `both`: an animation that is still filling when the dialog closes stops the fade-out from starting. */
+#app :is(.tk-dialog, .qf-dialog)[open] { opacity: 1; animation: gk-rise var(--dur-3) var(--ease) backwards; }
+#app :is(.tk-dialog, .qf-dialog)[open]::backdrop { opacity: 1; animation: gk-fade var(--dur-2) var(--ease) backwards; }
 
 /* Expanding a <details> opens smoothly where the browser can size to auto. */
 @supports (interpolate-size: allow-keywords) {
@@ -598,15 +607,21 @@ svg.ic { vertical-align: -.15em; }
 #app .qf-close { display: none; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; margin-right: -8px; padding: 0; border: 0; background: transparent; color: var(--muted); border-radius: var(--radius-sm); cursor: pointer; }
 #app .qf-kbd { padding: 3px 6px; border: 1px solid var(--border-dim); border-radius: 6px; font: 500 11px/1 var(--font-mono); color: var(--faint); white-space: nowrap; }
 
-#app .qf-list { max-height: min(56dvh, 440px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 6px; }
-#app .qf-list:empty { display: none; }
+#app .qf-list { position: relative; isolation: isolate; max-height: min(56dvh, 440px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 6px; }
+#app .qf-list:has(#qfList:empty) { display: none; }
+/* The selection is one tint that slides from row to row (as the tab strips' ink does); find.js places it. */
+#app .qf-ink {
+  position: absolute; z-index: -1; left: 0; right: 0; top: 0; height: 0; background: var(--green-glow); pointer-events: none;
+  transition: transform var(--dur-1) var(--ease), height var(--dur-1) var(--ease);
+}
+/* Results that arrive after the box is showing (the lists on first open, invoices and timesheet entries as you type) fade in. */
+#app .qf-arrive { animation: gk-fade var(--dur-2) var(--ease) both; }
 #app .qf-group { padding: 10px 16px 4px; font: 500 12px/1.2 var(--font-body); color: var(--faint); }
 #app .qf-row { display: flex; align-items: center; gap: 12px; min-height: 38px; padding: 6px 16px; cursor: pointer; }
 #app .qf-row .ic { flex: none; color: var(--faint); }
 #app .qf-text { flex: 1; min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 #app .qf-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 14px/1.35 var(--font-body); color: var(--white); }
 #app .qf-sub { flex: 0 1 auto; min-width: 0; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1.35; color: var(--muted); }
-#app .qf-row[aria-selected="true"] { background: var(--green-glow); }   /* card-hover alone is nearly white on white in the light theme */
 #app .qf-row[aria-selected="true"] .ic { color: var(--green); }
 #app .qf-empty { margin: 0; padding: 18px 16px; font-size: 13px; color: var(--muted); }
 

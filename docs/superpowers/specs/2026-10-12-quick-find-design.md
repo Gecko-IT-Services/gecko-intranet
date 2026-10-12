@@ -27,6 +27,20 @@ result. Opening a result closes the box.
 With nothing typed it lists the three actions and one line: "Type to find a client, person, job, task,
 invoice or timesheet entry."
 
+## Motion
+Jack, 12 Oct, once it was live: "nice animations please". It follows the app's one clock
+(`2026-10-10-icons-and-motion-design.md`): tokens only, nothing decorative, nothing that makes typing wait.
+- **Arriving**: the box rises into place and its backdrop fades in, exactly as the older pop-ups do
+  (`gk-rise`, `gk-fade` in `system.css` §7). The task dialog now does the same; it used to snap.
+- **Leaving**: both dialogs fade out, a little faster than they came, where the browser can keep a closing
+  dialog on screen (`allow-discrete`); elsewhere they close at once.
+- **The selection slides**: one tint moves from row to row under the arrow keys or the pointer, as the tab
+  strips' ink does. It is one element that find.js moves, not a background on each row.
+- **Late results fade in**: the lists on first open, and invoices and timesheet entries when the database
+  answers. Rows that were already there are never re-animated, so typing stays still.
+- Not animated on purpose: rows as you type (it would flicker on every key), and the task rows on Overview.
+- `prefers-reduced-motion` is honoured by the app's global rule.
+
 ## What it finds
 Up to five results per group, groups in this order.
 
