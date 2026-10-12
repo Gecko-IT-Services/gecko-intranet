@@ -522,11 +522,11 @@ svg.ic { vertical-align: -.15em; }
 }
 #app .tk-more:hover { color: var(--white); }
 /* A narrow list (a phone, or Overview's card beside This week): the title takes the whole line beside the tick;
-   badge, initial and due date wrap under it, in the title's column. */
+   badge, initial and due date are forced under it, in the title's column (#app: it must outrank `#app .tk-main`). */
 #app :is(.ovw-attn, .tk-list) { container-type: inline-size; }
 @container (max-width: 480px) {
-  .tk-tick ~ .tk-main { flex-basis: calc(100% - 30px); }
-  .tk-tick ~ .tk-main + * { margin-left: 30px; }
+  #app .tk-tick ~ .tk-main { flex-basis: calc(100% - 30px); }
+  #app .tk-tick ~ .tk-main + * { margin-left: 30px; }
 }
 /* Touch: the shell's 44px floor and 22px / 11px-margin checkbox rule (index.html §5) would stretch the title and push the
    tick in. The tick keeps its ::before reach; the title takes a taller hit area from padding it gives back as margin. */
