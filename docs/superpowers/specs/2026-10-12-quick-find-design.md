@@ -10,13 +10,15 @@ on hold; this note says "Jobs".
 
 ## Opening it
 - **⌘K** (Ctrl+K on Windows) from anywhere in the app, including while typing in a field. It does nothing
-  when signed out or while another dialog (the task dialog) is open.
+  when signed out or while another dialog is open (the task dialog, or one of the older pages' pop-ups). On a
+  Mac only ⌘K opens it: Ctrl+K in a text field keeps its own meaning there.
 - A **Find** row at the top of the sidebar, above Home, with the shortcut shown beside it.
 - On the phone, a search button in the top bar beside the menu button.
 
 ## The box
 A native `<dialog>` in the top third of the screen (not centred, so results grow downwards without the box
-jumping), 560px wide, full width on a phone. One text field; results underneath in groups with a small
+jumping), 560px wide, full width on a phone. On a phone it has a close button (there is no Esc key) and its
+list is sized to the part of the screen the keyboard leaves visible. One text field; results underneath in groups with a small
 heading each. The first result is selected (a green tint; no side stripe, as the design system rules). **↑ ↓**
 move through every result across groups, and so does the pointer: there is one selection, not a separate
 hover. **Enter** opens the selected one, **Esc** or a click outside the box closes it. A click or tap opens a
@@ -31,7 +33,7 @@ Up to five results per group, groups in this order.
 | Group | Matches on | The row shows | Opening it |
 | --- | --- | --- | --- |
 | Clients | client name | name | the client's page |
-| People | contact name, email | name · client · role | that client › Details & contacts |
+| People | contact name, email, their client's name | name · client · role | that client › Details & contacts |
 | Jobs and deals | title, client | title · client · "job" or "deal", stage · value | an open job: Jobs board with it picked. An open deal: Opportunities › Pipeline with it picked. One that is finished (invoiced, won, lost): that client's Jobs or Opportunities tab |
 | Prospects | company, contact name | company · contact · stage | Opportunities › Prospects, scrolled to it |
 | Tasks | title, note, client | title · client · who · due | the task dialog |
@@ -73,8 +75,14 @@ Two kinds, because two of the lists are large and grow for ever.
 Pages and actions are a fixed list in the code. A test checks that every page it lists exists in
 `index.html`, so the list cannot quietly go stale when a tab is added or removed.
 
-What is typed is tidied before it is sent to the database: only letters, digits, spaces and `- . @ &` are
-kept, so nothing typed can alter the database filter. Access is unchanged: staff only, by the existing rules.
+What is typed is tidied before it is sent to the database: it is split into words of letters and digits only
+(at most four, 40 characters each), so nothing typed can alter the database filter. Access is unchanged:
+staff only, by the existing rules.
+
+An invoice or timesheet row opens the client's Invoices or Support hours tab, which show the most recent ones
+(12 invoices, 15 entries). An older one found here may not be on that list; the row itself already shows its
+number, date and amount, or the work, date and hours. `ponytail:` open the invoice in Xero, or scroll to the
+entry, when that is missed.
 
 ## When things go wrong
 - **The lists have not arrived yet**: actions and pages work at once; a line says "Loading clients, jobs and
@@ -82,7 +90,7 @@ kept, so nothing typed can alter the database filter. Access is unchanged: staff
 - **One list fails to load**: the rest are searched, and a line at the foot names it: "Not searched: jobs
   (reason)". A failed list never reads as "no matches", and it is read again the next time the box opens
   rather than after five minutes.
-- **The invoice or timesheet search fails**: that group shows "Invoices could not be searched: reason".
+- **The invoice or timesheet search fails**: the foot says "Invoices could not be searched: reason".
 - **Not connected to the database**: pages and actions still work; the foot says to connect.
 - **Nothing matches**: "Nothing matches “xyz”." Only shown when every list was searched; if something was
   not, the foot line is shown as well.
@@ -92,14 +100,16 @@ kept, so nothing typed can alter the database filter. Access is unchanged: staff
   ranking and grouping (`search(index, query)`), tidying text for the database, and an invoice's state.
 - `src/sections/find.js`: the dialog, reading the lists, the two database searches, the keyboard, and
   opening a result through `geckoGo` / `openClient`. Registered as `window.GeckoFind` with `open()`.
-- Small additions so a result can be opened: `open(id)` exported by `sections/jobs.js` and
-  `sections/opportunities.js` (pick that card, the same as clicking it), `openTask(id)` by
-  `sections/tasks.js`, and an "add" hook in Jobs for the Add a job action.
+- Small additions so a result can be opened: `open(id)` and `add()` exported by `sections/jobs.js`, `open(id)`
+  and `openProspect(id)` by `sections/opportunities.js` (pick that card, the same as clicking it; it is scrolled
+  into view once drawn, also when the page had never been opened), `openTask(id)` and `newTask()` by
+  `sections/tasks.js`, and `geckoGo('overview', tab)` now switches Overview's tabs.
 - `src/styles/system.css` "11 · Quick find": it belongs to the shell, not to a section. Existing tokens,
-  `icon()` for the group icons (a `search` icon joins `src/core/icons.js`), and the listbox pattern for
+  `icon()` for the group icons (search, building, user, briefcase, file and clock join `src/core/icons.js`), and the listbox pattern for
   screen readers (`role="combobox"` on the field, `role="listbox"` / `option` on the results,
   `aria-activedescendant`).
-- `index.html`: the Find row in the one `.sidebar` block, the top-bar button, and the ⌘K listener.
+- `index.html`: the Find row in the one `.sidebar` block and the top-bar button. The ⌘K listener is in
+  `sections/find.js` `init()`.
 
 ## Not now
 - Recently opened items when nothing is typed.
