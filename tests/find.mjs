@@ -77,16 +77,23 @@ assert.deepEqual(search(null, 'harb', today), [], 'nothing loaded: nothing found
 assert.deepEqual(search({ clients: null, jobs: null }, 'overview today', today).map(x => x.key), ['pages'], 'a list that did not load is skipped');
 const many = { clients: Array.from({ length: 9 }, (_, i) => 'Acme ' + i) };
 assert.equal(search(many, 'acme', today)[0].rows.length, PER_GROUP);
+assert.equal(search(index, 'job', today).some(x => x.key === 'jobs'), false, 'the words "job" and "deal" in a row\'s supporting text are not searched');
+assert.equal(search(index, 'proposed', today).some(x => x.key === 'jobs'), false, 'nor is the stage');
+assert.deepEqual(search({ tasks: [{ id: 1, title: 'No date', client_name: '', assigned_to: 'Jack', due_on: null, done_at: null }] }, 'date', today)[0].rows[0].sub, 'Jack', 'a task with no date shows no date, never NaN');
 
 // What is sent to the database
 assert.deepEqual(remoteWords('  INV-0131, (harbour) 50% _x_ '), ['inv-0131', 'harbour', '50', 'x']);
 assert.deepEqual(remoteWords('a b c d e f'), ['a', 'b', 'c', 'd']);
 assert.deepEqual(remoteWords('- -- %'), []);
+assert.equal(remoteWords('x'.repeat(100))[0].length, 40, 'a word is cut to 40 characters');
 assert.equal(remoteReady('ha'), false);
 assert.equal(remoteReady('har'), true);
 assert.equal(remoteReady('13'), true, 'two digits are enough for an invoice number');
 assert.equal(remoteReady('a b'), false);
 assert.equal(remoteReady('%%%'), false);
+assert.equal(remoteReady('ab cd'), false, 'one word must be long enough, not the words added together');
+assert.equal(remoteReady('a--'), false, 'hyphens do not count');
+assert.equal(remoteReady('1 3'), false);
 
 // Invoices
 assert.equal(invoiceState({ status: 'PAID', amount_due: 0 }, today), 'paid');
@@ -106,6 +113,7 @@ assert.deepEqual(invoiceRows(inv, 'harbour', today), [{ title: 'INV-0142', sub: 
 assert.deepEqual(invoiceRows(inv, 'laptop', today).map(r => r.title), ['INV-0131'], 'found by its reference');
 assert.deepEqual(invoiceRows(inv, 'king', today), [], '"Checking" does not match "king"');
 assert.deepEqual(invoiceRows(null, 'inv', today), []);
+assert.deepEqual(invoiceRows([{ invoice_number: null, contact_name: 'Technix', reference: null, invoice_date: '2026-10-01', status: 'DRAFT', total: 1, amount_due: 1 }], 'null', today), [], 'an empty field is not the word "null"');
 
 // Timesheet entries
 const byId = new Map([['1', 'Harbour Lane Architects'], ['2', 'Technix']]);
@@ -123,6 +131,7 @@ assert.deepEqual(entryRows(entries, 'starter', byId), [
 ], 'work only, newest first; first line of the description, else the title; a client that is not known opens Timesheets');
 assert.deepEqual(entryRows(entries, 'start', byId).length, 3, '"Restarted" does not match "start"');
 assert.deepEqual(entryRows(null, 'x', byId), []);
+assert.deepEqual(entryRows([{ client_id: 1, engineer: 'Jack', entry_date: '2026-10-08', hours: 1, title: 'Onsite', work_description: null, deleted_at: null }], 'null', byId), [], 'an empty field is not the word "null"');
 
 // The pages list cannot go stale: every page and tab it names still exists in the source
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');

@@ -14,7 +14,7 @@ export const PER_GROUP = 5;        // results shown per group
 export const REMOTE_ROWS = 50;     // newest rows asked of the database per search
 export const REMOTE_MIN = 3;       // characters before the database is asked (2 when they are digits)
 
-/** The everyday actions. `go` is a page; `run` is something the page layer does. */
+/** The everyday actions. `open` says what choosing one does: a page to go to, or something the page layer runs. */
 export const ACTIONS = [
   { label: 'Log time', words: 'timesheet hours', open: { kind: 'page', section: 'timesheets', tab: 'log' } },
   { label: 'Add task', words: 'new to-do todo', open: { kind: 'action', run: 'task' } },
@@ -94,10 +94,12 @@ export function search(index, query, today) {
   const jobsAndDeals = [
     ...(ix.jobs || []).map(j => ({
       title: j.title, sub: join([j.client_name, `job, ${stageLabel(j.status).toLowerCase()}`, j.value == null ? '' : pounds(j.value)]),
+      match: j.client_name,
       open: OPEN_STAGES.has(j.status) ? { kind: 'job', id: j.id } : client(j.client_name, 'jobs')
     })),
     ...(ix.deals || []).map(d => ({
       title: d.title, sub: join([d.client_name, `deal, ${(DEAL_LABEL[d.status] || d.status || '').toLowerCase()}`, Number(d.mrr) ? pounds(d.mrr) + '/mo' : '']),
+      match: d.client_name,
       open: d.status === 'idea' || d.status === 'proposed' ? { kind: 'deal', id: d.id } : client(d.client_name, 'opportunities')
     }))
   ];
@@ -111,7 +113,7 @@ export function search(index, query, today) {
       title: p.company, sub: join([p.contact_name, PROSPECT_LABEL[p.stage] || p.stage]), match: p.contact_name, open: { kind: 'prospect', id: p.id }
     }))],
     ['tasks', 'Tasks', best((ix.tasks || []).filter(t => !t.done_at), query, t => ({
-      title: t.title, sub: join([t.client_name, t.assigned_to, dueLabel(t.due_on, today)]), match: join([t.note, t.client_name]), open: { kind: 'task', id: t.id }
+      title: t.title, sub: join([t.client_name, t.assigned_to, t.due_on ? dueLabel(t.due_on, today) : '']), match: join([t.note, t.client_name]), open: { kind: 'task', id: t.id }
     }))],
     ['pages', 'Pages', best(PAGES, query, p => ({ title: p.label, sub: '', open: p.open }))],
     ['actions', 'Actions', best(actions, query, a => a)]
@@ -119,13 +121,12 @@ export function search(index, query, today) {
   return groups.filter(([, , rows]) => rows.length).map(([key, label, rows]) => ({ key, label, rows }));
 }
 
-/** Words safe to send to the database: letters, digits and hyphens only, at most four. */
-export const remoteWords = query => String(query || '').toLowerCase().replace(/[^\p{L}\p{N}\s-]+/gu, ' ').split(/\s+/).filter(w => w.replace(/-/g, '')).slice(0, 4);
+/** Words safe to send to the database: letters, digits and hyphens only, at most four, each at most 40 characters. */
+export const remoteWords = query => String(query || '').toLowerCase().replace(/[^\p{L}\p{N}\s-]+/gu, ' ').split(/\s+/).filter(w => w.replace(/-/g, '')).map(w => w.slice(0, 40)).slice(0, 4);
 
-/** Is there enough typed to ask the database? Three characters, or two digits (an invoice number). */
+/** Is there enough typed to ask the database? One word of three characters, or of two digits (an invoice number). Hyphens do not count. */
 export function remoteReady(query) {
-  const q = remoteWords(query).join('');
-  return q.length >= REMOTE_MIN || /^\d{2,}$/.test(q);
+  return remoteWords(query).some(w => { const core = w.replace(/-/g, ''); return core.length >= REMOTE_MIN || /^\d{2,}$/.test(core); });
 }
 
 /** paid / draft / overdue / due, the same reading as the client page's Invoices tab. */
@@ -139,7 +140,7 @@ export function invoiceState(inv, today) {
 export function invoiceRows(invoices, query, today) {
   const digits = /^\d+$/.test(String(query || '').trim()) ? String(query).trim() : '';
   return (invoices || [])
-    .filter(i => (digits && String(i.invoice_number || '').endsWith(digits)) || matchLevel(query, `${i.invoice_number} ${i.contact_name}`, i.reference))
+    .filter(i => (digits && String(i.invoice_number || '').endsWith(digits)) || matchLevel(query, [i.invoice_number, i.contact_name].filter(Boolean).join(' '), i.reference || ''))
     .sort((a, b) => day(b.invoice_date).localeCompare(day(a.invoice_date)))
     .slice(0, PER_GROUP)
     .map(i => ({
@@ -157,7 +158,7 @@ export function entryRows(entries, query, clientsById) {
   const text = e => String(e.work_description || '').split('\n').find(l => l.trim())?.trim() || e.title || '';
   return (entries || [])
     .filter(e => !e.deleted_at && !/^system$/i.test(String(e.engineer || '').trim()))
-    .filter(e => matchLevel(query, `${e.title} ${e.work_description}`))
+    .filter(e => matchLevel(query, [e.title, e.work_description].filter(Boolean).join(' ')))
     .sort((a, b) => day(b.entry_date).localeCompare(day(a.entry_date)))
     .slice(0, PER_GROUP)
     .map(e => {
