@@ -17,8 +17,10 @@ on hold; this note says "Jobs".
 ## The box
 A native `<dialog>` in the top third of the screen (not centred, so results grow downwards without the box
 jumping), 560px wide, full width on a phone. One text field; results underneath in groups with a small
-heading each. The first result is selected. **↑ ↓** move through every result across groups, **Enter** opens
-the selected one, **Esc** closes. A click or tap opens a result. Opening a result closes the box.
+heading each. The first result is selected (a green tint; no side stripe, as the design system rules). **↑ ↓**
+move through every result across groups, and so does the pointer: there is one selection, not a separate
+hover. **Enter** opens the selected one, **Esc** or a click outside the box closes it. A click or tap opens a
+result. Opening a result closes the box.
 
 With nothing typed it lists the three actions and one line: "Type to find a client, person, job, task,
 invoice or timesheet entry."
@@ -58,8 +60,9 @@ Two kinds, because two of the lists are large and grow for ever.
 
 - **Read once, searched in the browser** (small): client names (`gecko_clients`, `ssa_clients`), contacts,
   jobs, deals, prospects. Read the first time the box opens, and again on opening if the last read is more
-  than five minutes old. Tasks come from `window.GeckoTasks`, which already holds them. Typing filters
-  instantly, with no request.
+  than five minutes old. Tasks come from the tasks module, which already holds them (they are only read
+  here if no page has read them yet, so opening the box never disturbs a task ticked a moment ago). Typing
+  filters instantly, with no request.
 - **Asked for as you type** (large): invoices (`xero_invoices`) and timesheet entries (`timesheet_entries`,
   1,100+ and growing). From three characters (two if they are digits), 250ms after the last keystroke, the
   database is asked for the newest 50 rows containing each word, and the same start-of-word rule is applied
@@ -77,7 +80,8 @@ kept, so nothing typed can alter the database filter. Access is unchanged: staff
 - **The lists have not arrived yet**: actions and pages work at once; a line says "Loading clients, jobs and
   tasks…".
 - **One list fails to load**: the rest are searched, and a line at the foot names it: "Not searched: jobs
-  (reason)". A failed list never reads as "no matches".
+  (reason)". A failed list never reads as "no matches", and it is read again the next time the box opens
+  rather than after five minutes.
 - **The invoice or timesheet search fails**: that group shows "Invoices could not be searched: reason".
 - **Not connected to the database**: pages and actions still work; the foot says to connect.
 - **Nothing matches**: "Nothing matches “xyz”." Only shown when every list was searched; if something was
