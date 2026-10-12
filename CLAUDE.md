@@ -147,6 +147,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Client page › **Activity** (9 Oct): log notes/calls/emails/meetings/visits with an optional follow-up date (`client_activity`);
   due follow-ups appear in Overview › Today › Needs attention and open the client's Activity tab. `src/core/activity.js`.
   Design `2026-10-09-client-activity-design.md`.
+  Since 12 Oct a follow-up date makes a task (see Tasks); `client_activity.follow_up_*` is no longer read or written.
 - Client page › **Details & contacts / Emails** (10 Oct): address + postcode map (postcodes.io → OpenStreetMap embed), office
   number as `tel:+44…` (VoxOne dials; a click readies a call log with duration), website, visiting notes (no passwords/codes);
   Emails tab = read-only Graph search of your mailbox, the rest of the team's (`TEAM_MAILBOXES`; needs Read and manage on
@@ -172,6 +173,18 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Dealer list refreshed 11 Oct from the account manager's commission sheet (`2026-10-11-dealer-list-design.md`): one row per
   service with fixed commission (£613.50/month); Cowan and MSA are VoxOne (no migration); call recording = priority VoxOne
   upgrade (Waterside, Freeston); PSTN lines raise a renewal (switch-off due 31 Jan 2027).
+
+## Tasks (from 12 Oct 2026)
+- `src/sections/tasks.js` + `src/core/tasks.js` (tests `tests/tasks.mjs`), styles `system.css` "10 · Tasks"; design note
+  `2026-10-12-tasks-design.md`. Client promises and handoffs between Philip (sells) and Jack (delivers): one line, who, a due
+  date (always), usually a client; Supabase `tasks`. Not a page: rows show in Overview › Today › Needs attention (Mine /
+  Everyone, then Later, Waiting on …, Done) and on the client page › Activity › Tasks. One row (`rowHtml`) and one native
+  `<dialog>` serve both; the classic script reaches them as `window.GeckoTasks`. Any element with `data-tk="add"` opens the
+  dialog.
+- A task given to the other person is "new" until they open or tick it (`assigned_by`, `seen_at`); the giver sees "not seen
+  yet" / "seen Mon 12 Oct" under Waiting on. Nobody is emailed (Jack's choice), so tasks are re-read on coming back to the tab.
+- Deal follow-ups and prospect chase dates are not tasks and are unchanged.
+- Left out on purpose: a board, emails, steps inside a job, repeating tasks, priorities (reasons in the design note).
 
 ## Ask Gecko HQ (built and removed 11 Oct 2026)
 - A Claude-powered question box (Edge Function `ask`) was built, then removed the same day at Philip's request: the
