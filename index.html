@@ -527,6 +527,13 @@ body {
 .sb-link:hover .ic { color: var(--sb-ink); }
 .sb-link.active .ic { color: var(--green); }
 .sb-link .lbl { flex: 1; }
+/* Find (quick find, ⌘K): the first row, with its shortcut beside it. */
+.sb-find kbd {
+  padding: 2px 6px; border: 1px solid color-mix(in srgb, var(--sb-ink) 14%, transparent); border-radius: 6px;
+  font: 500 11px/1.2 var(--font-mono); color: var(--faint);
+}
+:root[data-sidebar="collapsed"] .sb-find kbd { display: none; }
+@media (pointer: coarse) { .sb-find kbd { display: none; } }
 
 /* One row: who is signed in, and the way out. */
 .sb-foot {
@@ -564,6 +571,7 @@ body {
 
 /* — Mobile sidebar (slide-over) — */
 .sb-toggle { display: none; }
+.tb-find { display: none; }
 .sb-backdrop { display: none; }
 
 :where(button, [href], input, select, textarea):focus-visible {
@@ -720,6 +728,12 @@ body {
     background: var(--card); border: 1px solid var(--border);
     border-radius: var(--radius-sm); color: var(--white);
     font-size: 16px; cursor: pointer;
+  }
+  .tb-find {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--white); cursor: pointer;
   }
   .sidebar {
     position: fixed; left: 0; top: 0;
@@ -3751,6 +3765,9 @@ body::before {
     </div>
 
     <nav class="sb-nav" aria-label="Main navigation">
+      <button class="sb-link sb-find" type="button" data-find-open aria-keyshortcuts="Meta+K Control+K">
+        <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span><span class="lbl">Find</span><kbd data-find-kbd>⌘K</kbd>
+      </button>
       <div class="sb-nav-label">Home</div>
       <button class="sb-link active" type="button" data-section="overview" aria-current="page" onclick="navTo('overview')">
         <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21"/></svg></span><span class="lbl">Overview</span>
@@ -3808,6 +3825,7 @@ body::before {
     <div class="top-bar">
       <button class="sb-toggle" id="sbToggle" type="button" onclick="openSidebar()" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
       <h2 id="topBarTitle">OVERVIEW</h2>
+      <button class="tb-find" type="button" data-find-open aria-label="Find"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
     </div>
 
     <div id="loadingBar"></div>

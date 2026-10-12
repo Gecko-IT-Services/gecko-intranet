@@ -161,4 +161,16 @@ assert.equal(new Set(PAGES.map(p => p.label)).size, PAGES.length, 'no page liste
   assert.ok(/else if \(section === 'overview'/.test(html), 'geckoGo switches Overview tabs');
 }
 
+// The box: it loads under Node, and every icon its groups use exists
+{
+  const box = await import('../src/sections/find.js');
+  assert.deepEqual(Object.keys(box).sort(), ['init', 'open']);
+  const { ICONS } = await import('../src/core/icons.js');
+  const map = src('find.js').match(/const GROUP_ICON = \{([^}]+)\}/)[1];
+  const names = [...map.matchAll(/'([a-z-]+)'/g)].map(m => m[1]);
+  assert.ok(names.length >= 9, 'every group has an icon');
+  for (const n of names) assert.ok(ICONS[n], `group icon "${n}" exists`);
+  assert.ok(html.includes('data-find-open'), 'the sidebar and the top bar have a way to open it');
+}
+
 console.log('find: all tests passed');
