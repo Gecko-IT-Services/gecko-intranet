@@ -170,7 +170,7 @@ export function attention(d, today, now = new Date()) {
 
   // Quiet proposals are in deal_quiet above (which also respects a follow-up date still to come).
 
-  const rank = { red: 0, amber: 1, info: 2 };
+  const rank = { red: 0, new: 1, amber: 2, info: 3 };   // new = a task handed over and not opened yet
   return out.sort((a, b) => rank[a.level] - rank[b.level]);
 }
 

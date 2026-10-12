@@ -143,6 +143,12 @@ console.log('overview: all tests passed');
   assert.equal(attention({ tasks, me: 'Jack', everyone: true }, '2026-10-08').length, 4, 'everyone adds Philip’s');
   assert.deepEqual(attention({ tasks: null, me: 'Jack' }, '2026-10-08'), [], 'tasks not read: no rows (the page says "Not checked")');
   assert.deepEqual(attention({ followUps: [{ client_name: 'X', body: 'old', follow_up_on: '2026-10-01', follow_up_done_at: null }] }, '2026-10-08'), [], 'client follow-ups are no longer read');
+  // Tasks mixed with rows from other sources: red, then new handoffs, then amber, then info; tasks lead each colour.
+  const mixed = attention({ tasks, me: 'Jack',
+    ssa: [{ name: 'Out Ltd', remaining: 0 }],
+    leave: [{ person: 'Philip', start: '2026-10-20', end: '2026-10-21', status: 'Pending' }],
+    journeys: [{ date: '2026-09-10', amount: 9, claimedDate: '' }] }, '2026-10-08');
+  assert.deepEqual(mixed.map(i => [i.level, i.key]), [['red', 'task'], ['red', 'ssa'], ['new', 'task'], ['amber', 'task'], ['amber', 'leave'], ['info', 'mileage']]);
   console.log('overview: tasks ok');
 }
 
