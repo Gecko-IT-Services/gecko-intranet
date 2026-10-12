@@ -640,3 +640,23 @@ svg.ic { vertical-align: -.15em; }
   #app .qf-text { flex-direction: column; align-items: flex-start; gap: 1px; }
   #app .qf-sub { max-width: 100%; }
 }
+
+
+/* ── 12 · Change log ────────────────────────────────────────────────── */
+/* Settings › Change log (src/sections/changelog.js): merged pull requests by day, who made each, what is new to you. */
+#section-settings .chg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#section-settings .chg-filter { display: flex; gap: 6px; }
+#section-settings .chg-filter .set-seg-btn { padding: 5px 12px; }
+#section-settings .chg-body { padding: 6px 18px 12px; max-height: 460px; overflow-y: auto; }
+#section-settings .chg-body .state-error { margin: 10px 0 4px; }
+#section-settings .chg-note { margin: 12px 0 6px; color: var(--muted); font-size: 13px; }
+#section-settings .chg-day { margin: 14px 0 4px; font: 600 10px/1.4 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+#section-settings .chg-list { list-style: none; margin: 0; padding: 0; }
+#section-settings .chg-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; margin: 0 -8px; border-radius: var(--radius-sm); color: var(--white); font-size: 13px; text-decoration: none; }
+#section-settings a.chg-row:hover { background: var(--inset); }
+#section-settings .chg-title { flex: 1; min-width: 0; }
+#section-settings .chg-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 18px; border-top: 1px solid var(--border-dim); font-size: 12px; color: var(--muted); }
+#section-settings .chg-foot > span { flex: 1; min-width: 160px; }
+#section-settings .chg-stale { color: var(--amber); }
+#section-settings .chg-all { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+#section-settings .chg-all:hover { color: var(--white); }

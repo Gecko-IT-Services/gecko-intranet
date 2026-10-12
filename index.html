@@ -527,6 +527,12 @@ body {
 .sb-link:hover .ic { color: var(--sb-ink); }
 .sb-link.active .ic { color: var(--green); }
 .sb-link .lbl { flex: 1; }
+/* Something new behind this link (Settings › Change log): a dot on the icon's corner, so it shows collapsed too. */
+.sb-link.has-news .ic { position: relative; }
+.sb-link.has-news .ic::after {
+  content: ''; position: absolute; top: -3px; right: -4px;
+  width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+}
 /* Find (quick find, ⌘K): the first row, with its shortcut beside it. */
 .sb-find kbd {
   padding: 2px 6px; border: 1px solid color-mix(in srgb, var(--sb-ink) 14%, transparent); border-radius: 6px;
@@ -4833,6 +4839,11 @@ body::before {
           </div>
         </div>
 
+        <!-- What has been merged and by whom: src/sections/changelog.js (window.GeckoChangelog) -->
+        <div class="set-card" id="setChangelog">
+          <div class="set-card-head"><h3>Change log</h3></div>
+        </div>
+
         <div class="set-card">
           <div class="set-card-head"><h3>Data and sign-in</h3></div>
           <div class="set-card-body">
@@ -6197,6 +6208,7 @@ function onSignedIn() {
   document.getElementById('userRole').textContent   = email;
   document.getElementById('userAvatar').textContent = initialsFor(name);
   showPortal();
+  window.GeckoChangelog?.check();   // the dot on Settings: has the other person merged anything since you last looked?
 
   // — Auto-load Overview on landing —
   // Overview is the default section (HTML has `class="section active"` on it),
@@ -13664,6 +13676,7 @@ function renderSettings() {
   set('setProfileName', name);
   set('setProfileEmail', activeAccount?.username || '—');
   set('setAvatar', initialsFor(name));
+  window.GeckoChangelog?.render();
 }
 
 async function setFetchListItemsForBackup(siteId, listId) {

@@ -211,6 +211,16 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   quick find's selection is one sliding tint (`.qf-ink`, placed by `select()`), and late results fade in (`.qf-arrive`).
 - Left out on purpose: recent items, typo tolerance, searching notes, activity or emails (reasons in the design note).
 
+## Change log (from 12 Oct 2026)
+- `src/sections/changelog.js` + `src/core/changelog.js` (tests `tests/changelog.mjs`), styles `system.css` "12 · Change log";
+  design note `2026-10-12-change-log-design.md`. So Jack and Philip can see what the other shipped: a card on Settings listing
+  the repository's **merged pull requests** (read from GitHub's public search by the browser, no key; newest 100, kept 15
+  minutes), by day, with who (`AUTHORS`: `Gecko-IT` = Jack, `PhilipGecko99` = Philip) and a filter. The other person's changes
+  since you last opened Settings are marked New, and the sidebar's Settings link carries a green dot (`.sb-link.has-news`).
+- **The pull request title is the change log entry**: write it in plain English for the other person, one change per PR.
+- Depends on the repository staying public. Left out on purpose: PR descriptions in the app, notifications, a shared
+  "last looked" across devices (reasons in the design note).
+
 ## Ask Gecko HQ (built and removed 11 Oct 2026)
 - A Claude-powered question box (Edge Function `ask`) was built, then removed the same day at Philip's request: the
   Anthropic API is paid per question and he wants no running cost. Don't re-add without asking. Design note and git

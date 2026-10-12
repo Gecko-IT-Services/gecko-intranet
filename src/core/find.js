@@ -34,7 +34,7 @@ export const PAGES = [
   ['Timesheets › Log time', 'timesheets', 'log'], ['Timesheets › SSA dashboard', 'timesheets', 'ssa'], ['Timesheets › Weekly summary', 'timesheets', 'week'],
   ['Monitoring › Backups', 'backups'], ['Monitoring › Alerts', 'alerts'], ['Monitoring › Devices', 'devices'],
   ['Team › Overview', 'team'], ['Team › Leave', 'leave'], ['Team › Mileage', 'mileage'],
-  ['Settings', 'settings']
+  ['Settings', 'settings'], ['Settings › Change log', 'settings']
 ].map(([label, section, tab = '']) => ({ label, open: { kind: 'page', section, tab } }));
 
 const DEAL_LABEL = { idea: 'Idea', proposed: 'Proposed', won: 'Won', lost: 'Lost' };
