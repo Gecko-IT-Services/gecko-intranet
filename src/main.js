@@ -21,6 +21,7 @@ import * as client from './sections/client.js';
 import * as team from './sections/team.js';
 import * as licences from './sections/licences.js';
 import * as analytics from './sections/analytics.js';
+import * as tasks from './sections/tasks.js';
 import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
 import * as icons from './core/icons.js';
@@ -81,6 +82,10 @@ window.GeckoTimelog = timelog;
 window.GeckoSsa = ssa;
 // Timesheets › Weekly Summary: one week of work, by day, client and type, with an eight-week trend.
 window.GeckoWeekly = weekly;
+// Tasks: one row and one dialog shared by Overview › Today (classic script) and the client page.
+window.GeckoTasks = tasks;
+tasks.init();
+tasks.subscribe(() => window.ovwTasksChanged?.());
 
 // Back from Xero's consent screen (supabase/functions/xero-callback): keep the result for the
 // Jobs section, tidy the address bar, and open Jobs once the portal is signed in.
