@@ -80,3 +80,9 @@ The marks are decorative (`alt=""`, the name beside them says it); the `title` g
 ## Checked
 Preview harness, light and dark, 1440×900: Products, Pipeline board, Gaps (client card with a Google email
 check), client page › Services, Profitability lines, Analytics › Ahead. All 29 test files pass.
+
+## Jobs whiteboard (Jack, 13 Oct 2026: "like how the Opportunities whiteboard has them")
+The stickies on Jobs carry the marks too, in front of the title, the same way as on Opportunities ›
+Pipeline: `vendorMarks(productPart(title))` in `jobSticky` and `ideaSticky` (`src/sections/jobs.js`).
+A job's title is free text, so a mark shows only when the title names a maker or product the list
+knows ("M365 backup", "VoxOne"); "Firewall replacement" stays bare. Nothing is guessed from the client.
