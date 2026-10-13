@@ -185,7 +185,7 @@ assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, in
   assert.equal(b.ideasValue, 600);
   assert.deepEqual(b.lanes[0].items.map(j => j.id), [3, 1, 2], 'soonest target first, undated last');
   assert.equal(b.lanes[0].value, 1500);
-  assert.deepEqual(b.done, { invoiced: 1, lost: 1 });
+  assert.deepEqual(b.done, { invoiced: 1, lost: 1, sent: 0 });
 
   const q = ideaMove(opps[0], 'quoted', 'Jack Morris');
   assert.equal(q.job.status, 'quoted'); assert.equal(q.job.value, 400); assert.equal(q.job.source_ref, 'opp:10');
@@ -195,6 +195,36 @@ assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, in
   assert.deepEqual(ideaMove(opps[0], 'lost'), { job: null, opp: { status: 'lost' } });
   assert.equal(ideaMove(opps[0], 'invoiced'), null, 'not straight to invoiced');
   assert.ok(Math.abs(tilt(7)) <= 0.9 && tilt(7) === tilt(7));
+}
+
+// Sent to Xero (Philip, 13 Oct): a job whose whole value is in Xero, even as a draft, leaves the board for "In Xero";
+// part-invoiced jobs stay; a job marked invoiced by hand with no invoice number can still be invoiced in Xero.
+{
+  const { boardLanes, sentToXero, canInvoiceInXero, invoicedGroups, invoiceIndex } = await import('../src/core/jobs.js');
+  const idx = invoiceIndex([
+    { invoice_number: 'INV-0306', status: 'DRAFT', sub_total: 1600 },
+    { invoice_number: 'INV-0400', status: 'AUTHORISED', sub_total: 800, amount_due: 960, due_date: '2026-11-01' },
+    { invoice_number: 'INV-0401', status: 'VOIDED', sub_total: 500 }
+  ]);
+  const quoteZone = { id: 1, client_name: 'MSA Safety', status: 'to_invoice', value: 1600, invoice_ref: 'INV-0306' };
+  const half = { id: 2, status: 'in_progress', value: 1600, invoice_ref: 'INV-0400' };
+  const voided = { id: 3, status: 'to_invoice', value: 500, invoice_ref: 'INV-0401' };
+  const plaud = { id: 4, client_name: 'MSA Safety', status: 'invoiced', value: 1100, invoice_ref: '' };
+  assert.equal(sentToXero(quoteZone, idx), true, 'a draft for the whole value is enough');
+  assert.equal(sentToXero(half, idx), false, 'half invoiced: still on the board for the rest');
+  assert.equal(sentToXero(voided, idx), false, 'a voided invoice is not sent');
+  assert.equal(sentToXero(plaud, idx), false, 'only open jobs leave the board');
+  const b = boardLanes([quoteZone, half, voided, plaud], [], idx);
+  assert.deepEqual(b.sent.map(j => j.id), [1]);
+  assert.deepEqual(b.lanes.find(l => l.key === 'to_invoice').items.map(j => j.id), [3]);
+  assert.equal(b.lanes.find(l => l.key === 'to_invoice').value, 500, 'the column total leaves it out too');
+  assert.equal(b.done.sent, 1);
+  assert.equal(boardLanes([quoteZone], []).done.sent, 0, 'without Xero nothing leaves the board');
+  assert.equal(canInvoiceInXero(plaud), true, 'Plaud was marked invoiced before any Xero invoice: it can still be drafted');
+  assert.equal(canInvoiceInXero({ ...plaud, invoice_ref: 'INV-0310' }), false);
+  assert.equal(canInvoiceInXero({ status: 'quoted' }), false);
+  const g = invoicedGroups([{ ...quoteZone, status: 'invoiced', invoiced_at: '2026-10-13' }, plaud], idx, '2026-10-13');
+  assert.deepEqual([g.drafts.map(j => j.id), g.unmatched.map(j => j.id), g.awaiting.length], [[1], [4], 0], 'a draft is not "awaiting payment"');
 }
 
 console.log('jobs: ok');
