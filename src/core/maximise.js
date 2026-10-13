@@ -22,6 +22,8 @@ export function maximiser(sectionId, buttonId) {
   };
   const set = to => {
     section.classList.toggle('is-max', to);
+    // Both ways the page arrives in its new shape the way any page arrives: its own entry animation, played again.
+    section.style.animation = 'none'; void section.offsetWidth; section.style.animation = '';
     // An iPhone has no full screen and a browser may refuse it: the page still clears.
     if (to) document.documentElement.requestFullscreen?.()?.catch(() => {});
     else if (document.fullscreenElement) document.exitFullscreen?.()?.catch(() => {});
