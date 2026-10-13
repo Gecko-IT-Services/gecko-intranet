@@ -66,6 +66,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   (`icon(name, size)`; classic script `gkIcon`), sizes 16 nav · 14 buttons and row actions · 12 in text, line weight
   set once in `system.css` §9; never a text character as an icon (☎ ⚠ ↗ turn into emoji on an iPhone). Transitions
   use `--dur-1/2/3` + `--ease` or `--t-ui`, charts `--dur-chart`; `tests/icons.mjs` enforces both.
+  Motion review (13 Oct, `2026-10-13-motion-review-design.md`): a section that draws by replacing its markup uses `redraw(mount, html)`
+  from `src/core/motion.js` so anything pinned open (`data-pin`) does not arrive again, and `glide(draw)` to move stickies (view
+  transitions; arrows only, not drops). Tabs slide from their side everywhere, hub tabs included (desktop widths); `navTo` clears a
+  page's stale slide classes as it returns to it. Older `.show` pop-ups fade out on close.
   Vendor marks (10 Oct, `2026-10-10-vendor-marks-design.md`): `vendorMarks(name, after)` from `src/core/vendors.js`
   (classic script `gkVendor(serviceLine)`) puts the maker's logo beside a product's name (Microsoft, Google, VoxOne, Hornetsecurity = email filtering,
   Acronis = anything called backup, Webroot/OpenText = antivirus, AV, internet security, Keeper = password manager, Rank Math = SEO, Exclaimer = signatures,

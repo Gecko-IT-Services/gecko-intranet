@@ -32,6 +32,14 @@
 :is(.app-pane, #section-mileage .mil-panel.active, #section-timesheets .tsh-panel.active).from-right { animation: app-pane-r var(--dur-3) var(--ease) both; }
 :is(.app-pane, #section-mileage .mil-panel.active, #section-timesheets .tsh-panel.active).from-left { animation: app-pane-l var(--dur-3) var(--ease) both; }
 @keyframes app-pane-r { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+/* A hub's tabs (Clients, Monitoring, Team) change the page, which arrives the way a tab's pane does (navTo).
+   Not at phone width: the page fills the screen there, so 12px sideways would widen it for a moment; it rises as before. */
+@media (min-width: 881px) {
+  .section.active.from-right { animation-name: app-pane-r; }
+  .section.active.from-left { animation-name: app-pane-l; }
+}
+/* A change of view inside a tab (Board / List): the same rise as a page arriving. */
+.app-pane.rise { animation: fadeIn var(--dur-3) var(--ease) both; }
 @keyframes app-pane-l { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
 
 /* Hub strip: one sidebar entry, several sections under it */

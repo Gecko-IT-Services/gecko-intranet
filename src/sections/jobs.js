@@ -21,6 +21,7 @@ import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { icon } from '../core/icons.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { maximiser } from '../core/maximise.js';
+import { redraw, glide } from '../core/motion.js';
 import { STAGES, OPEN_STAGES, stageLabel, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
   nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt, canInvoiceInXero, sentToXero } from '../core/jobs.js';
@@ -189,7 +190,8 @@ async function saveJob(id, f) {
   finally { JOB.saving = false; }
 }
 
-async function moveJob(id, status, btn) {
+/** `byArrow`: the sticky glides to its column. Dropped by hand, it is already where it was put. */
+async function moveJob(id, status, btn, byArrow = false) {
   const job = JOB.jobs.find(j => j.id === id);
   if (!job) return;
   btn.disabled = true;
@@ -199,7 +201,7 @@ async function moveJob(id, status, btn) {
     const row = must(await sb.from('jobs').update(patch).eq('id', id).select('*').single());
     JOB.jobs = JOB.jobs.map(j => (j.id === id ? row : j));
     toast(status === 'invoiced' ? `Invoiced: ${money(row.value)} · add the Xero invoice number under Edit` : `Moved to ${stageLabel(status)}`, 'success', 5000);
-    render();
+    if (byArrow) glide(render); else render();
   } catch (err) { btn.disabled = false; toast('Could not update: ' + (err.message || err), 'error', 7000); }
 }
 
@@ -223,8 +225,8 @@ function render() {
       : `<div class="job-error art art-offline"><strong>Could not load jobs.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-job-act="reload">Retry</button></div>`;
     return;
   }
-  mount.innerHTML = (JOB.feedNote && !onXero() && JOB.tab !== 'jobs' ? `<p class="job-note">${escapeHtml(JOB.feedNote)}</p>` : '') +
-    `<div class="job-pane">${JOB.tab === 'jobs' ? boardHtml() : tabHtml(s)}</div>`;
+  redraw(mount, (JOB.feedNote && !onXero() && JOB.tab !== 'jobs' ? `<p class="job-note">${escapeHtml(JOB.feedNote)}</p>` : '') +
+    `<div class="job-pane">${JOB.tab === 'jobs' ? boardHtml() : tabHtml(s)}</div>`);
   if (JOB.animate) {
     JOB.animate = false;
     mount.firstElementChild?.classList.add('job-enter', JOB.dir);
@@ -427,7 +429,7 @@ function stageListHtml() {
   // In Xero: open jobs whose whole value is in Xero (usually a draft to approve); they move to Invoiced by themselves once approved.
   if (JOB.stage === 'sent') {
     const sent = boardLanes(JOB.jobs, [], onXero() ? JOB.byNumber : null).sent;
-    return `<div class="job-pinned job-stage-list">
+    return `<div class="job-pinned job-stage-list" data-pin="stage:sent">
       <div class="job-list-sub"><strong>In Xero</strong><span class="job-muted">Approve and send the drafts in Xero; each moves to Invoiced by itself once approved.</span><button type="button" class="job-link" data-job-act="liststage" data-stage="sent">Close</button></div>
       <div class="job-list">${sent.map(jobCard).join('') || '<p class="job-empty">Nothing waiting in Xero.</p>'}</div>
     </div>`;
@@ -435,7 +437,7 @@ function stageListHtml() {
   const groups = JOB.stage === 'invoiced' && onXero() ? invoicedGroups(JOB.jobs, JOB.byNumber, today()) : null;
   const list = JOB.jobs.filter(j => j.status === JOB.stage)
     .sort((a, b) => String(b.invoiced_at || b.modified_at || '').localeCompare(String(a.invoiced_at || a.modified_at || '')));
-  return `<div class="job-pinned job-stage-list">
+  return `<div class="job-pinned job-stage-list" data-pin="stage:${JOB.stage}">
       <div class="job-list-sub"><strong>${escapeHtml(stageLabel(JOB.stage))}</strong><button type="button" class="job-link" data-job-act="liststage" data-stage="${JOB.stage}">Close</button></div>
       ${groups ? invoicedHtml(groups) : `<div class="job-list">${list.map(jobCard).join('') || '<p class="job-empty">None yet.</p>'}</div>`}
     </div>`;
@@ -452,7 +454,7 @@ function jobSticky(j) {
   const xs = xi.find(x => x.state === 'overdue') || xi.find(x => x.state === 'due') || xi.find(x => x.state === 'draft');
   const [to, label] = NEXT[j.status][0] || [];
   return `<article class="job-sticky${p ? ' lp-' + p : ''}${JOB.selected === j.id ? ' on' : ''}" draggable="true" data-drag="job:${j.id}"
-      data-job-act="pick" data-id="${j.id}" tabindex="0" style="--tilt:${tilt(j.id)}deg" aria-label="${escapeHtml(`${j.client_name}: ${j.title}, ${stageLabel(j.status)}`)}">
+      data-job-act="pick" data-id="${j.id}" tabindex="0" style="--tilt:${tilt(j.id)}deg;view-transition-name:job-${j.id}" aria-label="${escapeHtml(`${j.client_name}: ${j.title}, ${stageLabel(j.status)}`)}">
     <span class="js-tape" aria-hidden="true"></span>
     <div class="js-top"><span class="js-client">${escapeHtml(j.client_name)}</span>${p ? `<b class="js-owner" title="${escapeHtml(j.owner)}">${p[0].toUpperCase()}</b>` : ''}</div>
     <div class="js-title">${vendorMarks(productPart(j.title))}${escapeHtml(j.title)}</div>
@@ -468,7 +470,7 @@ function jobSticky(j) {
 function ideaSticky(o) {
   const p = person(o.owner);
   const won = o.status === 'won';
-  return `<article class="job-sticky idea${p ? ' lp-' + p : ''}" draggable="true" data-drag="opp:${o.id}" style="--tilt:${tilt(o.id + 3)}deg"
+  return `<article class="job-sticky idea${p ? ' lp-' + p : ''}" draggable="true" data-drag="opp:${o.id}" style="--tilt:${tilt(o.id + 3)}deg;view-transition-name:idea-${o.id}"
       aria-label="${escapeHtml(`Idea: ${o.client_name}: ${o.title}`)}">
     <div class="js-top"><span class="js-client">${escapeHtml(o.client_name)}</span>${won ? '<span class="badge badge-green">Won</span>' : o.status === 'proposed' ? '<span class="badge">Proposed</span>' : ''}</div>
     <div class="js-title">${vendorMarks(productPart(o.title))}${escapeHtml(o.title)}</div>
@@ -520,7 +522,7 @@ function boardHtml() {
       <div class="job-drop" data-drop="lost"><strong>Lost</strong><span>${escapeHtml(count(b.done.lost))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="lost" aria-expanded="${JOB.stage === 'lost'}">See them</button></div>
     </div>
     ${stageListHtml()}
-    ${sel ? `<div class="job-pinned"><div class="job-list-sub"><span class="job-muted">Picked from the board</span><button type="button" class="job-link" data-job-act="pick" data-id="${sel.id}">Close</button></div>${jobCard(sel)}</div>` : ''}`;
+    ${sel ? `<div class="job-pinned" data-pin="job:${sel.id}"><div class="job-list-sub"><span class="job-muted">Picked from the board</span><button type="button" class="job-link" data-job-act="pick" data-id="${sel.id}">Close</button></div>${jobCard(sel)}</div>` : ''}`;
 }
 
 /** A sticky dropped on a column (or a sticky's arrow): jobs move stage; ideas become jobs. */
@@ -949,7 +951,7 @@ async function onClick(event) {
   if (act === 'add') { JOB.addStage = btn.dataset.stage || 'quoted'; JOB.addingIdea = false; JOB.adding = true; render(); els('jobWrap')?.querySelector('[data-job-form="new"] [name="client_name"]')?.focus(); return; }
   if (act === 'canceladd') { JOB.adding = false; render(); return; }
   if (act === 'edit') { JOB.editing.has(id) ? JOB.editing.delete(id) : JOB.editing.add(id); render(); return; }
-  if (act === 'move') { moveJob(id, btn.dataset.status, btn); return; }
+  if (act === 'move') { moveJob(id, btn.dataset.status, btn, true); return; }
   if (act === 'xero-connect') { xeroConnect(); return; }
   if (act === 'xero-sync') { xeroSync(); return; }
   if (act === 'xero-invoice') { openInvoice(id); return; }
