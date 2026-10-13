@@ -20,6 +20,7 @@
 import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { icon } from '../core/icons.js';
+import { maximiser } from '../core/maximise.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
@@ -487,10 +488,14 @@ async function saveProduct(key, form) {
 
 // ─── Render ───────────────────────────────────────────────────────────
 
+/** The header's Maximise button (core/maximise.js), for the pipeline's whiteboard; wired in init. */
+let drawMax = () => {};
+
 function render() {
   const mount = els('oppWrap');
   if (!mount) return;
   renderKpis();
+  drawMax(OPP.tab === 'pipeline' && OPP.view === 'board');
   document.querySelectorAll('#section-opportunities [data-opp-tab]').forEach(b =>
     b.setAttribute('aria-selected', String(b.dataset.oppTab === OPP.tab)));
 
@@ -1219,6 +1224,7 @@ export function init() {
   section?.addEventListener('keydown', onKeydown);
   for (const t of ['dragstart', 'dragend', 'dragover', 'drop']) section?.addEventListener(t, onDrag);
   els('oppRefresh')?.addEventListener('click', refresh);
+  drawMax = maximiser('section-opportunities', 'oppMax');
   load();
 }
 

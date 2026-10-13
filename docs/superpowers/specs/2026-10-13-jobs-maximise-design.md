@@ -24,9 +24,10 @@ already off the screen.
   page shows that page normally.
 
 ## How
-- `setMax` / `renderMax` in `src/sections/jobs.js` put `.is-max` on `#section-jobs`; the styles are one
-  block at the end of the whiteboard rules in `src/styles/jobs.css`. The shell is reached with
-  `:root:has(#section-jobs.active.is-max)`, so nothing outside Jobs knows about it.
+- `maximiser(sectionId, buttonId)` in `src/core/maximise.js` wires the header button and puts `.is-max`
+  on the section; it returns a function the section's render calls with whether the whiteboard is on
+  show. The styles are one block at the end of the whiteboard rules in `src/styles/jobs.css`. The
+  shell is reached with `:root:has(….active.is-max)`, so nothing outside the two pages knows about it.
 - Full screen is asked of the whole page (`document.documentElement`), not the board: toasts and the
   older pop-ups live outside the section and would not be drawn otherwise.
 - Icons `maximize` / `minimize` added to `src/core/icons.js`.
@@ -38,12 +39,16 @@ already off the screen.
 
 ## Left out on purpose
 - **Remembering it.** Jobs always opens as usual: a page that opens with no menu looks broken.
-- **Opportunities › Pipeline.** Same stickies, so the same few rules would do it. Not asked for.
 - **Columns that scroll on their own.** The page scrolls as it always has; one scrollbar.
 - **A phone layout of its own.** It works (about 250px more board), but the buttons take two rows.
 
+## Opportunities › Pipeline (Jack, later the same day: "add the same button")
+The same button in the Opportunities header, shown on Pipeline in Board view only. Switching to List,
+or to another tab, leaves the maximised view. The List / Board switch and the follow-up badges stay
+above the board. That made two users, so the code moved from `jobs.js` into `core/maximise.js`.
+
 ## Tests
 No pure logic to test. Checked in the preview at 1024, 1440 and 1920 wide and at 375 (phone): Esc,
-leaving the tab, leaving the page. `tests/icons.mjs` covers the two icon names.
+leaving the tab, leaving the page; Opportunities at 1440 and 375, plus Board to List. `tests/icons.mjs` covers the two icon names.
 The browser's own full screen does not engage inside the preview pane, so that half is to be
 checked on the live site after the merge (one click).

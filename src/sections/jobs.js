@@ -19,6 +19,7 @@ import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { icon } from '../core/icons.js';
+import { maximiser } from '../core/maximise.js';
 import { STAGES, OPEN_STAGES, stageLabel, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
   nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt, canInvoiceInXero, sentToXero } from '../core/jobs.js';
@@ -203,13 +204,16 @@ async function moveJob(id, status, btn) {
 
 // ─── Rendering ────────────────────────────────────────────────────────
 
+/** The header's Maximise button (core/maximise.js); wired in init. */
+let drawMax = () => {};
+
 function render() {
   const mount = els('jobWrap');
   if (!mount) return;
   const s = JOB.error ? null : sales();
   renderTabs(tabList(s));
   renderKpis();
-  renderMax();
+  drawMax(JOB.tab === 'jobs');
   if (JOB.loading && !JOB.jobs.length) { mount.innerHTML = '<p class="job-empty art art-loading">Loading jobs…</p>'; return; }
   if (JOB.error) {
     const e = JOB.error;
@@ -229,32 +233,6 @@ function render() {
     if (JOB.revealPicked) { JOB.revealPicked = false; mount.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' }); }
     if (JOB.focusNewForm) { JOB.focusNewForm = false; mount.querySelector('[data-job-form="new"] [name="client_name"]')?.focus(); }
   }
-}
-
-// ─── Maximise ─────────────────────────────────────────────────────────
-// The whiteboard on its own: the sidebar, heading, tabs and figures step aside (jobs.css, .is-max)
-// and the browser goes full screen where it can. Not remembered: Jobs always opens as usual.
-
-const maxed = () => !!els('section-jobs')?.classList.contains('is-max');
-
-function setMax(on) {
-  els('section-jobs')?.classList.toggle('is-max', on);
-  // An iPhone has no full screen and a browser may refuse it: the page still clears.
-  if (on) document.documentElement.requestFullscreen?.()?.catch(() => {});
-  else if (document.fullscreenElement) document.exitFullscreen?.()?.catch(() => {});
-  renderMax();
-}
-
-/** The header button: only on the Jobs tab, and leaving that tab leaves the maximised view. */
-function renderMax() {
-  const btn = els('jobMax');
-  if (!btn) return;
-  if (JOB.tab !== 'jobs' && maxed()) { setMax(false); return; }
-  const on = maxed();
-  btn.hidden = JOB.tab !== 'jobs';
-  btn.setAttribute('aria-pressed', String(on));
-  btn.title = on ? 'Back to the normal view (Esc)' : 'The whiteboard on its own, full screen';
-  btn.innerHTML = `${icon(on ? 'minimize' : 'maximize', 14)}${on ? 'Exit full screen' : 'Maximise'}`;
 }
 
 function renderKpis() {
@@ -1015,9 +993,8 @@ export function add() {
   if (!JOB.loading) render();
 }
 
-/** Arrow keys move along the tab strip (ARIA tabs pattern). Esc leaves the maximised whiteboard, but not from a form. */
+/** Arrow keys move along the tab strip (ARIA tabs pattern). */
 const onKey = event => {
-  if (event.key === 'Escape' && maxed() && !event.target.closest?.('input, textarea, select')) { setMax(false); return; }
   const st = event.target.closest?.('.job-sticky[data-job-act="pick"]');
   if (st && event.target === st && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); st.click(); return; }
   keyNav(event, 'data-job-tab', switchTab);
@@ -1050,9 +1027,7 @@ export function init() {
   window.addEventListener('resize', () => moveInk(tabStrip()));
   els('jobRefresh')?.addEventListener('click', refresh);
   els('jobAdd')?.addEventListener('click', addFromHeader);
-  els('jobMax')?.addEventListener('click', () => setMax(!maxed()));
-  // Esc in full screen goes to the browser, not the page: follow it out.
-  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && maxed()) setMax(false); });
+  drawMax = maximiser('section-jobs', 'jobMax');
   xeroReturn();
   load();
 }
