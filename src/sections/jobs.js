@@ -19,6 +19,7 @@ import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { icon } from '../core/icons.js';
+import { vendorMarks, productPart } from '../core/vendors.js';
 import { maximiser } from '../core/maximise.js';
 import { STAGES, OPEN_STAGES, stageLabel, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
@@ -454,7 +455,7 @@ function jobSticky(j) {
       data-job-act="pick" data-id="${j.id}" tabindex="0" style="--tilt:${tilt(j.id)}deg" aria-label="${escapeHtml(`${j.client_name}: ${j.title}, ${stageLabel(j.status)}`)}">
     <span class="js-tape" aria-hidden="true"></span>
     <div class="js-top"><span class="js-client">${escapeHtml(j.client_name)}</span>${p ? `<b class="js-owner" title="${escapeHtml(j.owner)}">${p[0].toUpperCase()}</b>` : ''}</div>
-    <div class="js-title">${escapeHtml(j.title)}</div>
+    <div class="js-title">${vendorMarks(productPart(j.title))}${escapeHtml(j.title)}</div>
     ${j.next_step ? `<div class="js-next">${escapeHtml(j.next_step)}</div>` : ''}
     <div class="js-foot"><strong>${j.value == null ? '<em>no value</em>' : escapeHtml(whole(j.value))}</strong>
       ${j.target_date ? `<span class="js-date${late ? ' late' : ''}">${late ? 'late · ' : ''}${escapeHtml(shortDate(j.target_date))}</span>` : ''}
@@ -470,7 +471,7 @@ function ideaSticky(o) {
   return `<article class="job-sticky idea${p ? ' lp-' + p : ''}" draggable="true" data-drag="opp:${o.id}" style="--tilt:${tilt(o.id + 3)}deg"
       aria-label="${escapeHtml(`Idea: ${o.client_name}: ${o.title}`)}">
     <div class="js-top"><span class="js-client">${escapeHtml(o.client_name)}</span>${won ? '<span class="badge badge-green">Won</span>' : o.status === 'proposed' ? '<span class="badge">Proposed</span>' : ''}</div>
-    <div class="js-title">${escapeHtml(o.title)}</div>
+    <div class="js-title">${vendorMarks(productPart(o.title))}${escapeHtml(o.title)}</div>
     ${o.next_step ? `<div class="js-next">${escapeHtml(o.next_step)}</div>` : ''}
     <div class="js-foot"><strong>${escapeHtml(whole(o.one_off))}</strong>${Number(o.mrr) ? `<span class="js-date">+ ${escapeHtml(whole(o.mrr))}/mo</span>` : ''}</div>
     <button type="button" class="js-move" data-job-act="idea" data-stage="${won ? 'agreed' : 'quoted'}" data-id="${o.id}">${won ? 'Create job' : 'Quote it'} →</button>
