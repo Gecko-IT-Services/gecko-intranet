@@ -196,8 +196,16 @@
          .set-seg-btn):active:not(:disabled) { transform: translateY(1px); }
 
 /* Dialogs: the backdrop fades, the panel rises into place. */
-#app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .lev-modal-bg, .alr-backdrop) {
-  background: var(--overlay); animation: gk-fade var(--dur-2) var(--ease) both;
+#app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .lev-modal-bg, .alr-backdrop) { background: var(--overlay); }
+#app .alr-backdrop { animation: gk-fade var(--dur-2) var(--ease) both; }
+/* The older pop-ups also fade out as they close, like the native dialogs below (and close at once where the browser
+   cannot keep a closing one on screen). `backwards` for the same reason as there. */
+#app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .lev-modal-bg) {
+  opacity: 0; pointer-events: none; animation: none;
+  transition: opacity var(--dur-1) var(--ease), display var(--dur-1) allow-discrete;
+}
+#app :is(.prf-modal-bg, .mil-modal-bg, .cli-modal-bg, .tsh-modal-bg, .lev-modal-bg).show {
+  opacity: 1; pointer-events: auto; animation: gk-fade var(--dur-2) var(--ease) backwards;
 }
 #app :is(.prf-modal, .mil-modal, .cli-modal, .tsh-modal, .lev-modal, .alr-modal) {
   animation: gk-rise var(--dur-3) var(--ease) both;

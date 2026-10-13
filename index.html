@@ -5543,11 +5543,20 @@ function renderHub(sectionKey) {
   const main = document.querySelector('.main');
   const hub = HUB_OF[sectionKey];
   if (!el) return;
-  if (!hub || !window.GeckoTabs) { el.hidden = true; el.innerHTML = ''; main?.classList.remove('in-hub'); return; }
+  if (!hub || !window.GeckoTabs) { el.hidden = true; el.innerHTML = ''; delete el.dataset.sig; main?.classList.remove('in-hub'); return; }
   const client = window.GeckoSections?.client?.current?.() || '';
   const tabs = HUBS[hub].tabs.filter(([k, l]) => l || (k === 'client' && client))
     .map(([key, label]) => ({ key, label: label || client, title: key === 'client' ? 'This client’s page' : '' }));
-  el.innerHTML = window.GeckoTabs.tabsHtml(tabs, sectionKey, { attr: 'data-hub-tab', label: HUBS[hub].label + ' views' });
+  // The same strip is kept while its tabs are the same, so the marker slides from the tab just left.
+  const sig = hub + '|' + tabs.map(t => t.key + ':' + t.label).join('|');
+  if (el.dataset.sig !== sig) {
+    el.innerHTML = window.GeckoTabs.tabsHtml(tabs, sectionKey, { attr: 'data-hub-tab', label: HUBS[hub].label + ' views' });
+    el.dataset.sig = sig;
+  } else el.querySelectorAll('[data-hub-tab]').forEach(b => {
+    const on = b.dataset.hubTab === sectionKey;
+    b.setAttribute('aria-selected', String(on));
+    b.tabIndex = on ? 0 : -1;
+  });
   el.hidden = false;
   main?.classList.add('in-hub');
   window.setTimeout(() => window.GeckoTabs.moveInk(el.querySelector('.app-tabs')), 0);
@@ -5657,8 +5666,18 @@ function navTo(sectionKey) {
   window.setTimeout(() => { geckoInkify(); document.querySelector(`#section-${sectionKey} .app-tabs`)?.geckoMoveInk?.(); }, 0);
 
   // — Show only the matching section, hide the rest —
+  // Along a hub's tabs the page slides in from the side its tab is on, as a tab's pane does.
+  const from = document.querySelector('.section.active')?.id.replace('section-', '');
+  const hubKeys = hub && from !== sectionKey && HUB_OF[from] === hub ? HUBS[hub].tabs.map(t => t[0]) : null;
+  const slide = hubKeys ? (hubKeys.indexOf(sectionKey) > hubKeys.indexOf(from) ? 'from-right' : 'from-left') : '';
   document.querySelectorAll('.section').forEach(s => {
-    s.classList.toggle('active', s.id === 'section-' + sectionKey);
+    const on = s.id === 'section-' + sectionKey;
+    s.classList.remove('from-left', 'from-right');
+    // An animation starts again when its element is shown again: a pane that slid in on the last visit would slide
+    // in once more under the page's own arrival. Returning to a page, its panes stay put.
+    if (on && !s.classList.contains('active')) s.querySelectorAll('.from-left, .from-right, .job-enter, .rise').forEach(p => p.classList.remove('from-left', 'from-right', 'job-enter', 'rise'));
+    s.classList.toggle('active', on);
+    if (on && slide) s.classList.add(slide);
   });
 
   // — Update top bar title —
@@ -7943,7 +7962,10 @@ function prfToggleCard(id, open = !PRF.openCards.has(id)) {
   const row = document.querySelector(`#prfWrap tr.prf-row[data-client-id="${id}"]`);
   row?.classList.toggle('open', open);
   row?.querySelector('.prf-toggle')?.setAttribute('aria-expanded', String(open));
-  document.querySelector(`#prfWrap tr.prf-detail[data-detail-for="${id}"]`)?.classList.toggle('open', open);
+  const detail = document.querySelector(`#prfWrap tr.prf-detail[data-detail-for="${id}"]`);
+  detail?.classList.toggle('open', open);
+  // The lines rise into view as they open; the class goes again so they do not rise on every return to the page.
+  if (open && detail) { detail.classList.add('rise'); detail.addEventListener('animationend', () => detail.classList.remove('rise'), { once: true }); }
 }
 
 

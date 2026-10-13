@@ -73,6 +73,8 @@
 #portalShell #section-profitability .prf-tbl tr.prf-gone,
 #portalShell #section-profitability .prf-tbl tr.prf-detail:not(.open) { display: none !important; }
 #section-profitability .prf-tbl tr.prf-detail > td { padding: 4px 14px 16px; background: var(--card-hover); cursor: default; }
+/* Just opened (prfToggleCard): the lines rise into view. */
+#section-profitability .prf-tbl tr.prf-detail.rise > td > * { animation: fadeIn var(--dur-3) var(--ease) both; }
 #section-profitability .prf-tbl tr.prf-detail .prf-stbl { background: var(--card); border: 1px solid var(--border-dim); border-radius: var(--radius); }
 #section-profitability .prf-dfoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 #section-profitability .prf-xline { margin: 0; font-size: 12px; color: var(--muted); }

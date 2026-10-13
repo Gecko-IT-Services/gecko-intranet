@@ -278,6 +278,12 @@
 #section-jobs .job-drop strong { color: var(--white); }
 #section-jobs .job-drop .job-link { margin-left: auto; }
 :is(#section-jobs, #section-opportunities) .job-pinned { margin-top: 16px; animation: job-pin var(--dur-3) var(--ease) both; }
+/* Already open before this redraw (core/motion.js): it does not arrive again. */
+:is(#section-jobs, #section-opportunities) .job-pinned.still { animation: none; }
+/* A sticky moved by its arrow glides to its new column, and the others close up (view transitions, where the
+   browser has them; each sticky names itself in its markup). Speed and curve are the app's own. */
+:is(#section-jobs, #section-opportunities) .job-sticky { view-transition-class: sticky; }
+::view-transition-group(.sticky) { animation-duration: var(--dur-3); animation-timing-function: var(--ease); }
 @keyframes job-pin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* ── Maximised (the header's Maximise button; core/maximise.js): a whiteboard on its own ───────────

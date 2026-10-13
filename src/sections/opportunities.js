@@ -21,6 +21,8 @@ import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { icon } from '../core/icons.js';
 import { maximiser } from '../core/maximise.js';
+import { redraw, glide } from '../core/motion.js';
+import { direction } from '../core/tabs.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
@@ -43,6 +45,7 @@ const SIGNAL_MAX_AGE_DAYS = 30;   // re-check a domain after this long
 
 const OPP = {
   tab: 'pipeline',
+  enter: '',               // how the next draw arrives: from-left / from-right (a tab) or rise (a view), then cleared
   showAll: false,          // include "not bought, no evidence yet" gaps
   open: new Set(),         // expanded client cards
   stage: 'open',           // pipeline filter: open (idea + proposed) | idea | proposed | won | lost
@@ -507,8 +510,11 @@ function render() {
       : `<div class="opp-error art art-offline"><strong>Could not load opportunities.</strong>${escapeHtml(e.message || e)}<button type="button" class="btn btn-sm" data-opp-act="reload">Retry</button></div>`;
     return;
   }
-  mount.innerHTML = (OPP.feedNote ? `<p class="opp-note">${escapeHtml(OPP.feedNote)}</p>` : '') + progressHtml() +
-    (OPP.tab === 'gaps' ? gapsHtml() : OPP.tab === 'pipeline' ? pipelineHtml() : OPP.tab === 'prospects' ? prospectsHtml() : OPP.tab === 'voip' ? dealerHtml() : productsHtml());
+  // One-shot: a change of tab slides the new pane in from its side, a change of view (Board / List, Map / Clients) rises.
+  const enter = OPP.enter ? ' ' + OPP.enter : '';
+  OPP.enter = '';
+  redraw(mount, (OPP.feedNote ? `<p class="opp-note">${escapeHtml(OPP.feedNote)}</p>` : '') + progressHtml() +
+    `<div class="app-pane${enter}">${OPP.tab === 'gaps' ? gapsHtml() : OPP.tab === 'pipeline' ? pipelineHtml() : OPP.tab === 'prospects' ? prospectsHtml() : OPP.tab === 'voip' ? dealerHtml() : productsHtml()}</div>`);
   syncTableLabels(mount);
   // A prospect opened from quick find: bring its card into view (it stays outlined until the next redraw).
   const found = OPP.found && mount.querySelector('.opp-prospect.found');
@@ -744,7 +750,7 @@ function pipelineHtml() {
       const st = dealState(o, t);
       const [to, lbl] = NEXT[o.status] || [];
       return `<article class="job-sticky st-${escapeHtml(o.status)}${p ? ' lp-' + p : ''}${OPP.selected === o.id ? ' on' : ''}" draggable="true" data-drag="${o.id}"
-          data-opp-act="pick" data-id="${o.id}" tabindex="0" style="--tilt:${tilt(o.id)}deg" aria-label="${escapeHtml(`${o.client_name}: ${o.title}, ${label[o.status]}`)}">
+          data-opp-act="pick" data-id="${o.id}" tabindex="0" style="--tilt:${tilt(o.id)}deg;view-transition-name:deal-${o.id}" aria-label="${escapeHtml(`${o.client_name}: ${o.title}, ${label[o.status]}`)}">
         <span class="js-tape" aria-hidden="true"></span>
         <div class="js-top"><span class="js-client">${escapeHtml(o.client_name)}</span>${p ? `<b class="js-owner" title="${escapeHtml(o.owner)}">${p[0].toUpperCase()}</b>` : ''}</div>
         <div class="js-title">${vendorMarks(findProduct(o.product_key)?.name || productPart(o.title))}${escapeHtml(findProduct(o.product_key)?.name || o.title)}</div>
@@ -764,7 +770,7 @@ function pipelineHtml() {
     const sel = OPP.opps.find(o => o.id === OPP.selected);
     return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
       <div class="job-board opp-wb">${cols}</div>
-      ${sel ? `<div class="job-pinned"><div class="opp-deals-head"><span class="opp-muted">Picked from the board</span><button type="button" class="btn btn-sm btn-ghost" data-opp-act="pick" data-id="${sel.id}">Close</button></div>${deal(sel)}</div>` : ''}`;
+      ${sel ? `<div class="job-pinned" data-pin="deal:${sel.id}"><div class="opp-deals-head"><span class="opp-muted">Picked from the board</span><button type="button" class="btn btn-sm btn-ghost" data-opp-act="pick" data-id="${sel.id}">Close</button></div>${deal(sel)}</div>` : ''}`;
   }
   return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
     <div class="opp-stages kpi-panel">${stages}</div>
@@ -774,7 +780,8 @@ function pipelineHtml() {
 }
 
 /** Move a deal to another stage (a button, or a sticky dropped on a column). */
-async function moveDeal(id, status) {
+/** `byArrow`: the sticky glides to its column. Dropped by hand, it is already where it was put. */
+async function moveDeal(id, status, byArrow = false) {
   const o = OPP.opps.find(x => x.id === id);
   if (!o || o.status === status) return false;
   try {
@@ -784,7 +791,7 @@ async function moveDeal(id, status) {
       ? `Won: +${money(o.mrr)}/mo${st?.needsJob || st?.needsBilling ? `. Next: ${[st.needsJob && 'create the job', st.needsBilling && 'set up the monthly billing'].filter(Boolean).join(' and ')}.` : ''}`
       : `Moved to ${{ idea: 'Idea', proposed: 'Proposed', lost: 'Lost' }[status] || status}`, 'success', 6000);
     if (status === 'won') { if (OPP.view === 'board') OPP.selected = id; else OPP.stage = 'won'; }
-    render();
+    if (byArrow && OPP.view === 'board') glide(render); else render();
     return true;
   } catch (err) { toast('Could not update: ' + (err.message || err), 'error', 7000); return false; }
 }
@@ -1048,7 +1055,12 @@ function productsHtml() {
 
 async function onClick(event) {
   const tab = event.target.closest('[data-opp-tab]');
-  if (tab) { OPP.tab = tab.dataset.oppTab; render(); return; }
+  if (tab) {
+    if (tab.dataset.oppTab === OPP.tab) return;
+    const keys = [...document.querySelectorAll('#section-opportunities [data-opp-tab]')].map(b => b.dataset.oppTab);
+    OPP.enter = direction(keys, OPP.tab, tab.dataset.oppTab);
+    OPP.tab = tab.dataset.oppTab; render(); return;
+  }
   const fu = event.target.closest('[data-opp-fu]');
   if (fu) { const input = fu.closest('form')?.elements.follow_up_on; if (input) input.value = fu.dataset.oppFu; return; }
   const btn = event.target.closest('[data-opp-act]');
@@ -1066,7 +1078,7 @@ async function onClick(event) {
   if (act === 'notint') { setStatus(client, product, 'not_interested'); return; }
   if (act === 'stage') { OPP.stage = OPP.stage === btn.dataset.stage ? 'open' : btn.dataset.stage; render(); return; }
   if (act === 'editopp') { const n = Number(id); OPP.editing.has(n) ? OPP.editing.delete(n) : OPP.editing.add(n); render(); return; }
-  if (act === 'move') { btn.disabled = true; if (!(await moveDeal(Number(id), btn.dataset.status))) btn.disabled = false; return; }
+  if (act === 'move') { btn.disabled = true; if (!(await moveDeal(Number(id), btn.dataset.status, true))) btn.disabled = false; return; }
   if (act === 'emailopp') { btn.disabled = true; draftEmail(Number(id)); return; }
   if (act === 'pview') { OPP.prospectView = btn.dataset.view; render(); return; }
   if (act === 'padd') { OPP.prospectEdit = 'new'; render(); els('oppWrap')?.querySelector('[data-opp-prospect="new"] [name="company"]')?.focus(); return; }
@@ -1086,9 +1098,9 @@ async function onClick(event) {
     catch (err) { toast('Could not delete: ' + (err.message || err), 'error'); }
     return;
   }
-  if (act === 'view') { OPP.view = btn.dataset.view; try { localStorage.setItem('gecko.opp.view', OPP.view); } catch { /* per-browser only */ } render(); return; }
+  if (act === 'view') { OPP.view = btn.dataset.view; OPP.enter = 'rise'; try { localStorage.setItem('gecko.opp.view', OPP.view); } catch { /* per-browser only */ } render(); return; }
   if (act === 'pick') { const n = Number(id); OPP.selected = OPP.selected === n ? null : n; render(); if (OPP.selected) els('oppWrap')?.querySelector('.job-pinned')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
-  if (act === 'gapview') { OPP.gapView = btn.dataset.view; try { localStorage.setItem('gecko.opp.gapview', OPP.gapView); } catch { /* per-browser only */ } render(); return; }
+  if (act === 'gapview') { OPP.gapView = btn.dataset.view; OPP.enter = 'rise'; try { localStorage.setItem('gecko.opp.gapview', OPP.gapView); } catch { /* per-browser only */ } render(); return; }
   if (act === 'mapgap') { OPP.gapView = 'list'; OPP.open.add(btn.dataset.client); render();
     [...document.querySelectorAll('#section-opportunities .opp-card-head')].find(h => h.dataset.client === btn.dataset.client)?.scrollIntoView({ block: 'start' }); return; }
   if (act === 'mapdeal') { OPP.view = 'board'; OPP.selected = Number(id); window.geckoGo?.('opportunities', 'pipeline'); setTimeout(() => els('oppWrap')?.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' }), 50); return; }
