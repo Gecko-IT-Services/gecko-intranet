@@ -47,6 +47,17 @@ The same button in the Opportunities header, shown on Pipeline in Board view onl
 or to another tab, leaves the maximised view. The List / Board switch and the follow-up badges stay
 above the board. That made two users, so the code moved from `jobs.js` into `core/maximise.js`.
 
+## Motion (Jack, later the same day: "are the animations up to scratch?")
+They were not: the change was a hard cut, where every other change of view in the app moves. Now,
+going in and coming back, the page arrives in its new shape the way any page arrives: the section's
+own entry animation (`fadeIn`, `--dur-3`) is played again. No new keyframes or timings, and the
+global reduced-motion guard already covers it.
+
+Rejected: **a class with its own animation on the section**. Tried first; taking the class off hands
+the `animation` property back to `fadeIn`, which then plays as well, so the page faded twice.
+**Sliding the sidebar away / growing the board**: the browser is resizing the window for full screen
+at the same moment, and two size changes at once judder. The sidebar still returns without a fade.
+
 ## Tests
 No pure logic to test. Checked in the preview at 1024, 1440 and 1920 wide and at 375 (phone): Esc,
 leaving the tab, leaving the page; Opportunities at 1440 and 375, plus Board to List. `tests/icons.mjs` covers the two icon names.
