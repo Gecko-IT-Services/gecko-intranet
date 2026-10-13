@@ -21,7 +21,7 @@ import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { icon } from '../core/icons.js';
 import { STAGES, OPEN_STAGES, stageLabel, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
-  nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt } from '../core/jobs.js';
+  nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt, canInvoiceInXero, sentToXero } from '../core/jobs.js';
 import { newOpportunity } from '../core/opportunities.js';
 
 const JOB = {
@@ -288,7 +288,8 @@ function jobCard(j) {
   ].filter(Boolean).join(' · ');
   const byNumber = JOB.byNumber || invoiceIndex(JOB.inv);
   const xi = onXero() ? jobInvoices(j, byNumber, today()) : [];
-  const canInvoice = JOB.xero?.connected && ['agreed', 'in_progress', 'to_invoice'].includes(j.status);
+  // Not again once its whole value is in Xero (a second draft would double-bill).
+  const canInvoice = JOB.xero?.connected && canInvoiceInXero(j) && !sentToXero(j, byNumber);
   const invoicing = JOB.invoicing?.id === j.id;
   return `<article class="job-card st-${escapeHtml(j.status)}">
     <div class="job-main">
@@ -405,7 +406,8 @@ async function createInvoice(id, f) {
     const { data, error } = await sb.functions.invoke('xero-invoice', { body: req });
     if (error || !data?.ok) throw new Error(await fnError(error, data));
     JOB.invoicing = null;
-    toast(`Draft ${data.invoice_number || 'invoice'} created in Xero for ${money(amount)} + VAT. Check it, approve and send it in Xero.`, 'success', 9000);
+    toast(`Draft ${data.invoice_number || 'invoice'} created in Xero for ${money(amount)} + VAT. Check it, approve and send it in Xero. The job is now under In Xero.`, 'success', 9000);
+    if (JOB.selected === id) JOB.selected = null;
     await load();
   } catch (err) {
     if (JOB.invoicing) { JOB.invoicing.busy = false; JOB.invoicing.error = 'Xero did not create the invoice: ' + (err.message || err); }
@@ -416,6 +418,14 @@ async function createInvoice(id, f) {
 /** Invoiced or Lost jobs, listed under the board from its drop zones (See them). */
 function stageListHtml() {
   if (!JOB.stage) return '';
+  // In Xero: open jobs whose whole value is in Xero (usually a draft to approve); they move to Invoiced by themselves once approved.
+  if (JOB.stage === 'sent') {
+    const sent = boardLanes(JOB.jobs, [], onXero() ? JOB.byNumber : null).sent;
+    return `<div class="job-pinned job-stage-list">
+      <div class="job-list-sub"><strong>In Xero</strong><span class="job-muted">Approve and send the drafts in Xero; each moves to Invoiced by itself once approved.</span><button type="button" class="job-link" data-job-act="liststage" data-stage="sent">Close</button></div>
+      <div class="job-list">${sent.map(jobCard).join('') || '<p class="job-empty">Nothing waiting in Xero.</p>'}</div>
+    </div>`;
+  }
   const groups = JOB.stage === 'invoiced' && onXero() ? invoicedGroups(JOB.jobs, JOB.byNumber, today()) : null;
   const list = JOB.jobs.filter(j => j.status === JOB.stage)
     .sort((a, b) => String(b.invoiced_at || b.modified_at || '').localeCompare(String(a.invoiced_at || a.modified_at || '')));
@@ -484,7 +494,7 @@ function ideaForm() {
  */
 function boardHtml() {
   JOB.byNumber = invoiceIndex(JOB.inv);
-  const b = boardLanes(JOB.jobs, JOB.opps);
+  const b = boardLanes(JOB.jobs, JOB.opps, onXero() ? JOB.byNumber : null);
   const count = n => `${n} ${n === 1 ? 'job' : 'jobs'}`;
   const col = (key, label, value, n, body, add) => `<section class="job-col col-${key}" data-drop="${key}" aria-label="${escapeHtml(label)}">
       <header><strong>${escapeHtml(label)}</strong><span>${escapeHtml(whole(value))}</span><small>${escapeHtml(n)}</small></header>
@@ -499,6 +509,7 @@ function boardHtml() {
     ${JOB.adding ? jobForm(null) : ''}${JOB.addingIdea ? ideaForm() : ''}
     <div class="job-board">${ideas}${lanes}</div>
     <div class="job-drops">
+      <div class="job-drop job-drop-xero"><strong>In Xero</strong><span>${escapeHtml(count(b.done.sent))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="sent" aria-expanded="${JOB.stage === 'sent'}">See them</button></div>
       <div class="job-drop" data-drop="invoiced"><strong>Invoiced</strong><span>${escapeHtml(count(b.done.invoiced))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="invoiced" aria-expanded="${JOB.stage === 'invoiced'}">See them</button></div>
       <div class="job-drop" data-drop="lost"><strong>Lost</strong><span>${escapeHtml(count(b.done.lost))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="lost" aria-expanded="${JOB.stage === 'lost'}">See them</button></div>
     </div>
@@ -596,8 +607,9 @@ function invoicedHtml(g) {
     : '';
   const paid = JOB.allPaid ? g.paid : g.recent;
   const older = g.paid.length - g.recent.length;
-  const html = block('Awaiting payment', '', g.awaiting) +
-    block('Not matched to a Xero invoice', 'Add the invoice number under Edit', g.unmatched) +
+  const html = block('Not in Xero yet', 'Invoice in Xero creates the draft (or add the invoice number under Edit)', g.unmatched) +
+    block('Draft in Xero', 'Approve and send it in Xero', g.drafts) +
+    block('Awaiting payment', '', g.awaiting) +
     block('Paid', JOB.allPaid ? '' : 'Last 90 days', paid) +
     (older > 0 ? `<p class="job-note"><button type="button" class="job-link" data-job-act="allpaid">${JOB.allPaid ? 'Show only the last 90 days' : `Show ${older} older paid ${older === 1 ? 'job' : 'jobs'}`}</button></p>` : '');
   return html || '<p class="job-empty">No invoiced jobs yet.</p>';

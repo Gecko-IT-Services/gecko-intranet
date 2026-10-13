@@ -82,6 +82,21 @@ ties the draft to the leak, which then shows "Draft INV-… in Xero" instead of 
   May 2026: Regal, West Country Fires, Technix), so those clients aren't prompted to pay twice.
 - Checked against the real October data: every Atera client matched its Xero contact; the only billable leak was MSA's.
 
+## The repeating invoice behind a leak (13 Oct, Philip: "act upon a change when we see it in this dashboard")
+
+Xero's API can create or delete a repeating invoice but not change one: its own OpenAPI spec (XeroAPI/Xero-OpenAPI,
+`xero_accounting.yaml`) lists PUT /RepeatingInvoices "Creates", POST /RepeatingInvoices "Creates or deletes" and POST
+/RepeatingInvoices/{id} "Deletes", all under `accounting.transactions` (Gecko is connected with `accounting.invoices`). Changing
+a line would mean deleting and recreating the client's template: schedule, sending settings and history at risk, and a client
+left with no repeating invoice if it failed half-way. Rejected.
+
+Instead each billable leak says exactly what to change on the client's repeating invoice and links straight to it in Xero
+(`https://go.xero.com/RepeatTransactions/Edit.aspx?invoiceID=<RepeatingInvoiceID>&type=AR`, the address Philip copied for MSA),
+then reads it back from `xero_repeating_invoices` (hourly sync; Clients › Atera › Refresh now runs `xero-sync` first):
+**todo** (MSA: backup 6 → 9, next invoice 1 Nov), **partly** (raised but still short of what Atera charges for: change it, or
+remove the extra seats in Atera), **fixed**, **add** (no such line: add it to the client's *monthly* template, never an annual one
+such as web hosting), **none**. `repeatingFix()` in `src/core/atera-costs.js`; the line is matched on item code and description.
+
 ## Not done / later
 
 - The exact report layout is unknown until Philip downloads one (11 Oct); the heading rules in `detectColumns` may need a

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   saleFeatures, costFeature, parseCsv, money, detectColumns, usageLines, reconcile,
-  billMonths, billsFromFeed, ateraSales, salesByMonth, ateraMonth, usageChanges, SEAT_OFFER_USD, ateraBreakdown
+  billMonths, billsFromFeed, ateraSales, salesByMonth, ateraMonth, usageChanges, SEAT_OFFER_USD, ateraBreakdown, repeatingFix, xeroRepeatingUrl
 } from '../src/core/atera-costs.js';
 
 // — Features from Xero descriptions (real lines, Sep 2026). —
@@ -201,12 +201,28 @@ const sm = ateraMonth({ month: '2026-10', bill: octBill, usage: seatUsage, invoi
 const msa = sm.leaks.find(l => l.kind === 'short_qty');
 assert.equal(msa.client, 'MSA Safety');
 assert.equal(msa.perMonth, 26.85, '3 more × £8.95');
-assert.deepEqual(msa.bill, { client: 'MSA Safety', item_code: 'Atera - Cloud Backup', description: 'Acronis/M365 - Cloud Backup', quantity: 3, unit: 8.95, costPerMonth: null });
+assert.deepEqual(msa.bill, { client: 'MSA Safety', item_code: 'Atera - Cloud Backup', description: 'Acronis/M365 - Cloud Backup', quantity: 3, unit: 8.95, costPerMonth: null, target: 9 });
 assert.equal(msa.ref, '2026-10|MSA Safety|short_qty|backup');
 assert.ok(!sm.leaks.some(l => l.kind === 'short_qty' && l.client.startsWith('Onsite')), 'a flat £65 line is not 1 seat');
 assert.ok(!sm.leaks.some(l => l.client.startsWith('Technix') && l.bill), 'Technix’s retainer already covers their backup: nothing to bill');
 const wired = sm.leaks.find(l => l.kind === 'unbilled' && l.client === 'Wired Services');
 assert.deepEqual([wired.bill.description, wired.bill.quantity], ['Backup (Acronis)', 1]);
 assert.ok(!sm.leaks.find(l => l.kind === 'seat_offer')?.bill, 'Atera’s own discount is not something to bill a client');
+
+// — The repeating invoice behind a leak (MSA's real template, ef117221…, next 1 Nov 2026: backup line 6 × £8.95). —
+const tmpl = (qty, status = 'AUTHORISED') => [{ repeating_invoice_id: 'ef117221-e4ae-4de6-94e0-6c237aba1581', contact_name: 'MSA Safety', status, next_date: '2026-11-01', unit: 'MONTHLY', period: 1,
+  line_items: [{ item_code: 'M365', description: 'M365 Subscription - msasafety.co.uk', quantity: 6 },
+    { item_code: 'Atera - Cloud Backup', description: 'Acronis/M365 - Cloud Backup', quantity: qty, unit_amount: 8.95 }] },
+  { repeating_invoice_id: '38af2829', contact_name: 'MSA Safety', status: 'AUTHORISED', next_date: '2027-03-01', unit: 'YEARLY', period: 1, line_items: [{ item_code: 'Web Hosting', description: 'Web Hosting - 1 year', quantity: 1 }] }];
+assert.equal(xeroRepeatingUrl('ef117221-e4ae-4de6-94e0-6c237aba1581'), 'https://go.xero.com/RepeatTransactions/Edit.aspx?invoiceID=ef117221-e4ae-4de6-94e0-6c237aba1581&type=AR', 'the link Philip copied from Xero');
+assert.equal(msa.bill.target, 9);
+assert.deepEqual(repeatingFix(msa, tmpl(6)), { id: 'ef117221-e4ae-4de6-94e0-6c237aba1581', url: xeroRepeatingUrl('ef117221-e4ae-4de6-94e0-6c237aba1581'), next: '2026-11-01',
+  line: 'Acronis/M365 - Cloud Backup', state: 'todo', from: 6, to: 9 });
+assert.equal(repeatingFix(msa, tmpl(7)).state, 'partly', '7 of 9: better, still 2 short of what Atera charges for');
+assert.equal(repeatingFix(msa, tmpl(9)).state, 'fixed');
+assert.equal(repeatingFix(msa, tmpl(6, 'DELETED')).state, 'none', 'a deleted template is not offered, and a monthly charge never goes on the annual hosting invoice');
+const wiredFix = repeatingFix(wired, [{ repeating_invoice_id: 'w1', contact_name: 'Wired Services Ltd', status: 'AUTHORISED', next_date: '2026-11-05', unit: 'MONTHLY', period: 1, line_items: [] }]);
+assert.deepEqual([wiredFix.state, wiredFix.id, wiredFix.to], ['add', 'w1', 1], 'nothing billed for it yet: add a line');
+assert.equal(repeatingFix({ kind: 'seat_offer' }, tmpl(6)), null);
 
 console.log('atera-costs: all tests passed');

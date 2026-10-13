@@ -270,7 +270,9 @@
 #section-jobs .is-dragging .job-col, #section-jobs .is-dragging .job-drop { border-color: var(--border); }
 #section-jobs .job-col.drop-over, #section-jobs .job-drop.drop-over { border-color: var(--green); background: var(--green-glow); }
 
-#section-jobs .job-drops { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+#section-jobs .job-drops { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+/* In Xero is a list, not a place to drop a sticky: a solid edge tells it apart from Invoiced and Lost. */
+#section-jobs .job-drop.job-drop-xero { border-style: solid; }
 #section-jobs .job-drop { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 1.5px dashed var(--border-dim); border-radius: var(--radius-sm);
   font-size: 13px; color: var(--muted); transition: border-color var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease); }
 #section-jobs .job-drop strong { color: var(--white); }

@@ -95,6 +95,11 @@
 #section-atera .at-bill-grid select, #section-atera .at-bill-grid input { width: 100%; min-width: 0; }
 #section-atera .at-bill p { margin: 8px 0 0; }
 
+/* The repeating invoice behind a leak */
+#section-atera .at-rep { flex-basis: 100%; margin: 4px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+#section-atera .at-rep p { margin: 0; }
+#section-atera .at-rep .at-actions { margin-top: 6px; }
+
 /* Upload */
 #section-atera .at-upload label { display: inline-flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
 #section-atera .at-upload select { min-width: 0; max-width: 100%; }
