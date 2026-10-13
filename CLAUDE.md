@@ -240,6 +240,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `show()` (`overview`, `tocome`, `invoiced`, `xero`) open This month.
   **In Xero** (13 Oct, `2026-10-13-jobs-in-xero-design.md`): a job whose whole value is in Xero (drafts too) leaves the board for the In Xero
   list (stage unchanged, so the money figures don't move); Invoice in Xero also works on a job marked invoiced with no invoice number.
+  **Maximise** (13 Oct, `2026-10-13-jobs-maximise-design.md`): header button on the Jobs tab; `.is-max` on `#section-jobs` hides the
+  sidebar, heading, tabs and figures and asks the browser for full screen; Esc or the same button returns. Not remembered.
   Chart colours Gecko Green (recurring) & Indigo (one-off), striped = still to come (`--viz-*`). Replaces the old Projects board
   (off the menu since 6 Oct; its code was removed 9 Oct).
 - "Sales this month" reads Xero from the feed: invoiced so far + repeating invoices not yet raised
