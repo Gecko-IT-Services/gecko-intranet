@@ -9,6 +9,7 @@
    leaks it can see from devices, and says what the report would add. */
 
 import { sameAteraClient, isInternal, isServer, daysSince, STALE_DAYS } from './devices.js';
+import { sameClient } from './client.js';
 
 export const FEATURES = [
   { key: 'backup', label: 'Backup', maker: 'Acronis' },
@@ -399,7 +400,7 @@ export function ateraMonth({ month, bill, usage, prevUsage, invoices, agents, to
         const line = perSeat[0];
         leaks.push({ kind: 'short_qty', client: c.name, perMonth: r2(short * line.unit), sure: true, ref: ref('short_qty', c.name, f.key),
           text: `${f.label}: Atera charges for ${u[f.key]}, Xero bills ${billed} × ${fmt(line.unit)} (“${line.text}”).`,
-          bill: { client: c.name, item_code: line.code, description: line.text, quantity: short, unit: line.unit, costPerMonth: null } });
+          bill: { client: c.name, item_code: line.code, description: line.text, quantity: short, unit: line.unit, costPerMonth: null, target: u[f.key] } });
       }
     }
     if (!hasUsage && c.devices && c.sale === 0) {
@@ -459,3 +460,43 @@ export function usageChanges(usage, prevUsage, gbp = () => null) {
   return { total: { usd: total, gbp: gbp(total) }, lines };
 }
 
+
+// — The repeating invoice behind a leak. Xero's API can create or delete a repeating invoice but not change one (Xero's
+//   own OpenAPI spec, Oct 2026), so Gecko HQ never edits it: it opens it in Xero with the exact change, and reads it back
+//   (the hourly sync) to see when it's done. —
+
+/** Xero's own page for a repeating (sales) invoice. */
+export const xeroRepeatingUrl = id => `https://go.xero.com/RepeatTransactions/Edit.aspx?invoiceID=${encodeURIComponent(id)}&type=AR`;
+
+/**
+ * What to do on the client's repeating invoice for a billable leak. templates: xero_repeating_invoices rows.
+ * → null (nothing to bill) or { state, id, url, next, line, from, to } where state is
+ *   'todo'    the line is there with too few (from → to),
+ *   'partly'  raised since, but still short of what Atera charges for,
+ *   'fixed'   the line now covers what Atera charges for (from the next invoice on),
+ *   'add'     no such line: add it,
+ *   'none'    the client has no monthly repeating invoice in Xero to put it on.
+ */
+export function repeatingFix(leak, templates) {
+  if (!leak?.bill) return null;
+  const b = leak.bill;
+  const mine = (templates || []).filter(t => String(t.status || '').toUpperCase() === 'AUTHORISED'
+    && (sameAteraClient(leak.client, t.contact_name) || sameClient(leak.client, t.contact_name)))
+    .sort((x, y) => String(x.next_date || '').localeCompare(String(y.next_date || '')));
+  if (!mine.length) return { state: 'none' };
+  const same = l => String(l.item_code || '') === String(b.item_code || '') && lc(l.description).trim() === lc(b.description).trim();
+  for (const t of mine) {
+    const line = (t.line_items || []).find(same);
+    if (!line) continue;
+    const from = Number(line.quantity) || 0;
+    const base = { id: t.repeating_invoice_id, url: xeroRepeatingUrl(t.repeating_invoice_id), next: t.next_date || '', line: line.description };
+    if (b.target == null) return { ...base, state: 'fixed', from, to: from };
+    if (from >= b.target) return { ...base, state: 'fixed', from, to: b.target };
+    return { ...base, state: from > b.target - b.quantity ? 'partly' : 'todo', from, to: b.target };
+  }
+  // Nothing billed for this yet: add a line to a monthly repeating invoice (never an annual one, e.g. web hosting).
+  const t = mine.find(x => String(x.unit || '').toUpperCase() === 'MONTHLY' && Number(x.period || 1) === 1);
+  if (!t) return { state: 'none' };
+  return { state: 'add', id: t.repeating_invoice_id, url: xeroRepeatingUrl(t.repeating_invoice_id), next: t.next_date || '',
+    line: b.description, from: 0, to: b.target ?? b.quantity };
+}

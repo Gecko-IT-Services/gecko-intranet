@@ -17,10 +17,10 @@ import { toast, escapeHtml, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   FEATURES, featureLabel, billMonths, billsFromFeed, salesByMonth, ateraMonth,
-  parseCsv, detectColumns, usageLines, reconcile, ateraBreakdown
+  parseCsv, detectColumns, usageLines, reconcile, ateraBreakdown, repeatingFix
 } from '../core/atera-costs.js';
 
-const AT = { bills: null, files: [], usage: [], invoices: [], agents: [], pushes: [], month: '', error: null, open: new Set(), pending: null, saving: false, billing: null, syncedAt: null };
+const AT = { bills: null, files: [], usage: [], invoices: [], agents: [], pushes: [], repeating: [], month: '', error: null, open: new Set(), pending: null, saving: false, billing: null, syncedAt: null };
 const els = id => document.getElementById(id);
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
@@ -51,16 +51,18 @@ async function load() {
       }
     } catch { /* the feed is optional here: the receipts already in atera_bills still show */ }
     const first = bills.length ? bills[0].month : today().slice(0, 7);
-    const [files, usage, invoices, agents, pushes] = await Promise.all([
+    const [files, usage, invoices, agents, pushes, repeating] = await Promise.all([
       sb.from('atera_usage_files').select('*').order('month', { ascending: false }).then(must),
       sb.from('atera_usage').select('month,customer,product,feature,quantity,usd').then(must),
       sb.from('xero_invoices').select('contact_name,invoice_number,invoice_date,status,line_items').gte('invoice_date', first + '-01').in('status', ['AUTHORISED', 'PAID']).then(must),
       sb.from('atera_agents').select('customer_name,machine_name,device_type,os,last_seen').then(must),
       // Drafts already raised from a leak here ("Bill in Xero"); before that update the column isn't there, so none.
       sb.from('xero_pushes').select('leak_ref,invoice_number,quantity,amount,created_at').eq('source', 'atera').eq('state', 'done')
-        .then(({ data, error }) => (error ? [] : data || []))
+        .then(({ data, error }) => (error ? [] : data || [])),
+      // Repeating invoices (synced from Xero hourly): what each billable leak's fix is checked against.
+      sb.from('xero_repeating_invoices').select('repeating_invoice_id,contact_name,status,next_date,unit,period,line_items').then(must)
     ]);
-    Object.assign(AT, { bills, files, usage, invoices, agents, pushes, syncedAt: new Date() });
+    Object.assign(AT, { bills, files, usage, invoices, agents, pushes, repeating, syncedAt: new Date() });
     const months = billMonths(bills).map(b => b.month);
     if (!AT.month || !months.includes(AT.month)) AT.month = months[0] || '';
   } catch (err) {
@@ -193,10 +195,33 @@ function leaksHtml(m) {
       <span class="at-leak-fig">${l.perMonth != null ? `${l.sure ? '' : 'about '}${escapeHtml(gbp(l.perMonth))}<small>/month</small>` : '<small>cost unknown</small>'}</span>
       <p>${escapeHtml(l.text)}</p>
       ${action ? `<div class="at-actions">${action}</div>` : ''}
+      ${repeatingHtml(l)}
       ${l.bill && AT.billing && AT.billing.ref === l.ref ? billFormHtml(l) : ''}
     </li>`;
   }).join('');
   return `<section class="at-group"><h2>Leaks and savings <span class="badge badge-amber">${m.leaks.length}</span></h2><ul class="at-leaks">${rows}</ul></section>`;
+}
+
+const nextLabel = d => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '');
+
+/**
+ * The client's repeating invoice for a billable leak: what to change and a link straight to it in Xero (Xero's API can't
+ * change a repeating invoice, so it's done there), then "fixed" once the hourly sync reads the new figure back.
+ */
+function repeatingHtml(l) {
+  const f = repeatingFix(l, AT.repeating);
+  if (!f) return '';
+  const link = label => `<a class="btn btn-sm btn-ghost" href="${escapeHtml(f.url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`;
+  const when = f.next ? ` (next invoice ${escapeHtml(nextLabel(f.next))})` : '';
+  if (f.state === 'fixed') return `<p class="at-rep"><span class="badge badge-green">Repeating invoice fixed</span> ${escapeHtml(`${f.line}: ${f.from} from ${nextLabel(f.next) || 'the next invoice'}`)}</p>`;
+  if (f.state === 'none') return `<p class="at-rep">${escapeHtml(`${l.client} has no monthly repeating invoice in Xero to add this to.`)}</p>`;
+  const what = f.state === 'add'
+    ? `Add “${f.line}” × ${f.to} to ${l.client}’s repeating invoice${when}.`
+    : f.state === 'partly'
+      ? `Repeating invoice now ${f.from}; Atera charges for ${f.to}. Change “${f.line}” to ${f.to}, or remove the extra seats in Atera${when}.`
+      : `On ${l.client}’s repeating invoice change “${f.line}” from ${f.from} to ${f.to}${when}.`;
+  return `<div class="at-rep"><p>${escapeHtml(what)} Gecko HQ checks it within the hour (Refresh checks now).</p>
+    <div class="at-actions">${link(f.state === 'add' ? 'Add to repeating invoice' : 'Fix repeating invoice')}</div></div>`;
 }
 
 /** The "Bill in Xero" form under a leak: a DRAFT sales invoice for this month, approved and sent by Philip in Xero. */
@@ -531,6 +556,14 @@ export function init() {
   els('atRefresh')?.addEventListener('click', async () => {
     const b = els('atRefresh');
     b?.classList.add('spinning');
+    // Read Xero first, so a repeating invoice just changed there shows as fixed (same sync as Jobs › Refresh).
+    try {
+      const sb = await connectSupabase({ interactive: true });
+      const { data, error } = await sb.functions.invoke('xero-sync', { body: {} });
+      if (error || data?.ok === false) toast(`Xero didn’t sync: ${error?.message || data?.error || 'unknown error'}. Showing the last sync.`, 'error', 7000);
+    } catch (err) {
+      toast(`Xero didn’t sync: ${err.message || err}. Showing the last sync.`, 'error', 7000);
+    }
     await load();
     b?.classList.remove('spinning');
   });

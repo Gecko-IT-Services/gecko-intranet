@@ -167,7 +167,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Cost per client needs Atera's usage report uploaded on the page (`atera_usage`, saved by `save_atera_usage` only when it adds up to
   the add-ons charge ±$1). The report is Atera › Admin › Subscription › Invoices › AppCenter invoice › breakdown .xlsx (`ateraBreakdown`;
   only Acronis is split by customer, Webroot/Keeper/EndUser Remote are totals). Leaks a client should pay for (billed short, not billed)
-  have **Bill in Xero**: a DRAFT via `xero-invoice` (`source: 'atera'`, `xero_pushes.leak_ref`). `src/core/atera-costs.js`, tests `tests/atera-costs.mjs`.
+  have **Bill in Xero**: a DRAFT via `xero-invoice` (`source: 'atera'`, `xero_pushes.leak_ref`), and **Fix repeating invoice**: the exact
+  change plus a link to the template in Xero, read back hourly as fixed (Xero's API can't edit a repeating invoice, so Gecko HQ never
+  does). `src/core/atera-costs.js` (`repeatingFix`), tests `tests/atera-costs.mjs`.
 - Monitoring › **Devices** + client page › Devices (11 Oct, `2026-10-11-atera-devices-design.md`): Atera agents per customer
   (Edge Function `atera-sync`, secret `ATERA_API_KEY`, 4× a day + Refresh; tables `atera_customers`, `atera_agents` with
   `raw`, `atera_status`): Windows 10, not seen 30+ days, devices but no Atera billing in Xero this month. Read only.
