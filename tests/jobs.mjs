@@ -164,7 +164,7 @@ assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, in
 
 // The whiteboard
 {
-  const { boardLanes, ideaMove, tilt } = await import('../src/core/jobs.js');
+  const { boardLanes, ideaMove, tilt, moveTargets } = await import('../src/core/jobs.js');
   const jobs = [
     { id: 1, status: 'quoted', value: 500, target_date: '2026-11-01' },
     { id: 2, status: 'quoted', value: 900, target_date: null },
@@ -178,10 +178,14 @@ assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, in
     { id: 12, status: 'won', one_off: 300, title: 'Has a job via source_ref' },
     { id: 13, status: 'won', one_off: 200, title: 'Won, needs a job' },
     { id: 14, status: 'lost', one_off: 900 },
-    { id: 15, status: 'idea', one_off: 800, job_id: 9 }
+    { id: 15, status: 'idea', one_off: 800, job_id: 9 },
+    { id: 16, status: 'idea', one_off: 0, mrr: 0, title: 'An idea with no fee yet' },
+    { id: 17, status: 'idea', one_off: 0, mrr: 0, product_key: 'hornet', title: 'Catalogue product, not priced' }
   ];
   const b = boardLanes(jobs, opps);
-  assert.deepEqual(b.ideas.map(o => o.id), [13, 10], 'won first, then biggest; monthly-only, linked and lost left out');
+  assert.deepEqual(b.ideas.map(o => o.id), [13, 10, 16], 'won first, then biggest, unpriced last; monthly-only, catalogue, linked and lost left out');
+  assert.deepEqual(moveTargets('job', 'agreed'), ['quoted', 'in_progress', 'to_invoice', 'invoiced', 'lost'], 'either way, never back to Ideas');
+  assert.deepEqual(moveTargets('idea', 'proposed'), ['quoted', 'agreed', 'in_progress', 'to_invoice', 'lost'], 'an idea is never invoiced straight away');
   assert.equal(b.ideasValue, 600);
   assert.deepEqual(b.lanes[0].items.map(j => j.id), [3, 1, 2], 'soonest target first, undated last');
   assert.equal(b.lanes[0].value, 1500);

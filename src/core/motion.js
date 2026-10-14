@@ -16,7 +16,8 @@ export function redraw(mount, html) {
  * has view transitions and the person has not asked for less motion; a plain redraw otherwise.
  */
 export function glide(draw) {
-  if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { draw(); return; }
-  // The browser may skip the movement (tab in the background, window resized mid-way); `draw` has still run.
+  // A page not on screen gets no frames, and the browser holds the redraw back until it has one: draw now instead.
+  if (!document.startViewTransition || document.visibilityState !== 'visible' || matchMedia('(prefers-reduced-motion: reduce)').matches) { draw(); return; }
+  // The browser may still skip the movement (window resized mid-way); `draw` has run all the same.
   document.startViewTransition(draw).ready.catch(() => {});
 }

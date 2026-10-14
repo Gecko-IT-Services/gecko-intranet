@@ -263,6 +263,10 @@
 :is(#section-jobs, #section-opportunities) .js-move { justify-self: start; margin-top: 2px; padding: 3px 9px; min-height: 0; border: 1px solid var(--border-dim); border-radius: var(--radius-pill);
   background: transparent; font: 600 11px var(--font-body); color: var(--white); cursor: pointer; }
 :is(#section-jobs, #section-opportunities) .js-move:hover { border-color: var(--green); color: var(--green); }
+/* The arrow (the usual next step) and Move to… (anywhere else, either way) share a row. */
+:is(#section-jobs, #section-opportunities) .js-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+:is(#section-jobs, #section-opportunities) .js-acts .js-move { margin-top: 2px; }
+:is(#section-jobs, #section-opportunities) .js-to { width: auto; max-width: 100%; appearance: none; -webkit-appearance: none; cursor: pointer; background: transparent; color: var(--muted); }
 :is(#section-jobs, #section-opportunities) .job-sticky.idea { border-style: dashed; background: color-mix(in srgb, var(--amber) 6%, var(--card)); }
 :is(#section-jobs, #section-opportunities) .job-sticky.idea .js-title { font-weight: 600; }
 

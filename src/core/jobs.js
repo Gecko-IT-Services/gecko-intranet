@@ -363,13 +363,25 @@ export function sentToXero(job, byNumber) {
 export const canInvoiceInXero = job => ['agreed', 'in_progress', 'to_invoice'].includes(job.status)
   || (job.status === 'invoiced' && !refKeys(job.invoice_ref).length);
 
+/**
+ * An opportunity that belongs in the board's Ideas: one with one-off work, or one with no price at all and no
+ * product (an idea typed on the board, where the fee is optional: Jack, 14 Oct). A monthly-only deal, or a
+ * catalogue product not yet priced, stays on the Opportunities pipeline only.
+ */
+export const isJobIdea = o => Number(o.one_off) > 0 || (!o.product_key && !(Number(o.mrr) > 0));
+
+/** Where a sticky can be sent from the board, its own place left out. A job never goes back to Ideas: that would undo the job. */
+export function moveTargets(kind, status) {
+  return (kind === 'idea' ? [...BOARD_STAGES, 'lost'] : [...BOARD_STAGES, 'invoiced', 'lost']).filter(k => k !== status);
+}
+
 export function boardLanes(jobs = [], opps = [], byNumber = null) {
   const sent = byNumber ? jobs.filter(j => sentToXero(j, byNumber)) : [];
   const gone = new Set(sent);
   const onBoard = jobs.filter(j => !gone.has(j));
   const linked = new Set(jobs.map(j => String(j.source_ref || '')).filter(r => r.startsWith('opp:')).map(r => r.slice(4)));
   const ideas = opps
-    .filter(o => Number(o.one_off) > 0 && !o.job_id && !linked.has(String(o.id)) && ['idea', 'proposed', 'won'].includes(o.status))
+    .filter(o => isJobIdea(o) && !o.job_id && !linked.has(String(o.id)) && ['idea', 'proposed', 'won'].includes(o.status))
     .sort((a, b) => (b.status === 'won') - (a.status === 'won') || (Number(b.one_off) || 0) - (Number(a.one_off) || 0));
   const byDate = (a, b) => String(a.target_date || '9999').localeCompare(String(b.target_date || '9999')) || (Number(b.value) || 0) - (Number(a.value) || 0);
   const lanes = BOARD_STAGES.map(key => {
