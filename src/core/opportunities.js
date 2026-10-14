@@ -359,13 +359,17 @@ export function pipelineTotals(opps, now = new Date()) {
   const open = opps.filter(o => o.status === 'idea' || o.status === 'proposed');
   const won = opps.filter(o => o.status === 'won');
   const wonThisMonth = won.filter(o => String(o.closed_at || '').startsWith(month));
+  const proposed = opps.filter(o => o.status === 'proposed');
   return {
     openCount: open.length,
     openMrr: sum(open, 'mrr'),
     openOneOff: sum(open, 'one_off'),
     wonMrr: sum(won, 'mrr'),
     wonMrrThisMonth: sum(wonThisMonth, 'mrr'),
-    wonCountThisMonth: wonThisMonth.length
+    wonCountThisMonth: wonThisMonth.length,
+    proposedCount: proposed.length,
+    proposedMrr: sum(proposed, 'mrr'),
+    proposedOneOff: sum(proposed, 'one_off')
   };
 }
 
@@ -519,6 +523,36 @@ export function boardColumns(opps, today, days = 90, places = null) {
   const byValue = (a, b) => (Number(b.mrr) || 0) - (Number(a.mrr) || 0) || (Number(b.one_off) || 0) - (Number(a.one_off) || 0);
   const col = (key, keep) => ({ key, items: opps.filter(o => o.status === key && keep(o)).sort((a, b) => byPlace(places, 'deal', key)(a, b) || byValue(a, b)) });
   return [col('idea', () => true), col('proposed', () => true), col('won', recent), col('lost', recent)];
+}
+
+/**
+ * Pipeline › Chase (14 Oct, 2026-10-14-opportunities-chase-design.md). Chase: deals that need a person —
+ * proposed; ideas with no (known) product, a one-off, a next step or a follow-up date; won still to set up.
+ * Order: follow-up due (latest first), won to set up, quiet (quietest first), then £/month, one-off.
+ * Could sell: the other ideas (promoted gaps nobody has acted on), by product, most clients first.
+ */
+export function chaseView(opps, products, today) {
+  const byKey = new Map(products.map(p => [p.key, p]));
+  const chase = [], groups = new Map();
+  for (const o of opps) {
+    const product = byKey.get(o.product_key);
+    const acted = !product || Number(o.one_off) > 0 || String(o.next_step || '').trim() || dayKey(o.follow_up_on);
+    if (o.status === 'idea' && !acted) {
+      if (!groups.has(product.key)) groups.set(product.key, { product, items: [] });
+      groups.get(product.key).items.push(o);
+      continue;
+    }
+    const st = dealState(o, today);
+    if (st.open || st.needsJob || st.needsBilling) chase.push({ o, st });
+  }
+  const rank = ({ st }) => (st.followUpDue ? 0 : st.needsJob || st.needsBilling ? 1 : st.stale ? 2 : 3);
+  const n = v => Number(v) || 0;
+  chase.sort((a, b) => rank(a) - rank(b) || b.st.followUpLate - a.st.followUpLate || b.st.stale - a.st.stale
+    || n(b.o.mrr) - n(a.o.mrr) || n(b.o.one_off) - n(a.o.one_off));
+  const couldSell = [...groups.values()]
+    .map(g => ({ ...g, items: g.items.sort((a, b) => String(a.client_name).localeCompare(String(b.client_name))) }))
+    .sort((a, b) => b.items.length - a.items.length || String(a.product.name).localeCompare(String(b.product.name)));
+  return { chase: chase.map(c => c.o), couldSell };
 }
 
 /**

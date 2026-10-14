@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
   classifyMx, spfStatus, dmarcPolicy, summariseDns, summarisePageSpeed, ticketHits,
   holds, evaluate, clientGaps, withoutOpen, pipelineTotals, fillTemplate, priceSentence, unitValue, emailDomain, THRESHOLDS,
-  renewalsDue
+  renewalsDue, chaseView
 } from '../src/core/opportunities.js';
 
 const NOW = new Date('2026-10-08T09:00:00Z');
@@ -142,7 +142,8 @@ const t = pipelineTotals([
   { status: 'won', mrr: 60, closed_at: '2026-10-02T10:00:00Z' }, { status: 'won', mrr: 20, closed_at: '2026-09-02T10:00:00Z' },
   { status: 'lost', mrr: 99 }
 ], NOW);
-assert.deepEqual(t, { openCount: 2, openMrr: 75.5, openOneOff: 150, wonMrr: 80, wonMrrThisMonth: 60, wonCountThisMonth: 1 });
+assert.deepEqual(t, { openCount: 2, openMrr: 75.5, openOneOff: 150, wonMrr: 80, wonMrrThisMonth: 60, wonCountThisMonth: 1,
+  proposedCount: 1, proposedMrr: 45.5, proposedOneOff: 150 });
 
 // — Email —
 const mail = fillTemplate(
@@ -314,3 +315,26 @@ console.log('opportunities: ok');
   assert.equal(mapCell({}), '');
   console.log('opportunities: map ok');
 }
+
+// — Chase and Could sell (14 Oct) —
+const CP = [{ key: 'voxone_mig', name: 'VoIP Exchange → VoxOne' }, { key: 'hornet', name: 'Hornetsecurity' }];
+const CD = '2026-10-14';
+const copp = (id, o) => ({ id, client_name: 'C' + id, status: 'idea', mrr: 0, one_off: 0, next_step: '', follow_up_on: null, modified_at: '2026-10-13T09:00:00Z', ...o });
+const cv = chaseView([
+  copp(1, { product_key: 'voxone_mig', mrr: 4, client_name: 'Waterside' }),
+  copp(2, { product_key: 'voxone_mig', mrr: 4, client_name: 'Freeston' }),
+  copp(3, { product_key: 'hornet', client_name: 'Snowskool' }),
+  copp(4, { product_key: 'hornet', next_step: 'Call Chris' }),                      // acted on → chase
+  copp(5, { one_off: 650 }),                                                       // a conversation → chase
+  copp(6, { product_key: 'gone' }),                                                // product removed → chase
+  copp(7, { status: 'proposed', mrr: 30 }),
+  copp(8, { status: 'proposed', mrr: 4, follow_up_on: '2026-10-11' }),             // 3 days late → first
+  copp(9, { status: 'proposed', mrr: 99, modified_at: '2026-09-01T09:00:00Z' }),   // quiet → after set-up
+  copp(10, { status: 'won', mrr: 10, closed_at: '2026-10-10T09:00:00Z' }),         // billing to set up
+  copp(11, { status: 'won', mrr: 10, billing_set_up_at: '2026-10-11T09:00:00Z' }), // done → nowhere
+  copp(12, { status: 'lost', mrr: 50 })                                            // nowhere
+], CP, CD);
+assert.deepEqual(cv.chase.map(o => o.id), [8, 10, 9, 7, 5, 4, 6], 'late, to set up, quiet, then by value');
+assert.deepEqual(cv.couldSell.map(g => [g.product.key, g.items.map(o => o.client_name)]),
+  [['voxone_mig', ['Freeston', 'Waterside']], ['hornet', ['Snowskool']]], 'by product, most clients first, clients by name');
+assert.deepEqual(chaseView([], CP, CD), { chase: [], couldSell: [] });
