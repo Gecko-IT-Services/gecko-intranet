@@ -22,13 +22,15 @@ import { icon } from '../core/icons.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { maximiser } from '../core/maximise.js';
 import { redraw, glide } from '../core/motion.js';
-import { STAGES, OPEN_STAGES, stageLabel, moveTargets, jobToIdea, isJobIdea, monthSales, salesHistory,
+import { placesMap, dropSpot, clearSpot } from '../core/board.js';
+import { STAGES, OPEN_STAGES, stageLabel, moveTargets, jobToIdea, isJobIdea, reorder, placeRows, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
   nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt, canInvoiceInXero, sentToXero } from '../core/jobs.js';
 import { newOpportunity } from '../core/opportunities.js';
 
 const JOB = {
   tab: 'jobs',
+  places: new Map(),      // stickies placed by hand in their column (board_places), 'kind:id' → { col, place }
   stage: null,            // 'invoiced' | 'lost': listed under the board (See them)
   editing: new Set(),
   adding: false,
@@ -88,15 +90,18 @@ async function load() {
   render();
   try {
     const sb = await connectSupabase();
-    const [jobs, clients, feed, xero, opps] = await Promise.all([
+    const [jobs, clients, feed, xero, opps, places] = await Promise.all([
       sb.from('jobs').select('*').order('modified_at', { ascending: false }).then(must),
       sb.from('gecko_clients').select('title,status').then(must),
       readFeed(),
       // Missing table (before the Xero migration) is not an error for Jobs.
       sb.from('xero_status').select('*').eq('id', 1).maybeSingle().then(r => (r.error ? null : r.data)),
       // The board's Ideas; if they can't be read the column says so and the jobs still show.
-      sb.from('opportunities').select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step,product_key').then(r => (r.error ? { error: r.error.message } : r.data))
+      sb.from('opportunities').select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step,product_key').then(r => (r.error ? { error: r.error.message } : r.data)),
+      // Hand order within a column; without it (table not there yet) the columns keep their own order.
+      sb.from('board_places').select('*').in('kind', ['job', 'idea']).then(r => (r.error ? [] : r.data))
     ]);
+    JOB.places = placesMap(places);
     JOB.jobs = jobs;
     JOB.opps = Array.isArray(opps) ? opps : [];
     JOB.oppsError = Array.isArray(opps) ? '' : opps.error;
@@ -191,7 +196,7 @@ async function saveJob(id, f) {
 }
 
 /** `byArrow`: the sticky glides to its column. Dropped by hand, it is already where it was put. */
-async function moveJob(id, status, btn, byArrow = false) {
+async function moveJob(id, status, btn, byArrow = false, index = null) {
   const job = JOB.jobs.find(j => j.id === id);
   if (!job) return;
   btn.disabled = true;
@@ -201,8 +206,9 @@ async function moveJob(id, status, btn, byArrow = false) {
     const row = must(await sb.from('jobs').update(patch).eq('id', id).select('*').single());
     JOB.jobs = JOB.jobs.map(j => (j.id === id ? row : j));
     toast(status === 'invoiced' ? `Invoiced: ${money(row.value)} · add the Xero invoice number under Edit` : `Moved to ${stageLabel(status)}`, 'success', 5000);
+    if (index != null) await place(status, 'job', id, index);
     if (byArrow) glide(render); else render();
-  } catch (err) { btn.disabled = false; toast('Could not update: ' + (err.message || err), 'error', 7000); }
+  } catch (err) { btn.disabled = false; toast('Could not update: ' + (err.message || err), 'error', 7000); render(); }
 }
 
 // ─── Rendering ────────────────────────────────────────────────────────
@@ -508,7 +514,7 @@ function ideaForm() {
  */
 function boardHtml() {
   JOB.byNumber = invoiceIndex(JOB.inv);
-  const b = boardLanes(JOB.jobs, JOB.opps, onXero() ? JOB.byNumber : null);
+  const b = boardLanes(JOB.jobs, JOB.opps, onXero() ? JOB.byNumber : null, JOB.places);
   const count = n => `${n} ${n === 1 ? 'job' : 'jobs'}`;
   const col = (key, label, value, n, body, add) => `<section class="job-col col-${key}" data-drop="${key}" aria-label="${escapeHtml(label)}">
       <header><strong>${escapeHtml(label)}</strong><span>${escapeHtml(whole(value))}</span><small>${escapeHtml(n)}</small></header>
@@ -533,7 +539,7 @@ function boardHtml() {
 
 /** A sticky dropped on a column (or a sticky's arrow): jobs move stage; ideas become jobs. */
 /** A job dragged (or sent with Move to…) back to Ideas: its opportunity takes it back, then the job goes (`jobToIdea`). */
-async function backToIdeas(j, picked) {
+async function backToIdeas(j, picked, index = null) {
   if (JOB.oppsError) { toast('Opportunities didn’t load, so it can’t go back to Ideas. Refresh and try again.', 'warning', 7000); return; }
   const oppId = String(j.source_ref || '').startsWith('opp:') ? Number(j.source_ref.slice(4)) : null;
   const opp = oppId ? JOB.opps.find(o => o.id === oppId) || null : null;
@@ -550,21 +556,42 @@ async function backToIdeas(j, picked) {
     must(await sb.from('jobs').delete().eq('id', j.id).select('id').single());
     JOB.jobs = JOB.jobs.filter(x => x.id !== j.id);
     if (JOB.selected === j.id) JOB.selected = null;
+    if (index != null && isJobIdea(row)) await place('ideas', 'idea', row.id, index);
     toast(isJobIdea(row) ? `${j.title}: back in Ideas` : `${j.title}: back on the Opportunities pipeline (a monthly deal with no one-off fee)`, 'success', 6000);
     if (picked) glide(render); else render();
   } catch (err) { toast('Could not move it back to Ideas: ' + (err.message || err), 'error', 8000); render(); }
 }
 
-async function dropOn(ref, stage, picked = false) {
+/** The column's stickies as drawn, top to bottom. */
+function columnItems(stage) {
+  const b = boardLanes(JOB.jobs, JOB.opps, onXero() ? JOB.byNumber : null, JOB.places);
+  return stage === 'ideas' ? b.ideas : b.lanes.find(l => l.key === stage)?.items || [];
+}
+
+/** Put a sticky at `index` (0 = top) in its column and save the places that change (board_places). */
+async function place(stage, kind, id, index) {
+  const rows = placeRows(reorder(columnItems(stage).map(x => x.id), id, index), kind, stage, JOB.places);
+  if (!rows.length) return;
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    must(await sb.from('board_places').upsert(rows, { onConflict: 'kind,ref_id' }));
+    rows.forEach(r => JOB.places.set(`${r.kind}:${r.ref_id}`, { col: r.col, place: r.place }));
+  } catch (err) { toast('Moved, but its place in the column was not saved: ' + (err.message || err), 'warning', 8000); }
+}
+
+/** `index`: where in the column it was dropped (null from Move to… and the drop zones under the board). */
+async function dropOn(ref, stage, picked = false, index = null) {
   const [kind, raw] = String(ref).split(':');
   const id = Number(raw);
   if (kind === 'job') {
     const j = JOB.jobs.find(x => x.id === id);
-    if (!j || j.status === stage) return;
-    if (stage === 'ideas') await backToIdeas(j, picked);
-    else await moveJob(id, stage, { disabled: false }, picked);
+    if (!j) return;
+    if (j.status === stage) { if (index != null) { await place(stage, 'job', id, index); render(); } return; }
+    if (stage === 'ideas') await backToIdeas(j, picked, index);
+    else await moveJob(id, stage, { disabled: false }, picked, index);
     return;
   }
+  if (stage === 'ideas') { if (index != null) { await place('ideas', 'idea', id, index); render(); } return; }
   const o = JOB.opps.find(x => x.id === id);
   const move = o && ideaMove(o, stage, myName());
   if (!move) { if (o && stage !== 'ideas') toast('An idea goes to Quoted or a later stage first', 'info'); return; }
@@ -586,6 +613,7 @@ async function dropOn(ref, stage, picked = false) {
     }
     toast(move.job ? `${o.title}: now a job, ${stageLabel(stage)}${patch.status ? ` (opportunity marked ${patch.status})` : ''}` : `${o.title}: marked lost`, 'success', 6000);
     if (jobId) JOB.selected = jobId;
+    if (jobId && index != null) await place(stage, 'job', jobId, index);
     render();
   } catch (err) { toast('Could not move the idea: ' + (err.message || err), 'error', 8000); }
 }
@@ -619,9 +647,11 @@ function onDrag(e) {
     JOB.dragging = '';
     els('jobWrap')?.classList.remove('is-dragging');
     document.querySelectorAll('#section-jobs .dragging, #section-jobs .drop-over').forEach(x => x.classList.remove('dragging', 'drop-over'));
+    clearSpot(els('jobWrap'));
   } else if (e.type === 'dragover' && zone && JOB.dragging) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    if (zone.matches('.job-col')) dropSpot(zone, e.clientY); else clearSpot(els('jobWrap'));
     if (!zone.classList.contains('drop-over')) {
       document.querySelectorAll('#section-jobs .drop-over').forEach(x => x.classList.remove('drop-over'));
       zone.classList.add('drop-over');
@@ -629,8 +659,9 @@ function onDrag(e) {
   } else if (e.type === 'drop' && zone && JOB.dragging) {
     e.preventDefault();
     const ref = JOB.dragging;
+    const index = zone.matches('.job-col') ? dropSpot(zone, e.clientY) : null;
     onDrag({ type: 'dragend', target: e.target });
-    dropOn(ref, zone.dataset.drop);
+    dropOn(ref, zone.dataset.drop, false, index);
   }
 }
 
@@ -1026,8 +1057,22 @@ export function add() {
   if (!JOB.loading) render();
 }
 
-/** Arrow keys move along the tab strip (ARIA tabs pattern). */
+/** Arrow keys move along the tab strip (ARIA tabs pattern). Alt+↑ / Alt+↓ on a sticky moves it up or down its column. */
 const onKey = event => {
+  const s = event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown') && event.target.closest?.('.job-sticky[data-drag]');
+  if (s) {
+    event.preventDefault();
+    const ref = s.dataset.drag, [kind, raw] = ref.split(':'), col = s.closest('[data-drop]')?.dataset.drop;
+    const at = columnItems(col).findIndex(x => x.id === Number(raw));
+    if (at < 0) return;
+    place(col, kind === 'job' ? 'job' : 'idea', Number(raw), at + (event.key === 'ArrowUp' ? -1 : 1))
+      .then(() => {
+        render();
+        const back = els('jobWrap')?.querySelector(`[data-drag="${ref}"]`);       // an idea's sticky takes no focus: its button does
+        (back?.tabIndex >= 0 ? back : back?.querySelector('button, select'))?.focus();
+      });
+    return;
+  }
   const st = event.target.closest?.('.job-sticky[data-job-act="pick"]');
   if (st && event.target === st && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); st.click(); return; }
   keyNav(event, 'data-job-tab', switchTab);

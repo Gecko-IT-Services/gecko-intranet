@@ -391,17 +391,43 @@ export function jobToIdea(job, opp = null) {
   return { insert: { ...carry, client_name: job.client_name, status: 'idea', mrr: 0, owner: job.owner || '', evidence: '' }, lose };
 }
 
-export function boardLanes(jobs = [], opps = [], byNumber = null) {
+// ─── Hand order within a column (Jack, 14 Oct; table board_places) ─────────────────
+// `places` is a Map of 'kind:id' → { col, place }. A place counts only in the column it was given in.
+
+/** A sticky's hand place in column `col`, or Infinity when it has none there. */
+export const placeIn = (places, kind, id, col) => {
+  const p = places?.get?.(`${kind}:${id}`);
+  return p && p.col === col ? Number(p.place) : Infinity;
+};
+
+/** Comparator: placed stickies first, top to bottom; the rest tie (0), for the column's own order to decide. */
+export const byPlace = (places, kind, col) => (a, b) => {
+  const x = placeIn(places, kind, a.id, col), y = placeIn(places, kind, b.id, col);
+  return x === y ? 0 : x - y;
+};
+
+/** A column's ids, top to bottom, after `id` is put at `index` (0 = top) among the others. */
+export function reorder(ids, id, index) {
+  const rest = ids.filter(x => x !== id);
+  rest.splice(Math.max(0, Math.min(Number(index) || 0, rest.length)), 0, id);
+  return rest;
+}
+
+/** The board_places rows that save a column's order (`ids` top to bottom): only those whose place changes. */
+export const placeRows = (ids, kind, col, places) =>
+  ids.map((id, i) => ({ kind, ref_id: id, col, place: i + 1 })).filter(r => placeIn(places, kind, r.ref_id, col) !== r.place);
+
+export function boardLanes(jobs = [], opps = [], byNumber = null, places = null) {
   const sent = byNumber ? jobs.filter(j => sentToXero(j, byNumber)) : [];
   const gone = new Set(sent);
   const onBoard = jobs.filter(j => !gone.has(j));
   const linked = new Set(jobs.map(j => String(j.source_ref || '')).filter(r => r.startsWith('opp:')).map(r => r.slice(4)));
   const ideas = opps
     .filter(o => isJobIdea(o) && !o.job_id && !linked.has(String(o.id)) && ['idea', 'proposed', 'won'].includes(o.status))
-    .sort((a, b) => (b.status === 'won') - (a.status === 'won') || (Number(b.one_off) || 0) - (Number(a.one_off) || 0));
+    .sort((a, b) => byPlace(places, 'idea', 'ideas')(a, b) || (b.status === 'won') - (a.status === 'won') || (Number(b.one_off) || 0) - (Number(a.one_off) || 0));
   const byDate = (a, b) => String(a.target_date || '9999').localeCompare(String(b.target_date || '9999')) || (Number(b.value) || 0) - (Number(a.value) || 0);
   const lanes = BOARD_STAGES.map(key => {
-    const items = onBoard.filter(j => j.status === key).sort(byDate);
+    const items = onBoard.filter(j => j.status === key).sort((a, b) => byPlace(places, 'job', key)(a, b) || byDate(a, b));
     return { key, items, value: round2(items.reduce((s, j) => s + (Number(j.value) || 0), 0)) };
   });
   const count = k => jobs.filter(j => j.status === k).length;

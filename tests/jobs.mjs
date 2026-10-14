@@ -164,7 +164,7 @@ assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, in
 
 // The whiteboard
 {
-  const { boardLanes, ideaMove, tilt, moveTargets, jobToIdea } = await import('../src/core/jobs.js');
+  const { boardLanes, ideaMove, tilt, moveTargets, jobToIdea, reorder, placeRows, placeIn } = await import('../src/core/jobs.js');
   const jobs = [
     { id: 1, status: 'quoted', value: 500, target_date: '2026-11-01' },
     { id: 2, status: 'quoted', value: 900, target_date: null },
@@ -202,6 +202,18 @@ assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, in
   assert.deepEqual(moveTargets('idea', 'proposed'), ['quoted', 'agreed', 'in_progress', 'to_invoice', 'lost'], 'an idea is never invoiced straight away');
   assert.equal(b.ideasValue, 600);
   assert.deepEqual(b.lanes[0].items.map(j => j.id), [3, 1, 2], 'soonest target first, undated last');
+
+  // Hand order within a column (Jack, 14 Oct): placed first, top to bottom; the rest in the column's own order;
+  // a place given in another column does not count.
+  const places = new Map([['job:2', { col: 'quoted', place: 1 }], ['job:1', { col: 'agreed', place: 1 }], ['idea:10', { col: 'ideas', place: 1 }]]);
+  const placed = boardLanes(jobs, opps, null, places);
+  assert.deepEqual(placed.lanes[0].items.map(j => j.id), [2, 3, 1], 'job 2 put on top by hand; job 1 was placed in Agreed, so here it is unplaced');
+  assert.deepEqual(placed.ideas.map(o => o.id), [10, 13, 16], 'an idea put on top stays on top, ahead of a won one');
+  assert.deepEqual(reorder([3, 1, 2], 2, 0), [2, 3, 1]);
+  assert.deepEqual(reorder([3, 1, 2], 3, 5), [1, 2, 3], 'past the end means last');
+  assert.deepEqual(placeRows([2, 3, 1], 'job', 'quoted', places), [{ kind: 'job', ref_id: 3, col: 'quoted', place: 2 }, { kind: 'job', ref_id: 1, col: 'quoted', place: 3 }],
+    'only the places that change are written');
+  assert.equal(placeIn(places, 'job', 1, 'quoted'), Infinity);
   assert.equal(b.lanes[0].value, 1500);
   assert.deepEqual(b.done, { invoiced: 1, lost: 1, sent: 0 });
 
