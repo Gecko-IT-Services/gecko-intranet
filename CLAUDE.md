@@ -250,6 +250,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   **Hand order** (14 Oct, `2026-10-14-whiteboard-reorder-design.md`): drag a sticky to a spot in any column (green line shows where),
   or Alt+↑/↓; kept in `board_places` (kind job/idea/deal, the column it was placed in, place), never on `jobs`/`opportunities`
   (their `modified_at` drives the quiet-deal flag). Placed first, the rest in the column's own order. `core/board.js` + `reorder`/`placeRows`.
+  **Click to edit** (14 Oct, `2026-10-14-whiteboard-edit-sticky-design.md`): clicking a sticky (job, idea, deal) opens it in a pop-up
+  (`<dialog id="jobDialog|oppDialog">` added by init, outside the redrawn board; `drawDialog`) already open to edit; Save closes it.
+  Moves never open it (no more "Picked from the board" panel).
   **Maximise** (13 Oct, `2026-10-13-jobs-maximise-design.md`): header button on the Jobs tab and on Opportunities › Pipeline (Board);
   `maximiser()` in `src/core/maximise.js` puts `.is-max` on the section, which hides the sidebar, heading, tabs and figures and asks
   the browser for full screen; Esc or the same button returns. Not remembered. A third whiteboard reuses it (styles in `jobs.css`).

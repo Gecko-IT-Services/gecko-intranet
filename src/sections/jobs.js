@@ -46,7 +46,7 @@ const JOB = {
   dir: 'from-right', animate: false,  // tab change: which way the new pane slides in
   opps: [], oppsError: '',      // opportunities with one-off work: the board's Ideas column
   selected: null,               // the sticky whose full card shows under the board
-  revealPicked: false,          // a job opened from quick find: its card (under the board) is scrolled into view on the next draw
+  selectedIdea: null,           // an idea's sticky clicked: its form in the pop-up
   focusNewForm: false,          // Add a job from quick find: the new-job form's first field takes the focus on the next draw
   addStage: 'quoted', addingIdea: false, dragging: ''
 };
@@ -187,6 +187,7 @@ async function saveJob(id, f) {
       const row = must(await sb.from('jobs').update(patch).eq('id', Number(id)).select('*').single());
       JOB.jobs = JOB.jobs.map(j => (j.id === row.id ? row : j));
       JOB.editing.delete(row.id);
+      if (JOB.selected === row.id) JOB.selected = null;     // saved from the pop-up: back to the board
       toast('Saved', 'success');
     }
     if (!JOB.clients.includes(patch.client_name)) JOB.clients = [...JOB.clients, patch.client_name].sort((a, b) => a.localeCompare(b));
@@ -223,6 +224,7 @@ function render() {
   renderTabs(tabList(s));
   renderKpis();
   drawMax(JOB.tab === 'jobs');
+  drawDialog();
   if (JOB.loading && !JOB.jobs.length) { mount.innerHTML = '<p class="job-empty art art-loading">Loading jobs…</p>'; return; }
   if (JOB.error) {
     const e = JOB.error;
@@ -239,7 +241,6 @@ function render() {
   }
   syncTableLabels(mount);
   if (JOB.tab === 'jobs') {                       // one-shot, from quick find: only once the board is actually drawn
-    if (JOB.revealPicked) { JOB.revealPicked = false; mount.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' }); }
     if (JOB.focusNewForm) { JOB.focusNewForm = false; mount.querySelector('[data-job-form="new"] [name="client_name"]')?.focus(); }
   }
 }
@@ -476,7 +477,8 @@ function jobSticky(j) {
 function ideaSticky(o) {
   const p = person(o.owner);
   const won = o.status === 'won';
-  return `<article class="job-sticky idea${p ? ' lp-' + p : ''}" draggable="true" data-drag="opp:${o.id}" style="--tilt:${tilt(o.id + 3)}deg;view-transition-name:idea-${o.id}"
+  return `<article class="job-sticky idea${p ? ' lp-' + p : ''}${JOB.selectedIdea === o.id ? ' on' : ''}" draggable="true" data-drag="opp:${o.id}"
+      data-job-act="pickidea" data-id="${o.id}" tabindex="0" style="--tilt:${tilt(o.id + 3)}deg;view-transition-name:idea-${o.id}"
       aria-label="${escapeHtml(`Idea: ${o.client_name}: ${o.title}`)}">
     <div class="js-top"><span class="js-client">${escapeHtml(o.client_name)}</span>${won ? '<span class="badge badge-green">Won</span>' : o.status === 'proposed' ? '<span class="badge">Proposed</span>' : ''}</div>
     <div class="js-title">${vendorMarks(productPart(o.title))}${escapeHtml(o.title)}</div>
@@ -492,19 +494,62 @@ function moveTo(ref, targets, title) {
       <option value="" selected disabled>Move to…</option>${targets.map(k => `<option value="${k}">${escapeHtml(k === 'ideas' ? 'Ideas' : stageLabel(k))}</option>`).join('')}</select>`;
 }
 
-function ideaForm() {
-  return `<form class="job-form job-add" data-job-idea="new">
-      <strong class="job-form-title">New idea</strong>
-      <label class="wide">Client <input name="client_name" type="text" list="jobClientNames" required placeholder="e.g. MSA Safety"></label>
-      <label class="wide">Idea <input name="title" type="text" required placeholder="e.g. Replace the office switches"></label>
-      <label>One-off £ (net) <input name="one_off" type="number" min="0" step="0.01" placeholder="optional"></label>
-      <label class="wide">Next step <input name="next_step" type="text" placeholder="e.g. Mention at the next visit"></label>
-      <p class="job-muted full">Goes on the Opportunities pipeline as an idea, and on this board.</p>
+/** A new idea (under the board), or an idea's own form (in the pop-up, from clicking its sticky). */
+function ideaForm(o = null) {
+  const v = k => escapeHtml(o?.[k] ?? '');
+  return `<form class="job-form${o ? '' : ' job-add'}" data-job-idea="${o ? o.id : 'new'}">
+      ${o ? '' : '<strong class="job-form-title">New idea</strong>'}
+      <label class="wide">Client <input name="client_name" type="text" list="jobClientNames" required value="${v('client_name')}" placeholder="e.g. MSA Safety"></label>
+      <label class="wide">Idea <input name="title" type="text" required value="${v('title')}" placeholder="e.g. Replace the office switches"></label>
+      <label>One-off £ (net) <input name="one_off" type="number" min="0" step="0.01" value="${Number(o?.one_off) > 0 ? v('one_off') : ''}" placeholder="optional"></label>
+      <label class="wide">Next step <input name="next_step" type="text" value="${v('next_step')}" placeholder="e.g. Mention at the next visit"></label>
+      <p class="job-muted full">${o ? 'The same idea is on the Opportunities pipeline.' : 'Goes on the Opportunities pipeline as an idea, and on this board.'}</p>
       <div class="job-actions full">
         <button type="button" class="btn btn-ghost btn-sm" data-job-act="cancelidea">Cancel</button>
-        <button type="submit" class="btn btn-primary btn-sm">Add idea</button>
+        <button type="submit" class="btn btn-primary btn-sm">${o ? 'Save' : 'Add idea'}</button>
       </div>
     </form>`;
+}
+
+/** An idea changed in the pop-up: the opportunity behind it. */
+async function saveIdea(id, f) {
+  const patch = { client_name: f.client_name.value.trim(), title: f.title.value.trim(), next_step: f.next_step.value.trim(),
+    one_off: Math.max(0, Number(f.one_off.value) || 0) };
+  if (!patch.client_name || !patch.title) { toast('Enter the client and the idea', 'warning'); return; }
+  if (JOB.saving) return;
+  JOB.saving = true;
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const row = must(await sb.from('opportunities').update(patch).eq('id', id).select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step,product_key').single());
+    JOB.opps = JOB.opps.map(o => (o.id === row.id ? row : o));
+    JOB.selectedIdea = null;
+    toast(isJobIdea(row) ? 'Saved' : 'Saved. With no one-off fee it is a monthly deal, so it is on the Opportunities pipeline only.', 'success', 7000);
+    render();
+  } catch (err) { toast('Could not save the idea: ' + (err.message || err), 'error', 7000); }
+  finally { JOB.saving = false; }
+}
+
+// ─── The pop-up: a sticky clicked, open to edit ────────────────────────
+// A native <dialog> kept in the section (not in the board, which is redrawn), so the delegated handlers reach it.
+
+function drawDialog() {
+  const d = els('jobDialog');
+  if (!d) return;
+  const j = JOB.tab === 'jobs' ? JOB.jobs.find(x => x.id === JOB.selected) : null;
+  const o = JOB.tab === 'jobs' && !j ? JOB.opps.find(x => x.id === JOB.selectedIdea) : null;
+  if (!j && !o) { if (d.open) d.close(); return; }
+  d.setAttribute('aria-label', j ? `Job: ${j.title}` : `Idea: ${o.title}`);
+  d.innerHTML = `<div class="board-dialog-body">
+      <div class="board-dialog-head"><strong>${j ? 'Job' : 'Idea'}</strong>
+        <button type="button" class="btn btn-ghost btn-sm" data-job-act="closedialog" aria-label="Close">${icon('x', 14)}</button></div>
+      ${j ? jobCard(j) : ideaForm(o)}</div>`;
+  if (!d.open) { d.showModal(); d.querySelector('[name="title"]')?.focus(); }
+}
+
+function closeDialog() {
+  if (JOB.selected) JOB.editing.delete(JOB.selected);
+  JOB.selected = null; JOB.selectedIdea = null;
+  render();
 }
 
 /**
@@ -524,7 +569,6 @@ function boardHtml() {
     `<button type="button" class="job-col-add" data-job-act="addidea">${icon('plus', 12)}Idea</button>`);
   const lanes = b.lanes.map(l => col(l.key, stageLabel(l.key), l.value, count(l.items.length), l.items.map(jobSticky).join(''),
     `<button type="button" class="job-col-add" data-job-act="add" data-stage="${l.key}">${icon('plus', 12)}Add</button>`)).join('');
-  const sel = JOB.jobs.find(j => j.id === JOB.selected);
   return `${clientOptions()}
     ${JOB.adding ? jobForm(null) : ''}${JOB.addingIdea ? ideaForm() : ''}
     <div class="job-board">${ideas}${lanes}</div>
@@ -534,7 +578,7 @@ function boardHtml() {
       <div class="job-drop" data-drop="lost"><strong>Lost</strong><span>${escapeHtml(count(b.done.lost))}</span><button type="button" class="job-link" data-job-act="liststage" data-stage="lost" aria-expanded="${JOB.stage === 'lost'}">See them</button></div>
     </div>
     ${stageListHtml()}
-    ${sel ? `<div class="job-pinned" data-pin="job:${sel.id}"><div class="job-list-sub"><span class="job-muted">Picked from the board</span><button type="button" class="job-link" data-job-act="pick" data-id="${sel.id}">Close</button></div>${jobCard(sel)}</div>` : ''}`;
+`;
 }
 
 /** A sticky dropped on a column (or a sticky's arrow): jobs move stage; ideas become jobs. */
@@ -612,7 +656,6 @@ async function dropOn(ref, stage, picked = false, index = null) {
       JOB.opps = JOB.opps.map(x => (x.id === id ? row : x));
     }
     toast(move.job ? `${o.title}: now a job, ${stageLabel(stage)}${patch.status ? ` (opportunity marked ${patch.status})` : ''}` : `${o.title}: marked lost`, 'success', 6000);
-    if (jobId) JOB.selected = jobId;
     if (jobId && index != null) await place(stage, 'job', jobId, index);
     render();
   } catch (err) { toast('Could not move the idea: ' + (err.message || err), 'error', 8000); }
@@ -992,6 +1035,7 @@ async function nudge(name) {
 
 async function onClick(event) {
   if (event.target.closest('select')) return;    // a sticky's Move to… picker, not a click on the sticky
+  if (event.target === els('jobDialog')) { closeDialog(); return; }   // outside the pop-up's box: its backdrop
   const tab = event.target.closest('[data-job-tab]');
   if (tab) { switchTab(tab.dataset.jobTab); return; }
   const btn = event.target.closest('[data-job-act]');
@@ -1000,7 +1044,9 @@ async function onClick(event) {
   const id = Number(btn.dataset.id);
   if (act === 'reload') { load(); return; }
   if (act === 'connect') { try { await connectSupabase({ interactive: true }); load(); } catch (err) { toast(err.message || 'Could not connect', 'error'); } return; }
-  if (act === 'pick') { JOB.selected = JOB.selected === id ? null : id; render(); if (JOB.selected) els('jobWrap')?.querySelector('.job-pinned')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+  if (act === 'pick') { JOB.selected = id; JOB.selectedIdea = null; JOB.editing.add(id); render(); return; }
+  if (act === 'pickidea') { JOB.selectedIdea = id; JOB.selected = null; render(); return; }
+  if (act === 'closedialog') { closeDialog(); return; }
   if (act === 'liststage') {
     JOB.stage = JOB.stage === btn.dataset.stage ? null : btn.dataset.stage; render();
     if (JOB.stage) els('jobWrap')?.querySelector('.job-stage-list')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1008,9 +1054,10 @@ async function onClick(event) {
   }
   if (act === 'idea') { dropOn(`opp:${id}`, btn.dataset.stage); return; }
   if (act === 'addidea') { JOB.addingIdea = true; JOB.adding = false; render(); els('jobWrap')?.querySelector('[data-job-idea] [name="client_name"]')?.focus(); return; }
-  if (act === 'cancelidea') { JOB.addingIdea = false; render(); return; }
+  if (act === 'cancelidea') { if (btn.closest('dialog')) { closeDialog(); return; } JOB.addingIdea = false; render(); return; }
   if (act === 'add') { JOB.addStage = btn.dataset.stage || 'quoted'; JOB.addingIdea = false; JOB.adding = true; render(); els('jobWrap')?.querySelector('[data-job-form="new"] [name="client_name"]')?.focus(); return; }
   if (act === 'canceladd') { JOB.adding = false; render(); return; }
+  if (act === 'edit' && btn.closest('dialog form')) { closeDialog(); return; }   // Cancel in the pop-up: back to the board
   if (act === 'edit') { JOB.editing.has(id) ? JOB.editing.delete(id) : JOB.editing.add(id); render(); return; }
   if (act === 'move') { moveJob(id, btn.dataset.status, btn, true); return; }
   if (act === 'xero-connect') { xeroConnect(); return; }
@@ -1043,8 +1090,8 @@ function addFromHeader() {
 
 /** From elsewhere (quick find): the whiteboard with one job picked, the same as clicking its sticky. */
 export function open(id) {
-  JOB.selected = Number(id);
-  JOB.stage = null; JOB.revealPicked = true;
+  JOB.selected = Number(id); JOB.selectedIdea = null; JOB.editing.add(Number(id));
+  JOB.stage = null;
   if (JOB.tab !== 'jobs') { show('jobs'); return; }
   if (!JOB.loading) render();                    // while loading, load() draws when it finishes, with the job picked and in view
 }
@@ -1081,7 +1128,7 @@ const onKey = event => {
 function onSubmit(event) {
   const form = event.target;
   if (form.dataset.jobInvoice) { event.preventDefault(); createInvoice(Number(form.dataset.jobInvoice), form.elements); return; }
-  if (form.dataset.jobIdea) { event.preventDefault(); addIdea(form.elements); return; }
+  if (form.dataset.jobIdea) { event.preventDefault(); if (form.dataset.jobIdea === 'new') addIdea(form.elements); else saveIdea(Number(form.dataset.jobIdea), form.elements); return; }
   if (!form.dataset.jobForm) return;
   event.preventDefault();
   saveJob(form.dataset.jobForm, form.elements);
@@ -1113,6 +1160,10 @@ export function init() {
   els('jobRefresh')?.addEventListener('click', refresh);
   els('jobAdd')?.addEventListener('click', addFromHeader);
   drawMax = maximiser('section-jobs', 'jobMax');
+  section?.insertAdjacentHTML('beforeend', '<dialog class="tk-dialog board-dialog" id="jobDialog"></dialog>');
+  // Closed by Esc (the cross, Cancel and the backdrop call closeDialog themselves): back to the board.
+  // 'close' does not bubble, so it is caught on the way down.
+  section?.addEventListener('close', e => { if (e.target.id === 'jobDialog' && (JOB.selected || JOB.selectedIdea)) closeDialog(); }, true);
   xeroReturn();
   load();
 }

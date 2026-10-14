@@ -62,7 +62,7 @@ const OPP = {
   gapView: 'map',          // Gaps: map (clients × products) or list (client cards); remembered per browser
   selected: null,          // the board sticky whose full deal shows under the board
   found: null,             // a prospect opened from quick find: outlined and scrolled to on the next draw
-  revealPicked: false,     // a deal opened from quick find: its detail panel (under the board) is scrolled into view on the next draw
+  dealHtml: '',            // the picked deal's card, drawn by pipelineHtml for the pop-up
   dragging: ''
 };
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -496,6 +496,27 @@ async function saveProduct(key, form) {
 
 // ─── Render ───────────────────────────────────────────────────────────
 
+// ─── The pop-up: a sticky on the board clicked, open to edit ───────────
+// A native <dialog> kept in the section (not in the board, which is redrawn), so the delegated handlers reach it.
+function drawDialog() {
+  const d = els('oppDialog');
+  if (!d) return;
+  const sel = OPP.tab === 'pipeline' && OPP.view === 'board' && OPP.dealHtml ? OPP.opps.find(o => o.id === OPP.selected) : null;
+  if (!sel) { if (d.open) d.close(); return; }
+  d.setAttribute('aria-label', `Deal: ${sel.title}`);
+  d.innerHTML = `<div class="board-dialog-body">
+      <div class="board-dialog-head"><strong>Deal</strong>
+        <button type="button" class="btn btn-ghost btn-sm" data-opp-act="closedialog" aria-label="Close">${icon('x', 14)}</button></div>
+      ${OPP.dealHtml}</div>`;
+  if (!d.open) { d.showModal(); d.querySelector('input, select')?.focus(); }
+}
+
+function closeDeal() {
+  if (OPP.selected) OPP.editing.delete(OPP.selected);
+  OPP.selected = null;
+  render();
+}
+
 /** The header's Maximise button (core/maximise.js), for the pipeline's whiteboard; wired in init. */
 let drawMax = () => {};
 
@@ -524,7 +545,7 @@ function render() {
   // A prospect opened from quick find: bring its card into view (it stays outlined until the next redraw).
   const found = OPP.found && mount.querySelector('.opp-prospect.found');
   if (found) { found.scrollIntoView({ block: 'center' }); OPP.found = null; }
-  if (OPP.revealPicked && OPP.tab === 'pipeline') { OPP.revealPicked = false; mount.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' }); }
+  drawDialog();
 }
 
 function renderKpis() {
@@ -774,9 +795,9 @@ function pipelineHtml() {
         <div class="job-col-body">${c.items.map(sticky).join('') || '<p class="job-col-note">None</p>'}</div></section>`;
     }).join('');
     const sel = OPP.opps.find(o => o.id === OPP.selected);
+    OPP.dealHtml = sel ? deal(sel) : '';
     return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
-      <div class="job-board opp-wb">${cols}</div>
-      ${sel ? `<div class="job-pinned" data-pin="deal:${sel.id}"><div class="opp-deals-head"><span class="opp-muted">Picked from the board</span><button type="button" class="btn btn-sm btn-ghost" data-opp-act="pick" data-id="${sel.id}">Close</button></div>${deal(sel)}</div>` : ''}`;
+      <div class="job-board opp-wb">${cols}</div>`;
   }
   return `<div class="opp-pipe-head">${toggle}<div class="opp-flags">${summary}</div></div>
     <div class="opp-stages kpi-panel">${stages}</div>
@@ -809,7 +830,7 @@ async function moveDeal(id, status, byArrow = false, index = null) {
     toast(status === 'won'
       ? `Won: +${money(o.mrr)}/mo${st?.needsJob || st?.needsBilling ? `. Next: ${[st.needsJob && 'create the job', st.needsBilling && 'set up the monthly billing'].filter(Boolean).join(' and ')}.` : ''}`
       : `Moved to ${{ idea: 'Idea', proposed: 'Proposed', lost: 'Lost' }[status] || status}`, 'success', 6000);
-    if (status === 'won') { if (OPP.view === 'board') OPP.selected = id; else OPP.stage = 'won'; }
+    if (status === 'won' && OPP.view !== 'board') OPP.stage = 'won';
     if (index != null) await placeDeal(status, id, index);
     if (byArrow && OPP.view === 'board') glide(render); else render();
     return true;
@@ -1087,6 +1108,7 @@ async function onClick(event) {
   const fu = event.target.closest('[data-opp-fu]');
   if (fu) { const input = fu.closest('form')?.elements.follow_up_on; if (input) input.value = fu.dataset.oppFu; return; }
   if (event.target.closest('select')) return;    // a sticky's Move to… picker, not a click on the sticky
+  if (event.target === els('oppDialog')) { closeDeal(); return; }   // outside the pop-up's box: its backdrop
   const btn = event.target.closest('[data-opp-act]');
   if (!btn || btn.disabled) return;
   const { oppAct: act, client, product, id } = btn.dataset;
@@ -1123,11 +1145,12 @@ async function onClick(event) {
     return;
   }
   if (act === 'view') { OPP.view = btn.dataset.view; OPP.enter = 'rise'; try { localStorage.setItem('gecko.opp.view', OPP.view); } catch { /* per-browser only */ } render(); return; }
-  if (act === 'pick') { const n = Number(id); OPP.selected = OPP.selected === n ? null : n; render(); if (OPP.selected) els('oppWrap')?.querySelector('.job-pinned')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+  if (act === 'pick') { const n = Number(id); OPP.selected = n; OPP.editing.add(n); render(); return; }
+  if (act === 'closedialog') { closeDeal(); return; }
   if (act === 'gapview') { OPP.gapView = btn.dataset.view; OPP.enter = 'rise'; try { localStorage.setItem('gecko.opp.gapview', OPP.gapView); } catch { /* per-browser only */ } render(); return; }
   if (act === 'mapgap') { OPP.gapView = 'list'; OPP.open.add(btn.dataset.client); render();
     [...document.querySelectorAll('#section-opportunities .opp-card-head')].find(h => h.dataset.client === btn.dataset.client)?.scrollIntoView({ block: 'start' }); return; }
-  if (act === 'mapdeal') { OPP.view = 'board'; OPP.selected = Number(id); window.geckoGo?.('opportunities', 'pipeline'); setTimeout(() => els('oppWrap')?.querySelector('.job-pinned')?.scrollIntoView({ block: 'nearest' }), 50); return; }
+  if (act === 'mapdeal') { OPP.view = 'board'; OPP.selected = Number(id); OPP.editing.add(Number(id)); window.geckoGo?.('opportunities', 'pipeline'); return; }
   if (act === 'openlist') {
     const o = OPP.opps.find(x => x.id === Number(id));
     OPP.view = 'list'; OPP.stage = o && (o.status === 'won' || o.status === 'lost') ? o.status : 'open'; OPP.editing.add(Number(id)); render();
@@ -1187,8 +1210,11 @@ async function onSubmit(event) {
       const auto = unitValue(findProduct(o?.product_key), patch.quantity);
       if (auto != null && patch.quantity !== (o?.quantity ?? null) && String(f.mrr.value) === String(o?.mrr ?? '')) patch.mrr = auto;
     }
-    try { await patchOpp(Number(form.dataset.oppForm), patch); OPP.editing.delete(Number(form.dataset.oppForm)); toast(patch.status === 'won' ? `Won: +${money(patch.mrr)}/mo` : 'Saved', 'success'); render(); }
-    catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
+    try {
+      await patchOpp(Number(form.dataset.oppForm), patch); OPP.editing.delete(Number(form.dataset.oppForm));
+      if (OPP.selected === Number(form.dataset.oppForm)) OPP.selected = null;    // saved from the pop-up: back to the board
+      toast(patch.status === 'won' ? `Won: +${money(patch.mrr)}/mo` : 'Saved', 'success'); render();
+    } catch (err) { toast('Could not save: ' + (err.message || err), 'error', 7000); }
   }
 }
 
@@ -1221,7 +1247,7 @@ export function show(tab) {
 
 /** From elsewhere (quick find): the pipeline board with one deal picked, the same as clicking its sticky. */
 export function open(id) {
-  OPP.tab = 'pipeline'; OPP.view = 'board'; OPP.selected = Number(id); OPP.revealPicked = true;
+  OPP.tab = 'pipeline'; OPP.view = 'board'; OPP.selected = Number(id); OPP.editing.add(Number(id));
   if (!OPP.loading) render();                    // while loading, load() draws when it finishes, with the deal picked and in view
 }
 
@@ -1273,6 +1299,10 @@ export function init() {
   for (const t of ['dragstart', 'dragend', 'dragover', 'drop']) section?.addEventListener(t, onDrag);
   els('oppRefresh')?.addEventListener('click', refresh);
   drawMax = maximiser('section-opportunities', 'oppMax');
+  section?.insertAdjacentHTML('beforeend', '<dialog class="tk-dialog board-dialog" id="oppDialog"></dialog>');
+  // Closed by Esc (the cross and the backdrop call closeDeal themselves): back to the board.
+  // 'close' does not bubble, so it is caught on the way down.
+  section?.addEventListener('close', e => { if (e.target.id === 'oppDialog' && OPP.selected) closeDeal(); }, true);
   load();
 }
 

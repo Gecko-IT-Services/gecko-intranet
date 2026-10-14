@@ -296,6 +296,14 @@
 ::view-transition-group(.sticky) { animation-duration: var(--dur-3); animation-timing-function: var(--ease); }
 @keyframes job-pin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
+/* ── A sticky clicked: its card in a pop-up, open to edit (a .tk-dialog: the same box and motion as a task's) ── */
+#app :is(#section-jobs, #section-opportunities) .board-dialog { width: min(640px, calc(100vw - 24px)); }   /* #app: over .tk-dialog's 440px */
+:is(#section-jobs, #section-opportunities) .board-dialog-body { display: grid; gap: 12px; padding: 16px 18px 18px; }
+:is(#section-jobs, #section-opportunities) .board-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+:is(#section-jobs, #section-opportunities) .board-dialog-head strong { font-size: 13px; font-weight: 700; color: var(--muted); }
+:is(#section-jobs, #section-opportunities) .board-dialog :is(.job-card, .opp-deal) { margin: 0; }
+:is(#section-jobs, #section-opportunities) .job-sticky.idea { cursor: pointer; }
+
 /* ── Maximised (the header's Maximise button; core/maximise.js): a whiteboard on its own ───────────
    Jobs and Opportunities › Pipeline. The sidebar and top bar step aside only while that page is on show;
    the heading band shrinks to its row of buttons; the board fills what is left of the window (on Jobs
