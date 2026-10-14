@@ -273,6 +273,12 @@
 /* While dragging, every column shows it can take the sticky; the one underneath lights up. */
 #section-jobs .is-dragging .job-col, #section-jobs .is-dragging .job-drop { border-color: var(--border); }
 #section-jobs .job-col.drop-over, #section-jobs .job-drop.drop-over { border-color: var(--green); background: var(--green-glow); }
+/* Where in the column a dragged sticky will land (core/board.js): a green line in the gap. */
+:is(#section-jobs, #section-opportunities) .job-sticky.drop-before::before,
+:is(#section-jobs, #section-opportunities) .job-col.drop-end .job-col-body::after {
+  content: ''; display: block; height: 3px; border-radius: 2px; background: var(--green); pointer-events: none;
+}
+:is(#section-jobs, #section-opportunities) .job-sticky.drop-before::before { position: absolute; left: 0; right: 0; top: -9px; transform: rotate(calc(-1 * var(--tilt, 0deg))); }
 
 #section-jobs .job-drops { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
 /* In Xero is a list, not a place to drop a sticky: a solid edge tells it apart from Invoiced and Lost. */

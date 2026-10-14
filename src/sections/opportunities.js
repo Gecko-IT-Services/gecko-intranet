@@ -22,6 +22,7 @@ import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { icon } from '../core/icons.js';
 import { maximiser } from '../core/maximise.js';
 import { redraw, glide } from '../core/motion.js';
+import { placesMap, dropSpot, clearSpot } from '../core/board.js';
 import { direction } from '../core/tabs.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { connectSupabase } from '../core/supabase.js';
@@ -29,7 +30,7 @@ import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
   emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns, holds, mapCell
 } from '../core/opportunities.js';
-import { tilt } from '../core/jobs.js';
+import { tilt, reorder, placeRows } from '../core/jobs.js';
 import { followUpChoices, dueText } from '../core/activity.js';
 import { STAGES as P_STAGES, SOURCES as P_SOURCES, OPEN_STAGES as P_OPEN, cleanProspect, prospectSummary, sortProspects, conversion } from '../core/prospects.js';
 
@@ -45,6 +46,7 @@ const SIGNAL_MAX_AGE_DAYS = 30;   // re-check a domain after this long
 
 const OPP = {
   tab: 'pipeline',
+  places: new Map(),       // deals placed by hand in their board column (board_places, kind 'deal')
   enter: '',               // how the next draw arrives: from-left / from-right (a tab) or rise (a view), then cleared
   showAll: false,          // include "not bought, no evidence yet" gaps
   open: new Set(),         // expanded client cards
@@ -116,7 +118,7 @@ async function load() {
     // Prospects load beside the rest but on their own: a missing table never stops the rest.
     const prospects = sb.from('prospects').select('*').then(must);
     prospects.catch(() => {});
-    const [products, statuses, domains, signals, opps, dealer, gClients, gServices, feed, ssaItems, tsItems] = await Promise.all([
+    const [products, statuses, domains, signals, opps, dealer, gClients, gServices, feed, ssaItems, tsItems, places] = await Promise.all([
       sb.from('opportunity_products').select('*').order('sort').then(must),
       sb.from('client_product_status').select('*').then(must),
       sb.from('client_domains').select('*').then(must),
@@ -128,8 +130,11 @@ async function load() {
       readFeed(),
       // SSA list and Timesheets from wherever they live (database or SharePoint).
       window.ssaListItems('clients', siteId, listId('Clients')),
-      window.ssaListItems('entries', siteId, listId('Timesheets'))
+      window.ssaListItems('entries', siteId, listId('Timesheets')),
+      // Hand order on the board; without it (table not there yet) the columns keep their own order.
+      sb.from('board_places').select('*').eq('kind', 'deal').then(r => (r.error ? [] : r.data), () => [])
     ]);
+    OPP.places = placesMap(places);
 
     OPP.products = products;
     OPP.statuses = {};
@@ -761,7 +766,7 @@ function pipelineHtml() {
           <select class="js-move js-to" data-opp-moveto="${o.id}" aria-label="${escapeHtml(`Move ${o.title} to`)}"><option value="" selected disabled>Move to…</option>${['idea', 'proposed', 'won', 'lost'].filter(k => k !== o.status).map(k => `<option value="${k}">${label[k]}</option>`).join('')}</select></div>
       </article>`;
     };
-    const cols = boardColumns(OPP.opps, t).map(c => {
+    const cols = boardColumns(OPP.opps, t, 90, OPP.places).map(c => {
       const total = c.items.reduce((a, o) => a + (Number(o.mrr) || 0), 0);
       const oneOff = c.items.reduce((a, o) => a + (Number(o.one_off) || 0), 0);
       return `<section class="job-col col-${c.key}" data-drop="${c.key}" aria-label="${escapeHtml(label[c.key])}">
@@ -782,8 +787,21 @@ function pipelineHtml() {
 
 /** Move a deal to another stage (a button, or a sticky dropped on a column). */
 /** `byArrow`: the sticky glides to its column. Dropped by hand, it is already where it was put. */
-async function moveDeal(id, status, byArrow = false) {
+/** Put a deal at `index` (0 = top) in its board column and save the places that change (board_places). */
+async function placeDeal(status, id, index) {
+  const col = boardColumns(OPP.opps, todayKey(), 90, OPP.places).find(c => c.key === status);
+  const rows = placeRows(reorder((col?.items || []).map(o => o.id), id, index), 'deal', status, OPP.places);
+  if (!rows.length) return;
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    must(await sb.from('board_places').upsert(rows, { onConflict: 'kind,ref_id' }));
+    rows.forEach(r => OPP.places.set(`deal:${r.ref_id}`, { col: r.col, place: r.place }));
+  } catch (err) { toast('Moved, but its place in the column was not saved: ' + (err.message || err), 'warning', 8000); }
+}
+
+async function moveDeal(id, status, byArrow = false, index = null) {
   const o = OPP.opps.find(x => x.id === id);
+  if (o && o.status === status && index != null) { await placeDeal(status, id, index); render(); return true; }
   if (!o || o.status === status) return false;
   try {
     await patchOpp(id, { status });
@@ -792,6 +810,7 @@ async function moveDeal(id, status, byArrow = false) {
       ? `Won: +${money(o.mrr)}/mo${st?.needsJob || st?.needsBilling ? `. Next: ${[st.needsJob && 'create the job', st.needsBilling && 'set up the monthly billing'].filter(Boolean).join(' and ')}.` : ''}`
       : `Moved to ${{ idea: 'Idea', proposed: 'Proposed', lost: 'Lost' }[status] || status}`, 'success', 6000);
     if (status === 'won') { if (OPP.view === 'board') OPP.selected = id; else OPP.stage = 'won'; }
+    if (index != null) await placeDeal(status, id, index);
     if (byArrow && OPP.view === 'board') glide(render); else render();
     return true;
   } catch (err) { toast('Could not update: ' + (err.message || err), 'error', 7000); return false; }
@@ -811,9 +830,11 @@ function onDrag(e) {
     OPP.dragging = '';
     els('oppWrap')?.classList.remove('is-dragging');
     document.querySelectorAll('#section-opportunities .dragging, #section-opportunities .drop-over').forEach(x => x.classList.remove('dragging', 'drop-over'));
+    clearSpot(els('oppWrap'));
   } else if (e.type === 'dragover' && zone && OPP.dragging) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    dropSpot(zone, e.clientY);
     if (!zone.classList.contains('drop-over')) {
       document.querySelectorAll('#section-opportunities .drop-over').forEach(x => x.classList.remove('drop-over'));
       zone.classList.add('drop-over');
@@ -821,8 +842,9 @@ function onDrag(e) {
   } else if (e.type === 'drop' && zone && OPP.dragging) {
     e.preventDefault();
     const id = Number(OPP.dragging);
+    const index = dropSpot(zone, e.clientY);
     onDrag({ type: 'dragend', target: e.target });
-    moveDeal(id, zone.dataset.drop);
+    moveDeal(id, zone.dataset.drop, false, index);
   }
 }
 
@@ -1171,6 +1193,16 @@ async function onSubmit(event) {
 }
 
 function onKeydown(event) {
+  // Alt+↑ / Alt+↓ on a sticky moves it up or down its column.
+  const s = event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown') && event.target.closest?.('.job-sticky[data-drag]');
+  if (s) {
+    event.preventDefault();
+    const id = Number(s.dataset.drag), col = s.closest('[data-drop]')?.dataset.drop;
+    const at = (boardColumns(OPP.opps, todayKey(), 90, OPP.places).find(c => c.key === col)?.items || []).findIndex(o => o.id === id);
+    if (at < 0) return;
+    placeDeal(col, id, at + (event.key === 'ArrowUp' ? -1 : 1)).then(() => { render(); els('oppWrap')?.querySelector(`[data-drag="${id}"]`)?.focus(); });
+    return;
+  }
   if ((event.key === 'Enter' || event.key === ' ') && event.target.matches?.('.job-sticky[data-opp-act="pick"]')) { event.preventDefault(); event.target.click(); return; }
   if (event.key === 'Enter' && event.target.matches?.('[data-opp-domain]')) {
     event.preventDefault();

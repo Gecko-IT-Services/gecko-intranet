@@ -8,6 +8,7 @@
  * No window, no network: the section gathers the data and passes it in.
  * Tests: tests/opportunities.mjs.
  */
+import { byPlace } from './jobs.js';
 
 /** Thresholds Philip can tune here (design note, open question 3). */
 export const THRESHOLDS = {
@@ -512,16 +513,12 @@ export function jobFromDeal(o, owner = '') {
 }
 
 /** Board columns: open stages in full, won/lost from the last `days` days. */
-export function boardColumns(opps, today, days = 90) {
+export function boardColumns(opps, today, days = 90, places = null) {
   const since = new Date(Date.parse(today + 'T00:00:00Z') - days * 86400000).toISOString().slice(0, 10);
   const recent = o => dayKey(o.closed_at || o.modified_at) >= since;
   const byValue = (a, b) => (Number(b.mrr) || 0) - (Number(a.mrr) || 0) || (Number(b.one_off) || 0) - (Number(a.one_off) || 0);
-  return [
-    { key: 'idea', items: opps.filter(o => o.status === 'idea').sort(byValue) },
-    { key: 'proposed', items: opps.filter(o => o.status === 'proposed').sort(byValue) },
-    { key: 'won', items: opps.filter(o => o.status === 'won' && recent(o)).sort(byValue) },
-    { key: 'lost', items: opps.filter(o => o.status === 'lost' && recent(o)).sort(byValue) }
-  ];
+  const col = (key, keep) => ({ key, items: opps.filter(o => o.status === key && keep(o)).sort((a, b) => byPlace(places, 'deal', key)(a, b) || byValue(a, b)) });
+  return [col('idea', () => true), col('proposed', () => true), col('won', recent), col('lost', recent)];
 }
 
 /**

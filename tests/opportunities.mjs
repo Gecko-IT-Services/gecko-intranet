@@ -294,6 +294,8 @@ console.log('opportunities: ok');
     { id: 4, status: 'won', mrr: 5, closed_at: '2026-09-30' }, { id: 5, status: 'won', mrr: 5, closed_at: '2026-05-01' }, { id: 6, status: 'lost', closed_at: '2026-10-01' }
   ], today);
   assert.deepEqual(cols.map(c => [c.key, c.items.map(o => o.id)]), [['idea', [2, 1]], ['proposed', [3]], ['won', [4]], ['lost', [6]]]);
+  const handPlaced = boardColumns([{ id: 1, status: 'idea', mrr: 10 }, { id: 2, status: 'idea', mrr: 50 }], today, 90, new Map([['deal:1', { col: 'idea', place: 1 }]]));
+  assert.deepEqual(handPlaced[0].items.map(o => o.id), [1, 2], 'a deal put on top by hand beats the bigger one');
   console.log('opportunities: pipeline ok');
 }
 
