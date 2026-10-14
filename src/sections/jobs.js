@@ -22,7 +22,7 @@ import { icon } from '../core/icons.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { maximiser } from '../core/maximise.js';
 import { redraw, glide } from '../core/motion.js';
-import { STAGES, OPEN_STAGES, stageLabel, moveTargets, monthSales, salesHistory,
+import { STAGES, OPEN_STAGES, stageLabel, moveTargets, jobToIdea, isJobIdea, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
   nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt, canInvoiceInXero, sentToXero } from '../core/jobs.js';
 import { newOpportunity } from '../core/opportunities.js';
@@ -483,7 +483,7 @@ function ideaSticky(o) {
 /** Any other place on the board, either way: a native picker, so it works with a finger and a keyboard as well as drag. */
 function moveTo(ref, targets, title) {
   return `<select class="js-move js-to" data-job-moveto="${ref}" aria-label="${escapeHtml(`Move ${title} to`)}">
-      <option value="" selected disabled>Move to…</option>${targets.map(k => `<option value="${k}">${escapeHtml(stageLabel(k))}</option>`).join('')}</select>`;
+      <option value="" selected disabled>Move to…</option>${targets.map(k => `<option value="${k}">${escapeHtml(k === 'ideas' ? 'Ideas' : stageLabel(k))}</option>`).join('')}</select>`;
 }
 
 function ideaForm() {
@@ -532,13 +532,37 @@ function boardHtml() {
 }
 
 /** A sticky dropped on a column (or a sticky's arrow): jobs move stage; ideas become jobs. */
+/** A job dragged (or sent with Move to…) back to Ideas: its opportunity takes it back, then the job goes (`jobToIdea`). */
+async function backToIdeas(j, picked) {
+  if (JOB.oppsError) { toast('Opportunities didn’t load, so it can’t go back to Ideas. Refresh and try again.', 'warning', 7000); return; }
+  const oppId = String(j.source_ref || '').startsWith('opp:') ? Number(j.source_ref.slice(4)) : null;
+  const opp = oppId ? JOB.opps.find(o => o.id === oppId) || null : null;
+  const plan = jobToIdea(j, opp);
+  if (!plan) { toast(j.invoice_ref ? `${j.title} has a Xero invoice (${j.invoice_ref}), so it stays a job.` : `${j.title} can’t go back to Ideas.`, 'info', 7000); return; }
+  if (plan.lose.length && !window.confirm(`Back to Ideas: the job goes, the idea keeps its title, value and next step.\n${plan.lose.join(' and ').replace(/^./, c => c.toUpperCase())} will not be kept.`)) return;
+  const cols = 'id,client_name,title,status,one_off,mrr,job_id,owner,next_step,product_key';
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const row = plan.update
+      ? must(await sb.from('opportunities').update(plan.update).eq('id', opp.id).select(cols).single())
+      : must(await sb.from('opportunities').insert(plan.insert).select(cols).single());
+    JOB.opps = plan.update ? JOB.opps.map(o => (o.id === row.id ? row : o)) : [row, ...JOB.opps];
+    must(await sb.from('jobs').delete().eq('id', j.id).select('id').single());
+    JOB.jobs = JOB.jobs.filter(x => x.id !== j.id);
+    if (JOB.selected === j.id) JOB.selected = null;
+    toast(isJobIdea(row) ? `${j.title}: back in Ideas` : `${j.title}: back on the Opportunities pipeline (a monthly deal with no one-off fee)`, 'success', 6000);
+    if (picked) glide(render); else render();
+  } catch (err) { toast('Could not move it back to Ideas: ' + (err.message || err), 'error', 8000); render(); }
+}
+
 async function dropOn(ref, stage, picked = false) {
   const [kind, raw] = String(ref).split(':');
   const id = Number(raw);
   if (kind === 'job') {
     const j = JOB.jobs.find(x => x.id === id);
-    if (!j || j.status === stage || stage === 'ideas') return;
-    await moveJob(id, stage, { disabled: false }, picked);
+    if (!j || j.status === stage) return;
+    if (stage === 'ideas') await backToIdeas(j, picked);
+    else await moveJob(id, stage, { disabled: false }, picked);
     return;
   }
   const o = JOB.opps.find(x => x.id === id);

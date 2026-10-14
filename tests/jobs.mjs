@@ -164,7 +164,7 @@ assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, in
 
 // The whiteboard
 {
-  const { boardLanes, ideaMove, tilt, moveTargets } = await import('../src/core/jobs.js');
+  const { boardLanes, ideaMove, tilt, moveTargets, jobToIdea } = await import('../src/core/jobs.js');
   const jobs = [
     { id: 1, status: 'quoted', value: 500, target_date: '2026-11-01' },
     { id: 2, status: 'quoted', value: 900, target_date: null },
@@ -184,7 +184,21 @@ assert.deepEqual(o.rows[0], { name: 'Voip Unlimited', due: 720, overdue: 720, in
   ];
   const b = boardLanes(jobs, opps);
   assert.deepEqual(b.ideas.map(o => o.id), [13, 10, 16], 'won first, then biggest, unpriced last; monthly-only, catalogue, linked and lost left out');
-  assert.deepEqual(moveTargets('job', 'agreed'), ['quoted', 'in_progress', 'to_invoice', 'invoiced', 'lost'], 'either way, never back to Ideas');
+  assert.deepEqual(moveTargets('job', 'agreed'), ['ideas', 'quoted', 'in_progress', 'to_invoice', 'invoiced', 'lost'], 'either way, Ideas too');
+
+  // A job back to Ideas (Jack, 14 Oct)
+  const quotedJob = { id: 40, status: 'quoted', client_name: 'MSA Safety', title: 'Site trend analysis', value: 1500, next_step: 'Quote to Matt',
+    owner: 'Jack', target_date: '2026-10-31', notes: '', invoice_ref: '' };
+  const fresh = jobToIdea(quotedJob);
+  assert.deepEqual(fresh.insert, { title: 'Site trend analysis', one_off: 1500, next_step: 'Quote to Matt', client_name: 'MSA Safety', status: 'idea', mrr: 0, owner: 'Jack', evidence: '' }, 'no opportunity behind it: a new idea');
+  assert.deepEqual(fresh.lose, ['its target date']);
+  const fromDeal = jobToIdea({ ...quotedJob, value: null, target_date: null, notes: 'From the opportunity “Site trend analysis”.' }, { id: 12, status: 'proposed' });
+  assert.deepEqual(fromDeal.update, { title: 'Site trend analysis', one_off: 0, next_step: 'Quote to Matt', job_id: null, status: 'idea', closed_at: null }, 'its own deal becomes an idea again; no value, no fee');
+  assert.deepEqual(fromDeal.lose, [], 'the note it was made with is not worth asking about');
+  assert.equal(jobToIdea({ ...quotedJob, notes: 'Matt wants it by Friday' }).lose[1], 'its notes');
+  assert.ok(!('status' in jobToIdea(quotedJob, { id: 13, status: 'won' }).update), 'a won deal stays won');
+  assert.equal(jobToIdea({ ...quotedJob, invoice_ref: 'INV-0304' }), null, 'not with a Xero invoice');
+  assert.equal(jobToIdea({ ...quotedJob, status: 'invoiced' }), null, 'not once invoiced');
   assert.deepEqual(moveTargets('idea', 'proposed'), ['quoted', 'agreed', 'in_progress', 'to_invoice', 'lost'], 'an idea is never invoiced straight away');
   assert.equal(b.ideasValue, 600);
   assert.deepEqual(b.lanes[0].items.map(j => j.id), [3, 1, 2], 'soonest target first, undated last');
