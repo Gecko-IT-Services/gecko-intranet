@@ -22,7 +22,7 @@ import { icon } from '../core/icons.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { maximiser } from '../core/maximise.js';
 import { redraw, glide } from '../core/motion.js';
-import { placesMap, dropSpot, clearSpot } from '../core/board.js';
+import { placesMap, dropSpot, clearSpot, touchDrag } from '../core/board.js';
 import { STAGES, OPEN_STAGES, stageLabel, moveTargets, jobToIdea, isJobIdea, reorder, placeRows, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
   nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt, canInvoiceInXero, sentToXero } from '../core/jobs.js';
@@ -1156,6 +1156,7 @@ export function init() {
     dropOn(to.dataset.jobMoveto, stage, true);
   });
   for (const t of ['dragstart', 'dragend', 'dragover', 'drop']) section?.addEventListener(t, onDrag);
+  if (section) touchDrag(section, (ref, stage, index) => dropOn(ref, stage, false, index));
   window.addEventListener('resize', () => moveInk(tabStrip()));
   els('jobRefresh')?.addEventListener('click', refresh);
   els('jobAdd')?.addEventListener('click', addFromHeader);

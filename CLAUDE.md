@@ -253,6 +253,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   **Click to edit** (14 Oct, `2026-10-14-whiteboard-edit-sticky-design.md`): clicking a sticky (job, idea, deal) opens it in a pop-up
   (`<dialog id="jobDialog|oppDialog">` added by init, outside the redrawn board; `drawDialog`) already open to edit; Save closes it.
   Moves never open it (no more "Picked from the board" panel).
+  **Touch** (14 Oct, `2026-10-14-whiteboard-touch-design.md`): press and hold a sticky to lift and drag it (`touchDrag` in `core/board.js`,
+  pointer events; mouse drag unchanged); the pop-up body is a `jobwrap`/`oppwrap` container so its form goes to two columns on a phone.
   **Maximise** (13 Oct, `2026-10-13-jobs-maximise-design.md`): header button on the Jobs tab and on Opportunities › Pipeline (Board);
   `maximiser()` in `src/core/maximise.js` puts `.is-max` on the section, which hides the sidebar, heading, tabs and figures and asks
   the browser for full screen; Esc or the same button returns. Not remembered. A third whiteboard reuses it (styles in `jobs.css`).
