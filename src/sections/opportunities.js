@@ -28,7 +28,7 @@ import { vendorMarks, productPart } from '../core/vendors.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
-  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns, holds, mapCell
+  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns, holds, mapCell, chaseView
 } from '../core/opportunities.js';
 import { tilt, reorder, placeRows } from '../core/jobs.js';
 import { followUpChoices, dueText } from '../core/activity.js';
@@ -58,7 +58,7 @@ const OPP = {
   products: [], statuses: {}, manualDomains: [], signals: new Map(), opps: [], dealer: [],
   clients: [], latestMonth: '', feedNote: '', commission: null,
   prospects: null, prospectsError: '', prospectEdit: null, prospectView: 'open', saving: false,   // Prospects tab
-  view: 'board',           // pipeline: board (the whiteboard) or list; remembered per browser, read in init
+  view: 'chase',           // pipeline: chase, board (the whiteboard) or list; remembered per browser, read in init
   gapView: 'map',          // Gaps: map (clients × products) or list (client cards); remembered per browser
   selected: null,          // the board sticky whose full deal shows under the board
   found: null,             // a prospect opened from quick find: outlined and scrolled to on the next draw
@@ -415,10 +415,10 @@ function myName() {
   return (els('userName')?.textContent || '').trim();
 }
 
-/** Outlook draft (never sent) to the client's contact; the opportunity moves to Proposed. */
+/** Outlook draft (never sent) to the client's contact; the opportunity moves to Proposed. → whether the draft was made. */
 async function draftEmail(id) {
   const o = OPP.opps.find(x => x.id === id);
-  if (!o) return;
+  if (!o) return false;
   const p = findProduct(o.product_key) || { name: o.title, email_subject: o.title, email_body: 'Hi {{first_name}},\n\n{{findings}}\n\n{{price}}\n\n{{sender}}' };
   const c = findClient(o.client_name) || {};
   // Client-facing findings, worked out afresh; o.evidence is our own notes and never goes out.
@@ -444,9 +444,9 @@ async function draftEmail(id) {
       })
     });
   } catch (err) {
-    toast('Could not create the draft: ' + (err.message || err), 'error', 8000);
+    toast(`Could not create the draft for ${o.client_name}: ` + (err.message || err), 'error', 8000);
     render();
-    return;
+    return false;
   }
   // The draft exists now: a failure below must not read as "no draft" (a second click would make another).
   try {
@@ -457,6 +457,7 @@ async function draftEmail(id) {
   } finally {
     render();
   }
+  return true;
 }
 
 async function addDomain(clientName, raw) {
@@ -501,7 +502,7 @@ async function saveProduct(key, form) {
 function drawDialog() {
   const d = els('oppDialog');
   if (!d) return;
-  const sel = OPP.tab === 'pipeline' && OPP.view === 'board' && OPP.dealHtml ? OPP.opps.find(o => o.id === OPP.selected) : null;
+  const sel = OPP.tab === 'pipeline' && OPP.view !== 'list' && OPP.dealHtml ? OPP.opps.find(o => o.id === OPP.selected) : null;
   if (!sel) { if (d.open) d.close(); return; }
   d.setAttribute('aria-label', `Deal: ${sel.title}`);
   d.innerHTML = `<div class="board-dialog-body">
@@ -552,11 +553,12 @@ function renderKpis() {
   const k = els('oppKpis');
   if (!k) return;
   const t = pipelineTotals(OPP.opps);
-  const current = OPP.clients.reduce((s, c) => s + (c.mrr || 0), 0);
-  const month = OPP.latestMonth ? new Date(OPP.latestMonth + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '';
+  const { couldSell } = chaseView(OPP.opps, OPP.products, todayKey());
+  const ideas = couldSell.flatMap(g => g.items), unpriced = ideas.filter(o => !(Number(o.mrr) > 0)).length;
+  const plural = (n, one) => `${n} ${n === 1 ? one : one + 's'}`;
   k.innerHTML = [
-    ['Recurring revenue', money(current), month],
-    ['Open pipeline', money(t.openMrr) + '/mo', `${t.openCount} open · ${money(t.openOneOff)} one-off`],
+    ['Proposed', money(t.proposedMrr) + '/mo', plural(t.proposedCount, 'deal') + (t.proposedOneOff ? ` · + ${money(t.proposedOneOff)} one-off` : '')],
+    ['Could sell', plural(ideas.length, 'idea'), plural(couldSell.length, 'product') + (unpriced ? ` · ${unpriced} need a price` : '')],
     ['Won this month', money(t.wonMrrThisMonth) + '/mo', `${t.wonCountThisMonth} won`]
   ].map(([l, v, s]) => `<div class="opp-kpi"><span>${escapeHtml(l)}</span><strong>${escapeHtml(v)}</strong>${s ? `<small>${escapeHtml(s)}</small>` : ''}</div>`).join('');
 }
@@ -766,8 +768,14 @@ function pipelineHtml() {
     quietN && `<span class="badge">${quietN} quiet for ${14}+ days</span>`,
     setupN && `<span class="badge badge-green">${setupN} won deal${setupN === 1 ? '' : 's'} to set up</span>`].filter(Boolean).join('');
   const toggle = `<div class="opp-view" role="group" aria-label="Pipeline view">
+      <button type="button" data-opp-act="view" data-view="chase" aria-pressed="${OPP.view === 'chase'}">Chase</button>
       <button type="button" data-opp-act="view" data-view="list" aria-pressed="${OPP.view === 'list'}">List</button>
       <button type="button" data-opp-act="view" data-view="board" aria-pressed="${OPP.view === 'board'}">Board</button></div>`;
+  if (OPP.view === 'chase') {
+    const sel = OPP.opps.find(o => o.id === OPP.selected);
+    OPP.dealHtml = sel ? deal(sel) : '';
+    return `<div class="opp-pipe-head">${toggle}</div>${chaseHtml(flags)}`;
+  }
   if (OPP.view === 'board') {
     const person = n => (/^philip/i.test(n || '') ? 'philip' : /^jack/i.test(n || '') ? 'jack' : '');
     const NEXT = { idea: ['proposed', 'Proposed'], proposed: ['won', 'Won'] };
@@ -804,6 +812,48 @@ function pipelineHtml() {
     <div class="opp-deals-head"><strong>${heading}</strong>
       ${OPP.stage !== 'open' ? '<button type="button" class="btn btn-sm btn-ghost" data-opp-act="stage" data-stage="open">Back to open deals</button>' : ''}</div>
     <div class="opp-deals">${shown.map(deal).join('') || '<p class="opp-muted">None at this stage.</p>'}</div>`;
+}
+
+/** Pipeline › Chase: deals that need a person, then ideas nobody has acted on, by product (chaseView). */
+function chaseHtml(flags) {
+  const t = todayKey();
+  const { chase, couldSell } = chaseView(OPP.opps, OPP.products, t);
+  const name = o => findProduct(o.product_key)?.name || o.title;
+  const row = o => {
+    const st = dealState(o, t);
+    const b = (act, text, cls = '', status = '') =>
+      `<button type="button" class="btn btn-sm ${cls}" data-opp-act="${act}" data-id="${o.id}"${status ? ` data-status="${status}"` : ''}>${text}</button>`;
+    const acts = st.open
+      ? b('emailopp', 'Draft email', 'btn-primary') + (o.status === 'idea' ? b('move', 'Proposed', '', 'proposed') : b('move', 'Won', 'btn-success', 'won')) + b('move', 'Lost', 'btn-ghost', 'lost')
+      : (st.needsJob ? b('mkjob', 'Create job', 'btn-primary') : '') + (st.needsBilling ? b('billingdone', 'Billing set up') : '');
+    const value = Number(o.mrr) ? `<span>${escapeHtml(money(o.mrr))}<small>/mo</small></span>${Number(o.one_off) ? `<small>+ ${escapeHtml(money(o.one_off))} one-off</small>` : ''}`
+      : Number(o.one_off) ? `${escapeHtml(money(o.one_off))}<small> one-off</small>` : '<small>No price</small>';
+    return `<article class="opp-chase-row" data-opp-act="pick" data-id="${o.id}" tabindex="0" aria-label="${escapeHtml(`${o.client_name}: ${o.title}`)}">
+      <div class="ocr-main"><span class="ocr-client">${escapeHtml(o.client_name)}${o.status === 'idea' ? ' · Idea' : ''}</span>
+        <span class="ocr-what">${vendorMarks(findProduct(o.product_key)?.name || productPart(o.title))}${escapeHtml(name(o))}</span>
+        ${o.next_step ? `<span class="ocr-next">${icon('right', 12)} ${escapeHtml(o.next_step)}</span>` : ''}</div>
+      <div class="opp-flags">${flags(o)}${st.needsJob || st.needsBilling ? '<span class="badge badge-green">To set up</span>' : ''}</div>
+      <div class="ocr-value">${value}</div>
+      <div class="ocr-acts">${acts}</div>
+    </article>`;
+  };
+  const unit = p => PRICE_UNITS.find(([k]) => k === (p.price_unit || 'user'))?.[1] || '';
+  const price = p => (p.unit_price != null && p.unit_price !== '' ? `${money(p.unit_price)} ${unit(p)}` : Number(p.default_mrr) ? `${money(p.default_mrr)}/mo each` : '');
+  const group = ({ product: p, items }) => {
+    const unpriced = items.filter(o => !(Number(o.mrr) > 0)).length;
+    const meta = [price(p), `${items.length} ${items.length === 1 ? 'client' : 'clients'}`, unpriced ? `${unpriced} need a price` : ''].filter(Boolean).join(' · ');
+    return `<section class="opp-sell-group">
+      <header><strong>${vendorMarks(p.name)}${escapeHtml(p.name)}</strong><span>${escapeHtml(meta)}</span>
+        <button type="button" class="btn btn-sm btn-primary" data-opp-act="draftall" data-product="${escapeHtml(p.key)}">${items.length === 1 ? 'Draft email' : `Draft emails (${items.length})`}</button></header>
+      <div class="opp-sell-chips">${items.map(o => `<button type="button" class="opp-sell-chip" data-opp-act="pick" data-id="${o.id}">${escapeHtml(o.client_name)}${Number(o.mrr) ? ` <small>${escapeHtml(money(o.mrr))}/mo</small>` : ''}</button>`).join('')}</div>
+    </section>`;
+  };
+  return `<div class="opp-chase">
+    <section><div class="opp-deals-head"><strong>Chase</strong><span class="opp-muted">${chase.length} to follow up, set up or close</span></div>
+      ${chase.length ? `<div class="opp-chase-list">${chase.map(row).join('')}</div>` : '<p class="opp-muted">Nothing to chase.</p>'}</section>
+    <section><div class="opp-deals-head"><strong>Could sell</strong><span class="opp-muted">ideas nobody has acted on yet, by product</span></div>
+      ${couldSell.length ? `<div class="opp-sell">${couldSell.map(group).join('')}</div>` : '<p class="opp-muted">Nothing waiting. Add ideas from Gaps.</p>'}</section>
+  </div>`;
 }
 
 /** Move a deal to another stage (a button, or a sticky dropped on a column). */
@@ -1126,6 +1176,12 @@ async function onClick(event) {
   if (act === 'editopp') { const n = Number(id); OPP.editing.has(n) ? OPP.editing.delete(n) : OPP.editing.add(n); render(); return; }
   if (act === 'move') { btn.disabled = true; if (!(await moveDeal(Number(id), btn.dataset.status, true))) btn.disabled = false; return; }
   if (act === 'emailopp') { btn.disabled = true; draftEmail(Number(id)); return; }
+  if (act === 'draftall') {   // one draft per client, one after another; stops at the first that fails (the rest stay ideas)
+    btn.disabled = true;
+    const items = chaseView(OPP.opps, OPP.products, todayKey()).couldSell.find(g => g.product.key === product)?.items || [];
+    for (const o of items) if (!(await draftEmail(o.id))) break;
+    return;
+  }
   if (act === 'pview') { OPP.prospectView = btn.dataset.view; render(); return; }
   if (act === 'padd') { OPP.prospectEdit = 'new'; render(); els('oppWrap')?.querySelector('[data-opp-prospect="new"] [name="company"]')?.focus(); return; }
   if (act === 'pedit') { OPP.prospectEdit = Number(id); render(); return; }
@@ -1144,7 +1200,7 @@ async function onClick(event) {
     catch (err) { toast('Could not delete: ' + (err.message || err), 'error'); }
     return;
   }
-  if (act === 'view') { OPP.view = btn.dataset.view; OPP.enter = 'rise'; try { localStorage.setItem('gecko.opp.view', OPP.view); } catch { /* per-browser only */ } render(); return; }
+  if (act === 'view') { OPP.view = btn.dataset.view; OPP.enter = 'rise'; try { localStorage.setItem('gecko.opp.pipeview', OPP.view); } catch { /* per-browser only */ } render(); return; }
   if (act === 'pick') { const n = Number(id); OPP.selected = n; OPP.editing.add(n); render(); return; }
   if (act === 'closedialog') { closeDeal(); return; }
   if (act === 'gapview') { OPP.gapView = btn.dataset.view; OPP.enter = 'rise'; try { localStorage.setItem('gecko.opp.gapview', OPP.gapView); } catch { /* per-browser only */ } render(); return; }
@@ -1229,7 +1285,7 @@ function onKeydown(event) {
     placeDeal(col, id, at + (event.key === 'ArrowUp' ? -1 : 1)).then(() => { render(); els('oppWrap')?.querySelector(`[data-drag="${id}"]`)?.focus(); });
     return;
   }
-  if ((event.key === 'Enter' || event.key === ' ') && event.target.matches?.('.job-sticky[data-opp-act="pick"]')) { event.preventDefault(); event.target.click(); return; }
+  if ((event.key === 'Enter' || event.key === ' ') && event.target.matches?.(':is(.job-sticky, .opp-chase-row)[data-opp-act="pick"]')) { event.preventDefault(); event.target.click(); return; }
   if (event.key === 'Enter' && event.target.matches?.('[data-opp-domain]')) {
     event.preventDefault();
     addDomain(event.target.dataset.oppDomain, event.target.value);
@@ -1288,7 +1344,8 @@ export async function whitespace() {
 export function init() {
   OPP.started = true;
   try {
-    OPP.view = localStorage.getItem('gecko.opp.view') === 'list' ? 'list' : 'board';
+    const v = localStorage.getItem('gecko.opp.pipeview');
+    OPP.view = v === 'list' || v === 'board' ? v : 'chase';
     OPP.gapView = localStorage.getItem('gecko.opp.gapview') === 'list' ? 'list' : 'map';
   } catch { /* private window: the defaults */ }
   const section = els('section-opportunities');

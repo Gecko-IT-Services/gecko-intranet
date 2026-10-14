@@ -162,6 +162,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Pipeline (9 Oct): follow-up dates, quiet-deal flag (14 days), Board (a whiteboard of stickies, drag between stages; default) / List, Won → **Create job** (one-off part, once per
   deal via `jobs.source_ref = 'opp:<id>'`) and **Mark done** for monthly billing; due follow-ups and won deals to set up show on
   Overview › Today. `dealState`/`jobFromDeal`/`boardColumns`. Design `2026-10-09-sharper-pipeline-design.md`.
+- Pipeline opens on **Chase** (14 Oct, `2026-10-14-opportunities-chase-design.md`; views Chase · Board · List): deals that need a
+  person (proposed; ideas with no product, a one-off, a next step or a follow-up; won to set up), late → to set up → quiet →
+  value, then **Could sell**: untouched catalogue ideas grouped by product with Draft emails (N). `chaseView` in
+  `core/opportunities.js`. Figures: Proposed · Could sell · Won this month (Recurring revenue left the page).
 - Opportunities › **Prospects** (9 Oct): new business that isn't a client yet (`prospects`: source, interest, stage New →
   Contacted → Meeting → Proposal / Lost, £/month estimate, follow-up); **Make client** adds them to Clients (New) with contact
   and a first activity line. `src/core/prospects.js`. Design `2026-10-09-prospects-design.md`.

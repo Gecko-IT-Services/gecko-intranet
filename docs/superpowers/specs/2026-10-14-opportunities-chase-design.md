@@ -15,7 +15,8 @@ Idea holds two kinds of thing, and the data already tells them apart:
 
 ## Design
 Pipeline gets a third view, **Chase**, and opens on it: `[Chase | Board | List]`, last choice remembered per
-browser (`gecko.opp.view`), as now. Board and List are unchanged.
+browser under a new key (`gecko.opp.pipeview`, so a browser that once picked Board still opens on Chase the
+first time). Board and List are unchanged.
 
 **Figures** (every tab): Proposed (£/mo, deal count, + one-off) · Could sell (ideas, products, "N need a price")
 · Won this month (unchanged). Recurring revenue goes.
@@ -26,13 +27,13 @@ browser (`gecko.opp.view`), as now. Board and List are unchanged.
 - every Won deal still to set up (`needsJob` / `needsBilling`).
 
 Order: follow-up due (most days late first) · won to set up · quiet 14+ days (quietest first) · the rest by
-£/month then one-off. A row: client (link), what it is (vendor mark), value, next step, one badge (late /
-follow up date / quiet / to set up), and buttons: Draft email (open deals), Proposed (ideas), Won, Lost (open
-deals), Create job / Mark done (won to set up). Clicking the row opens the deal pop-up the board uses
+£/month then one-off. A row: client (plain text, since the row itself opens the deal), what it is (vendor mark), value, next step, one badge (late /
+follow up date / quiet / to set up), and buttons: Draft email, then Proposed (an idea) or Won (proposed), then
+Lost; Create job / Billing set up on won deals still to set up. Clicking the row opens the deal pop-up the board uses
 (`oppDialog`); next step and follow-up date are set there.
 
 **Could sell**: every other Idea, grouped by product. A group: product name and vendor mark, the client price
-(`unit_price` per `price_unit`, or "£X commission" for dealer products), how many clients, and the clients as
+(`unit_price` per `price_unit`, or "£X/mo each" from `default_mrr` when there is no client price), how many clients, and the clients as
 chips (click opens the deal pop-up). "Draft emails (N)" makes one Outlook draft per client, one after another,
 with the existing `draftEmail` (each moves to Proposed, so it leaves the group and appears in Chase). Groups
 with more clients first, then by name.
