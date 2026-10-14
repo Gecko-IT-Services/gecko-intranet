@@ -757,7 +757,8 @@ function pipelineHtml() {
         ${o.next_step ? `<div class="js-next">${escapeHtml(o.next_step)}</div>` : ''}
         <div class="js-foot"><strong>${escapeHtml(money(o.mrr))}<small>/mo</small></strong>${Number(o.one_off) ? `<span class="js-date">+ ${escapeHtml(money(o.one_off))}</span>` : ''}</div>
         <div class="opp-flags">${flags(o)}${st.needsJob || st.needsBilling ? '<span class="badge badge-green">To set up</span>' : ''}</div>
-        ${to ? `<button type="button" class="js-move" data-opp-act="move" data-status="${to}" data-id="${o.id}">${lbl} →</button>` : ''}
+        <div class="js-acts">${to ? `<button type="button" class="js-move" data-opp-act="move" data-status="${to}" data-id="${o.id}">${lbl} →</button>` : ''}
+          <select class="js-move js-to" data-opp-moveto="${o.id}" aria-label="${escapeHtml(`Move ${o.title} to`)}"><option value="" selected disabled>Move to…</option>${['idea', 'proposed', 'won', 'lost'].filter(k => k !== o.status).map(k => `<option value="${k}">${label[k]}</option>`).join('')}</select></div>
       </article>`;
     };
     const cols = boardColumns(OPP.opps, t).map(c => {
@@ -1063,6 +1064,7 @@ async function onClick(event) {
   }
   const fu = event.target.closest('[data-opp-fu]');
   if (fu) { const input = fu.closest('form')?.elements.follow_up_on; if (input) input.value = fu.dataset.oppFu; return; }
+  if (event.target.closest('select')) return;    // a sticky's Move to… picker, not a click on the sticky
   const btn = event.target.closest('[data-opp-act]');
   if (!btn || btn.disabled) return;
   const { oppAct: act, client, product, id } = btn.dataset;
@@ -1141,6 +1143,8 @@ async function onClick(event) {
 }
 
 function onChange(event) {
+  const to = event.target.closest?.('[data-opp-moveto]');
+  if (to?.value) { const status = to.value; to.value = ''; moveDeal(Number(to.dataset.oppMoveto), status, true); return; }
   if (event.target.matches?.('[data-opp-act="showall"]')) { OPP.showAll = event.target.checked; render(); }
 }
 

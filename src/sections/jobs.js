@@ -22,7 +22,7 @@ import { icon } from '../core/icons.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { maximiser } from '../core/maximise.js';
 import { redraw, glide } from '../core/motion.js';
-import { STAGES, OPEN_STAGES, stageLabel, monthSales, salesHistory,
+import { STAGES, OPEN_STAGES, stageLabel, moveTargets, monthSales, salesHistory,
   xeroMonthSales, xeroHistory, jobInvoices, jobRaised, invoiceIndex, invoicedGroups, owed, refKey, previousMonth,
   nudgeInvoices, nudgeEmail, boardLanes, ideaMove, tilt, canInvoiceInXero, sentToXero } from '../core/jobs.js';
 import { newOpportunity } from '../core/opportunities.js';
@@ -95,7 +95,7 @@ async function load() {
       // Missing table (before the Xero migration) is not an error for Jobs.
       sb.from('xero_status').select('*').eq('id', 1).maybeSingle().then(r => (r.error ? null : r.data)),
       // The board's Ideas; if they can't be read the column says so and the jobs still show.
-      sb.from('opportunities').select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step').then(r => (r.error ? { error: r.error.message } : r.data))
+      sb.from('opportunities').select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step,product_key').then(r => (r.error ? { error: r.error.message } : r.data))
     ]);
     JOB.jobs = jobs;
     JOB.opps = Array.isArray(opps) ? opps : [];
@@ -462,7 +462,7 @@ function jobSticky(j) {
     <div class="js-foot"><strong>${j.value == null ? '<em>no value</em>' : escapeHtml(whole(j.value))}</strong>
       ${j.target_date ? `<span class="js-date${late ? ' late' : ''}">${late ? 'late · ' : ''}${escapeHtml(shortDate(j.target_date))}</span>` : ''}
       ${xs ? `<span class="js-x" data-tone="${XSTATE[xs.state][0]}">${escapeHtml(XSTATE[xs.state][1])}</span>` : ''}</div>
-    ${to ? `<button type="button" class="js-move" data-job-act="move" data-status="${to}" data-id="${j.id}" title="Move to ${escapeHtml(stageLabel(to))}">${escapeHtml(label)} →</button>` : ''}
+    <div class="js-acts">${to ? `<button type="button" class="js-move" data-job-act="move" data-status="${to}" data-id="${j.id}" title="Move to ${escapeHtml(stageLabel(to))}">${escapeHtml(label)} →</button>` : ''}${moveTo(`job:${j.id}`, moveTargets('job', j.status), j.title)}</div>
   </article>`;
 }
 
@@ -475,9 +475,15 @@ function ideaSticky(o) {
     <div class="js-top"><span class="js-client">${escapeHtml(o.client_name)}</span>${won ? '<span class="badge badge-green">Won</span>' : o.status === 'proposed' ? '<span class="badge">Proposed</span>' : ''}</div>
     <div class="js-title">${vendorMarks(productPart(o.title))}${escapeHtml(o.title)}</div>
     ${o.next_step ? `<div class="js-next">${escapeHtml(o.next_step)}</div>` : ''}
-    <div class="js-foot"><strong>${escapeHtml(whole(o.one_off))}</strong>${Number(o.mrr) ? `<span class="js-date">+ ${escapeHtml(whole(o.mrr))}/mo</span>` : ''}</div>
-    <button type="button" class="js-move" data-job-act="idea" data-stage="${won ? 'agreed' : 'quoted'}" data-id="${o.id}">${won ? 'Create job' : 'Quote it'} →</button>
+    <div class="js-foot"><strong>${Number(o.one_off) > 0 ? escapeHtml(whole(o.one_off)) : '<em>no fee yet</em>'}</strong>${Number(o.mrr) ? `<span class="js-date">+ ${escapeHtml(whole(o.mrr))}/mo</span>` : ''}</div>
+    <div class="js-acts"><button type="button" class="js-move" data-job-act="idea" data-stage="${won ? 'agreed' : 'quoted'}" data-id="${o.id}">${won ? 'Create job' : 'Quote it'} →</button>${moveTo(`opp:${o.id}`, moveTargets('idea', ''), o.title)}</div>
   </article>`;
+}
+
+/** Any other place on the board, either way: a native picker, so it works with a finger and a keyboard as well as drag. */
+function moveTo(ref, targets, title) {
+  return `<select class="js-move js-to" data-job-moveto="${ref}" aria-label="${escapeHtml(`Move ${title} to`)}">
+      <option value="" selected disabled>Move to…</option>${targets.map(k => `<option value="${k}">${escapeHtml(stageLabel(k))}</option>`).join('')}</select>`;
 }
 
 function ideaForm() {
@@ -485,7 +491,7 @@ function ideaForm() {
       <strong class="job-form-title">New idea</strong>
       <label class="wide">Client <input name="client_name" type="text" list="jobClientNames" required placeholder="e.g. MSA Safety"></label>
       <label class="wide">Idea <input name="title" type="text" required placeholder="e.g. Replace the office switches"></label>
-      <label>One-off £ (net) <input name="one_off" type="number" min="0" step="0.01" required placeholder="rough is fine"></label>
+      <label>One-off £ (net) <input name="one_off" type="number" min="0" step="0.01" placeholder="optional"></label>
       <label class="wide">Next step <input name="next_step" type="text" placeholder="e.g. Mention at the next visit"></label>
       <p class="job-muted full">Goes on the Opportunities pipeline as an idea, and on this board.</p>
       <div class="job-actions full">
@@ -526,13 +532,13 @@ function boardHtml() {
 }
 
 /** A sticky dropped on a column (or a sticky's arrow): jobs move stage; ideas become jobs. */
-async function dropOn(ref, stage) {
+async function dropOn(ref, stage, picked = false) {
   const [kind, raw] = String(ref).split(':');
   const id = Number(raw);
   if (kind === 'job') {
     const j = JOB.jobs.find(x => x.id === id);
     if (!j || j.status === stage || stage === 'ideas') return;
-    await moveJob(id, stage, { disabled: false });
+    await moveJob(id, stage, { disabled: false }, picked);
     return;
   }
   const o = JOB.opps.find(x => x.id === id);
@@ -551,7 +557,7 @@ async function dropOn(ref, stage) {
     const patch = { ...move.opp, ...(jobId ? { job_id: jobId } : {}) };
     if (patch.status === 'won' || patch.status === 'lost') patch.closed_at = new Date().toISOString();
     if (Object.keys(patch).length) {
-      const row = must(await sb.from('opportunities').update(patch).eq('id', id).select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step').single());
+      const row = must(await sb.from('opportunities').update(patch).eq('id', id).select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step,product_key').single());
       JOB.opps = JOB.opps.map(x => (x.id === id ? row : x));
     }
     toast(move.job ? `${o.title}: now a job, ${stageLabel(stage)}${patch.status ? ` (opportunity marked ${patch.status})` : ''}` : `${o.title}: marked lost`, 'success', 6000);
@@ -563,12 +569,11 @@ async function dropOn(ref, stage) {
 async function addIdea(f) {
   const row = newOpportunity({ client: f.client_name.value, title: f.title.value, oneOff: f.one_off.value, nextStep: f.next_step.value, owner: myName() });
   if (row.error) { toast(row.error, 'warning'); return; }
-  if (!(row.one_off > 0)) { toast('Give it a rough one-off value', 'warning'); return; }
   if (JOB.saving) return;
   JOB.saving = true;
   try {
     const sb = await connectSupabase({ interactive: true });
-    JOB.opps.unshift(must(await sb.from('opportunities').insert(row).select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step').single()));
+    JOB.opps.unshift(must(await sb.from('opportunities').insert(row).select('id,client_name,title,status,one_off,mrr,job_id,owner,next_step,product_key').single()));
     JOB.addingIdea = false;
     toast('Idea added (also on the Opportunities pipeline)', 'success');
     render();
@@ -931,6 +936,7 @@ async function nudge(name) {
 // ─── Events ───────────────────────────────────────────────────────────
 
 async function onClick(event) {
+  if (event.target.closest('select')) return;    // a sticky's Move to… picker, not a click on the sticky
   const tab = event.target.closest('[data-job-tab]');
   if (tab) { switchTab(tab.dataset.jobTab); return; }
   const btn = event.target.closest('[data-job-act]');
@@ -1026,6 +1032,13 @@ export function init() {
   section?.addEventListener('click', onClick);
   section?.addEventListener('submit', onSubmit);
   section?.addEventListener('keydown', onKey);
+  // Move to…: the picker goes back to its prompt at once, so a move the board refuses leaves nothing half-chosen.
+  section?.addEventListener('change', e => {
+    const to = e.target.closest?.('[data-job-moveto]');
+    if (!to?.value) return;
+    const stage = to.value; to.value = '';
+    dropOn(to.dataset.jobMoveto, stage, true);
+  });
   for (const t of ['dragstart', 'dragend', 'dragover', 'drop']) section?.addEventListener(t, onDrag);
   window.addEventListener('resize', () => moveInk(tabStrip()));
   els('jobRefresh')?.addEventListener('click', refresh);
