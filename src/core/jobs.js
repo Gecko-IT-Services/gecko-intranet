@@ -370,9 +370,25 @@ export const canInvoiceInXero = job => ['agreed', 'in_progress', 'to_invoice'].i
  */
 export const isJobIdea = o => Number(o.one_off) > 0 || (!o.product_key && !(Number(o.mrr) > 0));
 
-/** Where a sticky can be sent from the board, its own place left out. A job never goes back to Ideas: that would undo the job. */
+/** Where a sticky can be sent from the board, its own place left out. A job can go back to Ideas (`jobToIdea`). */
 export function moveTargets(kind, status) {
-  return (kind === 'idea' ? [...BOARD_STAGES, 'lost'] : [...BOARD_STAGES, 'invoiced', 'lost']).filter(k => k !== status);
+  return (kind === 'idea' ? [...BOARD_STAGES, 'lost'] : ['ideas', ...BOARD_STAGES, 'invoiced', 'lost']).filter(k => k !== status);
+}
+
+/**
+ * A job dragged back to Ideas (Jack, 14 Oct: "drag a quoted job to ideas"). The idea is an opportunity: the one the job
+ * was made from (`source_ref` 'opp:<id>', passed as `opp`) when it is still there, otherwise a new one. It takes the
+ * job's title, value (as its one-off fee) and next step; the job itself is then deleted. A won deal stays won (it may
+ * carry monthly billing); anything else is an idea again. `lose` lists what is on the job only, for the confirmation.
+ * Null when the job can't go back: not on the board, or it has a Xero invoice number.
+ */
+export function jobToIdea(job, opp = null) {
+  if (!job || !BOARD_STAGES.includes(job.status) || String(job.invoice_ref || '').trim()) return null;
+  const carry = { title: job.title, one_off: Number(job.value) || 0, next_step: job.next_step || '' };
+  const madeFrom = /^From the opportunity “.*”\.$/.test(String(job.notes || '').trim());
+  const lose = [job.target_date && 'its target date', String(job.notes || '').trim() && !madeFrom && 'its notes'].filter(Boolean);
+  if (opp) return { update: { ...carry, job_id: null, ...(opp.status === 'won' ? {} : { status: 'idea', closed_at: null }) }, lose };
+  return { insert: { ...carry, client_name: job.client_name, status: 'idea', mrr: 0, owner: job.owner || '', evidence: '' }, lose };
 }
 
 export function boardLanes(jobs = [], opps = [], byNumber = null) {

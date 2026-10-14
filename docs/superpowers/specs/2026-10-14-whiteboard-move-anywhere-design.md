@@ -26,14 +26,26 @@ trackpad.
   so the Jobs board does not fill with recurring deals. A job made from an idea with no fee has no
   value ("no value"), which Edit can add.
 
-## Left out (asking Jack)
-- **A job back to Ideas.** An idea is an opportunity, a job is a job: moving one back would delete the
-  job (its notes, dates, value, any Xero link) or leave two records. Not offered; drag refuses it too.
+## A job back to Ideas (Jack, later the same day: "I want to drag a quoted job to ideas")
+Drag a job onto Ideas, or Move to… › Ideas (`jobToIdea` in `core/jobs.js`, `backToIdeas` in the section):
+- The idea is an opportunity: the one the job was made from (`source_ref` 'opp:<id>') when it is still
+  there, otherwise a new one. It takes the job's title, value (as its one-off fee) and next step; then
+  the job is deleted (opportunity first, so a failure never loses both).
+- A won deal stays won (it may carry monthly billing that was set up); anything else is an idea again.
+- The job's target date and its own notes have nowhere to go on an idea, so when it has either the
+  person is asked first ("…its target date will not be kept"); the "From the opportunity…" note the
+  board writes itself does not count.
+- Not with a Xero invoice number, and not once invoiced or lost (those are off the board).
+- If the result is a monthly deal with no one-off fee, it is no longer one of the board's Ideas; the
+  toast says it is on the Opportunities pipeline instead.
+
+## Left out
 - **Placing a sticky within its column.** A column is sorted by target date; holding a hand-placed order
   needs a new column in `jobs`.
 
 ## Tests
-`tests/jobs.mjs`: `moveTargets` (either way, never back to Ideas, an idea never straight to Invoiced) and
+`tests/jobs.mjs`: `moveTargets` (either way, Ideas included, an idea never straight to Invoiced), `jobToIdea` (new idea or
+its own deal, won stays won, what is lost, refused with an invoice or once invoiced) and
 the Ideas rule (an unpriced idea shows, last; a catalogue product not priced and a monthly-only deal do
 not). Preview, 1440 and 375 wide: a job moved left two columns and back, to Lost; an idea to In progress;
 a deal Won → Proposed and Proposed → Idea; a new idea with no fee shows on both boards; the picker does
