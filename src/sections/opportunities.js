@@ -22,7 +22,7 @@ import { toast, escapeHtml, syncTableLabels, clientLink } from '../core/ui.js';
 import { icon } from '../core/icons.js';
 import { maximiser } from '../core/maximise.js';
 import { redraw, glide } from '../core/motion.js';
-import { placesMap, dropSpot, clearSpot } from '../core/board.js';
+import { placesMap, dropSpot, clearSpot, touchDrag } from '../core/board.js';
 import { direction } from '../core/tabs.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { connectSupabase } from '../core/supabase.js';
@@ -1297,6 +1297,7 @@ export function init() {
   section?.addEventListener('submit', onSubmit);
   section?.addEventListener('keydown', onKeydown);
   for (const t of ['dragstart', 'dragend', 'dragover', 'drop']) section?.addEventListener(t, onDrag);
+  if (section) touchDrag(section, (ref, stage, index) => moveDeal(Number(ref), stage, false, index));
   els('oppRefresh')?.addEventListener('click', refresh);
   drawMax = maximiser('section-opportunities', 'oppMax');
   section?.insertAdjacentHTML('beforeend', '<dialog class="tk-dialog board-dialog" id="oppDialog"></dialog>');
