@@ -48,7 +48,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Sidebar (Philip, 9 Oct, 8 entries; Analytics added under Home 10 Oct, so 9): Home (Overview, Analytics) · Sales (Clients, Opportunities, Jobs) · Operations
   (Timesheets, Monitoring, Commands) · Admin (Team, Settings). Commands (18 Oct) draws `docs/commands.md` like a GitHub README
   with copy buttons; `{name}` in a code box is a blank to type into (`src/core/markdown.js`, `2026-10-18-commands-design.md`). **Hubs** group sections under one entry with the
-  shared tab strip: Clients = Directory + Profitability + Licences + Atera + client page; Monitoring = Backups + Alerts + Devices;
+  shared tab strip: Clients = Directory + Profitability + Licences + Atera + client page; Monitoring = Backups + Coverage + Alerts + Devices;
   Team = Overview (`src/sections/team.js`: who's in, holiday left as day tokens, next four weeks, hours, mileage to claim)
   + Leave (tax-year wall planner, click two days to book; `2026-10-09-team-wall-planner-design.md`) + Mileage (`HUBS`/`renderHub` in index.html). Older tab strips get the shared look via `geckoInkify()`. Every section uses the same tabs
   (`src/core/tabs.js`, `.app-tabs` in `src/styles/app.css`). Any client name → `clientLink(name)` →
@@ -186,8 +186,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - **Acronis, direct** (18 Oct, `2026-10-18-acronis-sync-design.md`): Edge Function `acronis-sync` (secrets `ACRONIS_CLIENT_ID`,
   `ACRONIS_CLIENT_SECRET`, `ACRONIS_BASE_URL`; 4× a day + staff on demand) keeps Acronis's raw records per customer in
   `acronis_tenants` / `acronis_items` (kind usage, resource, resource_status, agent, policy, alert) / `acronis_status`. Read only
-  towards Acronis. Step 1 is the sync only; the Coverage page (servers with no plan, SharePoint unprotected, no good backup in 48 h,
-  agent offline) is built next against real rows. Never revoke SharePoint/Teams protection to save cost (Philip, 18 Oct).
+  towards Acronis. Never revoke SharePoint/Teams protection to save cost (Philip, 18 Oct).
+  Monitoring › **Coverage** (18 Oct, `2026-10-18-backup-coverage-design.md`): per client, machines with no plan or no good backup in
+  48 working hours, agents offline/out of date, Atera servers with no backup, SharePoint unprotected; red items also on Overview ›
+  Today (`GeckoMonitor.coverage`). `src/core/coverage.js` (`SAME_MACHINE` for VMs seen twice), tests `tests/coverage.mjs`.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
