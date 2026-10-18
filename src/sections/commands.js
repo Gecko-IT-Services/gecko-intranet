@@ -15,13 +15,21 @@ import { icon } from '../core/icons.js';
 import { markdownHtml } from '../core/markdown.js';
 
 const wrap = () => document.getElementById('cmdWrap');
+let loading = null;   // the page's current load, so Quick find can wait for it before going to a box
 
-async function load() {
+/** The page's Markdown (Quick find reads it too). Throws with the reason when it cannot be read. */
+export async function fetchCommands() {
+  const res = await fetch('docs/commands.md', { cache: 'no-cache' });
+  if (!res.ok) throw new Error(`docs/commands.md: ${res.status} ${res.statusText}`);
+  return res.text();
+}
+
+function load() { return (loading = draw()); }
+
+async function draw() {
   wrap().innerHTML = '<p class="state-empty art art-loading">Loading commands…</p>';
   try {
-    const res = await fetch('docs/commands.md', { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`docs/commands.md: ${res.status} ${res.statusText}`);
-    wrap().innerHTML = `<article class="md">${markdownHtml(await res.text())}</article>`;
+    wrap().innerHTML = `<article class="md">${markdownHtml(await fetchCommands())}</article>`;
   } catch (err) {
     console.error('Commands not loaded:', err);
     wrap().innerHTML = `<div class="state-error art art-offline"><strong>Could not load the commands</strong>`
@@ -49,6 +57,17 @@ async function copy(btn) {
   } catch (err) {
     toast('Could not copy: ' + (err.message || err), 'error');
   }
+}
+
+/** Quick find: bring box `n` into view, tint it a moment, and focus its first blank (or its copy button, so Enter copies). */
+export async function showBox(n) {
+  await loading;
+  const box = wrap()?.querySelectorAll('.md-code')[n];
+  if (!box) return;
+  box.scrollIntoView({ block: 'center' });
+  (box.querySelector('.md-blank') || box.querySelector('.md-copy')).focus({ preventScroll: true });
+  box.classList.add('is-found');
+  setTimeout(() => box.classList.remove('is-found'), 1600);
 }
 
 export function init() {

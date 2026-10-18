@@ -188,4 +188,17 @@ assert.equal(new Set(PAGES.map(p => p.label)).size, PAGES.length, 'no page liste
   assert.ok(html.includes('data-find-open'), 'the sidebar and the top bar have a way to open it');
 }
 
+// Commands (docs/commands.md boxes) are found by the command or by what it does, and open on their box.
+{
+  const commands = [
+    { code: 'ipconfig /flushdns', about: 'Clears the DNS cache.', heading: 'Network', n: 2 },
+    { code: 'manage-bde -status', about: 'Shows whether each drive is encrypted.', heading: 'BitLocker', n: 9 }
+  ];
+  const rows = q => search({ commands }, q, today).find(x => x.key === 'commands')?.rows || [];
+  assert.deepEqual(rows('flushdns'), [{ title: 'ipconfig /flushdns', sub: 'Clears the DNS cache.', open: { kind: 'command', n: 2 } }]);
+  assert.equal(rows('dns cache')[0].title, 'ipconfig /flushdns', 'found by what it does');
+  assert.equal(rows('bitlocker')[0].title, 'manage-bde -status', 'found by its heading');
+  assert.deepEqual(rows('harbour'), []);
+}
+
 console.log('find: all tests passed');
