@@ -22,7 +22,9 @@ export const ATERA_NAMES = {
   // Atera's App Center invoice breakdown (Oct 2026) uses its own short names.
   'Cowans': 'Cowan Consultancy',
   'Regals': 'Regal Autosport',
-  'Daron Ford Motors': 'Daron Motors'
+  'Daron Ford Motors': 'Daron Motors',
+  // Webroot site names (18 Oct 2026).
+  'The Ski Company': 'Snowskool'
 };
 /** Atera's customer name and a Xero / Gecko HQ name are the same client (spelling differences in ATERA_NAMES). */
 export const sameAteraClient = (ateraName, other) => sameClient(ateraName, other) || (ATERA_NAMES[ateraName] ? sameClient(ATERA_NAMES[ateraName], other) : false);

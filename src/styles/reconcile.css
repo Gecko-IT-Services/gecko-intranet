@@ -1,0 +1,48 @@
+/* Reconcile (Clients hub): src/sections/reconcile.js. Shared figures, badges, buttons and states come from system.css. */
+
+#section-reconcile .rc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
+#section-reconcile .rc-kpis .kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#section-reconcile .rc-bad { color: var(--red); }
+#section-reconcile .rc-warn { color: var(--amber); }
+#section-reconcile .state-error { margin-bottom: 16px; }
+#section-reconcile .rc-filter { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+
+#section-reconcile .rc-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); overflow: hidden; }
+#section-reconcile .rc-client + .rc-client { border-top: 1px solid var(--border-dim); }
+#section-reconcile .rc-row {
+  display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 2.2fr) repeat(2, minmax(72px, .5fr)); align-items: center; gap: 12px;
+  width: 100%; padding: 11px 14px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+#section-reconcile .rc-row:hover { background: var(--inset); }
+#section-reconcile .rc-row:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+#section-reconcile .rc-name { font-weight: 600; color: var(--white); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-reconcile .rc-flags { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+#section-reconcile .rc-first { min-width: 0; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-reconcile .rc-fig { font: 500 13px var(--font-mono); color: var(--white); text-align: right; white-space: nowrap; }
+#section-reconcile .rc-fig small { display: block; font-size: 10px; font-weight: 500; font-family: var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: var(--faint); }
+
+#section-reconcile .rc-detail { padding: 2px 14px 14px; display: grid; gap: 10px; justify-items: start; }
+#section-reconcile .rc-sub { margin: 0; font-size: 12px; color: var(--muted); }
+#section-reconcile .rc-products { width: 100%; border-collapse: collapse; font-size: 13px; }
+#section-reconcile .rc-products th { text-align: left; font-size: 11px; font-weight: 500; color: var(--faint); padding: 6px 8px; border-bottom: 1px solid var(--border-dim); }
+#section-reconcile .rc-products td { padding: 8px; border-bottom: 1px solid var(--border-dim); color: var(--white); vertical-align: middle; }
+#section-reconcile .rc-products td:nth-child(6) { color: var(--muted); min-width: 220px; }
+#section-reconcile .rc-products td:nth-child(6) strong { color: var(--white); }
+#section-reconcile .rc-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#section-reconcile .rc-edit input[type="number"] { width: 72px; padding: 4px 6px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset); color: var(--white); font: inherit; }
+#section-reconcile .rc-edit fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+#section-reconcile .rc-edit legend { font-size: 11px; color: var(--faint); margin-bottom: 4px; }
+#section-reconcile .rc-edit label { font-size: 13px; color: var(--white); display: inline-flex; align-items: center; gap: 4px; }
+#section-reconcile .rc-dead { font-size: 13px; color: var(--muted); padding: 8px 12px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset); }
+#section-reconcile .rc-dead strong { color: var(--amber); }
+#section-reconcile .rc-actions { font-size: 13px; }
+#section-reconcile .rc-foot { margin: 12px 0 0; font-size: 12px; color: var(--faint); }
+
+@media (max-width: 640px) {
+  #section-reconcile .rc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #section-reconcile .rc-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  #section-reconcile .rc-name, #section-reconcile .rc-first { white-space: normal; }
+  #section-reconcile .rc-fig { display: none; }
+  #section-reconcile .rc-products td:nth-child(6) { min-width: 0; }
+}

@@ -82,6 +82,7 @@
 <link rel="stylesheet" href="src/styles/atera.css">
 <link rel="stylesheet" href="src/styles/devices.css">
 <link rel="stylesheet" href="src/styles/coverage.css">
+<link rel="stylesheet" href="src/styles/reconcile.css">
 <link rel="stylesheet" href="src/styles/analytics.css">
 <link rel="stylesheet" href="src/styles/commands.css">
 <script type="module" src="src/main.js"></script>
@@ -4271,6 +4272,21 @@ body::before {
          — Gaps per client (what they buy, email/website checks, timesheets),
            the pipeline, and the product catalogue. Supabase-backed.
          ═══════════════════════════════════════════════════════════════ -->
+    <!-- ═══ RECONCILE ═══ src/sections/reconcile.js: Atera cost ↔ what clients use (Webroot, Acronis, Keeper, Work from Home) ↔ what Xero bills, with an action per gap (Clients hub). -->
+    <section class="section" id="section-reconcile">
+      <div class="section-head">
+        <h1>Atera <span>Reconcile</span></h1>
+        <div class="head-actions">
+          <button class="head-btn" id="rcRefresh" type="button" title="Sync Webroot, Acronis and Xero now">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="rcLastSync"></span>
+        </div>
+      </div>
+      <div id="rcWrap"><p class="state-empty">Open this section to load the reconcile.</p></div>
+    </section>
+
     <!-- ═══ COVERAGE ═══ src/sections/coverage.js: is everything that should be backed up, backed up? From Acronis directly (Monitoring hub). Read only. -->
     <section class="section" id="section-coverage">
       <div class="section-head">
@@ -4987,6 +5003,7 @@ const SECTION_TITLES = {
   leave:         'TEAM · LEAVE',
   backups:       'MONITORING · BACKUPS',
   coverage:      'MONITORING · COVERAGE',
+  reconcile:     'CLIENTS · RECONCILE',
   alerts:        'MONITORING · ALERTS',
   devices:       'MONITORING · DEVICES',
   commands:      'COMMANDS',
@@ -5558,7 +5575,7 @@ async function graphFetch(path, options = {}) {
    (.app-tabs) above them. Every old section key still works: navTo('alerts')
    opens Monitoring on its Alerts tab. Design: 2026-10-09-gecko-hq-structure-design.md */
 const HUBS = {
-  clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['licences', 'Licences'], ['atera', 'Atera'], ['client', null]] },
+  clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['licences', 'Licences'], ['atera', 'Atera'], ['reconcile', 'Reconcile'], ['client', null]] },
   monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['coverage', 'Coverage'], ['alerts', 'Alerts'], ['devices', 'Devices']] },
   team:       { label: 'Team',       tabs: [['team', 'Overview'], ['leave', 'Leave'], ['mileage', 'Mileage']] }
 };
