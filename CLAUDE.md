@@ -196,7 +196,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   and what Xero's repeating invoices bill. Per-device lines are checked by count; a flat fee against what it was priced on (kind `covered`,
   "Use today's counts"). States leak / not billed / over-billed / check / grown / record / enter; every gap links to the template in Xero
   with the exact change. Dead Webroot devices (30+ days) listed. `src/core/reconcile.js`, tests `tests/reconcile.mjs`. Webroot site names
-  that differ from Xero go in `ATERA_NAMES` (The Ski Company = Snowskool).
+  that differ from Xero go in `ATERA_NAMES` (The Ski Company = Snowskool). Margin by supplier (`vendorMargins`: flat fees split by cost,
+  seats by devices) and Who lists (Webroot devices, Microsoft 365 users from `acronis_items` kind `m365_user`, ticked WFH devices).
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the

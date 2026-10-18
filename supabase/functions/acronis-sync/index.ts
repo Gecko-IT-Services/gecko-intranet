@@ -48,6 +48,32 @@ const PER_CUSTOMER: [string, string][] = [
   ['alert', '/api/alert_manager/v1/alerts']
 ];
 
+/**
+ * Microsoft 365 users per customer, from the backup console's API (the one Acronis's own console uses; not in the public
+ * docs, found 18 Oct 2026): root c2c group → organisation → Users → All users → resources. Each user says whether Acronis
+ * charges a seat for it (licenseOfferingItems has pw_base_m365_seats). Kept small: who, and what makes them count.
+ */
+async function m365Users(base: string, bearer: string) {
+  const rm = `${base}/bc/api/resource_manager/v1`;
+  const data = (b: any) => (Array.isArray(b) ? b : b?.data || b?.items || []) as any[];
+  const out: any[] = [];
+  const roots = data(await get('', `${rm}/groups/c2c?parentId=0`, bearer)).filter(r => (r.resource_types || []).some((t: string) => /o365/.test(t)));
+  for (const root of roots) {
+    for (const org of data(await get('', `${rm}/o365/groups?parentId=${root.id}&limit=500`, bearer))) {
+      const usersGroup = data(await get('', `${rm}/o365/groups?parentId=${org.id}&limit=500`, bearer)).find(g => g.groupKind === 'c2cUsersGroup');
+      if (!usersGroup) continue;
+      const all = data(await get('', `${rm}/o365/groups?parentId=${usersGroup.id}&limit=500`, bearer)).find(g => g.groupKind === 'c2cUsers');
+      if (!all) continue;
+      for (const u of data(await get('', `${rm}/o365/groups/${all.id}/resources?limit=500`, bearer))) {
+        out.push({ id: u.id, org: org.name, name: u.title || u.name || '', email: u.email || '', licensedByMsft: !!u.licensedByMsft,
+          seat: (u.licenseOfferingItems || []).includes('pw_base_m365_seats'), offering: u.licenseOfferingItems || [], blocked: !!u.signInBlocked,
+          recipientType: u.recipientType || '', isAdmin: !!u.isAdmin, protected: !!u.hasProtections });
+      }
+    }
+  }
+  return out;
+}
+
 export async function syncAcronis() {
   const base = clean(Deno.env.get('ACRONIS_BASE_URL')).replace(/\/+$/, '');
   const id = clean(Deno.env.get('ACRONIS_CLIENT_ID')), secret = clean(Deno.env.get('ACRONIS_CLIENT_SECRET'));
@@ -99,6 +125,13 @@ export async function syncAcronis() {
       } catch (err) {
         problems.push({ tenant: t.name, kind: 'token', error: String((err as Error).message).slice(0, 300) });
         continue;
+      }
+      try {
+        const users = await m365Users(base, scoped);
+        users.forEach(u => rows.push({ kind: 'm365_user', tenant_id: t.id, item_id: `${t.id}|${u.id}`, raw: u }));
+        replaced.add(`${t.id}|m365_user`);
+      } catch (err) {
+        problems.push({ tenant: t.name, kind: 'm365_user', error: String((err as Error).message).slice(0, 300) });
       }
       for (const [kind, path] of PER_CUSTOMER) {
         try {
