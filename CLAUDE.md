@@ -48,7 +48,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Sidebar (Philip, 9 Oct, 8 entries; Analytics added under Home 10 Oct, so 9): Home (Overview, Analytics) · Sales (Clients, Opportunities, Jobs) · Operations
   (Timesheets, Monitoring, Commands) · Admin (Team, Settings). Commands (18 Oct) draws `docs/commands.md` like a GitHub README
   with copy buttons; `{name}` in a code box is a blank to type into (`src/core/markdown.js`, `2026-10-18-commands-design.md`). **Hubs** group sections under one entry with the
-  shared tab strip: Clients = Directory + Profitability + Licences + Atera + Reconcile + client page; Monitoring = Backups + Coverage + Alerts + Devices;
+  shared tab strip: Clients = Directory + Profitability + Licences + Atera + Reconcile + client page; Monitoring = Backups + Coverage + Alerts + Devices + Upgrades;
   Team = Overview (`src/sections/team.js`: who's in, holiday left as day tokens, next four weeks, hours, mileage to claim)
   + Leave (tax-year wall planner, click two days to book; `2026-10-09-team-wall-planner-design.md`) + Mileage (`HUBS`/`renderHub` in index.html). Older tab strips get the shared look via `geckoInkify()`. Every section uses the same tabs
   (`src/core/tabs.js`, `.app-tabs` in `src/styles/app.css`). Any client name → `clientLink(name)` →
@@ -198,6 +198,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   with the exact change. Dead Webroot devices (30+ days) listed. `src/core/reconcile.js`, tests `tests/reconcile.mjs`. Webroot site names
   that differ from Xero go in `ATERA_NAMES` (The Ski Company = Snowskool). Margin by supplier (`vendorMargins`: flat fees split by cost,
   seats by devices) and Who lists (Webroot devices, Microsoft 365 users from `acronis_items` kind `m365_user`, ticked WFH devices).
+- Monitoring › **Upgrades** (18 Oct, `2026-10-18-upgrades-design.md`): per client, devices out of support or about to be (Windows,
+  Windows 11 build, Office, servers, macOS) and what to do (free Windows 11 upgrade / replace / update / new server), plus memory, disk
+  and age; Add task pre-filled. Support dates live in `SUPPORT` in `src/core/upgrades.js` (tests `tests/upgrades.mjs`): add a row when
+  Microsoft publishes the next one.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
