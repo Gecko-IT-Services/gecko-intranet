@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { lineProducts, billing, webrootUse, acronisUse, reconcileAll, PRICE_USD } from '../src/core/reconcile.js';
+import { userTags, whoFor, lineProducts, billing, webrootUse, acronisUse, reconcileAll, PRICE_USD, splitRevenue, vendorCostsUsd, vendorMargins } from '../src/core/reconcile.js';
 
 // — What a repeating-invoice line sells (real descriptions, 18 Oct 2026). —
 const p = d => lineProducts({ description: d, item_code: 'Atera - Internet Security' }).sort().join(',');
@@ -49,7 +49,7 @@ assert.equal(w.some(x => x.name === 'Technix Rubber'), false, 'switched-off site
 const acronisTenants = [{ tenant_id: 'a1', name: 'MSA Safety', kind: 'customer' }, { tenant_id: 'a2', name: 'Cowans', kind: 'customer' }, { tenant_id: 'a3', name: 'Onsite Commercial', kind: 'customer' }];
 const u = (tenant_id, name, value) => ({ tenant_id, raw: { name, value } });
 const acronisUsage = [u('a1', 'pw_base_m365_seats', 9), u('a2', 'pw_base_m365_seats', 15), u('a2', 'pw_base_workstations', 1), u('a2', 'pw_base_storage', 54e9), u('a3', 'pw_base_m365_seats', 18)];
-assert.deepEqual(acronisUse(acronisTenants, acronisUsage).find(x => x.name === 'Cowans'), { name: 'Cowans', workstations: 1, vms: 0, servers: 0, m365: 15, gb: 54 });
+assert.deepEqual(acronisUse(acronisTenants, acronisUsage).find(x => x.name === 'Cowans'), { users: [], name: 'Cowans', workstations: 1, vms: 0, servers: 0, m365: 15, gb: 54 });
 
 // — The reconcile. —
 const inputs = [
@@ -91,5 +91,44 @@ assert.equal(r.totals.overGbp, 5.5 + 10 + 52 + 9);
 assert.equal(r.clients[0].issues > 0, true, 'clients with something to do first');
 assert.equal(r.clients.at(-1).issues, 0);
 assert.ok(PRICE_USD.av === 1.2 && PRICE_USD.wfh === 5);
+
+// — Who: MSA's Microsoft 365 users as Acronis listed them on 18 Oct 2026 (kinds of account, not just names). —
+const t = u => userTags(u).join(',');
+assert.equal(t({ name: 'Harriet Calvert', email: 'hc@msasafety.co.uk', recipientType: 'user', licensedByMsft: true, seat: true }), '');
+assert.equal(t({ name: 'Accounts Department', email: 'accounts@msasafety.co.uk', recipientType: 'user', licensedByMsft: true, seat: true }), 'shared');
+assert.equal(t({ name: 'Gecko IT Services', email: 'gecko@msasafety.co.uk', recipientType: 'user', licensedByMsft: true, seat: true }), 'admin');
+assert.equal(t({ name: 'Cowan Consultancy Admin', email: 'admin@cowanconsult.onmicrosoft.com', recipientType: 'user', licensedByMsft: true, seat: true }), 'admin');
+assert.equal(t({ name: 'MSA Safety', email: 'MSASafety@msasafety.co.uk', recipientType: 'others', licensedByMsft: false, seat: true }), 'shared,not_ms');
+assert.equal(t({ name: 'Leaver - Andy Strugnell (#260691)', email: 'as@msasafety.co.uk', recipientType: 'shared', blocked: true, seat: false }), 'leaver,shared');
+const msaUse = acronisUse([{ tenant_id: 'm', name: 'MSA Safety', kind: 'customer' }], [
+  { tenant_id: 'm', kind: 'm365_user', raw: { name: 'Helen Woods', email: 'hw@x', seat: true, licensedByMsft: true, recipientType: 'user' } },
+  { tenant_id: 'm', kind: 'm365_user', raw: { name: 'Gecko IT Services', email: 'gecko@x', seat: true, licensedByMsft: true, recipientType: 'user' } },
+  { tenant_id: 'm', kind: 'm365_user', raw: { name: 'Barracuda NDR', email: 'b@x', seat: false, recipientType: 'shared' } },
+  { tenant_id: 'm', kind: 'usage', raw: { name: 'pw_base_m365_seats', value: 2 } }])[0];
+assert.equal(msaUse.m365, 2);
+const who = whoFor('m365', null, msaUse, null);
+assert.deepEqual(who.counted.map(x => x.name), ['Helen Woods', 'Gecko IT Services'], 'people first, then the special accounts');
+assert.deepEqual(who.notCounted.map(x => x.name), ['Barracuda NDR']);
+assert.deepEqual(whoFor('av', w.find(x => x.name === 'MSA Safety'), null, null).counted.map(x => [x.name, x.tags.join()]), [['MSA-1', ''], ['OLD-PC', 'dead']]);
+assert.equal(whoFor('keeper', null, null, null), null, 'nothing to name for Keeper');
+
+// — Margin per supplier. —
+// A per-device line is its product's; a flat line is shared by cost (platform included), evenly when nothing costs yet.
+assert.deepEqual(splitRevenue([{ monthly: 44, products: ['av'], perDevice: true }], {}), { av: 44 });
+assert.deepEqual(splitRevenue([{ monthly: 100, products: ['av', 'backup'], perDevice: false }], { av: 10, backup: 30, mgmt: 10 }), { av: 20, backup: 60, mgmt: 20 });
+assert.deepEqual(splitRevenue([{ monthly: 90, products: ['av', 'wfh'], perDevice: false }], {}), { av: 30, wfh: 30, mgmt: 30 });
+assert.deepEqual(vendorCostsUsd([{ product: 'Acronis Acronis-PerWorkLoadWorkstationLicense-M', usd: 50.7 }, { product: 'Webroot Webroot-DNS-1M', usd: 14.4 },
+  { product: 'Keeper BreachWatch-M', usd: 5.85 }, { product: 'Keeper MSP-base-license-M', usd: 7.92 }, { product: 'EndUser Remote EndUser-Remote-M', usd: 80 }]),
+  { acronis: 50.7, webroot: 14.4, keeper: 13.77, atera_wfh: 80 });
+const agents = [{ customer_name: 'MSA Safety' }, { customer_name: 'MSA Safety' }, { customer_name: 'Cowan Consultancy' }, { customer_name: 'Cowan Consultancy' }];
+const rm = reconcileAll({ repeating, webrootSites, webrootEndpoints, acronisTenants, acronisUsage, inputs, rate: 1, now, agents, seatsUsd: 100 });
+assert.equal(rm.clients.find(x => x.name === 'Cowan Consultancy').cost.mgmt, 50, 'seats shared by Atera devices');
+assert.equal(rm.clients.find(x => x.name === 'Cowan Consultancy').cost.wfh, 25, '"(x5)" counts until devices are ticked');
+const vm = vendorMargins(rm, [{ product: 'Webroot Webroot-Endpoint-1M', usd: 40 }], 100, 1);
+const sumIncome = vm.rows.reduce((t, x) => t + x.incomeGbp, 0);
+assert.ok(Math.abs(sumIncome - rm.clients.reduce((t, c) => t + c.monthly, 0)) < 0.05, 'every £ of income lands on one supplier');
+assert.equal(vm.rows.find(x => x.key === 'webroot').costGbp, 40);
+assert.equal(vm.rows.find(x => x.key === 'atera_seats').costGbp, 100);
+assert.equal(vm.total.costGbp, 140);
 
 console.log('reconcile: ok');

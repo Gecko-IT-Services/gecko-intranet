@@ -53,3 +53,11 @@ of waiting for the monthly breakdown xlsx.
 
 - Reading the Acronis console's own pages: needs Philip's session, breaks when they change the UI.
 - Per-customer API clients: one client at the partner tenant sees every customer.
+
+## Microsoft 365 users (18 Oct)
+
+The public resource API returns no Microsoft 365 items for these tenants. The backup console's own API does, and accepts the same
+customer-scoped token: `/bc/api/resource_manager/v1/groups/c2c?parentId=0` (root) → `o365/groups?parentId=<root>` (organisation) →
+the child with `groupKind` c2cUsersGroup (Users) → its child c2cUsers (All users) → `o365/groups/<id>/resources`. Stored as kind
+`m365_user` with only who and what makes them count (`seat` = licenseOfferingItems has pw_base_m365_seats). Undocumented: if Acronis
+changes it, the sync records the error per customer under `problems` and the rest carries on.

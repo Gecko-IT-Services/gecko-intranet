@@ -15,12 +15,12 @@
 
 import { toast, escapeHtml, clientLink, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
-import { reconcileAll, productLabel, DEAD_DAYS, PRICE_USD } from '../core/reconcile.js';
+import { reconcileAll, productLabel, DEAD_DAYS, PRICE_USD, vendorMargins } from '../core/reconcile.js';
 import { vendorMarks } from '../core/vendors.js';
 import { sameAteraClient } from '../core/devices.js';
 import { sameClient } from '../core/client.js';
 
-const RC = { raw: null, error: null, open: new Set(), filter: 'attention', saving: false, editing: null };
+const RC = { raw: null, error: null, open: new Set(), who: new Set(), filter: 'attention', saving: false, editing: null };
 const els = id => document.getElementById(id);
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
 const gbp = n => (n == null ? '—' : (n < 0 ? '−£' : '£') + Math.abs(Number(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','));
@@ -35,20 +35,25 @@ async function load() {
   RC.error = null; render();
   try {
     const sb = await connectSupabase();
-    const [repeating, webrootSites, webrootEndpoints, acronisTenants, acronisUsage, inputs, agents, bills, wst, ast] = await Promise.all([
+    const [repeating, webrootSites, webrootEndpoints, acronisTenants, acronisUsage, inputs, agents, bills, wst, ast, usageAll, seats] = await Promise.all([
       sb.from('xero_repeating_invoices').select('repeating_invoice_id,contact_name,status,unit,period,next_date,line_items').then(must),
       sb.from('webroot_sites').select('site_id,name,raw').then(must),
       sb.from('webroot_endpoints').select('site_id,hostname,raw').then(must),
       sb.from('acronis_tenants').select('tenant_id,name,kind').then(must),
-      sb.from('acronis_items').select('tenant_id,raw').eq('kind', 'usage').like('raw->>name', 'pw_base_%').then(must),
+      sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'usage').like('raw->>name', 'pw_base_%').then(must)
+        .then(async usage => usage.concat(must(await sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'm365_user')))),
       sb.from('atera_reconcile_inputs').select('*').then(must),
       sb.from('atera_agents').select('customer_name,machine_name,device_type,online').then(must),
       sb.from('atera_bills').select('usd,gbp,charged_on').not('gbp', 'is', null).order('charged_on', { ascending: false }).limit(1).then(must),
       sb.from('webroot_status').select('*').eq('id', 1).maybeSingle().then(must),
-      sb.from('acronis_status').select('*').eq('id', 1).maybeSingle().then(must)
+      sb.from('acronis_status').select('*').eq('id', 1).maybeSingle().then(must),
+      sb.from('atera_usage').select('month,product,usd').then(must),
+      sb.from('atera_bills').select('usd,month,charged_on').eq('kind', 'seats').order('charged_on', { ascending: false }).limit(1).then(must)
     ]);
+    const lastMonth = usageAll.reduce((m, u) => (u.month > m ? u.month : m), '');
     const rate = bills[0] && Number(bills[0].usd) ? Number(bills[0].gbp) / Number(bills[0].usd) : null;
-    RC.raw = { repeating, webrootSites, webrootEndpoints, acronisTenants, acronisUsage, inputs, agents, rate, webrootStatus: wst, acronisStatus: ast };
+    RC.raw = { repeating, webrootSites, webrootEndpoints, acronisTenants, acronisUsage, inputs, agents, rate, webrootStatus: wst, acronisStatus: ast,
+      usage: usageAll.filter(u => u.month === lastMonth), usageMonth: lastMonth, seatsUsd: seats[0] ? Number(seats[0].usd) : 0 };
   } catch (err) {
     RC.error = err;
   }
@@ -56,6 +61,7 @@ async function load() {
 }
 
 const result = () => reconcileAll({ ...RC.raw, now: new Date() });
+const monthName = m => (m ? new Date(m + '-01T00:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '');
 
 function render() {
   const mount = els('rcWrap');
@@ -83,6 +89,7 @@ function render() {
     <div class="kpi"><span class="kpi-label">Set up once</span><span class="kpi-value">${setup.length}</span><span class="kpi-sub">client${setup.length === 1 ? '' : 's'} with fees or counts to record</span></div>
   </div>`;
   mount.innerHTML = `<div class="app-pane rc-pane">${statusLine}${figures}
+    ${block('Margin by supplier', `What clients pay for each part against what Atera charged you${RC.raw.usageMonth ? ` (${monthName(RC.raw.usageMonth)} invoice)` : ''}. Flat fees are shared across what they cover by what each part costs you.`, marginTable(r))}
     ${block('Fix these', fixes.length ? `${fixes.length} to do · biggest first` : '', fixes.length
       ? `<ul class="rc-fixes">${fixes.map(fixHtml).join('')}</ul>`
       : '<p class="rc-none">Nothing to fix: every invoice matches what’s in use.</p>')}
@@ -92,6 +99,22 @@ function render() {
     <p class="rc-foot">In use: Webroot and Acronis (live, synced 4 times a day), Keeper and Work from Home as entered here. Billed: Xero repeating invoices (hourly).
     Costs at Atera’s prices${RC.raw.rate ? `, £ at ${RC.raw.rate.toFixed(4)} per $` : ''}. Gecko HQ never changes an invoice or a device: each button opens the place to do it.</p></div>`;
   syncTableLabels(mount);
+}
+
+function marginTable(r) {
+  if (!RC.raw.rate) return '<p class="rc-none">No £ rate yet: the margin needs an Atera receipt with the £ paid.</p>';
+  const m = vendorMargins(r, RC.raw.usage, RC.raw.seatsUsd, RC.raw.rate);
+  const pctCls = p => (p == null ? '' : p < 0 ? ' rc-bad' : p < 40 ? ' rc-warn' : ' rc-good');
+  const MARK = { acronis: 'Acronis', webroot: 'Webroot', keeper: 'Keeper', atera_wfh: '', atera_seats: '' };
+  const row = (x, total = false) => `<tr class="${total ? 'rc-total' : ''}">
+      <td>${total ? '' : vendorMarks(MARK[x.key] || '')}<strong>${escapeHtml(x.label)}</strong>${x.what ? `<small>${escapeHtml(x.what)}</small>` : ''}</td>
+      <td>${escapeHtml(gbp(x.incomeGbp))}</td>
+      <td>${escapeHtml(gbp(x.costGbp))}${x.unassignedGbp ? `<small>${escapeHtml(gbp(x.unassignedGbp))} not tied to a client</small>` : ''}</td>
+      <td class="${x.marginGbp < 0 ? 'rc-bad' : ''}">${escapeHtml(gbp(x.marginGbp))}</td>
+      <td><span class="rc-pct${pctCls(x.pct)}">${x.pct == null ? '—' : `${escapeHtml(x.pct)}%`}</span>${x.pct != null ? `<span class="rc-bar"><i style="width:${Math.max(0, Math.min(100, x.pct))}%"></i></span>` : ''}</td>
+    </tr>`;
+  return `<table class="rc-margins"><thead><tr><th>Supplier</th><th>Clients pay</th><th>Atera charges</th><th>Margin</th><th>Margin %</th></tr></thead>
+    <tbody>${m.rows.map(x => row(x)).join('')}${row(m.total, true)}</tbody></table>`;
 }
 
 const block = (title, sub, body) => `<section class="rc-block"><header><h2>${escapeHtml(title)}</h2>${sub ? `<p>${escapeHtml(sub)}</p>` : ''}</header>${body}</section>`;
@@ -129,9 +152,31 @@ function fixHtml(f) {
   const fact = x.mode === 'flat' ? `${n(x.used)} in use · ${x.covered == null ? 'flat fee' : `fee priced on ${n(x.covered)}`}` : `${n(x.used)} in use · ${n(x.billed)} billed`;
   return `<li class="rc-fix"><span class="badge badge-${STATE[x.state][0]}">${escapeHtml(STATE[x.state][1])}</span>
     <div class="rc-fix-what"><strong>${escapeHtml(c.name)}</strong>${product(x.product)}</div>
-    <div class="rc-fix-fact">${fact}<small>${escapeHtml(x.text)}</small></div>
+    <div class="rc-fix-fact">${fact}<small>${escapeHtml(x.text)}</small>${whoButton(c, x)}</div>
     <div class="rc-fix-money${f.red ? ' rc-bad' : ''}">${x.gapGbp ? `${escapeHtml(gbp(x.gapGbp))}<small>/mo</small>` : '—'}</div>
-    <div class="rc-fix-do">${actionHtml(x)}</div></li>`;
+    <div class="rc-fix-do">${actionHtml(x)}</div>${whoList(c, x)}</li>`;
+}
+
+const TAG = { dead: ['amber', 'Not seen 30+ days'], shared: ['blue', 'Shared / role mailbox'], admin: ['purple', 'Admin login'],
+  not_ms: ['amber', 'No Microsoft licence'], leaver: ['blue', 'Leaver'] };
+
+function whoButton(c, x) {
+  if (!x.who) return '';
+  const key = `${c.name}|${x.product}`, open = RC.who.has(key);
+  return `<button type="button" class="rc-who-btn" data-rc-who="${escapeHtml(key)}" aria-expanded="${open}">${open ? 'Hide' : 'Who'} (${x.who.counted.length})</button>`;
+}
+
+/** The people or devices behind a count; the special accounts tagged so the odd ones out stand out. */
+function whoList(c, x) {
+  if (!x.who || !RC.who.has(`${c.name}|${x.product}`)) return '';
+  const item = i => `<li><strong>${escapeHtml(i.name)}</strong>${i.detail ? `<small>${escapeHtml(i.detail)}</small>` : ''}${i.tags.filter(t => TAG[t]).map(t => `<span class="badge badge-${TAG[t][0]}">${escapeHtml(TAG[t][1])}</span>`).join('')}</li>`;
+  const odd = x.who.counted.filter(i => i.tags.some(t => t !== 'leaver')).length;
+  const what = x.product === 'm365' ? 'Acronis charges a seat for' : x.product === 'wfh' ? 'Ticked as having Work from Home' : 'In use in Webroot';
+  return `<div class="rc-who">
+    <p>${escapeHtml(what)}: ${x.who.counted.length}${odd ? ` · <strong>${odd} not a regular person or device</strong>` : ''}${x.mode === 'per' && x.billed ? ` · Xero bills ${escapeHtml(x.billed)} (the invoice doesn’t say who)` : ''}</p>
+    <ul>${x.who.counted.map(item).join('')}</ul>
+    ${x.who.notCounted.length ? `<p class="rc-who-not">Not charged: ${x.who.notCounted.map(i => escapeHtml(i.name)).join(', ')}</p>` : ''}
+  </div>`;
 }
 
 function actionHtml(x) {
@@ -202,11 +247,11 @@ function clientsTable(r) {
 
 function detail(c) {
   const rows = c.rows.map(x => `<tr>
-      <td>${product(x.product)}</td>
+      <td>${product(x.product)}${whoButton(c, x)}</td>
       <td>${n(x.used)}</td>
       <td>${x.mode === 'flat' ? `flat fee${x.covered != null ? ` · priced on ${n(x.covered)}` : ''}` : n(x.billed)}</td>
       <td><span class="badge badge-${STATE[x.state][0]}">${escapeHtml(STATE[x.state][1])}</span> ${escapeHtml(x.text)}</td>
-    </tr>`).join('');
+    </tr>${RC.who.has(`${c.name}|${x.product}`) ? `<tr class="rc-who-row"><td colspan="4">${whoList(c, x)}</td></tr>` : ''}`).join('');
   return `<div class="rc-detail">
     <table class="rc-products"><thead><tr><th>Product</th><th>In use</th><th>Billed</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
     <p class="rc-sub">${[c.webroot && `Webroot site: ${c.webroot}`, c.acronis && `Acronis: ${c.acronis}`, `costs $${c.costUsd.toFixed(2)} a month`].filter(Boolean).map(escapeHtml).join(' · ')}
@@ -264,6 +309,8 @@ function onClick(e) {
   if (o) { const k = o.dataset.rcOpen; RC.open.has(k) ? RC.open.delete(k) : RC.open.add(k); render(); return; }
   const f = e.target.closest('[data-rc-filter]');
   if (f) { RC.filter = f.dataset.rcFilter; render(); return; }
+  const wb = e.target.closest('[data-rc-who]');
+  if (wb) { const k = wb.dataset.rcWho; RC.who.has(k) ? RC.who.delete(k) : RC.who.add(k); render(); return; }
   const ed = e.target.closest('[data-rc-edit]');
   if (ed) { RC.editing = ed.dataset.rcEdit; render(); return; }
   const bl = e.target.closest('[data-rc-baseline]');

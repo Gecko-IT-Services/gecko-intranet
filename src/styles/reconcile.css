@@ -19,6 +19,22 @@
 #section-reconcile .rc-product { display: inline-flex; align-items: center; color: var(--muted); font-size: 12px; }
 #section-reconcile small { font-size: 11px; color: var(--muted); }
 
+/* Margin by supplier: one row each, the % with a thin bar. */
+#section-reconcile .rc-margins { width: 100%; border-collapse: collapse; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); overflow: hidden; font-size: 13px; }
+#section-reconcile .rc-margins th { text-align: right; font-size: 11px; font-weight: 500; color: var(--faint); padding: 10px 16px; border-bottom: 1px solid var(--border-dim); }
+#section-reconcile .rc-margins th:first-child, #section-reconcile .rc-margins td:first-child { text-align: left; }
+#section-reconcile .rc-margins td { padding: 10px 16px; border-bottom: 1px solid var(--border-dim); text-align: right; font: 500 13px var(--font-mono); color: var(--white); font-variant-numeric: tabular-nums; vertical-align: middle; }
+#section-reconcile .rc-margins td:first-child { font-family: var(--font-body); }
+#section-reconcile .rc-margins td strong { font-weight: 600; }
+#section-reconcile .rc-margins td small { display: block; font-family: var(--font-body); font-weight: 400; }
+#section-reconcile .rc-margins .rc-total td { border-bottom: 0; background: var(--inset); }
+#section-reconcile .rc-pct { display: inline-block; min-width: 44px; }
+#section-reconcile .rc-good { color: var(--green); }
+#section-reconcile .rc-bar { display: inline-block; width: 64px; height: 4px; margin-left: 8px; border-radius: 2px; background: var(--border-dim); vertical-align: middle; overflow: hidden; }
+#section-reconcile .rc-bar i { display: block; height: 100%; background: currentColor; color: var(--green); }
+#section-reconcile .rc-pct.rc-warn + .rc-bar i { color: var(--amber); }
+#section-reconcile .rc-pct.rc-bad + .rc-bar i { color: var(--red); }
+
 /* Fix these: badge · client and product · the numbers · £ a month · the button. */
 #section-reconcile .rc-fix {
   display: grid; grid-template-columns: 104px minmax(0, 1.3fr) minmax(0, 1.6fr) 84px minmax(180px, auto); align-items: center; gap: 14px; padding: 12px 16px;
@@ -31,6 +47,22 @@
 #section-reconcile .rc-fix-money { font: 500 15px var(--font-mono); color: var(--white); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 #section-reconcile .rc-fix-money.rc-bad { color: var(--red); }
 #section-reconcile .rc-fix-do { justify-self: end; }
+
+/* Who: the people or devices behind a count. */
+#section-reconcile .rc-who-btn {
+  align-self: flex-start; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--green); font: 500 12px var(--font-body); cursor: pointer;
+}
+#section-reconcile .rc-who-btn:hover { text-decoration: underline; }
+#section-reconcile .rc-products td:first-child .rc-who-btn { display: block; }
+#section-reconcile .rc-who { grid-column: 1 / -1; padding: 12px 14px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset); }
+#section-reconcile .rc-who p { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+#section-reconcile .rc-who p strong { color: var(--amber); }
+#section-reconcile .rc-who ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 16px; }
+#section-reconcile .rc-who li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-size: 13px; min-width: 0; }
+#section-reconcile .rc-who li strong { color: var(--white); font-weight: 500; }
+#section-reconcile .rc-who li small { overflow-wrap: anywhere; }
+#section-reconcile .rc-who .rc-who-not { margin: 10px 0 0; }
+#section-reconcile .rc-who-row td { background: transparent; }
 
 /* Set up once: client · today's counts · Use these counts / Edit. */
 #section-reconcile .rc-set { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); align-items: start; gap: 10px 16px; padding: 14px 16px; }
@@ -80,6 +112,7 @@
 #section-reconcile .rc-foot { margin: 0; font-size: 12px; color: var(--faint); }
 
 @container (max-width: 820px) {
+  #section-reconcile .rc-bar { display: none; }
   #section-reconcile .rc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #section-reconcile .rc-fix { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
   #section-reconcile .rc-fix > .badge { grid-column: 1; }

@@ -78,3 +78,18 @@ because Atera is month by month from invoices and this is now, from live counts.
   antivirus 15 vs 2 (£52/mo), Snowskool 9 vs 7, CanCan and Philip Brazier billed for antivirus with no Webroot site, 4 dead Webroot devices.
 - Not done: Bill in Xero from this page (the repeating invoice is the fix for an ongoing gap; Clients › Atera still has Bill in Xero),
   Keeper and EndUser Remote totals checked against Atera's bill, the client page panel.
+
+## Margin by supplier and Who (18 Oct, Philip: "how much margin is being made for each part"; "we should know who that relates to")
+
+- **Margin by supplier** (`vendorMargins`): Acronis, Webroot, Keeper, Atera Work from home, Atera technician seats, and the total.
+  Cost is what Atera actually charged (the latest usage report, plus the last seats charge), so it reconciles to the invoice;
+  "not tied to a client" is the part no client's live count explains (Gecko's own, dead devices, Keeper's MSP base and BreachWatch).
+  Income: a per-device line belongs to its product; a flat fee is shared across what it covers plus the platform, in proportion to
+  what each costs Gecko for that client (`splitRevenue`). The seats are shared out by each client's Atera devices. "(x5)" in a
+  bundle's wording counts as its Work from Home devices until they are ticked. First run: £2,637.84 in, £867.47 out, 67%.
+- **Who** (`whoFor`): every count opens to its names. Antivirus: Webroot devices (user, last seen, not seen 30+ days). Microsoft 365
+  backup: the users Acronis charges a seat for, from the backup console's API (`/bc/api/resource_manager/v1/o365/…`, read by
+  `acronis-sync` as kind `m365_user`; not in Acronis's public docs), each tagged shared / admin login / no Microsoft licence / leaver
+  (`userTags`), and those it doesn't charge. Named seats matched Acronis's seat count for all 9 clients on 18 Oct. Work from home:
+  the ticked devices. Xero lines don't name people, so the page says who is in use, not which ones the invoice meant.
+- Found on the first run: Gecko and admin logins hold paid seats at MSA, Onsite, Cowans (two) and CDA.
