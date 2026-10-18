@@ -1,0 +1,94 @@
+/* Reconcile (Clients hub): src/sections/reconcile.js. Shared figures, badges, buttons and states come from system.css.
+   Three blocks: Fix these (money, one line each), Set up once (counts to record), All clients (billed / costs / margin). */
+
+#section-reconcile .rc-pane { display: grid; gap: 20px; width: 100%; min-width: 0; container-type: inline-size; }
+#section-reconcile .rc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#section-reconcile .rc-kpis .kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#section-reconcile .rc-bad { color: var(--red); }
+#section-reconcile .rc-warn { color: var(--amber); }
+
+/* A block: a heading, one line saying what it is for, then a card. */
+#section-reconcile .rc-block > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 8px; }
+#section-reconcile .rc-block h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--white); }
+#section-reconcile .rc-block header p { margin: 0; font-size: 12px; color: var(--muted); }
+#section-reconcile :is(.rc-fixes, .rc-setup, .rc-clients) {
+  list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); overflow: hidden;
+}
+#section-reconcile :is(.rc-fixes, .rc-setup, .rc-clients) > li + li { border-top: 1px solid var(--border-dim); }
+#section-reconcile .rc-none { margin: 0; padding: 14px 16px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); color: var(--muted); font-size: 13px; }
+#section-reconcile .rc-product { display: inline-flex; align-items: center; color: var(--muted); font-size: 12px; }
+#section-reconcile small { font-size: 11px; color: var(--muted); }
+
+/* Fix these: badge · client and product · the numbers · £ a month · the button. */
+#section-reconcile .rc-fix {
+  display: grid; grid-template-columns: 104px minmax(0, 1.3fr) minmax(0, 1.6fr) 84px minmax(180px, auto); align-items: center; gap: 14px; padding: 12px 16px;
+}
+#section-reconcile .rc-fix > .badge { justify-self: start; }
+#section-reconcile .rc-fix-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#section-reconcile .rc-fix-what strong { color: var(--white); font-weight: 600; overflow-wrap: anywhere; }
+#section-reconcile .rc-fix-fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; font: 500 13px var(--font-mono); color: var(--white); }
+#section-reconcile .rc-fix-fact small { font-family: var(--font-body); }
+#section-reconcile .rc-fix-money { font: 500 15px var(--font-mono); color: var(--white); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#section-reconcile .rc-fix-money.rc-bad { color: var(--red); }
+#section-reconcile .rc-fix-do { justify-self: end; }
+
+/* Set up once: client · today's counts · Use these counts / Edit. */
+#section-reconcile .rc-set { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); align-items: start; gap: 10px 16px; padding: 14px 16px; }
+#section-reconcile .rc-set-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#section-reconcile .rc-set-who strong { color: var(--white); font-weight: 600; }
+#section-reconcile .rc-set-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+#section-reconcile .rc-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border: 1px solid var(--border-dim); border-radius: var(--radius-pill);
+  background: var(--inset); font-size: 12px; color: var(--muted); white-space: nowrap;
+}
+#section-reconcile .rc-chip strong { font: 500 12px var(--font-mono); color: var(--white); }
+#section-reconcile .rc-set-do { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#section-reconcile .rc-set-do:empty { display: none; }
+#section-reconcile .rc-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+#section-reconcile .rc-edit-wide { grid-column: 1 / -1; padding: 12px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset); }
+#section-reconcile .rc-edit label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--white); }
+#section-reconcile .rc-edit input[type="number"] {
+  width: 64px; padding: 4px 6px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset); color: var(--white);
+  font: 500 13px var(--font-mono);
+}
+#section-reconcile .rc-edit fieldset { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px 14px; width: 100%; }
+#section-reconcile .rc-edit legend { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+#section-reconcile .rc-edit .btn + .btn { margin-left: 6px; }
+#section-reconcile .rc-dead-list { display: flex; flex-direction: column; gap: 2px; }
+#section-reconcile .rc-dead-list span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
+
+/* All clients: name · status · billed · costs · margin; opens to the products. */
+#section-reconcile .rc-crow {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(90px, .8fr) repeat(3, minmax(80px, .6fr)); align-items: center; gap: 12px;
+  width: 100%; padding: 10px 16px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+#section-reconcile .rc-crow:hover { background: var(--inset); }
+#section-reconcile .rc-crow:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+#section-reconcile .rc-crow > .badge { justify-self: start; }
+#section-reconcile .rc-cname { font-weight: 600; color: var(--white); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-reconcile .rc-num { font: 500 13px var(--font-mono); color: var(--white); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#section-reconcile .rc-num.rc-bad { color: var(--red); }
+#section-reconcile .rc-num small { display: block; font: 500 10px var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: var(--faint); }
+#section-reconcile .rc-detail { padding: 0 16px 14px; display: grid; gap: 8px; }
+#section-reconcile .rc-products { width: 100%; border-collapse: collapse; font-size: 13px; }
+#section-reconcile .rc-products th { text-align: left; font-size: 11px; font-weight: 500; color: var(--faint); padding: 6px 8px; border-bottom: 1px solid var(--border-dim); }
+#section-reconcile .rc-products td { padding: 8px; border-bottom: 1px solid var(--border-dim); color: var(--white); vertical-align: middle; }
+#section-reconcile .rc-products td:nth-child(2), #section-reconcile .rc-products td:nth-child(3) { font-family: var(--font-mono); }
+#section-reconcile .rc-products td:last-child { color: var(--muted); }
+#section-reconcile .rc-sub { margin: 0; font-size: 12px; color: var(--muted); }
+#section-reconcile .rc-foot { margin: 0; font-size: 12px; color: var(--faint); }
+
+@container (max-width: 820px) {
+  #section-reconcile .rc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #section-reconcile .rc-fix { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+  #section-reconcile .rc-fix > .badge { grid-column: 1; }
+  #section-reconcile .rc-fix-money { grid-column: 2; grid-row: 1; }
+  #section-reconcile .rc-fix-what, #section-reconcile .rc-fix-fact, #section-reconcile .rc-fix-do { grid-column: 1 / -1; }
+  #section-reconcile .rc-fix-do { justify-self: start; }
+  #section-reconcile .rc-set { grid-template-columns: minmax(0, 1fr); }
+  #section-reconcile .rc-set-do { grid-column: 1; }
+  #section-reconcile .rc-crow { grid-template-columns: minmax(0, 1fr) auto; }
+  #section-reconcile .rc-crow .rc-num { display: none; }
+  #section-reconcile .rc-crow .rc-num:last-child { display: block; grid-column: 1 / -1; text-align: left; }
+}

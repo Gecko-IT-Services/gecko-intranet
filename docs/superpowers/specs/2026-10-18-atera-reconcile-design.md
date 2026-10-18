@@ -55,3 +55,26 @@ client is checked for margin, not quantity (Philip's pricing workbook, May 2026:
 
 - Read only towards every vendor. Gecko HQ never deactivates a device, revokes a backup or changes a repeating invoice.
 - Money must reconcile: per product, live counts × unit price must come to Atera's charge within $1, or the gap is shown.
+
+## Built (step 2, 18 Oct)
+
+Clients › **Reconcile** (`src/sections/reconcile.js`, `src/core/reconcile.js`, tests `tests/reconcile.mjs`), its own tab beside Atera
+because Atera is month by month from invoices and this is now, from live counts.
+
+- Page (Philip: "clean, visually clear and apparent"): four figures (to bill, over-billed, dead devices, set up once), then three
+  blocks. **Fix these**: every money gap across clients, one line each (state, client and product with its vendor mark, in use · billed,
+  £ a month, one button), red first then by £. **Set up once**: one line per client with today's counts as chips, Use these counts /
+  Edit, and Pick Work from Home devices / Enter Keeper users. **All clients**: billed, costs, margin, status; opens to the products.
+  "Check" (billed with no Webroot site) offers Review in Xero, never a change, since the client may be under another name there.
+- Lines → products (`lineProducts`): "Acronis/M365 …" and "… Office365 & Sharepoint" are Microsoft 365 backup; any other backup line covers
+  machines and Microsoft 365; "Cloud Management" / retainer bundles cover antivirus and backup unless the antivirus is Defender (Technix);
+  hosting and website lines are not Atera. A line is per-device when it sells one product and is a count (qty > 1 or ≤ £12 each); yearly
+  templates (period ≥ 11) count quantity ÷ 12.
+- Flat fees: recorded once per product (`atera_reconcile_inputs`, kind `covered`); "Use today's counts" records them all for a client.
+  After that only growth is flagged ("grown"), with a link to review the fee in Xero.
+- Keeper users seeded from Philip's console check on 18 Oct (CDA 5, MSA 4 Enterprise Plus, Haus Coast 1); Work from Home devices are
+  ticked from the client's Atera devices.
+- First run on live data: MSA Microsoft 365 backup 9 in use vs 6 billed (£26.85/mo), MSA Keeper 6 vs 4 and antivirus 8 vs 7, Onsite
+  antivirus 15 vs 2 (£52/mo), Snowskool 9 vs 7, CanCan and Philip Brazier billed for antivirus with no Webroot site, 4 dead Webroot devices.
+- Not done: Bill in Xero from this page (the repeating invoice is the fix for an ongoing gap; Clients › Atera still has Bill in Xero),
+  Keeper and EndUser Remote totals checked against Atera's bill, the client page panel.

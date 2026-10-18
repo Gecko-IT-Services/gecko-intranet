@@ -26,7 +26,7 @@ export const PAGES = [
   ['Overview › Today', 'overview', 'today'], ['Overview › This week', 'overview', 'week'],
   ['Overview › Month-end', 'overview', 'monthend'], ['Overview › Business', 'overview', 'business'],
   ['Analytics › Revenue', 'analytics', 'revenue'], ['Analytics › Time', 'analytics', 'time'], ['Analytics › Ahead', 'analytics', 'ahead'],
-  ['Clients › Directory', 'clients'], ['Clients › Profitability', 'profitability'], ['Clients › Licences', 'licences'], ['Clients › Atera', 'atera'],
+  ['Clients › Directory', 'clients'], ['Clients › Profitability', 'profitability'], ['Clients › Licences', 'licences'], ['Clients › Atera', 'atera'], ['Clients › Reconcile', 'reconcile'],
   ['Opportunities › Pipeline', 'opportunities', 'pipeline'], ['Opportunities › Gaps', 'opportunities', 'gaps'],
   ['Opportunities › Prospects', 'opportunities', 'prospects'], ['Opportunities › VoIP Unlimited', 'opportunities', 'voip'],
   ['Opportunities › Products', 'opportunities', 'products'],
