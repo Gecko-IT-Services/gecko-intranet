@@ -5,7 +5,15 @@
 import { cors, json, sql, staffEmail } from '../_shared/xero.ts';
 
 const API = 'https://unityapi.webrootcloudav.com';
-const clean = (v: string | undefined) => (v || '').trim().replace(/^["']|["']$/g, '');   // pasted values often carry a space or quotes
+// Pasted values often carry spaces, quotes (straight or curly) or invisible characters from the page they were copied from.
+const clean = (v: string | undefined) => (v || '').replace(/[\u200B-\u200D\u2060\uFEFF]/g, '').replace(/\u00A0/g, ' ').trim()
+  .replace(/^["'\u2018\u2019\u201C\u201D]+|["'\u2018\u2019\u201C\u201D]+$/g, '').trim();
+/** Names the secret (never its value) that still holds a character Webroot's sign-in can't take. */
+const plain = (name: string, v: string) => {
+  const odd = [...v].find(c => c.charCodeAt(0) > 126 || c.charCodeAt(0) < 32);
+  if (odd) throw new Error(`${name} contains an unusual character (code ${odd.charCodeAt(0)}). Type it again by hand in Supabase › Edge Functions › Secrets.`);
+  return v;
+};
 
 async function token() {
   const id = clean(Deno.env.get('WEBROOT_CLIENT_ID')), secret = clean(Deno.env.get('WEBROOT_CLIENT_SECRET'));
@@ -13,6 +21,7 @@ async function token() {
   const missing = [['WEBROOT_CLIENT_ID', id], ['WEBROOT_CLIENT_SECRET', secret], ['WEBROOT_USERNAME', username], ['WEBROOT_PASSWORD', password]]
     .filter(([, v]) => !v).map(([n]) => n);
   if (missing.length) throw new Error(`Not set in Supabase › Edge Functions › Secrets: ${missing.join(', ')}`);
+  plain('WEBROOT_CLIENT_ID', id); plain('WEBROOT_CLIENT_SECRET', secret);
   const res = await fetch(`${API}/auth/token`, {
     method: 'POST',
     headers: { authorization: 'Basic ' + btoa(`${id}:${secret}`), 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
