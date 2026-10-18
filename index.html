@@ -82,6 +82,7 @@
 <link rel="stylesheet" href="src/styles/atera.css">
 <link rel="stylesheet" href="src/styles/devices.css">
 <link rel="stylesheet" href="src/styles/analytics.css">
+<link rel="stylesheet" href="src/styles/commands.css">
 <script type="module" src="src/main.js"></script>
 
 <style>
@@ -3805,6 +3806,9 @@ body::before {
       <button class="sb-link" type="button" data-section="backups" data-hub="monitoring" onclick="navHub('monitoring')">
         <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="lbl">Monitoring</span>
       </button>
+      <button class="sb-link" type="button" data-section="commands" onclick="navTo('commands')">
+        <span class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span><span class="lbl">Commands</span>
+      </button>
 
       <div class="sb-nav-label">Admin</div>
       <button class="sb-link" type="button" data-section="team" data-hub="team" onclick="navHub('team')">
@@ -4362,6 +4366,18 @@ body::before {
         <pattern id="an-st-one" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" class="f-one" opacity=".2"/><rect width="2" height="6" class="f-one"/></pattern>
         <pattern id="an-st-away" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.4" height="4" class="f-mute"/></pattern>
       </defs></svg>
+    </section>
+
+    <!-- ═══ COMMANDS ═══ src/sections/commands.js draws docs/commands.md (design 2026-10-18-commands-design.md). -->
+    <section class="section" id="section-commands">
+      <div class="section-head">
+        <h1>Commands</h1>
+        <p>Windows commands to copy and paste.</p>
+        <div class="head-actions">
+          <a class="btn btn-ghost btn-sm" href="https://github.com/Gecko-IT-Services/gecko-intranet/edit/main/docs/commands.md" target="_blank" rel="noopener">Edit on GitHub</a>
+        </div>
+      </div>
+      <div id="cmdWrap"></div>
     </section>
 
     <section class="section" id="section-team">
@@ -4956,6 +4972,7 @@ const SECTION_TITLES = {
   backups:       'MONITORING · BACKUPS',
   alerts:        'MONITORING · ALERTS',
   devices:       'MONITORING · DEVICES',
+  commands:      'COMMANDS',
   settings:      'SETTINGS'
 };
 

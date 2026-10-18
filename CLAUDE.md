@@ -46,7 +46,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `--red`, `--muted`, `--radius`; fonts Schibsted Grotesk / JetBrains Mono); section
   CSS scoped under `#section-<key>`. `ponytail:` comments mark accepted ceilings.
 - Sidebar (Philip, 9 Oct, 8 entries; Analytics added under Home 10 Oct, so 9): Home (Overview, Analytics) · Sales (Clients, Opportunities, Jobs) · Operations
-  (Timesheets, Monitoring) · Admin (Team, Settings). **Hubs** group sections under one entry with the
+  (Timesheets, Monitoring, Commands) · Admin (Team, Settings). Commands (18 Oct) draws `docs/commands.md` like a GitHub README
+  with copy buttons; `{name}` in a code box is a blank to type into (`src/core/markdown.js`, `2026-10-18-commands-design.md`). **Hubs** group sections under one entry with the
   shared tab strip: Clients = Directory + Profitability + Licences + Atera + client page; Monitoring = Backups + Alerts + Devices;
   Team = Overview (`src/sections/team.js`: who's in, holiday left as day tokens, next four weeks, hours, mileage to claim)
   + Leave (tax-year wall planner, click two days to book; `2026-10-09-team-wall-planner-design.md`) + Mileage (`HUBS`/`renderHub` in index.html). Older tab strips get the shared look via `geckoInkify()`. Every section uses the same tabs
