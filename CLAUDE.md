@@ -202,6 +202,11 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Windows 11 build, Office, servers, macOS) and what to do (free Windows 11 upgrade / replace / update / new server), plus memory, disk
   and age; Add task pre-filled. Support dates live in `SUPPORT` in `src/core/upgrades.js` (tests `tests/upgrades.mjs`): add a row when
   Microsoft publishes the next one.
+- Client page › **Upgrades & advice** (18 Oct, `2026-10-18-client-advice-email-design.md`): a client's upgrades (Monitoring › Upgrades),
+  unprotected machines (Coverage) and catalogue gaps (Opportunities, `adviceFor`) as ticked topics, composed into one friendly email
+  to the main contact (`composeEmail` in `src/core/advice.js`, catalogue wording reused; tests `tests/advice.mjs`) and saved to Outlook
+  Drafts; products in it become Proposed (`proposeFromAdvice`). Client-facing only: never billing, leaks, tool names or our own backup
+  failures. `src/sections/advice.js`.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the

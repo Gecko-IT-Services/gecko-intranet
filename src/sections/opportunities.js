@@ -28,8 +28,9 @@ import { vendorMarks, productPart } from '../core/vendors.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
-  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns, holds, mapCell, chaseView
+  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns, holds, mapCell, chaseView, newOpportunity
 } from '../core/opportunities.js';
+import { sameClient } from '../core/client.js';
 import { tilt, reorder, placeRows } from '../core/jobs.js';
 import { followUpChoices, dueText } from '../core/activity.js';
 import { STAGES as P_STAGES, SOURCES as P_SOURCES, OPEN_STAGES as P_OPEN, cleanProspect, prospectSummary, sortProspects, conversion } from '../core/prospects.js';
@@ -1339,6 +1340,37 @@ export async function whitespace() {
       })) };
     })
   };
+}
+
+/**
+ * Client page › Upgrades & advice: this client's catalogue gaps (findings are written for the client), the catalogue, and
+ * its main contact. Loads this section's data when it hasn't been opened yet.
+ */
+export async function adviceFor(clientName) {
+  if (!OPP.clients.length) await load();
+  if (OPP.error) throw OPP.error;
+  const c = OPP.clients.find(x => x.name === clientName) || OPP.clients.find(x => sameClient(x.name, clientName));
+  if (!c) return { name: clientName, gaps: [], products: OPP.products, contact: '', contactName: '' };
+  const gaps = withoutOpen(clientGaps(analyse(c).client, OPP.products, OPP.statuses[c.name] || {}), OPP.opps, c.name);
+  return { name: c.name, gaps, products: OPP.products, contact: c.contact || '', contactName: c.contactName || '' };
+}
+
+/** After an advice email is drafted: each product in it becomes a Proposed deal (an open idea moves to Proposed; nothing is doubled). */
+export async function proposeFromAdvice(clientName, productKeys) {
+  const sb = await connectSupabase({ interactive: true });
+  const step = 'Advice email drafted: check, then send';
+  let n = 0;
+  for (const key of [...new Set(productKeys)].filter(Boolean)) {
+    const p = findProduct(key);
+    if (!p) continue;
+    const open = OPP.opps.find(o => o.client_name === clientName && o.product_key === key && (o.status === 'idea' || o.status === 'proposed'));
+    if (open) { if (open.status === 'idea') { await patchOpp(open.id, { status: 'proposed', next_step: step }); n++; } continue; }
+    const row = newOpportunity({ client: clientName, product: p, status: 'proposed', nextStep: step, owner: myName() });
+    if (row.error) continue;
+    OPP.opps.push(must(await sb.from('opportunities').insert(row).select('*').single()));
+    n++;
+  }
+  return n;
 }
 
 export function init() {

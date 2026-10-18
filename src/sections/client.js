@@ -22,6 +22,7 @@ import { tabsHtml, moveInk, keyNav, direction } from '../core/tabs.js';
 import { icon } from '../core/icons.js';
 import { vendorMarks, productPart } from '../core/vendors.js';
 import { newOpportunity } from '../core/opportunities.js';
+import * as advice from './advice.js';
 import { ROLES, cleanContact, contactsFor, mainContact, duplicateEmail } from '../core/contacts.js';
 import { KINDS, cleanActivity, timeline, dueText, lastContact, followUpChoices, durationText } from '../core/activity.js';
 import { PEOPLE, titleFromNote, cleanTask } from '../core/tasks.js';
@@ -33,7 +34,7 @@ import { deviceSummary, devicesFor, STALE_DAYS } from '../core/devices.js';
 // adding: the New opportunity form is open (with what's been picked so far); saving: one insert at a time.
 // contactEdit: null, 'new' or the id of the contact being edited.
 const CL = { name: '', tab: 'summary', data: null, loading: false, error: null, dir: '', seq: 0, adding: null, saving: false, contactEdit: null };
-const TABS = ['summary', 'activity', 'emails', 'contacts', 'invoices', 'services', 'support', 'devices', 'jobs', 'opportunities'];
+const TABS = ['summary', 'activity', 'emails', 'contacts', 'invoices', 'services', 'support', 'devices', 'advice', 'jobs', 'opportunities'];
 
 const els = id => document.getElementById(id);
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
@@ -162,7 +163,7 @@ function render() {
     return;
   }
   if (!p) { mount.innerHTML = `<p class="cl-empty art art-loading">Loading ${escapeHtml(CL.name)}…</p>`; return; }
-  const pane = { summary: summaryHtml, activity: activityHtml, emails: emailsHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, devices: devicesHtml, jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
+  const pane = { summary: summaryHtml, activity: activityHtml, emails: emailsHtml, contacts: contactsHtml, invoices: invoicesHtml, services: servicesHtml, support: supportHtml, devices: devicesHtml, advice: () => advice.html(CL.name), jobs: jobsHtml, opportunities: oppsHtml }[CL.tab] || summaryHtml;
   mount.innerHTML = `<div class="app-pane ${CL.dir}">${pane(p, CL.data.errors)}</div>`;
   CL.dir = '';
   syncTableLabels(mount);
@@ -195,6 +196,7 @@ function headHtml(p) {
     { key: 'services', label: 'Services & profit' },
     { key: 'support', label: 'Support hours', badge: s && s.remaining < 2 ? hours(s.remaining) : '', warn: s && s.remaining <= 0 },
     { key: 'devices', label: 'Devices', badge: CL.data?.devices?.win10 ? `${CL.data.devices.win10} on Win 10` : (CL.data?.devices?.devices || ''), warn: !!CL.data?.devices?.win10 },
+    { key: 'advice', label: 'Upgrades & advice' },
     { key: 'jobs', label: 'Jobs', badge: p?.openJobs?.length || '' },
     { key: 'opportunities', label: 'Opportunities', badge: p?.openOpps?.length || '' }
   ];
@@ -865,6 +867,7 @@ function onClick(event) {
 export function init() {
   const section = els('section-client');
   section?.addEventListener('click', onClick);
+  if (section) advice.wire(section);
   // A follow-up date typed by hand shows the task fields too.
   section?.addEventListener('change', e => {
     if (e.target.name === 'follow_up_on') { const box = e.target.form?.querySelector('.cl-follow-task'); if (box) box.hidden = !e.target.value; }

@@ -192,3 +192,46 @@
   #section-client .cl-mail-acts { grid-column: 2; flex-direction: row; align-items: center; }
 }
 #section-client .cl-warn-text { color: var(--amber); }
+
+/* Upgrades & advice tab (src/sections/advice.js): what to raise on the left, the email on the right. */
+#section-client .ad-wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; width: 100%; }
+#section-client .ad-head { margin: 0 0 8px; }
+#section-client .ad-head h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--white); }
+#section-client .ad-head p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+#section-client .ad-none { margin: 0; padding: 14px 16px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); color: var(--muted); font-size: 13px; }
+#section-client .ad-topics { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+#section-client .ad-topic { padding: 12px 14px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease); }
+#section-client .ad-topic.on { border-color: var(--green); }
+#section-client .ad-topic:not(.on) { opacity: .75; }
+#section-client .ad-tick { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; cursor: pointer; }
+#section-client .ad-tick input { width: 16px; height: 16px; accent-color: var(--green); }
+#section-client .ad-title { font-weight: 600; color: var(--white); }
+#section-client .ad-why, #section-client .ad-sum, #section-client .ad-price { margin: 6px 0 0 26px; font-size: 12px; color: var(--muted); }
+#section-client .ad-sum { color: var(--white); }
+#section-client .ad-items { list-style: none; margin: 6px 0 0 26px; padding: 0; display: grid; gap: 2px; font-size: 12px; }
+#section-client .ad-items strong { font: 500 12px var(--font-mono); color: var(--white); }
+#section-client .ad-items span { color: var(--muted); }
+#section-client .ad-more { margin: 4px 0 0 26px; padding: 0; border: 0; background: none; color: var(--green); font: 500 12px var(--font-body); cursor: pointer; }
+#section-client .ad-mail { position: sticky; top: 12px; }
+#section-client .ad-card { border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); padding: 14px 16px; display: grid; gap: 12px; }
+#section-client .ad-to { font-size: 13px; color: var(--muted); }
+#section-client .ad-to strong { color: var(--white); font-weight: 600; }
+#section-client .ad-to .ad-warn { color: var(--amber); }
+#section-client .ad-subject { display: grid; gap: 4px; font-size: 11px; color: var(--faint); }
+#section-client .ad-subject input { padding: 7px 10px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset); color: var(--white); font: 500 13px var(--font-body); }
+/* The email as it will read: the page's colours swapped, so it stands apart like a sheet of paper in either theme. */
+#section-client .ad-preview { max-height: 520px; overflow: auto; padding: 14px 16px; border-radius: var(--radius-sm); background: var(--white); color: var(--card); font: 14px/1.55 var(--font-body); }
+#section-client .ad-preview p { margin: 0 0 10px; }
+#section-client .ad-preview ul { margin: 0 0 10px; padding-left: 20px; }
+#section-client .ad-preview li { margin: 0 0 3px; }
+#section-client .ad-preview .ad-none { background: none; border: 0; padding: 0; color: inherit; opacity: .7; }
+#section-client .ad-do { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+@media (max-width: 900px) {
+  #section-client .ad-wrap { grid-template-columns: minmax(0, 1fr); }
+  #section-client .ad-mail { position: static; }
+}
+@media (max-width: 640px) {
+  #section-client .ad-tick { grid-template-columns: auto minmax(0, 1fr); }
+  #section-client .ad-tick .badge { grid-column: 2; justify-self: start; }
+  #section-client .ad-why, #section-client .ad-sum, #section-client .ad-price, #section-client .ad-items, #section-client .ad-more { margin-left: 0; }
+}
