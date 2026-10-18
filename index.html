@@ -83,6 +83,7 @@
 <link rel="stylesheet" href="src/styles/devices.css">
 <link rel="stylesheet" href="src/styles/coverage.css">
 <link rel="stylesheet" href="src/styles/reconcile.css">
+<link rel="stylesheet" href="src/styles/upgrades.css">
 <link rel="stylesheet" href="src/styles/analytics.css">
 <link rel="stylesheet" href="src/styles/commands.css">
 <script type="module" src="src/main.js"></script>
@@ -4302,6 +4303,21 @@ body::before {
       <div id="cvWrap"><p class="state-empty">Open this section to load backup coverage.</p></div>
     </section>
 
+    <!-- ═══ UPGRADES ═══ src/sections/upgrades.js: what needs upgrading per client, and how soon (Monitoring hub). Read only. -->
+    <section class="section" id="section-upgrades">
+      <div class="section-head">
+        <h1>Device <span>Upgrades</span></h1>
+        <div class="head-actions">
+          <button class="head-btn" id="upRefresh" type="button" title="Sync from Atera now">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="upLastSync"></span>
+        </div>
+      </div>
+      <div id="upWrap"><p class="state-empty">Open this section to load upgrades.</p></div>
+    </section>
+
     <!-- ═══ DEVICES ═══ src/sections/devices.js: Atera devices per client (Monitoring hub). Read only. -->
     <section class="section" id="section-devices">
       <div class="section-head">
@@ -5003,6 +5019,7 @@ const SECTION_TITLES = {
   leave:         'TEAM · LEAVE',
   backups:       'MONITORING · BACKUPS',
   coverage:      'MONITORING · COVERAGE',
+  upgrades:      'MONITORING · UPGRADES',
   reconcile:     'CLIENTS · RECONCILE',
   alerts:        'MONITORING · ALERTS',
   devices:       'MONITORING · DEVICES',
@@ -5576,7 +5593,7 @@ async function graphFetch(path, options = {}) {
    opens Monitoring on its Alerts tab. Design: 2026-10-09-gecko-hq-structure-design.md */
 const HUBS = {
   clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['licences', 'Licences'], ['atera', 'Atera'], ['reconcile', 'Reconcile'], ['client', null]] },
-  monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['coverage', 'Coverage'], ['alerts', 'Alerts'], ['devices', 'Devices']] },
+  monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['coverage', 'Coverage'], ['alerts', 'Alerts'], ['devices', 'Devices'], ['upgrades', 'Upgrades']] },
   team:       { label: 'Team',       tabs: [['team', 'Overview'], ['leave', 'Leave'], ['mileage', 'Mileage']] }
 };
 const HUB_OF = Object.fromEntries(Object.entries(HUBS).flatMap(([h, d]) => d.tabs.map(([k]) => [k, h])));

@@ -136,7 +136,7 @@ export function noteTask(activityId) {
 
 function dialogHtml(t, preset) {
   const td = today(), names = (TK.clients || []).slice();
-  const v = t || { title: '', note: '', client_name: preset.client || '', assigned_to: me() || PEOPLE[0], due_on: td };
+  const v = t || { title: preset.title || '', note: preset.note || '', client_name: preset.client || '', assigned_to: me() || PEOPLE[0], due_on: td };
   // The client as the list spells it; a name the list does not have (renamed, or the list did not load) is kept as it is.
   const client = names.find(n => sameClient(n, v.client_name)) || v.client_name || '';
   if (client && !names.includes(client)) names.push(client);
@@ -275,7 +275,7 @@ function onClick(e) {
   const el = e.target.closest?.('[data-tk]');
   if (!el) return;
   const act = el.dataset.tk, id = Number(el.dataset.id) || null;
-  if (act === 'add') openDialog(null, { client: el.dataset.client || '' });
+  if (act === 'add') openDialog(null, { client: el.dataset.client || '', title: el.dataset.title || '', note: el.dataset.note || '' });   // title/note: pre-filled from Monitoring › Upgrades
   if (act === 'open' && byId(id)) openDialog(byId(id));
   if (act === 'close') closeDialog();
   if (act === 'due') {
