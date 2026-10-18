@@ -81,6 +81,7 @@
 <link rel="stylesheet" href="src/styles/licences.css">
 <link rel="stylesheet" href="src/styles/atera.css">
 <link rel="stylesheet" href="src/styles/devices.css">
+<link rel="stylesheet" href="src/styles/coverage.css">
 <link rel="stylesheet" href="src/styles/analytics.css">
 <link rel="stylesheet" href="src/styles/commands.css">
 <script type="module" src="src/main.js"></script>
@@ -4270,6 +4271,21 @@ body::before {
          — Gaps per client (what they buy, email/website checks, timesheets),
            the pipeline, and the product catalogue. Supabase-backed.
          ═══════════════════════════════════════════════════════════════ -->
+    <!-- ═══ COVERAGE ═══ src/sections/coverage.js: is everything that should be backed up, backed up? From Acronis directly (Monitoring hub). Read only. -->
+    <section class="section" id="section-coverage">
+      <div class="section-head">
+        <h1>Backup <span>Coverage</span></h1>
+        <div class="head-actions">
+          <button class="head-btn" id="cvRefresh" type="button" title="Sync from Acronis now">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
+          <span class="head-sync" id="cvLastSync"></span>
+        </div>
+      </div>
+      <div id="cvWrap"><p class="state-empty">Open this section to load backup coverage.</p></div>
+    </section>
+
     <!-- ═══ DEVICES ═══ src/sections/devices.js: Atera devices per client (Monitoring hub). Read only. -->
     <section class="section" id="section-devices">
       <div class="section-head">
@@ -4970,6 +4986,7 @@ const SECTION_TITLES = {
   timesheets:    'TIMESHEETS',
   leave:         'TEAM · LEAVE',
   backups:       'MONITORING · BACKUPS',
+  coverage:      'MONITORING · COVERAGE',
   alerts:        'MONITORING · ALERTS',
   devices:       'MONITORING · DEVICES',
   commands:      'COMMANDS',
@@ -5542,7 +5559,7 @@ async function graphFetch(path, options = {}) {
    opens Monitoring on its Alerts tab. Design: 2026-10-09-gecko-hq-structure-design.md */
 const HUBS = {
   clients:    { label: 'Clients',    tabs: [['clients', 'Directory'], ['profitability', 'Profitability'], ['licences', 'Licences'], ['atera', 'Atera'], ['client', null]] },
-  monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['alerts', 'Alerts'], ['devices', 'Devices']] },
+  monitoring: { label: 'Monitoring', tabs: [['backups', 'Backups'], ['coverage', 'Coverage'], ['alerts', 'Alerts'], ['devices', 'Devices']] },
   team:       { label: 'Team',       tabs: [['team', 'Overview'], ['leave', 'Leave'], ['mileage', 'Mileage']] }
 };
 const HUB_OF = Object.fromEntries(Object.entries(HUBS).flatMap(([h, d]) => d.tabs.map(([k]) => [k, h])));
@@ -6879,8 +6896,8 @@ async function ovwLoadMonitor({ interactive = false } = {}) {
   OVW.monLoading = true;
   if (OVW.tab === 'today') ovwRenderAll();
   try {
-    const [backups, alerts] = await Promise.all([mon.backups({ hours: 24, interactive }), mon.alerts({ days: 2, interactive })]);
-    OVW.mon = { backups, alerts, at: new Date() };
+    const [backups, alerts, coverage] = await Promise.all([mon.backups({ hours: 24, interactive }), mon.alerts({ days: 2, interactive }), mon.coverage ? mon.coverage() : null]);
+    OVW.mon = { backups, alerts, coverage, at: new Date() };
   } finally {
     OVW.monLoading = false;
     ovwRenderAll();
@@ -6903,7 +6920,8 @@ function ovwRenderHead() {
 /** Red items on Today: failed backups, critical alerts, money overdue, SSA clients out of hours. */
 function ovwTodayRedCount(core, today) {
   const b = OVW.mon?.backups, a = OVW.mon?.alerts;
-  let n = (b?.ok ? b.failing.length : 0) + (a?.ok ? a.needing.filter(i => i.level === 'critical').length : 0);
+  const cv = OVW.mon?.coverage;
+  let n = (b?.ok ? b.failing.length : 0) + (a?.ok ? a.needing.filter(i => i.level === 'critical').length : 0) + (cv?.ok ? cv.red.length : 0);
   const db = OVW.db;
   if (db?.inv && core.money({ inv: db.inv, rep: db.rep || [], jobs: db.jobs || [], opps: [] }, today).owed.overdue > 0) n += 1;
   n += OVW.ssaClients.filter(c => !c.archived && c.hoursRemaining != null && c.hoursRemaining <= 0).length;
@@ -6960,11 +6978,12 @@ function ovwStatusHtml(core, today) {
   return `<div class="ovw-stats">${backups}${alerts}${money}${support}${jobs}${team}</div>`;
 }
 
-/** Monitoring's rows for Needs attention: failed backups, alerts that need a look, backups with warnings. */
+/** Monitoring's rows for Needs attention: failed backups, coverage gaps (Acronis direct), alerts that need a look, backups with warnings. */
 function ovwMonitorItems() {
-  const b = OVW.mon?.backups, a = OVW.mon?.alerts;
+  const b = OVW.mon?.backups, a = OVW.mon?.alerts, cv = OVW.mon?.coverage;
   const rows = [];
   if (b?.ok) for (const j of b.failing) rows.push({ level: 'red', who: j.client, title: `Backup failed: ${j.what}${j.plan ? ` (${j.plan})` : ''}`, detail: j.reason, goKey: 'backups' });
+  if (cv?.ok) for (const i of cv.red) rows.push({ level: 'red', who: i.client, title: `Not covered: ${i.what}`, detail: i.text, goKey: 'coverage' });
   if (a?.ok) for (const i of a.needing) rows.push({ level: i.level === 'critical' ? 'red' : 'amber', who: i.client, title: `${i.device}: ${i.label}`, detail: i.why, goKey: 'alerts' });
   if (b?.ok && b.warnings.length) rows.push({ level: 'amber', who: '', title: `${b.warnings.length} backup${b.warnings.length === 1 ? '' : 's'} finished with warnings`, detail: [...new Set(b.warnings.map(w => w.client))].slice(0, 4).join(', '), goKey: 'backups' });
   if (rows.length <= 8) return rows;

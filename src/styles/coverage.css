@@ -1,0 +1,54 @@
+/* Coverage (Monitoring hub): src/sections/coverage.js. Shared figures, badges, buttons and states come from system.css. */
+
+#section-coverage .cv-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
+#section-coverage .cv-kpis .kpi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#section-coverage .kpi-value small { font-size: 13px; color: var(--muted); }
+#section-coverage .cv-bad { color: var(--red); }
+#section-coverage .cv-warn { color: var(--amber); }
+#section-coverage .cv-note {
+  margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--border-dim); border-radius: var(--radius);
+  background: var(--card); color: var(--muted); font-size: 13px;
+}
+#section-coverage .cv-note strong { color: var(--white); }
+#section-coverage .state-error { margin-bottom: 16px; }
+#section-coverage .cv-filter { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+
+#section-coverage .cv-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); overflow: hidden; }
+#section-coverage .cv-client + .cv-client { border-top: 1px solid var(--border-dim); }
+#section-coverage .cv-row {
+  display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 2.2fr) repeat(2, minmax(72px, .5fr)); align-items: center; gap: 12px;
+  width: 100%; padding: 11px 14px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+#section-coverage .cv-row:hover { background: var(--inset); }
+#section-coverage .cv-row:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+#section-coverage .cv-name { font-weight: 600; color: var(--white); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-coverage .cv-flags { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+#section-coverage .cv-first { min-width: 0; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#section-coverage .cv-fig { font: 500 13px var(--font-mono); color: var(--white); text-align: right; white-space: nowrap; }
+#section-coverage .cv-fig small { display: block; font-size: 10px; font-weight: 500; font-family: var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: var(--faint); }
+
+#section-coverage .cv-detail { padding: 2px 14px 14px; display: grid; gap: 10px; }
+#section-coverage .cv-sub { margin: 0; font-size: 12px; color: var(--muted); }
+#section-coverage .cv-issues { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+#section-coverage .cv-issues li {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 12px; font-size: 13px;
+  border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset);
+}
+#section-coverage .cv-issues strong { color: var(--white); }
+#section-coverage .cv-issues li > span:last-child { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+#section-coverage .cv-machines { width: 100%; border-collapse: collapse; font-size: 13px; }
+#section-coverage .cv-machines th { text-align: left; font-size: 11px; font-weight: 500; color: var(--faint); padding: 6px 8px; border-bottom: 1px solid var(--border-dim); }
+#section-coverage .cv-machines td { padding: 7px 8px; border-bottom: 1px solid var(--border-dim); color: var(--white); }
+#section-coverage .cv-machines td small { color: var(--muted); }
+#section-coverage .cv-machines .cv-row-bad td:first-child { color: var(--red); }
+#section-coverage .cv-actions { font-size: 13px; }
+#section-coverage .cv-foot { margin: 12px 0 0; font-size: 12px; color: var(--faint); }
+
+@media (max-width: 640px) {
+  #section-coverage .cv-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #section-coverage .cv-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  #section-coverage .cv-name { white-space: normal; }
+  #section-coverage .cv-first { white-space: normal; }
+  #section-coverage .cv-fig { display: none; }
+}
