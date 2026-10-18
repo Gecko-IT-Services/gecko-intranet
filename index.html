@@ -5680,7 +5680,7 @@ function clientLink(name) {
 
 document.addEventListener('click', e => {
   const c = e.target.closest?.('[data-open-client]');
-  if (c) { e.preventDefault(); e.stopPropagation(); openClient(c.dataset.openClient); return; }
+  if (c) { e.preventDefault(); e.stopPropagation(); openClient(c.dataset.openClient, c.dataset.openTab); return; }   // data-open-tab: a client page tab (e.g. advice)
   const h = e.target.closest?.('#appHub [data-hub-tab]');
   if (h) navTo(h.dataset.hubTab);
 });

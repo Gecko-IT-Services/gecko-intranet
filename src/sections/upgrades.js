@@ -123,7 +123,8 @@ function detail(c) {
     </tr>`).join('');
   return `<div class="up-detail">
     <table class="up-devices"><colgroup><col style="width:24%"><col style="width:38%"><col style="width:28%"><col style="width:10%"></colgroup><thead><tr><th>Device</th><th>What’s wrong</th><th>What to do</th><th>Last seen</th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="up-actions">${c.own ? '' : `<button type="button" class="btn btn-sm btn-primary" data-tk="add" data-client="${escapeHtml(c.name)}" data-title="${escapeHtml(task.title)}" data-note="${escapeHtml(task.note)}">Add task</button> ${clientLink(c.name)}`}</div>
+    <div class="up-actions">${c.own ? '' : `<button type="button" class="btn btn-sm btn-primary" data-tk="add" data-client="${escapeHtml(c.name)}" data-title="${escapeHtml(task.title)}" data-note="${escapeHtml(task.note)}">Add task</button>
+      <button type="button" class="btn btn-sm" data-open-client="${escapeHtml(c.name)}" data-open-tab="advice">Email ${escapeHtml(c.name)} about it</button> ${clientLink(c.name)}`}</div>
   </div>`;
 }
 
