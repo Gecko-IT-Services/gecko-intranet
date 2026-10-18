@@ -70,6 +70,7 @@ export async function syncAcronis() {
       }
     }
     const customers = tenants.filter(t => t.kind === 'customer');
+    console.log(`acronis: ${tenants.length} tenants, ${customers.length} customers`);
 
     const rows: { kind: string; item_id: string; tenant_id: string; raw: unknown }[] = [];
     const replaced = new Set<string>();        // "tenant|kind" fetched in full, safe to replace
@@ -104,28 +105,33 @@ export async function syncAcronis() {
           const items = await getAll(base, path, scoped);
           items.forEach((o, n) => rows.push({ kind, tenant_id: t.id, item_id: `${t.id}|${idOf(o, n)}`, raw: o }));
           replaced.add(`${t.id}|${kind}`);
+          console.log(`acronis: ${t.name} ${kind} ${items.length}`);
         } catch (err) {
           problems.push({ tenant: t.name, kind, error: String((err as Error).message).slice(0, 300) });
         }
       }
     }
 
+    // Saved in batches (one statement per 500 rows, not one per row): the free plan allows ~2 s of CPU per run.
+    const keep = new Map<string, (typeof rows)[number]>();
+    for (const r of rows) if (replaced.has(`${r.tenant_id}|${r.kind}`)) keep.set(`${r.kind}|${r.item_id}`, r);
+    const saving = [...keep.values()];
     const counts: Record<string, number> = {};
-    rows.forEach(r => (counts[r.kind] = (counts[r.kind] || 0) + 1));
+    saving.forEach(r => (counts[r.kind] = (counts[r.kind] || 0) + 1));
+    const pairs = [...replaced].map(k => { const [tenant_id, kind] = k.split('|'); return { tenant_id, kind }; });
+    const tenantRows = tenants.map(t => ({ tenant_id: String(t.id), name: String(t.name || ''), kind: String(t.kind || ''), parent_id: String(t.parent_id || ''), raw: t }));
     await sql.begin(async tx => {
       await tx`delete from public.acronis_tenants`;
-      for (const t of tenants) {
-        await tx`insert into public.acronis_tenants (tenant_id, name, kind, parent_id, raw)
-                 values (${String(t.id)}, ${String(t.name || '')}, ${String(t.kind || '')}, ${String(t.parent_id || '')}, ${tx.json(t)})
-                 on conflict (tenant_id) do nothing`;
-      }
-      for (const key of replaced) {
-        const [tid, kind] = key.split('|');
-        await tx`delete from public.acronis_items where tenant_id = ${tid} and kind = ${kind}`;
-      }
-      for (const r of rows) {
-        if (!replaced.has(`${r.tenant_id}|${r.kind}`)) continue;
-        await tx`insert into public.acronis_items (kind, item_id, tenant_id, raw) values (${r.kind}, ${r.item_id}, ${r.tenant_id}, ${tx.json(r.raw as any)})
+      await tx`insert into public.acronis_tenants (tenant_id, name, kind, parent_id, raw)
+               select tenant_id, name, kind, parent_id, raw from jsonb_to_recordset(${tx.json(tenantRows as any)})
+                 as x(tenant_id text, name text, kind text, parent_id text, raw jsonb)
+               on conflict (tenant_id) do nothing`;
+      await tx`delete from public.acronis_items i using jsonb_to_recordset(${tx.json(pairs as any)}) as x(tenant_id text, kind text)
+               where i.tenant_id = x.tenant_id and i.kind = x.kind`;
+      for (let i = 0; i < saving.length; i += 500) {
+        await tx`insert into public.acronis_items (kind, item_id, tenant_id, raw)
+                 select kind, item_id, tenant_id, raw from jsonb_to_recordset(${tx.json(saving.slice(i, i + 500) as any)})
+                   as x(kind text, item_id text, tenant_id text, raw jsonb)
                  on conflict (kind, item_id) do update set raw = excluded.raw, synced_at = now()`;
       }
       await tx`update public.acronis_status set last_sync_at = now(), last_sync_ok = true, last_error = '',
