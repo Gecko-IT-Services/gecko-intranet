@@ -61,6 +61,11 @@ client is checked for margin, not quantity (Philip's pricing workbook, May 2026:
 Clients › **Reconcile** (`src/sections/reconcile.js`, `src/core/reconcile.js`, tests `tests/reconcile.mjs`), its own tab beside Atera
 because Atera is month by month from invoices and this is now, from live counts.
 
+- Page (Philip: "clean, visually clear and apparent"): four figures (to bill, over-billed, dead devices, set up once), then three
+  blocks. **Fix these**: every money gap across clients, one line each (state, client and product with its vendor mark, in use · billed,
+  £ a month, one button), red first then by £. **Set up once**: one line per client with today's counts as chips, Use these counts /
+  Edit, and Pick Work from Home devices / Enter Keeper users. **All clients**: billed, costs, margin, status; opens to the products.
+  "Check" (billed with no Webroot site) offers Review in Xero, never a change, since the client may be under another name there.
 - Lines → products (`lineProducts`): "Acronis/M365 …" and "… Office365 & Sharepoint" are Microsoft 365 backup; any other backup line covers
   machines and Microsoft 365; "Cloud Management" / retainer bundles cover antivirus and backup unless the antivirus is Defender (Technix);
   hosting and website lines are not Atera. A line is per-device when it sells one product and is a count (qty > 1 or ≤ £12 each); yearly

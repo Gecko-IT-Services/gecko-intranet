@@ -160,7 +160,7 @@ export function reconcileAll({ repeating, webrootSites, webrootEndpoints, acroni
       const row = { product: p, used: u, billed, covered, mode: flat.length ? 'flat' : billed ? 'per' : 'none', costUsd: r2(cost[p]), state: 'ok', gapUnits: 0, gapGbp: null, text: '', action: null, lines: bp ? [...bp.lines, ...flat] : [] };
       if (u == null && (p === 'wfh' || p === 'keeper')) {
         if (!billed && !flat.length) continue;
-        Object.assign(row, { state: 'enter', text: `Billed for ${billed || 'a bundle'}; enter how many are in use`, action: { kind: 'enter' } });
+        Object.assign(row, { state: 'enter', text: p === 'wfh' ? 'Pick which devices have it' : 'Enter how many users', action: { kind: 'enter' } });
         rows.push(row); continue;
       }
       if (!u && !billed && !flat.length) continue;
@@ -170,21 +170,23 @@ export function reconcileAll({ repeating, webrootSites, webrootEndpoints, acroni
         : monthlyTemplate ? { kind: 'add_line', url: xeroRepeatingUrl(monthlyTemplate.id), from: 0, to, line: productLabel(p) } : null;
       if (row.mode === 'none') {
         Object.assign(row, { state: 'unbilled', gapUnits: u, gapGbp: rate ? r2(cost[p] * rate) : null,
-          text: `${u} in use, nothing on the repeating invoice (costs ${usdText(cost[p])} a month)`, action: fix(0, u) });
+          text: `Not on the invoice (costs you ${usdText(cost[p])} a month)`, action: fix(0, u) });
       } else if (row.mode === 'per') {
-        if (u > billed) Object.assign(row, { state: 'leak', gapUnits: u - billed, gapGbp: r2((u - billed) * (bp.unit || 0)), text: `${u} in use, billed for ${billed}`, action: fix(billed, u) });
+        if (u > billed) Object.assign(row, { state: 'leak', gapUnits: u - billed, gapGbp: r2((u - billed) * (bp.unit || 0)), text: `${u - billed} more in use than billed`, action: fix(billed, u) });
         else if (u < billed) Object.assign(row, { state: u === 0 && p === 'av' && !w ? 'check' : 'over', gapUnits: billed - u, gapGbp: r2((billed - u) * (bp.unit || 0)),
-          text: u === 0 && p === 'av' && !w ? `Billed for ${billed}, but there is no Webroot site under this name` : `Billed for ${billed}, ${u} in use`, action: fix(billed, u) });
-        else row.text = `${u} in use, ${billed} billed`;
+          text: u === 0 && p === 'av' && !w ? 'No Webroot site under this name' : `${billed - u} fewer in use than billed`,
+          // "Check": the client may be under another name in Webroot, so look before changing anything.
+          action: u === 0 && p === 'av' && !w ? { ...fix(billed, u), to: null } : fix(billed, u) });
+        else row.text = 'Matches';
       } else if (!u) {
         // Nothing in use under a bundle: fine (a bundle names more than every client takes), unless nothing is there at all.
         if (p !== 'av' || w) continue;
-        Object.assign(row, { state: 'check', text: 'Billed for antivirus, but there is no Webroot site under this name' });
+        Object.assign(row, { state: 'check', text: 'No Webroot site under this name', action: { kind: 'repeating', url: xeroRepeatingUrl(flat[0].template), line: flat[0].description } });
       } else {
         const total = (covered ?? 0) + billed;
-        if (covered == null) Object.assign(row, { state: 'record', text: `${u} in use; the flat fee (${flat.map(f => `£${f.amount}`).join(' + ')}) doesn’t say how many it covers`, action: { kind: 'record' } });
-        else if (u > total) Object.assign(row, { state: 'grown', gapUnits: u - total, text: `${u} in use, the fee was priced on ${total}: ${u - total} more since`, action: { kind: 'repeating', url: xeroRepeatingUrl(flat[0].template), line: flat[0].description } });
-        else row.text = `${u} in use, priced on ${total}`;
+        if (covered == null) Object.assign(row, { state: 'record', text: 'Flat fee: not recorded yet', fee: r2(flat.reduce((t, f) => t + f.amount, 0)), action: { kind: 'record' } });
+        else if (u > total) Object.assign(row, { state: 'grown', gapUnits: u - total, text: `${u - total} more than the fee was priced on`, action: { kind: 'repeating', url: xeroRepeatingUrl(flat[0].template), line: flat[0].description } });
+        else row.text = 'Within the fee';
       }
       rows.push(row);
     }
