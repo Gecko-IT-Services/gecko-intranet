@@ -25,6 +25,7 @@ export const ICONS = {
   clock:     '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   paperclip: '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
   maximize:  '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
+  copy:      '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   minimize:  '<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/>'
 };
 

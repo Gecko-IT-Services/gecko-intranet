@@ -33,6 +33,7 @@ export const PAGES = [
   ['Jobs › Jobs', 'jobs', 'jobs'], ['Jobs › This month', 'jobs', 'month'], ['Jobs › Owed to us', 'jobs', 'owed'],
   ['Timesheets › Log time', 'timesheets', 'log'], ['Timesheets › SSA dashboard', 'timesheets', 'ssa'], ['Timesheets › Weekly summary', 'timesheets', 'week'],
   ['Monitoring › Backups', 'backups'], ['Monitoring › Alerts', 'alerts'], ['Monitoring › Devices', 'devices'],
+  ['Commands', 'commands'],
   ['Team › Overview', 'team'], ['Team › Leave', 'leave'], ['Team › Mileage', 'mileage'],
   ['Settings', 'settings'], ['Settings › Change log', 'settings']
 ].map(([label, section, tab = '']) => ({ label, open: { kind: 'page', section, tab } }));

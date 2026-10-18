@@ -1,0 +1,36 @@
+/* Commands (Operations › Commands): src/sections/commands.js draws docs/commands.md like a GitHub README. */
+
+#section-commands .md {
+  max-width: 860px; padding: 24px 28px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card);
+  font-size: 14px; line-height: 1.6; color: var(--white);
+}
+#section-commands .md > :first-child { margin-top: 0; }
+#section-commands .md h1 { margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-dim); font-size: 26px; }
+#section-commands .md h2 { margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border-dim); font-size: 19px; }
+#section-commands .md h3 { margin: 20px 0 8px; font-size: 15px; }
+#section-commands .md p, #section-commands .md ul { margin: 0 0 10px; }
+#section-commands .md ul { padding-left: 22px; }
+#section-commands .md a { color: var(--green); }
+#section-commands .md :not(pre) > code {
+  padding: 1px 5px; border-radius: var(--radius-sm); background: var(--inset); font-family: var(--font-mono); font-size: 12.5px;
+}
+
+#section-commands .md-code { position: relative; margin: 0 0 18px; }
+#section-commands .md-code pre {
+  margin: 0; padding: 12px 52px 12px 14px; white-space: pre-wrap; overflow-wrap: anywhere;   /* wraps, so a blank never scrolls out of sight */
+  border: 1px solid var(--border-dim); border-radius: var(--radius);
+  background: var(--inset); font-family: var(--font-mono); font-size: 13px; line-height: 1.5;
+}
+#section-commands .md-code .md-copy { position: absolute; top: 6px; right: 6px; }
+#section-commands .md-code .md-copy.is-copied { color: var(--green); }
+#section-commands .md-blank {
+  field-sizing: content; min-width: 8ch; max-width: 100%; padding: 0 4px; border: 0;   /* grows with what is typed */
+  border-bottom: 1px dashed var(--green); border-radius: 0; background: none;
+  color: var(--green); font: inherit;
+}
+#section-commands .md-blank:focus { outline: none; border-bottom-style: solid; }
+#section-commands .md-blank::placeholder { color: var(--muted); }
+
+@media (max-width: 600px) {
+  #section-commands .md { padding: 16px; }
+}
