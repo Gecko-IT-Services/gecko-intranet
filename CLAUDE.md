@@ -182,6 +182,11 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   (Edge Function `atera-sync`, secret `ATERA_API_KEY`, 4× a day + Refresh; tables `atera_customers`, `atera_agents` with
   `raw`, `atera_status`): Windows 10, not seen 30+ days, devices but no Atera billing in Xero this month. Read only.
   `src/core/devices.js`, tests `tests/devices.mjs`. Windows 10 device gaps in Opportunities are not built yet.
+- **Acronis, direct** (18 Oct, `2026-10-18-acronis-sync-design.md`): Edge Function `acronis-sync` (secrets `ACRONIS_CLIENT_ID`,
+  `ACRONIS_CLIENT_SECRET`, `ACRONIS_BASE_URL`; 4× a day + staff on demand) keeps Acronis's raw records per customer in
+  `acronis_tenants` / `acronis_items` (kind usage, resource, resource_status, agent, policy, alert) / `acronis_status`. Read only
+  towards Acronis. Step 1 is the sync only; the Coverage page (servers with no plan, SharePoint unprotected, no good backup in 48 h,
+  agent offline) is built next against real rows. Never revoke SharePoint/Teams protection to save cost (Philip, 18 Oct).
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
