@@ -45,3 +45,24 @@ export function markdownHtml(text) {
   flush();
   return out.join('\n');
 }
+
+/**
+ * Each code box with what it is for, for Quick find: { code, about, heading, n }. `about` is the paragraph just above
+ * the box, `heading` the ## it sits under, `n` its place among the page's boxes (from 0, as markdownHtml draws them).
+ * Blanks stay as {name}. An unclosed box at the end is left out.
+ */
+export function codeBoxes(text) {
+  const out = [];
+  let heading = '', para = [], gap = true, code = null, m;
+  for (const line of String(text).replace(/\r/g, '').split('\n')) {
+    if (code) {
+      if (/^```\s*$/.test(line)) { out.push({ code: code.join('\n').trim(), about: para.join(' ').replace(/\*\*|`/g, ''), heading, n: out.length }); code = null; para = []; }
+      else code.push(line);
+    }
+    else if (/^```/.test(line)) code = [];
+    else if ((m = line.match(/^#{1,3}\s+(.*)$/))) { heading = m[1].trim(); para = []; }
+    else if (!line.trim()) gap = true;
+    else { if (gap) para = []; gap = false; para.push(line.trim()); }
+  }
+  return out;
+}

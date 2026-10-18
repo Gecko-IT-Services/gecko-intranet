@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { markdownHtml } from '../src/core/markdown.js';
+import { markdownHtml, codeBoxes } from '../src/core/markdown.js';
 
 const html = markdownHtml('# Title\n\nSome **bold** and `code`,\nsame paragraph.\n\n- one\n- [two](https://x.test/?a=1&b=2)\n\n```cmd\nnet localgroup administrators /add "AzureAD\\{email}"\n```\n\n<script>alert(1)</script>');
 assert.match(html, /^<h1>Title<\/h1>/);
@@ -19,5 +19,15 @@ assert.match(markdownHtml('```\nGet-Service | ? { $_.Status -eq 1 }\n'), /\{ \$_
 const page = markdownHtml(readFileSync('docs/commands.md', 'utf8'));
 assert.equal((page.match(/<pre>/g) || []).length, (readFileSync('docs/commands.md', 'utf8').match(/^```\w/gm) || []).length);
 assert.match(page, /data-blank="email"/);
+
+// Quick find's list of boxes: the command, the paragraph just above it, its heading, and its place on the page.
+assert.deepEqual(codeBoxes('## Network\n\nIntro.\n\nShows **the** `IP`.\n\n```cmd\nipconfig\n```\n\n## Users\n\n```cmd\nnet localgroup administrators /add "AzureAD\\{email}"\n```\n\n```\nnot closed'), [
+  { code: 'ipconfig', about: 'Shows the IP.', heading: 'Network', n: 0 },
+  { code: 'net localgroup administrators /add "AzureAD\\{email}"', about: '', heading: 'Users', n: 1 }
+]);
+// Every box on the real page has a description, and the numbering matches the boxes markdownHtml draws.
+const boxes = codeBoxes(readFileSync('docs/commands.md', 'utf8'));
+assert.equal(boxes.length, (page.match(/<pre>/g) || []).length);
+for (const b of boxes) assert.ok(b.about && b.heading, `"${b.code}" has a description and a heading`);
 
 console.log('markdown: ok');

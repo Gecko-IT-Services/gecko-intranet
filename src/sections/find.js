@@ -3,8 +3,8 @@
    ║                                                                   ║
    ║   One box (⌘K, the sidebar's Find row, the phone's search         ║
    ║   button) that goes straight to a client, person, job, deal,      ║
-   ║   prospect, task, page, invoice or timesheet entry, or runs an    ║
-   ║   everyday action. Part of the shell, not a page.                 ║
+   ║   prospect, task, command, page, invoice or timesheet entry, or   ║
+   ║   runs an everyday action. Part of the shell, not a page.         ║
    ║   Logic: core/find.js. Styles: system.css "11 · Quick find".      ║
    ║   Design: docs/superpowers/specs/2026-10-12-quick-find-design.md  ║
    ║                                                                   ║
@@ -18,16 +18,18 @@ import { search, clientNames, remoteFilters, remoteReady, invoiceRows, entryRows
 import { read as readTasks, put as putTasks, view as taskView, state as taskState, openTask, newTask } from './tasks.js';
 import { open as openJob, add as addJob } from './jobs.js';
 import { open as openDeal, openProspect } from './opportunities.js';
+import { fetchCommands, showBox } from './commands.js';
+import { codeBoxes } from '../core/markdown.js';
 
 const STALE_MS = 5 * 60000;    // the lists are read again on opening after this long
 const DEBOUNCE_MS = 250;       // wait this long after the last keystroke before asking the database
-const GROUP_ICON = { clients: 'building', people: 'user', jobs: 'briefcase', prospects: 'user', tasks: 'check', pages: 'right', actions: 'plus', invoices: 'file', entries: 'clock' };
+const GROUP_ICON = { clients: 'building', people: 'user', jobs: 'briefcase', prospects: 'user', tasks: 'check', commands: 'copy', pages: 'right', actions: 'plus', invoices: 'file', entries: 'clock' };
 const SOURCE_LABEL = { gecko: 'clients', ssa: 'support clients', contacts: 'people', jobs: 'jobs', deals: 'deals', prospects: 'prospects' };
 const NO_REMOTE = () => ({ q: '', invoices: null, entries: null, errors: {}, busy: false });
 
 // index: the small lists, read once ({ clients, contacts, jobs, deals, prospects }; a list that failed is null).
 // rows: the results on screen, flat, in order; sel: the selected one, keep: which row that is (so a list redrawn by data arriving keeps the selection on the same row). seq: discards a reply to an older query.
-const QF = { index: null, clientsById: new Map(), at: 0, loading: false, errors: {}, needsConnect: false, q: '', rows: [], sel: 0, keep: '', seq: 0, timer: 0, remote: NO_REMOTE() };
+const QF = { commands: null, commandsError: '', index: null, clientsById: new Map(), at: 0, loading: false, errors: {}, needsConnect: false, q: '', rows: [], sel: 0, keep: '', seq: 0, timer: 0, remote: NO_REMOTE() };
 
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
 const settle = p => p.then(v => ({ v }), e => ({ e }));
@@ -66,6 +68,13 @@ async function loadIndex() {
     if (err.code === 'DB_SIGNIN_REQUIRED') QF.needsConnect = true;
     else QF.errors = { all: err.message || String(err) };
   } finally { QF.loading = false; render('lists'); }
+}
+
+/** The Commands page's boxes (docs/commands.md), read once per visit; read again on the next opening if it failed. */
+async function loadCommands() {
+  try { QF.commands = codeBoxes(await fetchCommands()); QF.commandsError = ''; }
+  catch (err) { QF.commandsError = err.message || String(err); }
+  render();
 }
 
 /** Invoices and timesheet entries: asked for as you type, once there is enough to ask with. */
@@ -108,7 +117,7 @@ async function runRemote(q, seq) {
 
 function groupsNow() {
   const td = today(), r = QF.remote;
-  const groups = search({ ...(QF.index || {}), tasks: taskView() }, QF.q, td);
+  const groups = search({ ...(QF.index || {}), tasks: taskView(), commands: QF.commands }, QF.q, td);
   if (r.q && r.q === QF.q) {
     const inv = invoiceRows(r.invoices, QF.q, td), ent = entryRows(r.entries, QF.q, QF.clientsById);
     if (inv.length) groups.push({ key: 'invoices', label: 'Invoices', rows: inv });
@@ -124,11 +133,12 @@ function footHtml(count) {
   else if (QF.loading && !QF.index) notes.push('Loading clients, jobs and tasks…');
   const failed = Object.entries(QF.errors).map(([k, m]) => (k === 'all' ? `clients, jobs and tasks (${m})` : `${SOURCE_LABEL[k]} (${m})`));
   if (taskState().error) failed.push(`tasks (${taskState().error})`);
+  if (QF.commandsError) failed.push(`commands (${QF.commandsError})`);
   if (failed.length) notes.push(`<span class="qf-warn">Not searched: ${escapeHtml(failed.join(', '))}.</span>`);
   if (r.errors.invoices) notes.push(`<span class="qf-warn">Invoices could not be searched: ${escapeHtml(r.errors.invoices)}.</span>`);
   if (r.errors.entries) notes.push(`<span class="qf-warn">Timesheet entries could not be searched: ${escapeHtml(r.errors.entries)}.</span>`);
   if (r.busy) notes.push('Searching invoices and timesheet entries…');
-  if (!QF.q.trim()) notes.push('Type to find a client, person, job, task, invoice or timesheet entry.');
+  if (!QF.q.trim()) notes.push('Type to find a client, person, job, task, invoice, timesheet entry or command.');
   else if (count) notes.push(`${count} result${count === 1 ? '' : 's'}`);
   return notes.map(n => `<span>${n}</span>`).join('');
 }
@@ -147,7 +157,7 @@ function render(arrive = '') {
     return `<div class="qf-row" role="option" id="qfOpt${i}" data-qf-row="${i}" aria-selected="${i === QF.sel}">${icon(GROUP_ICON[g.key], 14)}<span class="qf-text"><span class="qf-title">${escapeHtml(r.title)}</span>${r.sub ? `<span class="qf-sub">${escapeHtml(r.sub)}</span>` : ''}</span></div>`;
   }).join('') + '</div>').join('');
   const r = QF.remote, waiting = r.busy || (QF.loading && !QF.index);
-  const unsure = QF.needsConnect || Object.keys(QF.errors).length || taskState().error || r.errors.invoices || r.errors.entries;   // something could not be searched: the foot says what, and "no matches" would be a guess
+  const unsure = QF.needsConnect || Object.keys(QF.errors).length || taskState().error || QF.commandsError || r.errors.invoices || r.errors.entries;   // something could not be searched: the foot says what, and "no matches" would be a guess
   d.querySelector('#qfList').innerHTML = list || (QF.q.trim() && !waiting && !unsure ? `<p class="qf-empty">Nothing matches “${escapeHtml(QF.q.trim())}”.</p>` : '');
   d.querySelector('#qfFoot').innerHTML = footHtml(QF.rows.length);
   select(QF.sel);
@@ -184,6 +194,7 @@ function openRow(i) {
   else if (o.kind === 'job') { window.navTo('jobs'); openJob(o.id); }
   else if (o.kind === 'deal') { window.navTo('opportunities'); openDeal(o.id); }
   else if (o.kind === 'prospect') { window.navTo('opportunities'); openProspect(o.id); }
+  else if (o.kind === 'command') { window.geckoGo('commands'); showBox(o.n); }
   else if (o.kind === 'task') { if (!openTask(o.id)) toast('That task is no longer there.', 'warning'); }
   else if (o.kind === 'action' && o.run === 'task') newTask();
   else if (o.kind === 'action' && o.run === 'job') { window.navTo('jobs'); addJob(); }
@@ -197,7 +208,7 @@ function build() {
   d.id = 'qfDialog'; d.className = 'qf-dialog'; d.setAttribute('aria-label', 'Quick find');
   d.innerHTML = `<div class="qf-head">${icon('search', 16)}
       <input id="qfInput" type="text" role="combobox" aria-expanded="true" aria-controls="qfList" aria-autocomplete="list" aria-label="Find"
-        placeholder="Find a client, job, task, invoice…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">
+        placeholder="Find a client, job, task, command…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">
       <kbd class="qf-kbd">Esc</kbd><button type="button" class="qf-close" data-qf="close" aria-label="Close">${icon('x', 16)}</button></div>
     <div class="qf-list"><div class="qf-ink" aria-hidden="true"></div><div id="qfList" role="listbox" aria-label="Results"></div></div>
     <div id="qfFoot" class="qf-foot" aria-live="polite"></div>`;
@@ -245,6 +256,7 @@ export function open() {
   d.querySelector('#qfInput').focus();
   render();
   if (!QF.index || Date.now() - QF.at > STALE_MS) loadIndex();
+  if (!QF.commands) loadCommands();
 }
 
 let started = false;

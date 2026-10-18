@@ -15,6 +15,13 @@
   everywhere on the page. Enter in a blank copies. Braces with spaces or `$` (PowerShell script blocks) are left alone.
 - Code boxes wrap rather than scroll, so a blank never goes out of sight on a phone.
 
+## In Quick find (18 Oct, same day)
+- Every box is a row in Quick find's **Commands** group: the command as the title, the paragraph above it underneath.
+  Found by the command, what it does or its heading ("dns cache", "bitlocker", "admin"). `codeBoxes()` in
+  `core/markdown.js` lists them; Find reads `docs/commands.md` once per visit (`fetchCommands()` in the section).
+- Choosing one opens Commands on that box (`showBox(n)`), rings it green for a moment and focuses its first blank,
+  or its copy button when it has none, so Enter copies.
+
 ## Rejected
 - A Markdown library (marked etc.): another CDN dependency for six rules; ours escapes everything first.
 - Editing in the app / a Supabase table: needs a form, RLS and a migration for a list that changes a few times a year.

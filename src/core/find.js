@@ -2,7 +2,7 @@
    Design: docs/superpowers/specs/2026-10-12-quick-find-design.md
 
    One rule everywhere: every word typed must match the start of a word in the row's text. The lists
-   small enough to hold (clients, people, jobs, deals, prospects, tasks, pages, actions) are searched
+   small enough to hold (clients, people, jobs, deals, prospects, tasks, commands, pages, actions) are searched
    here; invoices and timesheet entries are asked for from the database and then put through the same rule. */
 
 import { OPEN_STAGES, stageLabel } from './jobs.js';
@@ -83,7 +83,7 @@ export function clientNames(geckoClients, ssaClients) {
 }
 
 /**
- * Search what is held in the browser. `index` = { clients: [name], contacts, jobs, deals, prospects, tasks }
+ * Search what is held in the browser. `index` = { clients: [name], contacts, jobs, deals, prospects, tasks, commands }
  * (a list that did not load is null and is simply not searched). Returns the groups that have rows, in
  * display order: [{ key, label, rows: [{ title, sub, open }] }]. Nothing typed: the actions only.
  */
@@ -115,6 +115,9 @@ export function search(index, query, today) {
     }))],
     ['tasks', 'Tasks', best((ix.tasks || []).filter(t => !t.done_at && !t._done), query, t => ({
       title: t.title, sub: join([t.client_name, t.assigned_to, t.due_on ? dueLabel(t.due_on, today) : '']), match: join([t.note, t.client_name]), open: { kind: 'task', id: t.id }
+    }))],
+    ['commands', 'Commands', best(ix.commands || [], query, c => ({
+      title: c.code.replace(/\s*\n\s*/g, ' '), sub: c.about, match: join([c.about, c.heading]), open: { kind: 'command', n: c.n }
     }))],
     ['pages', 'Pages', best(PAGES, query, p => ({ title: p.label, sub: '', open: p.open }))],
     ['actions', 'Actions', best(actions, query, a => a)]

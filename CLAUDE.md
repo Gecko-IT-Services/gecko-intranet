@@ -216,7 +216,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - `src/sections/find.js` + `src/core/find.js` (tests `tests/find.mjs`), styles `system.css` "11 · Quick find"; design note
   `2026-10-12-quick-find-design.md`. One box for the whole app: ⌘K / Ctrl+K, the sidebar's Find row, the phone's top-bar
   search button (any element with `data-find-open`). A native `<dialog>`; `window.GeckoFind.open()`.
-- Finds clients, people (contacts), jobs and deals, prospects, open tasks, pages and three actions (Log time, Add task, Add a
+- Finds clients, people (contacts), jobs and deals, prospects, open tasks, Windows commands (the Commands page's boxes,
+  opened on their box), pages and three actions (Log time, Add task, Add a
   job) from lists read once and filtered in the browser; invoices and timesheet entries are asked of the database as you type
   (from 3 characters, newest 50, 250ms after the last key). One rule: every word typed must start a word of the row.
 - A new page or tab must be added to `PAGES` in `core/find.js` (the test fails if a listed one disappears, not if a new one

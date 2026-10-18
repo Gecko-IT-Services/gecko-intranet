@@ -22,6 +22,8 @@
   background: var(--inset); font-family: var(--font-mono); font-size: 13px; line-height: 1.5;
 }
 #section-commands .md-code .md-copy { position: absolute; top: 6px; right: 6px; }
+#section-commands .md-code pre { transition: box-shadow var(--dur-2) var(--ease); }
+#section-commands .md-code.is-found pre { box-shadow: 0 0 0 2px var(--green); }   /* the box Quick find went to */
 #section-commands .md-code .md-copy.is-copied { color: var(--green); }
 #section-commands .md-blank {
   field-sizing: content; min-width: 8ch; max-width: 100%; padding: 0 4px; border: 0;   /* grows with what is typed */
