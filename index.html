@@ -6653,6 +6653,26 @@ function ovwPipelineTile(tile, go, svg, p) {
     <div class="k-sub">${p.proposals ? `${p.proposals} proposal${p.proposals === 1 ? '' : 's'} out · <strong>+${escapeHtml(ovwWhole(p.proposalMrr))}/mo</strong>` : 'No proposals out'}</div>`);
 }
 
+/** The Monday brief's input (src/sections/brief.js, core/brief.js): last week, this week, what needs a look, from what Overview holds. */
+function ovwBriefInput() {
+  const core = window.GeckoOverview, db = OVW.db || {};
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+  const attention = core.attention({
+    xero: db.xero, inv: db.inv, rep: db.rep, jobs: db.jobs, opps: db.opps, leave: db.leave,
+    ssa: OVW.ssaLoaded ? ovwSsaForCore() : null, journeys: OVW.journeys, prospects: db.prospects, tasks: null
+  }, today).concat(ovwMonitorItems());
+  const missing = [];
+  if (!OVW.db) missing.push('the database');
+  if (!OVW.ssaLoaded) missing.push('SSA balances');
+  if (!OVW.tshLoaded) missing.push('timesheets');
+  return {
+    email: activeAccountEmail(), first: (document.getElementById('userName')?.textContent || '').trim().split(/\s+/)[0], today,
+    last: OVW.db ? core.review.weekReview(ovwReviewData(), core.addDays(today, -7)) : null,
+    ahead: core.thisWeek({ leave: db.leave || [], jobs: db.jobs || [], inv: db.inv, rep: db.rep, entries: OVW.tshEntries }, today),
+    attention, missing, url: location.origin + location.pathname
+  };
+}
+
 /** Do next (src/sections/actions.js): handed what Overview already has; it reads the rest itself. */
 function ovwActionsHtml() {
   const A = window.GeckoActions;
@@ -6835,7 +6855,7 @@ function ovwRenderAll() {
     ? ovwMoneyHtml(core, today) + `<div class="ovw-split">${ovwHistoryHtml(core, today) || '<div></div>'}${ovwGlanceHtml()}</div>`
     : OVW.tab === 'monthend' ? ovwMonthEndHtml(me)
     : OVW.tab === 'week' ? ovwReviewHtml(core.review.weekReview(ovwReviewData(), today))
-    : (me?.soon ? ovwMonthEndBanner(me) : '') + ovwStatusHtml(core, today) +
+    : (me?.soon ? ovwMonthEndBanner(me) : '') + ovwStatusHtml(core, today) + (window.GeckoBrief ? window.GeckoBrief.lineHtml(activeAccountEmail(), today) : '') +
       `<div class="ovw-split"><div class="ovw-col">${ovwActionsHtml()}${ovwAttentionHtml(core, today)}</div>${ovwWeekHtml(core, today)}</div>`;
   wrap.innerHTML = `<div class="ovw-tabbar">${tabs}</div><div class="app-pane ovw-pane ${OVW.dir || ''}" id="ovwPane">${pane}</div>`;
   OVW.dir = '';
@@ -6943,6 +6963,8 @@ async function ovwLoadMonitor({ interactive = false } = {}) {
   } finally {
     OVW.monLoading = false;
     ovwRenderAll();
+    // Monday: the brief goes into Outlook Drafts once Overview has everything (once per person per week; src/sections/brief.js).
+    if (OVW.db && new Date().toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'Europe/London' }) === 'Monday') window.GeckoBrief?.auto(ovwBriefInput);
   }
 }
 

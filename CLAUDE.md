@@ -228,6 +228,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - **Do next** (19 Oct, `2026-10-19-next-best-action-design.md`): Overview › Today, above Needs attention: protect first (Devices red,
   Coverage red), then money by value (Reconcile leaks via its `snapshot()`, overdue Xero, quiet Proposed deals, SSA renewals, evidence
   products not in the pipeline, one line for old PCs). `src/core/actions.js` (`nextActions`), `src/sections/actions.js` (`window.GeckoActions`).
+- **Monday brief** (19 Oct, `2026-10-19-monday-brief-design.md`): the first Overview load on a Monday puts the week (Do next, last week vs
+  the week before, this week, needs a look) in the reader's own Outlook Drafts, once per person per week (`weekly_briefs`); "Make this
+  week's brief" any day. Never sent; delegated Mail.ReadWrite only (Philip chose this over a server job). `core/brief.js`, `sections/brief.js`.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the

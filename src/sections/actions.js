@@ -18,7 +18,7 @@ import { upgrades } from '../core/upgrades.js';
 import { nextActions, valueText } from '../core/actions.js';
 import { snapshot as reconcileSnapshot } from './reconcile.js';
 
-const NA = { raw: null, missing: [], loading: false, at: 0, ext: {}, all: false };
+const NA = { raw: null, missing: [], loading: false, at: 0, ext: {}, all: false, waiting: [] };
 const FRESH_MS = 10 * 60 * 1000;   // re-read at most every ten minutes (Overview redraws often)
 const SHOWN = 6;
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
@@ -49,6 +49,7 @@ async function load() {
     NA.raw = null; NA.missing = [`everything (${err.message || err})`];
   } finally {
     NA.loading = false;
+    NA.waiting.splice(0).forEach(r => r());
     const mount = document.getElementById('ovwActions');
     if (mount) mount.innerHTML = card();
   }
@@ -82,6 +83,13 @@ export function html(ext = {}) {
   if (!NA.loading && (!NA.raw || Date.now() - NA.at > FRESH_MS)) load();
   return `<div id="ovwActions">${card()}</div>`;
 }
+
+/** The list as it stands, for the Monday brief: { list, missing }, or null before the first read. */
+export function current() {
+  return NA.raw || NA.missing.length ? { list: NA.raw ? nextActions({ ...NA.raw, ...NA.ext, today: today() }) : [], missing: NA.missing } : null;
+}
+/** Resolves once the first read has finished (at once if it has). */
+export const whenReady = () => (NA.raw || (!NA.loading && NA.missing.length) ? Promise.resolve() : new Promise(r => NA.waiting.push(r)));
 
 export function init() {
   document.addEventListener('click', e => {
