@@ -39,10 +39,15 @@ export async function check() {
     e.sources.add(source); e.billed = e.billed || billed; if (!e.client) e.client = client;
     found.set(d, e);
   };
+  const hosted = new Set<string>();   // clients we invoice hosting to, whether or not the line names the domain
   for (const r of await sql`select contact_name, line_items from public.xero_repeating_invoices where status = 'AUTHORISED'`)
-    for (const l of (r.line_items || [])) if (/domain|hosting/i.test(l.description || '')) note(domainOf(l.description), r.contact_name, 'xero', /domain/i.test(l.description || ''));
+    for (const l of (r.line_items || [])) if (/domain|hosting/i.test(l.description || '')) {
+      hosted.add(String(r.contact_name).toLowerCase());
+      note(domainOf(l.description), r.contact_name, 'xero', /domain/i.test(l.description || ''));
+    }
   for (const c of await sql`select client_name, email from public.client_contacts where email <> ''`) note(domainOf(c.email), c.client_name, 'email');
   for (const p of await sql`select client_name, website from public.client_profiles where website <> ''`) note(domainOf(p.website), p.client_name, 'website');
+  for (const e of found.values()) if (hosted.has(String(e.client).toLowerCase())) e.sources.add('hosting');
   let n = 0;
   for (const [domain, e] of found) {
     let r: any;
