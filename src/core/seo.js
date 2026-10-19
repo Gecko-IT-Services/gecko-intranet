@@ -65,3 +65,34 @@ export function seoFee(repeating, sameClient, client) {
     .flatMap(r => r.line_items || []).filter(l => /\bseo\b|search engine/i.test(l.description || ''))
     .reduce((t, l) => t + Number(l.line_amount || 0), 0) * 100) / 100;
 }
+
+/* ── Search Console (20 Oct 2026, 2026-10-20-search-console-design.md): the last 28 days against the 28 before. ── */
+
+/**
+ * days: a site's seo_search_days rows; today: YYYY-MM-DD. Search Console runs about two days behind, so periods end at the newest day
+ * there is. → { now: { clicks, impressions, ctr, position }, before: same, series: clicks per day (90 days, oldest first), end } or null.
+ */
+export function searchSummary(days, today) {
+  if (!days?.length) return null;
+  const by = new Map(days.map(d => [String(d.day).slice(0, 10), d]));
+  const end = [...by.keys()].sort().pop();
+  const back = n => new Date(new Date(end + 'T12:00:00Z').getTime() - n * 86400000).toISOString().slice(0, 10);
+  const sum = (from, to) => {
+    const rows = [...by.entries()].filter(([k]) => k >= from && k <= to).map(([, v]) => v);
+    const clicks = rows.reduce((t, r) => t + Number(r.clicks || 0), 0), impressions = rows.reduce((t, r) => t + Number(r.impressions || 0), 0);
+    // Average position weighted by impressions, as Search Console shows it.
+    const position = impressions ? rows.reduce((t, r) => t + Number(r.position || 0) * Number(r.impressions || 0), 0) / impressions : null;
+    return { clicks, impressions, ctr: impressions ? clicks / impressions : 0, position: position == null ? null : Math.round(position * 10) / 10 };
+  };
+  const series = Array.from({ length: 90 }, (_, i) => Number(by.get(back(89 - i))?.clicks || 0));
+  return { now: sum(back(27), end), before: sum(back(55), back(28)), series, end, stale: today && end < new Date(new Date(today + 'T12:00:00Z').getTime() - 6 * 86400000).toISOString().slice(0, 10) };
+}
+
+/** A small line of clicks per day, as an SVG string (width × height). */
+export function sparkline(series, width = 220, height = 36) {
+  if (!series?.length) return '';
+  const max = Math.max(1, ...series);
+  const step = width / Math.max(1, series.length - 1);
+  const pts = series.map((v, i) => `${(i * step).toFixed(1)},${(height - 2 - (v / max) * (height - 4)).toFixed(1)}`).join(' ');
+  return `<svg class="seo-spark" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+}
