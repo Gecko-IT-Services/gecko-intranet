@@ -19,7 +19,11 @@ async function get(url: string, ms = 20000) {
 }
 
 export async function onpage(domain: string) {
-  const { res, text: html, ms } = await get(`https://${domain}/`);
+  // A site whose https is broken (CDA, 19 Oct 2026: the certificate doesn't cover the domain) is still read over http, and says so.
+  let page, httpsError = '';
+  try { page = await get(`https://${domain}/`); }
+  catch (err) { httpsError = String((err as Error).message || err).replace(/^.*?:\s*(?=invalid|certificate|tls|dns|connection)/i, '').slice(0, 160); page = await get(`http://${domain}/`); }
+  const { res, text: html, ms } = page;
   const finalUrl = res.url;
   const schema = [...html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)].flatMap(m => {
     try { const j = JSON.parse(m[1]); const all = [j, ...(Array.isArray(j) ? j : []), ...(j['@graph'] || [])]; return all.map((x: any) => x?.['@type']).flat().filter(Boolean); } catch { return []; }
@@ -38,7 +42,7 @@ export async function onpage(domain: string) {
   const title = decode(pick(html, /<title[^>]*>([\s\S]*?)<\/title>/i));
   const description = meta(html, 'description');
   return {
-    url: `https://${domain}/`, finalUrl, status: res.status, https: finalUrl.startsWith('https://'), ms, bytes: html.length,
+    url: `https://${domain}/`, finalUrl, status: res.status, https: finalUrl.startsWith('https://'), httpsError, ms, bytes: html.length,
     title, titleLength: title.length, description, descriptionLength: description.length, h1,
     canonical: pick(html, /<link[^>]+rel=["']canonical["'][^>]*href=["']([^"']+)["']/i), noindex: /noindex/i.test(robotsMeta),
     viewport: /<meta[^>]+name=["']viewport["']/i.test(html), lang: pick(html, /<html[^>]*\blang=["']([^"']+)["']/i),
