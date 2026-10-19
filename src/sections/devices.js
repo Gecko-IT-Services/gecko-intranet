@@ -17,6 +17,7 @@ import { connectSupabase } from '../core/supabase.js';
 import { deviceSummary, ateraBilling, STALE_DAYS, ATERA_NAMES } from '../core/devices.js';
 import { notOnYet } from '../core/offline.js';
 import { readAll } from '../core/rows.js';
+import { openIncident } from './incident.js';
 
 const DV = { agents: null, invoices: null, status: null, seenDays: [], hidden: [], offError: null, error: null, open: new Set(), offOpen: new Set(), filter: 'attention' };
 const els = id => document.getElementById(id);
@@ -186,8 +187,9 @@ function offCard() {
         <p class="dv-sub">${i.server ? 'Servers should never go quiet.' : `Normally ${escapeHtml(i.usual)}${i.expectedBy ? `, expected by ${escapeHtml(i.expectedBy)}` : ''}${i.laptop ? ' (a laptop)' : ''}.`} A PC that can’t start can’t tell Atera anything, so these are the likely reasons, most telling first:</p>
         <ol class="dv-off-why">${i.reasons.map(x => `<li>${escapeHtml(x.text)}</li>`).join('')}</ol>
         <div class="dv-actions">
+          <button type="button" class="btn btn-sm btn-primary" data-dv-help="${escapeHtml(key)}">Help with this</button>
           ${i.url ? `<a class="btn btn-sm btn-ghost" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">Open in Atera</a>` : ''}
-          <button type="button" class="btn btn-sm btn-primary" data-tk="add" data-client="${escapeHtml(client)}" data-title="${escapeHtml(`${i.machine} isn’t on: find out why`)}" data-note="${escapeHtml(taskNote)}">Add task</button>
+          <button type="button" class="btn btn-sm" data-tk="add" data-client="${escapeHtml(client)}" data-title="${escapeHtml(`${i.machine} isn’t on: find out why`)}" data-note="${escapeHtml(taskNote)}">Add task</button>
           <button type="button" class="btn btn-sm btn-ghost" data-dv-known="${escapeHtml(key)}">Known about: hide today</button>
           ${clientLink(client)}
         </div>
@@ -217,6 +219,15 @@ function onClick(e) {
   if (o) { const k = o.dataset.dvOpen; DV.open.has(k) ? DV.open.delete(k) : DV.open.add(k); render(); return; }
   const off = e.target.closest('[data-dv-off]');
   if (off) { const k = off.dataset.dvOff; DV.offOpen.has(k) ? DV.offOpen.delete(k) : DV.offOpen.add(k); render(); return; }
+  const help = e.target.closest('[data-dv-help]');
+  if (help) {
+    const r = notOnYet({ agents: DV.agents, seenDays: DV.seenDays, hidden: DV.hidden, syncedAt: DV.status?.last_sync_at });
+    const i = r.items.find(x => String(x.agent) === help.dataset.dvHelp);
+    if (i) openIncident({ client: i.customer, device: i.machine,
+      problem: i.server ? `Server ${i.machine} has gone offline` : `${i.machine} hasn’t come on this morning (normally ${i.usual}${i.expectedBy ? `, by ${i.expectedBy}` : ''})`,
+      details: { lastCheckedIn: i.lastSeen, whatGeckoHqThinks: i.reasons.map(x => x.text) } });
+    return;
+  }
   const kn = e.target.closest('[data-dv-known]');
   if (kn) { knownAbout(kn.dataset.dvKnown, today()); return; }
   const f = e.target.closest('[data-dv-filter]');

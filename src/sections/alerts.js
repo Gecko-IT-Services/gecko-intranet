@@ -17,6 +17,7 @@
 import { graphFetch, resolveSiteId, fetchAllLists } from '../core/graph.js';
 import { toast, escapeHtml, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
+import { openIncident } from './incident.js';
 
 export const MAILBOX     = 'support@gecko-it.com';
 export const SENDER      = 'noreply@atera.com';
@@ -588,7 +589,7 @@ export function renderIssue(is) {
       <td class="bkp-mono">${escapeHtml(fmtWhen(is.last))}${is.quiet ? '<span class="bkp-sub">quiet since</span>' : ''}</td>
       <td class="alr-actions">${is.level === 'resolved'
         ? `<span class="bkp-sub">${escapeHtml(fmtWhen(is.resolution.at))}</span><button type="button" class="btn btn-sm" data-alr-undo="${escapeHtml(is.key)}">Undo</button>`
-        : `<button type="button" class="btn btn-sm" data-alr-email="${escapeHtml(is.key)}">Email client</button><button type="button" class="btn btn-sm" data-alr-resolve="${escapeHtml(is.key)}">Resolved</button>`}</td>
+        : `<button type="button" class="btn btn-sm btn-primary" data-alr-help="${escapeHtml(is.key)}">Help</button><button type="button" class="btn btn-sm" data-alr-email="${escapeHtml(is.key)}">Email client</button><button type="button" class="btn btn-sm" data-alr-resolve="${escapeHtml(is.key)}">Resolved</button>`}</td>
     </tr>`;
 }
 
@@ -858,6 +859,14 @@ export function init() {
   }
 
   document.getElementById('alrBoard')?.addEventListener('click', event => {
+    const helpBtn = event.target.closest?.('[data-alr-help]');
+    if (helpBtn) {
+      const is = ALR.issues?.find(i => i.key === helpBtn.dataset.alrHelp);
+      if (is) openIncident({ client: is.client, device: is.device, problem: `${is.label} (${is.why})`,
+        details: { alert: is.message, kind: is.kind, drive: is.drive || undefined, service: is.service || undefined, now: is.current || undefined,
+          peak: is.peak || undefined, alerts: is.count, overDays: is.days, first: is.first, last: is.last } });
+      return;
+    }
     const emailBtn = event.target.closest?.('[data-alr-email]');
     if (emailBtn) { openEmail(emailBtn.dataset.alrEmail); return; }
     const resolveBtn = event.target.closest?.('[data-alr-resolve]');

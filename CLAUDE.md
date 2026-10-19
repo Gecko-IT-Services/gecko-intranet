@@ -219,6 +219,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   **What we keep fixing** (19 Oct, `2026-10-19-what-we-keep-fixing-design.md`): AI (Edge Function `client-ai`, kind `evidence`) groups six
   months of a client's timesheet notes into recurring themes with the product that would stop each; Gecko HQ sums jobs and hours itself;
   kept in `client_insights`; the theme becomes `evidence` on that product in the email (`withEvidence`).
+- **Help with this** (19 Oct, `2026-10-19-incident-help-design.md`): on Devices' "Not on this morning" items and on every alert, one dialog
+  (`src/sections/incident.js`, `core/incident.js`) gathers the machine's Atera record, the problem, the note and timesheet notes about it,
+  and `client-ai` (kind `incident`) returns likely causes, steps, and a plain numbered message for the client to copy into WhatsApp.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
