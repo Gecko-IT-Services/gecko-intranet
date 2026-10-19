@@ -103,6 +103,8 @@ function draw() {
   if (m) m.innerHTML = body();
 }
 
+/** An AI email is showing and the setup notes have changed since it was written. */
+const stale = () => !!AD.ai && !AD.writing && AD.note.trim() !== (AD.ai.noteUsed ?? '');
 const chosen = () => (AD.data?.topics || []).filter(t => AD.ticked.get(t.key));
 const firstName = () => String(AD.data?.main?.name || '').trim().split(/\s+/)[0] || '';
 const sender = () => (myName() ? `Kind regards,\n${myName()}\nGecko IT Services` : 'Kind regards,\nGecko IT Services');
@@ -142,6 +144,8 @@ function body() {
         <p class="ad-mode">${AD.ai ? `Written by AI from the facts and your notes${AD.ai.costUsd ? ` (about ${escapeHtml((AD.ai.costUsd * 100).toFixed(1))}¢)` : ''}. Click into it to change anything.` : 'Plain version, built from the ticked items. AI writes a version that uses your notes.'}</p>
         <div class="ad-to">To ${main?.email ? `<strong>${escapeHtml(main.name || main.email)}</strong> <span>${escapeHtml(main.email)}</span>` : '<strong class="ad-warn">no main contact email</strong> <span>(add one on Details & contacts, or fill in the recipient in Outlook)</span>'}</div>
         <label class="ad-subject">Subject <input type="text" data-ad-subject value="${escapeHtml(subject)}" maxlength="200"${AD.ai || picked.length ? '' : ' disabled'}></label>
+        <div class="ad-stale" data-ad-stale${stale() ? '' : ' hidden'}><span>Your notes have changed since this was written.</span>
+          <button type="button" class="btn btn-sm btn-primary" data-ad-act="rewrite"${can ? '' : ' disabled'}>Rewrite with the updated notes</button></div>
         <div class="ad-preview"${AD.ai ? ' contenteditable="true" data-ad-preview' : ''}>${preview}</div>
         <div class="ad-do">
           <button type="button" class="btn btn-primary" data-ad-act="draft"${(AD.ai || picked.length) && can ? '' : ' disabled'}${AD.sending ? ' aria-busy="true"' : ''}>${AD.sending ? 'Saving draft…' : 'Draft email in Outlook'}</button>
@@ -166,7 +170,7 @@ async function writeWithAi(kind) {
     const { data, error } = await sb.functions.invoke('email-writer', { body: { kind, client: AD.client, firstName: firstName(), sender: myName(), note: AD.note.trim(), facts } });
     if (error) throw new Error(error.message || 'The email writer didn’t answer');
     if (!data?.ok) throw new Error(data?.error || 'The email writer didn’t answer');
-    AD.ai = { kind, subject: data.subject, html: data.html, costUsd: data.costUsd };
+    AD.ai = { kind, subject: data.subject, html: data.html, costUsd: data.costUsd, noteUsed: AD.note.trim() };
   } catch (err) {
     toast(`AI couldn’t write it: ${err.message || err}`, 'error', 9000);
   } finally {
@@ -243,6 +247,8 @@ export function wire(root) {
       AD.note = n.value;
       const b = document.querySelector('[data-ad-act="save-note"]');   // just the button: a redraw would lose the cursor
       if (b) { const dirty = AD.note !== AD.noteSaved; b.disabled = !dirty; b.textContent = dirty ? 'Save' : 'Saved'; b.classList.toggle('btn-primary', dirty); }
+      const banner = document.querySelector('[data-ad-stale]');
+      if (banner) banner.hidden = !stale();
     }
   });
   root.addEventListener('click', e => {
@@ -253,6 +259,7 @@ export function wire(root) {
     if (a === 'save-note') saveNote();
     if (a === 'ai-advice') writeWithAi('advice');
     if (a === 'ai-summary') writeWithAi('summary');
+    if (a === 'rewrite' && AD.ai) writeWithAi(AD.ai.kind);
     if (a === 'template') { AD.ai = null; AD.subject = ''; draw(); }
     if (a === 'reload') { const n = AD.client; AD.client = ''; html(n); draw(); }
   });

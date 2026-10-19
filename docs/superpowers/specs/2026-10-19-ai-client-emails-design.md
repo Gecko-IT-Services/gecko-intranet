@@ -46,3 +46,10 @@ list, plain is/has verbs, no habitual threes, no "not only… but", no bolded bu
 puffery, varied sentence length, contractions, sentence-case headings, and a self-check before answering. As a safety net the function
 replaces any em/en dash left in the subject or body (a dash between numbers becomes "to"). The key is also cleaned of pasted spaces and
 quotes and must start sk-ant- (the first two runs failed with 401 invalid x-api-key).
+
+## Rewrite with the updated notes (19 Oct)
+
+Philip: "if I see something not right in that email I will add to the context note box and the preview should adjust?" The preview
+doesn't rewrite as you type (each rewrite is a paid call). Instead, once an AI email is showing, editing the setup note shows a banner
+over the preview, "Your notes have changed since this was written", with **Rewrite with the updated notes** (same kind of email, the
+note saved first). One-off wording fixes are still made by editing the preview itself (free).
