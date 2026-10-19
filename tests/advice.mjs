@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { fromCatalogue, adviceTopics, composeEmail, emailAuth, servicesFrom, summaryFacts, adviceFacts, withM365Cover, leaveOut, itemKey, factsPanel, checkEmail } from '../src/core/advice.js';
+import { fromCatalogue, adviceTopics, composeEmail, emailAuth, servicesFrom, summaryFacts, adviceFacts, withM365Cover, leaveOut, itemKey, factsPanel, checkEmail, withEvidence, themeFigures } from '../src/core/advice.js';
 
 // Catalogue wording as it is in opportunity_products (18 Oct 2026, shortened).
 const keeper = { key: 'keeper', name: 'Keeper password manager', unit_price: null, price_unit: 'user', email_subject: 'A safer, simpler way to manage passwords at {{client}}',
@@ -143,5 +143,20 @@ const dealt = adviceTopics({ client: 'Cowans', gaps: [{ product: hornet, strengt
 assert.deepEqual(dealt.map(t => [t.key, t.checked, t.deal?.status || null, t.added]),
   [['product:email_security', false, 'proposed', false], ['product:keeper', true, 'idea', false]], 'Proposed: listed, unticked; an idea ticked; no product twice');
 assert.deepEqual(adviceTopics({ client: 'Cowans', gaps: [{ product: keeper, strength: 0, added: true }] }).map(t => [t.checked, t.added]), [[true, true]], 'added by hand: ticked');
+
+// — What we keep fixing → evidence on the product that would stop it (19 Oct 2026). —
+const phish = { theme: 'Suspicious and phishing emails', product_key: 'email_security', jobs: 6, hours: 4.5, from: '2026-06-03', to: '2026-10-19',
+  client_line: 'A filter in front of your mailboxes would stop most of these before anyone sees them.' };
+assert.equal(themeFigures(phish), '6 jobs (4.5 hours of support) between Jun 2026 and Oct 2026');
+assert.equal(themeFigures({ ...phish, jobs: 1, hours: 1, from: '2026-10-01' }), '1 job (1 hour of support) in Oct 2026');
+const evT = withEvidence(dealt, [phish, { ...phish, theme: 'Printers', product_key: null }]);
+assert.equal(evT[0].evidence, 'Suspicious and phishing emails: 6 jobs (4.5 hours of support) between Jun 2026 and Oct 2026. A filter in front of your mailboxes would stop most of these before anyone sees them.');
+assert.equal(evT[1].evidence, undefined, 'only the product the theme points at');
+assert.equal(withEvidence(dealt, []), dealt);
+assert.equal(adviceFacts(evT).recommendations[0].evidence, evT[0].evidence, 'the writer gets it');
+assert.equal('evidence' in adviceFacts(evT).recommendations[1], false);
+assert.deepEqual(summaryFacts({ agents, today: '2026-10-19', themes: [phish] }).supportPatterns, [{ theme: 'Suspicious and phishing emails', jobs: 6, hours: 4.5, from: '2026-06-03', to: '2026-10-19' }]);
+assert.match(Object.fromEntries(factsPanel({ recommendations: [] }, { sell: evT.slice(0, 1) })).Selling, /\+ evidence from their support history/);
+assert.deepEqual(checkEmail('We helped with 6 suspicious emails, 4.5 hours of your support time.', { facts: adviceFacts(evT) }), [], 'its figures are known numbers');
 
 console.log('advice: ok');

@@ -15,7 +15,8 @@
 import { toast, escapeHtml } from '../core/ui.js';
 import { graphFetch } from '../core/graph.js';
 import { connectSupabase } from '../core/supabase.js';
-import { adviceTopics, composeEmail, summaryFacts, adviceFacts, emailAuth, servicesFrom, withM365Cover, leaveOut, itemKey, factsPanel, checkEmail } from '../core/advice.js';
+import { adviceTopics, composeEmail, summaryFacts, adviceFacts, emailAuth, servicesFrom, withM365Cover, leaveOut, itemKey, factsPanel, checkEmail,
+  withEvidence, themeFigures } from '../core/advice.js';
 import { upgrades } from '../core/upgrades.js';
 import { coverage, coverageFor } from '../core/coverage.js';
 import { sameAteraClient } from '../core/devices.js';
@@ -35,7 +36,7 @@ const same = (a, b) => sameAteraClient(a, b) || sameAteraClient(b, a) || sameCli
 
 /** The tab's markup; the first call for a client starts loading and the tab redraws itself when done. */
 export function html(clientName) {
-  if (AD.client !== clientName) { Object.assign(AD, { client: clientName, data: null, error: null, ticked: new Map(), subject: '', open: new Set(), note: '', noteSaved: '', leftOut: [], ai: null, writing: '' }); load(clientName); }
+  if (AD.client !== clientName) { Object.assign(AD, { client: clientName, data: null, error: null, ticked: new Map(), subject: '', open: new Set(), note: '', noteSaved: '', leftOut: [], ai: null, writing: '', evidence: null, finding: false }); load(clientName); }
   return `<div id="adMount">${body()}</div>`;
 }
 
@@ -43,7 +44,7 @@ async function load(name) {
   AD.loading = true;
   try {
     const sb = await connectSupabase();
-    const [agents, contacts, tenants, items, opp, notes, repeating, sites] = await Promise.all([
+    const [agents, contacts, tenants, items, opp, notes, repeating, sites, ssaRows, insights] = await Promise.all([
       sb.from('atera_agents').select('customer_name,machine_name,device_type,os,last_seen,last_user,model,online,raw').then(must),
       sb.from('client_contacts').select('*').then(must),
       sb.from('acronis_tenants').select('tenant_id,name,kind').then(must),
@@ -52,9 +53,18 @@ async function load(name) {
       // Before the notes table exists (this update), no note: the rest still works.
       sb.from('client_notes').select('*').then(({ data, error }) => (error ? [] : data || [])),
       sb.from('xero_repeating_invoices').select('contact_name,status,line_items').eq('status', 'AUTHORISED').then(must),
-      sb.from('webroot_sites').select('name,raw').then(({ data, error }) => (error ? [] : data || []))
+      sb.from('webroot_sites').select('name,raw').then(({ data, error }) => (error ? [] : data || [])),
+      sb.from('ssa_clients').select('id,name').then(must),
+      // Before the insights table exists (this update), none: the rest still works.
+      sb.from('client_insights').select('*').eq('kind', 'evidence').order('created_at', { ascending: false }).then(({ data, error }) => (error ? [] : data || []))
     ]);
     if (AD.client !== name) return;
+    // Six months of the client's own timesheet notes, for "What we keep fixing" (timesheets hold SSA clients' work).
+    const ssaIds = ssaRows.filter(r => same(r.name, name)).map(r => r.id);
+    const since = new Date(Date.now() - 183 * 86400000).toISOString().slice(0, 10);
+    const entries = ssaIds.length ? await readAll(() => sb.from('timesheet_entries').select('id,entry_date,title,work_description,hours,engineer')
+      .in('client_id', ssaIds).gte('entry_date', since).is('deleted_at', null).gt('hours', 0).neq('engineer', 'System').order('id')) : [];
+    AD.evidence = insights.find(i => same(i.client_name, name)) || null;
     const up = upgrades(agents.filter(a => same(a.customer_name, name)), today()).clients[0] || null;
     const cov = coverageFor(coverage(tenants, items, agents, new Date()), name);
     const main = mainContact(contacts.filter(c => same(c.client_name, name)), opp.contact ? { name: opp.contactName, email: opp.contact } : null);
@@ -76,7 +86,7 @@ async function load(name) {
     const lines = repeating.filter(r => same(r.contact_name, name)).flatMap(r => r.line_items || []);
     const site = sites.find(x => same(x.name, name) && x.raw?.Deactivated !== true && Number(x.raw?.TotalEndpoints) > 0);
     const myAgents = agents.filter(a => same(a.customer_name, name));
-    AD.data = { topics, main, ...extra, facts: { agents: myAgents, device: up, acronis, antivirus: site ? Number(site.raw?.TotalEndpoints) || true : 0, services: servicesFrom(lines) } };
+    AD.data = { topics, main, ...extra, entries, facts: { agents: myAgents, device: up, acronis, antivirus: site ? Number(site.raw?.TotalEndpoints) || true : 0, services: servicesFrom(lines) } };
     emailCheck(main?.email);
     for (const t of topics) AD.ticked.set(t.key, t.checked);
   } catch (err) {
@@ -107,12 +117,13 @@ function draw() {
 }
 
 /** The ticked topics, without the machines left out. */
-const chosen = () => leaveOut((AD.data?.topics || []).filter(t => AD.ticked.get(t.key)), AD.leftOut);
+const themes = () => AD.evidence?.data?.themes || [];
+const chosen = () => withEvidence(leaveOut((AD.data?.topics || []).filter(t => AD.ticked.get(t.key)), AD.leftOut), themes());
 /** What the AI is told for an email of this kind, as things stand now. */
 function currentFacts(kind) {
   const f = AD.data.facts;
   return kind === 'summary'
-    ? summaryFacts({ ...f, email: AD.data.email || null, topics: chosen(), leftOut: AD.leftOut, today: today() })   // the ticked topics only
+    ? summaryFacts({ ...f, email: AD.data.email || null, topics: chosen(), leftOut: AD.leftOut, themes: themes(), today: today() })   // the ticked topics only
     : adviceFacts(chosen(), AD.leftOut);
 }
 /** An AI email is showing and the notes, ticks or left-out machines have changed since it was written. */
@@ -169,6 +180,7 @@ function body() {
   const can = !AD.writing && !AD.sending;
   return `${setup}<div class="ad-wrap">
     <section class="ad-col">
+      ${evidenceHtml()}
       <header class="ad-head"><h2>What to raise</h2><p>Tick what to include. Devices and backups come from Atera and Acronis; products from the Opportunities catalogue.</p></header>
       ${list}
     </section>
@@ -268,6 +280,55 @@ function addProduct(key) {
   AD.subject = ''; draw();
 }
 
+/** "What we keep fixing": the AI's themes from six months of timesheet notes, with Gecko HQ's own counts, and what would stop each. */
+function evidenceHtml() {
+  const n = (AD.data.entries || []).length;
+  const ev = AD.evidence;
+  const head = `<header class="ad-head"><h2>What we keep fixing</h2><p>Patterns in the last six months of timesheet notes, and what would stop them: evidence for the sale. The AI only groups the jobs; the counts and hours are added up from the timesheets.</p></header>`;
+  if (!n && !ev) return `<section class="ad-ev">${head}<p class="ad-none">No timesheet entries for ${escapeHtml(AD.client)} in the last six months (timesheets cover support-hours clients).</p></section>`;
+  const run = `<button type="button" class="btn btn-sm${ev ? ' btn-ghost' : ' btn-primary'}" data-ad-act="evidence"${AD.finding || n < 2 ? ' disabled' : ''}>${AD.finding ? 'Reading the notes…' : ev ? 'Read again' : `Find patterns in ${n} notes with AI`}</button>`;
+  if (!ev) return `<section class="ad-ev">${head}<div class="ad-do">${run}<span>about 1p; kept for next time</span></div></section>`;
+  const list = ev.data.themes || [];
+  const shownProducts = new Set((AD.data.topics || []).map(t => t.productKey).filter(Boolean));
+  const name = key => (AD.data.products || []).find(p => p.key === key)?.name || key;
+  const rows = list.map(x => {
+    const act = !x.product_key ? '' : shownProducts.has(x.product_key)
+      ? `<span class="badge badge-green">${escapeHtml(name(x.product_key))}: evidence added</span>`
+      : (AD.data.more || []).some(m => m.product.key === x.product_key)
+        ? `<button type="button" class="btn btn-sm" data-ad-act="add-product" data-key="${escapeHtml(x.product_key)}">Add ${escapeHtml(name(x.product_key))}</button>` : '';
+    return `<li><div class="ad-ev-row"><strong>${escapeHtml(x.theme)}</strong> <span>${escapeHtml(themeFigures(x))}</span></div>
+      <p>${escapeHtml(x.client_line)}</p>
+      ${x.examples?.length ? `<p class="ad-ev-eg">e.g. ${x.examples.map(e => `“${escapeHtml(e)}”`).join(' · ')}</p>` : ''}${act ? `<div class="ad-ev-act">${act}</div>` : ''}</li>`;
+  }).join('');
+  const when = new Date(ev.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return `<section class="ad-ev">${head}
+    ${list.length ? `<ul class="ad-ev-list">${rows}</ul>` : '<p class="ad-none">Nothing keeps coming back: no theme with two or more jobs.</p>'}
+    <div class="ad-do">${run}<span>Read ${escapeHtml(when)} from ${ev.data.entries} notes${n !== ev.data.entries ? ` (${n} now)` : ''}</span></div></section>`;
+}
+
+/** Ask the AI for "What we keep fixing" (Edge Function client-ai, kind evidence). */
+async function findEvidence() {
+  if (AD.finding) return;
+  if (AD.note !== AD.noteSaved) await saveNote();
+  const active = (AD.data.products || []).filter(p => p.active);
+  const offered = new Set([...(AD.data.topics || []).map(t => t.productKey), ...(AD.data.more || []).map(m => m.product.key)]);
+  AD.finding = true; draw();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const { data, error } = await sb.functions.invoke('client-ai', { body: { kind: 'evidence', client: AD.client, note: AD.note.trim(),
+      entries: AD.data.entries.map(e => ({ id: e.id, date: e.entry_date, text: [e.title, e.work_description].filter((v, i, a) => v && a.indexOf(v) === i).join(': ') })),
+      catalogue: active.map(p => ({ key: p.key, name: p.name, pitch: p.pitch || '' })),
+      already: active.filter(p => !offered.has(p.key)).map(p => p.key) } });
+    if (error) throw new Error(error.message || 'The AI didn’t answer');
+    if (!data?.ok) throw new Error(data?.error || 'The AI didn’t answer');
+    AD.evidence = data.insight;
+  } catch (err) {
+    toast(`Couldn’t read the notes: ${err.message || err}`, 'error', 9000);
+  } finally {
+    AD.finding = false; draw();
+  }
+}
+
 /** One machine or finding under a topic. Machines (devices and protection) have their own tick: unticked = left out for this client. */
 function itemHtml(t, i) {
   const text = i.note ? `<strong>${escapeHtml(i.name)}</strong> <span>${escapeHtml(i.note)}</span>` : `<span>${escapeHtml(i.name)}</span>`;
@@ -350,6 +411,8 @@ export function wire(root) {
     if (more) { const k = more.dataset.adMore; AD.open.has(k) ? AD.open.delete(k) : AD.open.add(k); draw(); return; }
     const a = e.target.closest?.('[data-ad-act]')?.dataset.adAct;
     if (a === 'draft') draft();
+    if (a === 'evidence') findEvidence();
+    if (a === 'add-product') addProduct(e.target.closest('[data-key]').dataset.key);
     if (a === 'save-note') saveNote();
     if (a === 'ai-advice') writeWithAi('advice');
     if (a === 'ai-summary') writeWithAi('summary');

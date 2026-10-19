@@ -34,6 +34,9 @@ This is a sales email (Philip, 19 Oct 2026: "i want to be using this to sell gap
 to the recommendations. Make each one's case for this client in particular: their people, machines and way of working from the note
 and the facts; lead with what they gain; one or two sentences on the risk of leaving it, stated plainly. Where something is
 time-sensitive (no security updates now) say so; never call the recommendations "not urgent". No scare tactics, no hard sell.
+A recommendation may carry "evidence": what Gecko has actually spent this client's support time on, which the product would stop.
+It is the strongest reason they have to say yes: use it, with its figures exactly as given (jobs, hours, months). In an "IT at a
+glance" email, facts.supportPatterns may be mentioned briefly as what we've been helping with.
 Be specific: name the computers and people the facts name. Keep it short enough to be read in a couple of minutes.
 End with one clear next step (a short call, or a reply to book it in), that we'll plan it around them and quote before any cost.
 Kind "advice": the ticked recommendations only. Kind "summary": an "IT at a glance" overview (what they have, how it's protected and
