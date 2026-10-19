@@ -56,12 +56,16 @@ export function clean(html: string) {
     .trim();
 }
 
-/** The first JSON object in Claude's reply → { subject, html }; tolerant of code fences and words around it. */
+/**
+ * Claude's reply → { subject, html }. Asked for "SUBJECT: …", a line "---", then the HTML body (JSON broke on long HTML, 19 Oct).
+ * Tolerant: code fences dropped; a JSON reply still read; with no separator, the first line is the subject if it says so.
+ */
 export function parseEmail(text: string) {
-  const t = String(text || '').replace(/^```(?:json)?\s*|\s*```$/g, '');
-  const start = t.indexOf('{'), end = t.lastIndexOf('}');
-  try { const o = JSON.parse(t.slice(start, end + 1)); return { subject: String(o.subject || ''), html: String(o.html || '') }; }
-  catch { return { subject: '', html: '' }; }
+  const t = String(text || '').replace(/```(?:html|json)?/g, '').trim();
+  if (t.startsWith('{')) { try { const o = JSON.parse(t); if (o.html) return { subject: String(o.subject || ''), html: String(o.html) }; } catch { /* not JSON after all */ } }
+  const m = t.match(/^\s*SUBJECT:\s*(.+?)\s*\n\s*-{3,}\s*\n([\s\S]+)$/i) || t.match(/^\s*SUBJECT:\s*(.+?)\s*\n([\s\S]+)$/i);
+  if (m) return { subject: m[1].trim(), html: m[2].trim() };
+  return { subject: '', html: /<p[\s>]/i.test(t) ? t : '' };
 }
 
 async function write(input: any) {
@@ -73,8 +77,8 @@ async function write(input: any) {
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
       // Plain JSON in the reply (forcing a tool isn't supported on every model: Sonnet 5.5 refused it, 19 Oct).
-      model: MODEL, max_tokens: 3000,
-      system: RULES + '\n\nReply with ONLY a JSON object, nothing before or after it: {"subject": "…", "html": "…"}. The subject is short, specific and friendly.',
+      model: MODEL, max_tokens: 4000,
+      system: RULES + '\n\nReply in exactly this shape and nothing else:\nSUBJECT: <a short, specific, friendly subject>\n---\n<the email body as HTML>',
       messages: [{ role: 'user', content: JSON.stringify({
         kind: input.kind, client: input.client, to_first_name: input.firstName || '', sender: input.sender || '',
         how_they_are_set_up: input.note || '', facts: input.facts || {} }) }]
@@ -84,7 +88,7 @@ async function write(input: any) {
   if (!res.ok) throw new Error(`Claude ${res.status}: ${body?.error?.message || 'no answer'}`);
   const text = (body.content || []).filter((c: any) => c.type === 'text').map((c: any) => c.text).join('');
   const out = parseEmail(text);
-  if (!out.html) throw new Error('Claude didn’t return an email this time: try again');
+  if (!out.html) throw new Error(`Claude's reply couldn't be read as an email (stop: ${body.stop_reason || '?'}; starts: ${text.slice(0, 160).replace(/\s+/g, ' ')})`);
   // Safety net for the one rule that is easiest to check: no em or en dashes reach the client.
   const undash = (t: string) => t.replace(/(\d)\s*[\u2013\u2014]\s*(?=[£$]?\d)/g, '$1 to ').replace(/\s*[\u2014\u2013]\s*/g, ', ').replace(/,\s*,/g, ',');
   return { subject: undash(String(out.subject || '')).slice(0, 200), html: undash(clean(out.html)), usage: body.usage || {} };
