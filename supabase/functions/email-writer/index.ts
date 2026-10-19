@@ -76,7 +76,7 @@ async function write(input: any) {
     method: 'POST',
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
-      // Plain JSON in the reply (forcing a tool isn't supported on every model: Sonnet 5.5 refused it, 19 Oct).
+      // A plain-text reply shape (forcing a tool isn’t supported on Sonnet 5.5, and JSON broke on long HTML, 19 Oct).
       model: MODEL, max_tokens: 4000,
       system: RULES + '\n\nReply in exactly this shape and nothing else:\nSUBJECT: <a short, specific, friendly subject>\n---\n<the email body as HTML>',
       messages: [{ role: 'user', content: JSON.stringify({
