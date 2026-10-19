@@ -47,7 +47,8 @@ export function win11Cpu(cpu) {
   const s = String(cpu || '');
   if (/core\(tm\)\s*ultra|core ultra/i.test(s)) return true;
   const intel = s.match(/\bi[3579]-(\d{4,5})/i);
-  if (intel) { const n = intel[1]; const gen = n.length === 5 ? Number(n.slice(0, 2)) : Number(n[0]); return gen >= 8; }
+  // i5-8500 → 8th gen; i7-14700T → 14th; laptop chips i7-1065G7 / i5-1135G7 / i7-1255U are 10th, 11th, 12th (four digits starting "1").
+  if (intel) { const n = intel[1]; const gen = n.length === 5 || n[0] === '1' ? Number(n.slice(0, 2)) : Number(n[0]); return gen >= 8; }
   if (/\bcore\(tm\)\s*[3579]\s+\d{3}/i.test(s)) return true;           // Core 5 120U and the like (2023+)
   const ryzen = s.match(/ryzen\s*(?:\d|threadripper)\s*(?:pro\s*)?(\d)\d{2,3}/i);
   if (ryzen) return Number(ryzen[1]) >= 2;
