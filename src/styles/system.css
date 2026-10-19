@@ -668,3 +668,36 @@ svg.ic { vertical-align: -.15em; }
 #section-settings .chg-stale { color: var(--amber); }
 #section-settings .chg-all { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
 #section-settings .chg-all:hover { color: var(--white); }
+
+/* ── 13 · Help with this ─────────────────────────────────────────────
+   One native dialog (src/sections/incident.js) from Devices and Alerts: likely causes, steps, a message for the client.
+   Design: docs/superpowers/specs/2026-10-19-incident-help-design.md */
+#app .ih-dialog {
+  width: min(620px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 0; overflow: auto;
+  border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); color: var(--white);
+}
+#app .ih-dialog::backdrop { background: var(--overlay, rgb(0 0 0 / .55)); }
+#app .ih-wrap { display: grid; gap: 16px; padding: 20px; }
+#app .ih-wrap header h3 { margin: 0; font: 700 16px/1.3 var(--font-body); color: var(--white); letter-spacing: 0; text-transform: none; }
+#app .ih-wrap header h3 span { margin-left: 6px; font-weight: 400; color: var(--muted); }
+#app .ih-wrap header p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+#app .ih-wrap h4 { margin: 0 0 6px; font: 600 13px/1.3 var(--font-body); color: var(--white); text-transform: none; letter-spacing: 0; }
+#app .ih-wait { margin: 0; font-size: 13px; color: var(--muted); }
+#app .ih-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; line-height: 1.45; }
+#app .ih-list strong { color: var(--white); }
+#app .ih-list span { color: var(--muted); }
+#app .ih-note { margin: 0 0 6px; font-size: 12px; color: var(--muted); }
+#app .ih-msg {
+  width: 100%; min-height: 200px; padding: 10px 12px; resize: vertical;
+  border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset);
+  font: 400 14px/1.5 var(--font-body); color: var(--white);
+}
+#app .ih-msg:focus { outline: none; border-color: var(--green); }
+#app .ih-acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+#app .ih-acts [data-ih="close"] { margin-right: auto; }
+@media (max-width: 640px) { #app .ih-msg { font-size: 16px; } }
+#app .ih-dialog, #app .ih-dialog::backdrop {
+  opacity: 0; transition: opacity var(--dur-1) var(--ease), overlay var(--dur-1) allow-discrete, display var(--dur-1) allow-discrete;
+}
+#app .ih-dialog[open] { opacity: 1; animation: gk-rise var(--dur-3) var(--ease) backwards; }
+#app .ih-dialog[open]::backdrop { opacity: 1; animation: gk-fade var(--dur-2) var(--ease) backwards; }

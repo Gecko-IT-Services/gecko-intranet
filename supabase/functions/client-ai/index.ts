@@ -3,6 +3,8 @@
 //   kind 'evidence': "What we keep fixing": groups six months of timesheet notes into recurring themes, each with the catalogue
 //   product that would stop it. The AI only groups entry ids; the job counts and hours are summed here from timesheet_entries, so
 //   every figure can be checked. Saved in public.client_insights.
+//   kind 'incident': "Help with this": one machine's problem (an alert, or not on this morning) → likely causes, steps for us, and a
+//   simple message for the client to follow. Not saved (logged only).
 // Secret: ANTHROPIC_API_KEY. Optional: EMAIL_DAILY_LIMIT, AI_MODEL (default claude-sonnet-5-5).
 // Design: docs/superpowers/specs/2026-10-19-what-we-keep-fixing-design.md
 import { cors, json, sql, staffEmail } from '../_shared/xero.ts';
@@ -29,6 +31,24 @@ Group the entries into recurring themes. Rules:
 
 Reply with JSON only, no other text:
 {"themes":[{"theme":"…","entry_ids":[1,2],"product_key":"…or null","client_line":"…"}]}`;
+
+const INCIDENT = `You help a small UK IT support company (Gecko IT Services) deal with a problem on one of a client's computers. You get
+what their monitoring knows about the machine (it may be stale if the machine is off), the problem, recent support notes about it,
+and Gecko's background on the client ("how_they_are_set_up").
+
+Reply with JSON only, no other text:
+{"causes":[{"cause":"…","why":"…"}],"steps":["…"],"message":"…"}
+
+- "causes": the likely causes, most likely first, at most 4. "cause" is a few words; "why" says which facts point to it (dates, the
+  last restart, disk space, age, recent notes). Never invent facts; if something can't be known from here, say what would tell.
+- "steps": what Gecko's engineer should do, in order, safest first, each one short and concrete. Protect the client's data: check
+  what's backed up before anything that could lose files; never reset or reinstall Windows before files are safe.
+- "message": for a non-technical person at the client to read on their phone (WhatsApp or text). Start with "Hi" and the first
+  name if one is given, else "Hi". One plain sentence on what's happening. Then numbered steps they can safely do themselves,
+  written with emoji numbers (1️⃣ 2️⃣ 3️⃣), only steps that can't make things worse; if there are none, ask them to leave it and say
+  we'll connect remotely or come in. Use ⚠️ lines for anything they must not do (for example "Reset this PC") and for when to stop
+  and send a photo of the screen. End with a short thanks and the sender's first name. No internal tool names (Atera, Acronis,
+  Webroot), no blame. UK English. No em or en dashes.`;
 
 async function claude(system: string, user: unknown, maxTokens = 4000) {
   const key = (Deno.env.get('ANTHROPIC_API_KEY') || '').replace(/[\s"'‘’“”​-‍﻿]/g, '');
@@ -94,6 +114,21 @@ async function evidence(input: any, email: string) {
   return { ok: true, insight: { ...saved, kind: 'evidence', client_name: client, data, model: MODEL } };
 }
 
+async function incident(input: any, email: string) {
+  const client = String(input.client || '').trim();
+  const r = await claude(INCIDENT, { how_they_are_set_up: String(input.note || '').slice(0, 8000), sender: String(input.sender || ''),
+    to_first_name: String(input.firstName || ''), ...(input.facts || {}) }, 3000);
+  const p = jsonOf(r.text);
+  if (!p?.causes || !p?.steps || !p?.message) throw new Error(`The reply couldn't be read (stop: ${r.stop}; starts: ${r.text.slice(0, 120).replace(/\s+/g, ' ')})`);
+  const cost = ((r.usage.input_tokens || 0) * PRICE_IN + (r.usage.output_tokens || 0) * PRICE_OUT) / 1e6;
+  await sql`insert into public.ai_email_log (client_name, kind, created_by, model, input_tokens, output_tokens, cost_usd)
+            values (${client}, 'incident', ${email}, ${MODEL}, ${r.usage.input_tokens || 0}, ${r.usage.output_tokens || 0}, ${cost})`;
+  return { ok: true, help: {
+    causes: p.causes.slice(0, 4).map((c: any) => ({ cause: undash(c.cause).slice(0, 120), why: undash(c.why).slice(0, 500) })),
+    steps: p.steps.slice(0, 10).map((x: any) => undash(x).slice(0, 400)),
+    message: undash(p.message).slice(0, 2500), costUsd: Math.round(cost * 10000) / 10000 } };
+}
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
@@ -101,11 +136,11 @@ Deno.serve(async req => {
     if (!email) return json({ error: 'Not allowed' }, 403);
     const input = await req.json().catch(() => ({}));
     const client = String(input.client || '').trim();
-    if (!client || !['evidence'].includes(input.kind)) return json({ ok: false, error: 'Which client, and which kind?' }, 400);
+    if (!client || !['evidence', 'incident'].includes(input.kind)) return json({ ok: false, error: 'Which client, and which kind?' }, 400);
     const [{ n }] = await sql`select count(*)::int as n from public.ai_email_log where created_at > now() - interval '1 day'`;
     if (n >= DAILY_LIMIT) return json({ ok: false, error: `Today's limit of ${DAILY_LIMIT} AI calls is reached (EMAIL_DAILY_LIMIT in Supabase secrets).` });
     try {
-      return json(await evidence(input, email));
+      return json(input.kind === 'incident' ? await incident(input, email) : await evidence(input, email));
     } catch (err) {
       const message = String((err as Error).message || err).slice(0, 400);
       await sql`insert into public.ai_email_log (client_name, kind, created_by, model, ok, error) values (${client}, ${input.kind}, ${email}, ${MODEL}, false, ${message})`;
