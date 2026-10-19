@@ -280,3 +280,41 @@
 #section-client .ad-ev-list p { margin: 0; color: var(--muted); }
 #section-client .ad-ev-eg { font-size: 12px; font-style: italic; }
 #section-client .ad-ev-act { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Network (19 Oct 2026, src/sections/network.js; 2026-10-19-client-network-design.md): the drawing in the app's colours. */
+#section-client .nw-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+#section-client .nw-lenses, #section-client .nw-out { display: flex; flex-wrap: wrap; gap: 6px; }
+#section-client .nw-canvas { border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); padding: 8px; overflow-x: auto; }
+#section-client .nw-svg { display: block; min-width: 640px; font-family: var(--font-body); }
+#section-client .nw-h { font-size: 14px; font-weight: 600; fill: var(--white); }
+#section-client .nw-s { font-size: 11px; font-weight: 400; fill: var(--muted); }
+#section-client .nw-name { font: 600 12px var(--font-mono); fill: var(--white); }
+#section-client .nw-net rect { fill: var(--inset); stroke: var(--border); }
+#section-client .nw-cloud rect { fill: var(--inset); stroke: var(--blue, #5b8def); stroke-opacity: .6; }
+#section-client .nw-site rect { fill: var(--inset); stroke: var(--green); stroke-opacity: .5; }
+#section-client .nw-remote rect { stroke: var(--border); stroke-opacity: 1; stroke-dasharray: 5 4; }
+#section-client .nw-line { stroke: var(--muted); stroke-width: 1.2; }
+#section-client .nw-m { cursor: pointer; }
+#section-client .nw-m rect { fill: var(--card); stroke: var(--border); stroke-width: 1; transition: stroke var(--dur-1) var(--ease), fill var(--dur-1) var(--ease); }
+#section-client .nw-good rect { stroke: var(--green); fill: var(--green-glow); }
+#section-client .nw-warn rect { stroke: var(--amber); fill: var(--amber-dim); }
+#section-client .nw-bad rect { stroke: var(--red); fill: var(--red-dim); }
+#section-client .nw-server rect { stroke-width: 2.2; }
+#section-client .nw-quiet { opacity: .55; }
+#section-client .nw-quiet rect { stroke-dasharray: 4 3; }
+#section-client .nw-sel rect { stroke: var(--white); stroke-width: 2.4; }
+#section-client .nw-m:focus-visible { outline: none; }
+#section-client .nw-m:focus-visible rect { stroke: var(--white); stroke-width: 2.4; }
+#section-client .nw-key { cursor: default; }
+#section-client .nw-on { fill: var(--green); }
+#section-client .nw-side { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+#section-client .nw-card { padding: 14px 16px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); }
+#section-client .nw-card h3 { margin: 0 0 6px; font-size: 14px; color: var(--white); letter-spacing: 0; text-transform: none; }
+#section-client .nw-muted { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+#section-client .nw-card dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0 0 10px; font-size: 12px; }
+#section-client .nw-card dt { color: var(--muted); }
+#section-client .nw-card dd { margin: 0; color: var(--white); overflow-wrap: anywhere; }
+#section-client .nw-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+#section-client .nw-name-row { display: flex; align-items: flex-end; gap: 8px; margin-top: 8px; }
+#section-client .nw-name-row label { flex: 1; display: grid; gap: 4px; font-size: 11px; color: var(--muted); min-width: 0; }
+#section-client .nw-name-row input { min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset); color: var(--white); font: 400 13px var(--font-body); }

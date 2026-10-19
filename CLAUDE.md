@@ -234,6 +234,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - **Dates that come round** (19 Oct, `2026-10-19-dates-come-round-design.md`): `core/dates.js` `comingUp`: annual Xero renewals (60 days),
   domain expiry (`domain_dates`, Edge Function `domain-check`, public RDAP, Mondays), VoIP contract ends (90), PSTN switch-off 31 Jan 2027
   (180), end of support from Upgrades findings' `ends` (120). Into Do next and the brief's Coming up. Warranty dates not built (need Dell/Lenovo keys).
+- Client page › **Network** (19 Oct, `2026-10-19-client-network-design.md`): an automatic Visio-style drawing: sites from Atera's internet
+  addresses (named once, `client_sites`), home/remote workers, cloud services; lenses Health / Backups / Antivirus; click a machine for
+  details and Help with this; download SVG or print to PDF. `core/network.js`, `sections/network.js`. Network equipment not drawn yet.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
