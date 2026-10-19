@@ -32,34 +32,47 @@ const STATE = {
   grown: ['amber', 'Grown'], record: ['blue', 'Record'], enter: ['blue', 'Enter'], ok: ['green', 'OK']
 };
 
+/** Everything the reconcile works from (also read by Overview's next best action through snapshot()). */
+async function readRaw(sb) {
+  const [repeating, webrootSites, webrootEndpoints, acronisTenants, acronisUsage, inputs, agents, bills, wst, ast, usageAll, seats] = await Promise.all([
+    sb.from('xero_repeating_invoices').select('repeating_invoice_id,contact_name,status,unit,period,next_date,line_items').then(must),
+    sb.from('webroot_sites').select('site_id,name,raw').then(must),
+    sb.from('webroot_endpoints').select('site_id,hostname,raw').then(must),
+    sb.from('acronis_tenants').select('tenant_id,name,kind').then(must),
+    Promise.all([
+      readAll(() => sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'usage').like('raw->>name', 'pw_base_%').order('item_id')),
+      readAll(() => sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'm365_user').order('item_id'))]).then(([u, m]) => u.concat(m)),
+    sb.from('atera_reconcile_inputs').select('*').then(must),
+    sb.from('atera_agents').select('customer_name,machine_name,device_type,online').then(must),
+    sb.from('atera_bills').select('usd,gbp,charged_on').not('gbp', 'is', null).order('charged_on', { ascending: false }).limit(1).then(must),
+    sb.from('webroot_status').select('*').eq('id', 1).maybeSingle().then(must),
+    sb.from('acronis_status').select('*').eq('id', 1).maybeSingle().then(must),
+    sb.from('atera_usage').select('month,product,usd').then(must),
+    sb.from('atera_bills').select('usd,month,charged_on').eq('kind', 'seats').order('charged_on', { ascending: false }).limit(1).then(must)
+  ]);
+  const lastMonth = usageAll.reduce((m, u) => (u.month > m ? u.month : m), '');
+  const rate = bills[0] && Number(bills[0].usd) ? Number(bills[0].gbp) / Number(bills[0].usd) : null;
+  return { repeating, webrootSites, webrootEndpoints, acronisTenants, acronisUsage, inputs, agents, rate, webrootStatus: wst, acronisStatus: ast,
+    usage: usageAll.filter(u => u.month === lastMonth), usageMonth: lastMonth, seatsUsd: seats[0] ? Number(seats[0].usd) : 0 };
+}
+
 async function load() {
   RC.error = null; render();
   try {
-    const sb = await connectSupabase();
-    const [repeating, webrootSites, webrootEndpoints, acronisTenants, acronisUsage, inputs, agents, bills, wst, ast, usageAll, seats] = await Promise.all([
-      sb.from('xero_repeating_invoices').select('repeating_invoice_id,contact_name,status,unit,period,next_date,line_items').then(must),
-      sb.from('webroot_sites').select('site_id,name,raw').then(must),
-      sb.from('webroot_endpoints').select('site_id,hostname,raw').then(must),
-      sb.from('acronis_tenants').select('tenant_id,name,kind').then(must),
-      Promise.all([
-        readAll(() => sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'usage').like('raw->>name', 'pw_base_%').order('item_id')),
-        readAll(() => sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'm365_user').order('item_id'))]).then(([u, m]) => u.concat(m)),
-      sb.from('atera_reconcile_inputs').select('*').then(must),
-      sb.from('atera_agents').select('customer_name,machine_name,device_type,online').then(must),
-      sb.from('atera_bills').select('usd,gbp,charged_on').not('gbp', 'is', null).order('charged_on', { ascending: false }).limit(1).then(must),
-      sb.from('webroot_status').select('*').eq('id', 1).maybeSingle().then(must),
-      sb.from('acronis_status').select('*').eq('id', 1).maybeSingle().then(must),
-      sb.from('atera_usage').select('month,product,usd').then(must),
-      sb.from('atera_bills').select('usd,month,charged_on').eq('kind', 'seats').order('charged_on', { ascending: false }).limit(1).then(must)
-    ]);
-    const lastMonth = usageAll.reduce((m, u) => (u.month > m ? u.month : m), '');
-    const rate = bills[0] && Number(bills[0].usd) ? Number(bills[0].gbp) / Number(bills[0].usd) : null;
-    RC.raw = { repeating, webrootSites, webrootEndpoints, acronisTenants, acronisUsage, inputs, agents, rate, webrootStatus: wst, acronisStatus: ast,
-      usage: usageAll.filter(u => u.month === lastMonth), usageMonth: lastMonth, seatsUsd: seats[0] ? Number(seats[0].usd) : 0 };
+    RC.raw = await readRaw(await connectSupabase());
   } catch (err) {
     RC.error = err;
   }
   render();
+}
+
+/** For Overview › Next best action: the reconcile now, or { error }. Never throws. */
+export async function snapshot() {
+  try {
+    return reconcileAll({ ...(await readRaw(await connectSupabase())), now: new Date() });
+  } catch (err) {
+    return { error: err.message || String(err) };
+  }
 }
 
 const result = () => reconcileAll({ ...RC.raw, now: new Date() });
