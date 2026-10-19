@@ -266,7 +266,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   Anthropic API is paid per question and he wants no running cost. Don't re-add without asking. Design note and git
   history (`2026-10-11-ask-gecko-hq-design.md`) have it.
 - **Exception, 19 Oct 2026 (Philip chose it):** AI-written client emails only. Edge Function `email-writer` (secret
-  `ANTHROPIC_API_KEY`; Claude Haiku 5.5 since 19 Oct, ~0.15p an email (Sonnet 5.5 ~3p: secret `EMAIL_MODEL`), logged in `ai_email_log`, `EMAIL_DAILY_LIMIT` 40/day) writes the advice email or an
+  `ANTHROPIC_API_KEY`; Claude Sonnet 5.5, ~3.5p an email (Haiku 5.5 tried 19 Oct: ~0.3p but contradicted itself and ignored facts, so not for client emails), logged in `ai_email_log`, `EMAIL_DAILY_LIMIT` 40/day) writes the advice email or an
   "IT at a glance" email from client-safe facts plus `client_notes.setup` ("How <client> is set up, in our words", client page ›
   Upgrades & advice). Design `2026-10-19-ai-client-emails-design.md`. Any other paid AI still needs asking.
 
