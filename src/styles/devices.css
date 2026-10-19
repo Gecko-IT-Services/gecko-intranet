@@ -36,6 +36,27 @@
 #section-devices .dv-devices li strong { color: var(--white); }
 #section-devices .dv-actions { margin-top: 10px; font-size: 13px; }
 
+/* Not on this morning (19 Oct 2026, core/offline.js): PCs normally on by now that aren't, and servers gone quiet. */
+#section-devices .dv-off { margin: 0 0 16px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); }
+#section-devices .dv-off.state-error { padding: 12px 14px; }
+#section-devices .dv-off-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 12px 14px; border-bottom: 1px solid var(--border-dim); }
+#section-devices .dv-off-head h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--white); }
+#section-devices .dv-off-head span { font-size: 12px; color: var(--muted); }
+#section-devices .dv-off-none { margin: 0; padding: 12px 14px; font-size: 13px; color: var(--muted); }
+#section-devices .dv-off-list { list-style: none; margin: 0; padding: 0; }
+#section-devices .dv-off-item + .dv-off-item { border-top: 1px solid var(--border-dim); }
+#section-devices .dv-off-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; width: 100%; padding: 10px 14px; border: 0; background: none;
+  color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; transition: background var(--dur-1) var(--ease);
+}
+#section-devices .dv-off-row:hover { background: var(--inset); }
+#section-devices .dv-off-row:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+#section-devices .dv-off-row strong { color: var(--white); }
+#section-devices .dv-off-seen { margin-left: auto; font: 500 12px var(--font-mono); color: var(--muted); }
+#section-devices .dv-off-detail { padding: 0 14px 14px; }
+#section-devices .dv-off-why { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; line-height: 1.45; }
+#section-devices .dv-off-detail .dv-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
 @media (max-width: 640px) {
   #section-devices .dv-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #section-devices .dv-row { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "name name name" "flags flags flags"; gap: 6px 12px; }

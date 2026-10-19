@@ -183,6 +183,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   (Edge Function `atera-sync`, secret `ATERA_API_KEY`, 4× a day + Refresh; tables `atera_customers`, `atera_agents` with
   `raw`, `atera_status`): Windows 10, not seen 30+ days, devices but no Atera billing in Xero this month. Read only.
   `src/core/devices.js`, tests `tests/devices.mjs`. Windows 10 device gaps in Opportunities are not built yet.
+  **Not on this morning** (19 Oct, `2026-10-19-not-on-this-morning-design.md`): top of Devices and in Overview › Today › Needs attention;
+  PCs normally on every working day that haven't checked in by their usual time, and servers quiet an hour, with likely reasons
+  (a PC that can't start can't alert: Kelly's PC, Daron, 0x7B). History in `atera_seen_days` (trigger after each sync), weekday
+  half-hourly morning syncs, "Known about" in `device_offline_ok`. Learning until 26 Oct 2026 (amber, desktops only). `src/core/offline.js`.
 - **Acronis, direct** (18 Oct, `2026-10-18-acronis-sync-design.md`): Edge Function `acronis-sync` (secrets `ACRONIS_CLIENT_ID`,
   `ACRONIS_CLIENT_SECRET`, `ACRONIS_BASE_URL`; 4× a day + staff on demand) keeps Acronis's raw records per customer in
   `acronis_tenants` / `acronis_items` (kind usage, resource, resource_status, agent, policy, alert) / `acronis_status`. Read only
