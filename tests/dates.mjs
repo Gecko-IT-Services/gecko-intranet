@@ -34,7 +34,11 @@ const by = k => items.find(i => i.key.startsWith(k));
 assert.equal(by('renewal:r1').title, 'Web Hosting and Domain Renewal renews for CDA Ltd');
 assert.deepEqual(by('renewal:r1').value, { gbp: 174, per: 'once' });
 assert.equal(by('renewal:Freeston').title, 'Web Hosting renews for Freeston Water Treatment');
-assert.match(by('domain:lscommercials').why, /we bill for it/);
+assert.match(by('domain:lscommercials').why, /we look after it/);
+const clook = comingUp({ today, domains: [{ domain: 'freeston.co.uk', client_name: 'Freeston', billed: false, expires_on: '2026-11-11', registrar: 'Sub 6 Limited t/a Clook Internet', sources: ['xero', 'email'] },
+  { domain: 'own.co.uk', client_name: 'Own', billed: false, expires_on: '2026-11-11', registrar: 'Sub 6 Limited t/a Clook Internet', sources: ['email'] }] });
+assert.deepEqual(clook.map(x => [x.client, x.group, x.title]), [['Freeston', 'protect', 'Renew freeston.co.uk for Freeston'], ['Own', 'money', 'own.co.uk expires 11 Nov 2026']],
+  'a Clook domain for a client we invoice hosting to is ours; one only seen on an email address is theirs');
 assert.equal(by('domain:cowanconsult').title, 'cowanconsult.co.uk expires 28 Oct 2026');
 assert.equal(by('domain:cowanconsult').go, 'client:contacts:Cowan Consultancy');
 assert.equal(by('pstn:Clarke').title, 'Move Clarke Lane Engineering off 2 PSTN lines before the switch-off');

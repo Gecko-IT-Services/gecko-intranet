@@ -42,9 +42,11 @@ export function comingUp({ annual = [], domains = [], dealer = [], upgrades = []
   // Domains: one Gecko bills for must be renewed at the registrar in time; one it doesn't is worth offering to look after.
   for (const d of domains.filter(x => x.expires_on)) {
     const soon = daysUntil(today, d.expires_on) <= 14;
-    add(LEAD.domain, d.expires_on, d.billed
+    // Ours to renew: billed as a domain in Xero, or registered through Clook (Gecko's reseller account) for a client we invoice hosting to.
+    const ours = d.billed || (/clook/i.test(d.registrar || '') && (d.sources || []).includes('xero'));
+    add(LEAD.domain, d.expires_on, ours
       ? { key: `domain:${d.domain}`, kind: 'domain', group: 'protect', client: d.client_name, title: `Renew ${d.domain} for ${d.client_name || 'a client'}`,
-          why: `Expires ${longDay(d.expires_on)}${d.registrar ? ` at ${d.registrar}` : ''}; we bill for it. A lapsed domain stops their email and website.`, go: `client:contacts:${d.client_name}` }
+          why: `Expires ${longDay(d.expires_on)}${d.registrar ? ` at ${d.registrar}` : ''}; we look after it. A lapsed domain stops their email and website.`, go: `client:contacts:${d.client_name}` }
       : { key: `domain:${d.domain}`, kind: 'domain', group: soon ? 'protect' : 'money', client: d.client_name, title: `${d.domain} expires ${longDay(d.expires_on)}`,
           why: `Not renewed through us${d.registrar ? ` (${d.registrar})` : ''}. Check it's in hand, and offer to look after it so it never lapses.`, go: `client:contacts:${d.client_name}` });
   }
