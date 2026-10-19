@@ -15,6 +15,7 @@
 
 import { toast, escapeHtml, clientLink, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
+import { readAll } from '../core/rows.js';
 import { reconcileAll, productLabel, DEAD_DAYS, PRICE_USD, vendorMargins } from '../core/reconcile.js';
 import { vendorMarks } from '../core/vendors.js';
 import { sameAteraClient } from '../core/devices.js';
@@ -40,8 +41,9 @@ async function load() {
       sb.from('webroot_sites').select('site_id,name,raw').then(must),
       sb.from('webroot_endpoints').select('site_id,hostname,raw').then(must),
       sb.from('acronis_tenants').select('tenant_id,name,kind').then(must),
-      sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'usage').like('raw->>name', 'pw_base_%').then(must)
-        .then(async usage => usage.concat(must(await sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'm365_user')))),
+      Promise.all([
+        readAll(() => sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'usage').like('raw->>name', 'pw_base_%').order('item_id')),
+        readAll(() => sb.from('acronis_items').select('tenant_id,kind,raw').eq('kind', 'm365_user').order('item_id'))]).then(([u, m]) => u.concat(m)),
       sb.from('atera_reconcile_inputs').select('*').then(must),
       sb.from('atera_agents').select('customer_name,machine_name,device_type,online').then(must),
       sb.from('atera_bills').select('usd,gbp,charged_on').not('gbp', 'is', null).order('charged_on', { ascending: false }).limit(1).then(must),

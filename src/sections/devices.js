@@ -16,6 +16,7 @@ import { toast, escapeHtml, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { deviceSummary, ateraBilling, STALE_DAYS, ATERA_NAMES } from '../core/devices.js';
 import { notOnYet } from '../core/offline.js';
+import { readAll } from '../core/rows.js';
 
 const DV = { agents: null, invoices: null, status: null, seenDays: [], hidden: [], offError: null, error: null, open: new Set(), offOpen: new Set(), filter: 'attention' };
 const els = id => document.getElementById(id);
@@ -29,16 +30,6 @@ const FLAG = { not_billed: ['amber', 'No Atera billing'], win10: ['amber', 'Wind
 const AGENT_COLS = 'agent_id,customer_name,machine_name,device_type,os,os_version,online,last_seen,last_user,vendor,model,'
   + 'disks:raw->HardwareDisks,bios:raw->>BiosReleaseDate,reboot:raw->>LastRebootTime,battery:raw->BatteryInfo,url:raw->>AppViewUrl';
 const SEEN_FROM_DAYS = 21;
-
-/** Every row of a query, a thousand at a time (the database hands out at most 1,000 per request). */
-async function readAll(query) {
-  const out = [];
-  for (let from = 0; ; from += 1000) {
-    const rows = must(await query().range(from, from + 999));
-    out.push(...rows);
-    if (rows.length < 1000) return out;
-  }
-}
 
 /** The check's inputs: devices, the daily record and what's marked known about. */
 async function readOffline(sb) {

@@ -19,6 +19,7 @@ import { adviceTopics, composeEmail, summaryFacts, adviceFacts, emailAuth, servi
 import { upgrades } from '../core/upgrades.js';
 import { coverage, coverageFor } from '../core/coverage.js';
 import { sameAteraClient } from '../core/devices.js';
+import { readAll } from '../core/rows.js';
 import { sameClient } from '../core/client.js';
 import { mainContact } from '../core/contacts.js';
 import { vendorMarks } from '../core/vendors.js';
@@ -46,7 +47,7 @@ async function load(name) {
       sb.from('atera_agents').select('customer_name,machine_name,device_type,os,last_seen,last_user,model,online,raw').then(must),
       sb.from('client_contacts').select('*').then(must),
       sb.from('acronis_tenants').select('tenant_id,name,kind').then(must),
-      sb.from('acronis_items').select('kind,tenant_id,raw').in('kind', ['resource_status', 'agent', 'usage']).then(must),
+      readAll(() => sb.from('acronis_items').select('kind,tenant_id,raw').in('kind', ['resource_status', 'agent', 'usage']).order('kind').order('item_id')),
       adviceFor(name),
       // Before the notes table exists (this update), no note: the rest still works.
       sb.from('client_notes').select('*').then(({ data, error }) => (error ? [] : data || [])),
