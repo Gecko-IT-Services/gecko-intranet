@@ -249,3 +249,22 @@
   #section-client .ad-tick .badge { grid-column: 2; justify-self: start; }
   #section-client .ad-why, #section-client .ad-sum, #section-client .ad-price, #section-client .ad-items, #section-client .ad-more { margin-left: 0; }
 }
+
+/* Upgrades & advice, 19 Oct 2026 (2026-10-19-advice-facts-and-checks-design.md): machines left out, what the AI is told, the checks. */
+#section-client .ad-item label { display: block; padding-left: 20px; text-indent: -20px; cursor: pointer; }   /* text flows; the tick hangs */
+#section-client .ad-item input { margin: 0 6px 0 0; vertical-align: -2px; }
+#section-client .ad-item.out strong, #section-client .ad-item.out span { text-decoration: line-through; color: var(--muted); }
+#section-client .ad-item em { font-style: normal; font-size: 11px; color: var(--amber); white-space: nowrap; }
+#section-client .ad-facts { border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset); font-size: 12px; }
+#section-client .ad-facts summary { padding: 8px 12px; cursor: pointer; font-weight: 600; color: var(--white); }
+#section-client .ad-facts summary span { margin-left: 6px; font-weight: 400; color: var(--muted); }
+#section-client .ad-facts dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; padding: 0 12px 8px; }
+#section-client .ad-facts dt { color: var(--muted); }
+#section-client .ad-facts dd { margin: 0; color: var(--white); overflow-wrap: anywhere; }
+#section-client .ad-facts p { margin: 0; padding: 0 12px 10px; color: var(--muted); }
+#section-client .ad-checks { padding: 8px 12px; border: 1px solid var(--amber); border-radius: var(--radius-sm); font-size: 12px; color: var(--white); }
+#section-client .ad-checks ul { margin: 6px 0; padding-left: 18px; display: grid; gap: 3px; }
+#section-client .ad-checks p { margin: 0; color: var(--muted); }
+#section-client .ad-check-red { color: var(--red); }
+#section-client .ad-checks-ok { border-color: var(--green); color: var(--muted); }
+@media (max-width: 640px) { #section-client .ad-facts dl { grid-template-columns: minmax(0, 1fr); } #section-client .ad-facts dd { margin-bottom: 4px; } }

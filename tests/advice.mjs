@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { fromCatalogue, adviceTopics, composeEmail, emailAuth, servicesFrom, summaryFacts, adviceFacts, withM365Cover } from '../src/core/advice.js';
+import { fromCatalogue, adviceTopics, composeEmail, emailAuth, servicesFrom, summaryFacts, adviceFacts, withM365Cover, leaveOut, itemKey, factsPanel, checkEmail } from '../src/core/advice.js';
 
 // Catalogue wording as it is in opportunity_products (18 Oct 2026, shortened).
 const keeper = { key: 'keeper', name: 'Keeper password manager', unit_price: null, price_unit: 'user', email_subject: 'A safer, simpler way to manage passwords at {{client}}',
@@ -93,5 +93,48 @@ assert.deepEqual(cov.benefits, ['Email and OneDrive backed up automatically ever
 assert.deepEqual(withM365Cover([m365b], { sharepoint: true, teams: true, mailboxes: true, onedrive: true }), [], 'all covered: nothing to offer');
 assert.equal(withM365Cover([m365b], null)[0], m365b, 'unknown: unchanged');
 assert.match(adviceTopics({ client: 'X', device }).find(t => t.key === 'office').why, /Office 2021 and older/);
+
+// — Leave one machine out (Cowans' ENGINEER-HP2, 19 Oct 2026). —
+assert.equal(itemKey({ name: 'PAULAPCNEW (Paula)' }), 'PAULAPCNEW');
+const lo = leaveOut(topics, ['paulapcnew']);
+assert.equal(lo.find(t => t.key === 'windows').title, '1 computer that can’t get Windows security updates');
+assert.deepEqual(lo.find(t => t.key === 'windows').items.map(i => i.name), ['SAGEPC (Dannii)']);
+assert.equal(lo.find(t => t.key === 'office'), undefined, 'a topic with every machine left out goes');
+assert.equal(leaveOut(topics, ['DCSERVER']).find(t => t.key === 'backup'), undefined);
+assert.equal(leaveOut(topics, []), topics);
+assert.deepEqual(adviceFacts(lo, ['PAULAPCNEW']).leaveAlone, ['PAULAPCNEW'], 'the writer is told what was left out');
+assert.equal(adviceFacts(lo).leaveAlone, undefined);
+
+// — What the AI will be told. —
+const panelFacts = summaryFacts({ agents, today: '2026-10-19', antivirus: 2, services: ['Backups', 'Website hosting'], topics: lo, leftOut: ['PAULAPCNEW'],
+  acronis: { machines: [{ name: 'SagePC', lastSuccess: '2026-10-18T18:15:02Z' }], m365: { accounts: 15, sharepoint: true, teams: true, mailboxes: false, onedrive: false } } });
+const panel = Object.fromEntries(factsPanel(panelFacts, { antivirusCount: 2, sell: lo.filter(t => t.productKey) }));
+assert.equal(panel.Selling, '1 computer that can’t get Windows security updates · 1 machine with no backup · Hornetsecurity 365 Total Protection (£7.50 per user a month, plus VAT) · Keeper password manager');
+assert.equal(panel.Computers, '3 in use in the last month: 2 Windows 11, 1 Windows 10; 1 on current Microsoft 365 apps');
+assert.equal(panel.Antivirus, 'on 2 of 3; told “in place”, not “every computer”');
+assert.equal(panel['Microsoft 365 backup'], 'backed up: SharePoint sites and Teams; not backed up: email and OneDrive');
+assert.equal(panel['Nightly backups'], 'SagePC (18 Oct)');
+assert.equal(panel['Left out'], 'PAULAPCNEW');
+assert.match(panel.Recommendations, /1 computer that can’t get Windows security updates: SAGEPC/);
+assert.equal(Object.fromEntries(factsPanel(panelFacts, { kind: 'advice' })).Computers, undefined, 'an advice email gets the recommendations only');
+assert.match(Object.fromEntries(factsPanel({ recommendations: [] })).Selling, /no products ticked/);
+
+// — Gecko HQ's check of what came back: the holes in the Cowans emails, 19 Oct 2026. —
+const cf = { computers: { inUseLastMonth: 22 }, protection: { managedAntivirus: true, antivirusOnEveryComputer: false },
+  microsoft365: { backedUp: ['SharePoint sites', 'Teams'], notBackedUp: ['email', 'OneDrive'] }, recommendations: [{ title: '3 computers', items: [{ name: 'DANPC (Dan)' }] }] };
+const ck = (text, o = {}) => checkEmail(text, { facts: cf, note: 'Whiteley has a 1gb ethernet circuit', machines: ['DANPC', 'ENGINEER-HP2', 'DAVIDPC'], ...o }).map(x => `${x.level}: ${x.text}`);
+assert.deepEqual(ck('3. Backup for mailboxes, OneDrive and Teams. Your SharePoint documents are already covered.'),
+  ['amber: Offers Teams backup, but Teams is already backed up: “Backup for mailboxes, OneDrive and Teams.”'], 'the Teams error is caught; the true SharePoint sentence is not');
+assert.deepEqual(ck('Managed antivirus runs on all of them.'), ['red: “Managed antivirus runs on all of them.”: antivirus isn’t on every computer.']);
+assert.deepEqual(ck('All of them are monitored by us, and managed antivirus is in place.'), [], 'two true claims in one sentence');
+assert.deepEqual(ck('All 22 computers are backed up every night.'), ['amber: “All 22 computers are backed up every night.”: check that’s true of every one.']);
+assert.deepEqual(ck('None of this is urgent.'), ['amber: Says it isn’t urgent: this is a sales email, and some of it (no security updates) is time-sensitive.']);
+assert.deepEqual(ck('Every mailbox and OneDrive would be backed up automatically, every day.'), [], 'the pitch is not a claim');
+assert.deepEqual(ck('22 computers were in use. Your line is 1Gb. DANPC needs replacing.'), [], 'numbers and machines from the facts and the note');
+assert.deepEqual(ck('21 computers were in use, and four computers need replacing.'), ['amber: Says 21, which isn’t in the facts or your note.', 'amber: Says “four computers”, but 4 isn’t in the facts or your note.']);
+assert.deepEqual(ck('DAVIDPC is old too.'), ['amber: Names DAVIDPC, which it wasn’t told about.']);
+assert.deepEqual(ck('ENGINEER-HP2 should be replaced.', { leftOut: ['ENGINEER-HP2'] }), ['amber: Mentions ENGINEER-HP2, which you left out: make sure nothing is recommended for it.']);
+assert.deepEqual(ck('Acronis backs it up and our margin is fine.').map(x => x.split(':')[0]), ['red', 'red']);
+assert.deepEqual(ck('It works seamlessly — and it is seamless.'), ['amber: Has a long dash (an AI tell).', 'amber: Uses “seamless” (an AI tell).']);
 
 console.log('advice: ok');

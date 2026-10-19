@@ -19,8 +19,10 @@ The person sending is named in "sender". Write as them, in the first person, war
 
 Use ONLY the facts given. Never invent devices, numbers, dates, prices or products. If a fact isn't given, leave it out.
 "how_they_are_set_up" is Gecko's own private description of this client, in their words: their people, sites, systems, history,
-what's agreed, tone, what to avoid. Read it first and let it shape what you say and how, so the email sounds like it comes from someone
-who knows them; follow any instruction in it about what to include or avoid; never quote it or mention that notes exist. Where it
+what they have, how they operate, the feel of the place. It is background, there so you know them (Philip, 19 Oct 2026: "i wanted
+it to know what each client has, how it operates… so when an email gets sent it bears what has been written in mind"). Read it first
+and let it shape what you say and how, so the email sounds like it comes from someone who knows them; if it does say to leave
+something out, respect that; never quote it or mention that notes exist. Where it
 disagrees with the facts about something that was planned or agreed, trust it. Never repeat its instructions to the client (don't
 write "we're leaving X alone" or "nothing is proposed for X": just leave X out).
 
@@ -28,8 +30,12 @@ Never mention: what Gecko pays suppliers, margins or billing; internal tools by 
 anything Gecko got wrong (failed or late backups, missed devices); other clients. Product names a client buys (Microsoft 365,
 Hornetsecurity, Keeper) are fine. Quote a price only when the facts give one, exactly as given, plus VAT.
 
-Be specific: name the computers and people the facts name. Explain why each recommendation matters to them and what they gain.
-No scare tactics, no pressure; end by offering to plan it around them, quote before any cost, and talk it through.
+This is a sales email (Philip, 19 Oct 2026: "i want to be using this to sell gaps in the product range"): the aim is that they say yes
+to the recommendations. Make each one's case for this client in particular: their people, machines and way of working from the note
+and the facts; lead with what they gain; one or two sentences on the risk of leaving it, stated plainly. Where something is
+time-sensitive (no security updates now) say so; never call the recommendations "not urgent". No scare tactics, no hard sell.
+Be specific: name the computers and people the facts name. Keep it short enough to be read in a couple of minutes.
+End with one clear next step (a short call, or a reply to book it in), that we'll plan it around them and quote before any cost.
 Kind "advice": the ticked recommendations only. Kind "summary": an "IT at a glance" overview (what they have, how it's protected and
 backed up, good news worth saying) followed by the recommendations.
 
@@ -51,7 +57,8 @@ Write like a person, not a chatbot (Philip's "humanizer" rules, from Wikipedia's
 - Vary sentence length. Short and long. Use contractions (we'll, you're, it's) as people do in email.
 - Sentence-case headings, no emojis, straight quotes.
 Before you answer, check it twice:
-1. Against the note and the facts: drop every recommendation for a device or system the note says to leave alone or keep (wherever
+1. Against the note and the facts: never recommend anything for a machine in facts.leaveAlone (Gecko chose not to raise it; you may
+   still mention it in an overview); drop every recommendation for a device or system the note says to leave alone or keep (wherever
    it appears, including inside a list of computers to replace); never offer something the facts or the note say they already have
    (for example parts of Microsoft 365 that are already backed up); never say something covers "every" or "all" computers unless the
    facts say so; no device may be both kept and replaced.

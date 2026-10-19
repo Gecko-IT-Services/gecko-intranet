@@ -199,7 +199,7 @@ export function servicesFrom(lines) {
  * (0 = none; true = yes, count unknown);
  * services: servicesFrom(); email: emailAuth(); topics: adviceTopics() (all, as recommendations); today: YYYY-MM-DD.
  */
-export function summaryFacts({ agents = [], device = null, acronis = null, antivirus = false, services = [], email = null, topics = [], today }) {
+export function summaryFacts({ agents = [], device = null, acronis = null, antivirus = false, services = [], email = null, topics = [], leftOut = [], today }) {
   const day = 86400000, at = new Date(today + 'T12:00:00Z').getTime();
   const recent = agents.filter(a => a.last_seen && at - new Date(a.last_seen).getTime() <= 30 * day);
   const quiet = agents.filter(a => !a.last_seen || at - new Date(a.last_seen).getTime() > 30 * day);
@@ -219,9 +219,127 @@ export function summaryFacts({ agents = [], device = null, acronis = null, antiv
     protection: { managedAntivirus: !!antivirus, antivirusOnEveryComputer: typeof antivirus === 'number' && antivirus >= recent.length && recent.length > 0,
       nightlyBackups: freshBackups },
     servicesFromGecko: services,
-    recommendations: topics.map(t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '' }))
+    recommendations: topics.map(t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '' })),
+    ...(leftOut.length ? { leaveAlone: leftOut } : {})
   };
 }
 
-/** The ticked topics as facts for an advice email. */
-export const adviceFacts = topics => ({ recommendations: topics.map(t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '' })) });
+/** The ticked topics as facts for an advice email; leftOut: machines Gecko chose not to raise. */
+export const adviceFacts = (topics, leftOut = []) => ({ recommendations: topics.map(t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '' })),
+  ...(leftOut.length ? { leaveAlone: leftOut } : {}) });
+
+/* ── Leave out one machine (Philip, 19 Oct 2026: ENGINEER-HP2 is the Windows 7 PC kept for TimFram, and only a whole topic could
+   be unticked). Remembered per client in client_notes.left_out. ── */
+
+/** The machine an item is about: "PAULAPCNEW (Paula)" → "PAULAPCNEW". */
+export const itemKey = i => String(i?.key ?? i?.name ?? '').replace(/\s*\(.*\)\s*$/, '').trim();
+
+/** Topics without the left-out machines; a device topic with none left goes, and its count is redone. Catalogue topics are untouched. */
+export function leaveOut(topics, names) {
+  const out = new Set((names || []).map(n => String(n).toUpperCase()));
+  if (!out.size) return topics;
+  return topics.flatMap(t => {
+    if (t.source === 'opportunity') return [t];
+    const items = t.items.filter(i => !out.has(itemKey(i).toUpperCase()));
+    if (items.length === t.items.length) return [t];
+    if (!items.length) return [];
+    return [{ ...t, items, summary: '', title: t.title.replace(/^\d+ (computer|server|machine)s?\b/, (_, w) => plural(items.length, w)) }];
+  });
+}
+
+/* ── What the AI will be told, for Philip to read before writing (19 Oct 2026: the Teams backup error was visible in the facts). ── */
+
+const list = xs => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] || '');
+const shortDay = d => new Date(String(d).slice(0, 10) + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+/**
+ * summaryFacts() as lines to read → [[label, text]]. antivirusCount: how many computers Webroot covers (shown here, never sent);
+ * kind 'advice' shows only the recommendations.
+ */
+export function factsPanel(facts, { kind = 'summary', antivirusCount = null, sell = [] } = {}) {
+  const rows = [];
+  const recs = facts?.recommendations || [];
+  // A sales tool first (Philip, 19 Oct 2026: "i want to be using this to sell gaps in the product range"): what's being sold, at the top.
+  rows.push(['Selling', sell.length ? sell.map(t => `${t.title}${t.price ? ` (${t.price.replace(/\.$/, '').replace(/^.*?\bis\s+(?=£)/, '')})` : ''}`).join(' · ') : 'no products ticked: tick a gap under What to raise to sell it']);
+  if (kind === 'summary') {
+    const c = facts.computers || {};
+    const os = Object.entries(c.byWindowsVersion || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${k}`).join(', ');
+    rows.push(['Computers', `${c.inUseLastMonth || 0} in use in the last month${os ? `: ${os}` : ''}; ${c.onCurrentMicrosoft365Apps || 0} on current Microsoft 365 apps`]);
+    const p = facts.protection || {};
+    rows.push(['Antivirus', !p.managedAntivirus ? 'none (it won’t mention antivirus)'
+      : `${typeof antivirusCount === 'number' ? `on ${antivirusCount} of ${c.inUseLastMonth || 0}` : 'in place'}; told ${p.antivirusOnEveryComputer ? '“on every computer”' : '“in place”, not “every computer”'}`]);
+    rows.push(['Nightly backups', (p.nightlyBackups || []).length ? p.nightlyBackups.map(b => `${b.machine} (${shortDay(b.lastGoodBackup)})`).join(', ') : 'none current (it won’t mention machine backups)']);
+    const m = facts.microsoft365;
+    rows.push(['Microsoft 365 backup', !m ? 'not known (it won’t mention it)' : `${m.backedUp.length ? `backed up: ${list(m.backedUp)}` : 'nothing backed up'}${m.notBackedUp.length ? `; not backed up: ${list(m.notBackedUp)}` : ''}`]);
+    const e = facts.email;
+    rows.push(['Email', !e ? 'still checking, or not known' : `${e.provider}; SPF ${e.spf}, DKIM ${e.dkim}, DMARC ${e.dmarc}`]);
+    if ((facts.servicesFromGecko || []).length) rows.push(['From Gecko', list(facts.servicesFromGecko)]);
+    if ((facts.notSeenForAMonth || []).length) rows.push(['Not seen for a month', facts.notSeenForAMonth.map(n => n.name).join(', ')]);
+  }
+  rows.push(['Recommendations', recs.length ? recs.map(r => `${r.title}${(r.items || []).length ? `: ${r.items.map(i => itemKey(i)).join(', ')}` : ''}`).join(' · ') : 'none ticked']);
+  if ((facts?.leaveAlone || []).length) rows.push(['Left out', facts.leaveAlone.join(', ')]);
+  return rows;
+}
+
+/* ── Gecko HQ's own check of what came back (no AI, no cost): the things a customer would catch. ── */
+
+const TOOLS = /\b(Atera|Acronis|Webroot|Supabase|Gecko HQ)\b/i;
+const MONEY = /\b(margins?|mark-?up|our costs?|we pay|leaks?|under-?billed|over-?billed|unbilled)\b/i;
+const TELLS = ['crucial', 'delve', 'enhance', 'foster', 'garner', 'intricate', 'landscape', 'pivotal', 'seamless', 'showcase', 'tapestry',
+  'testament', 'underscore', 'vibrant', 'robust', 'leverage', 'streamline', 'additionally', 'moreover', 'game-changer', 'peace of mind'];
+const WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+  thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20 };
+const COUNTED = '(?:computers?|machines?|pcs?|laptops?|servers?|people|users|mailboxes|accounts|sites|devices)';
+const COVER_TERMS = { 'SharePoint sites': /sharepoint/i, Teams: /\bteams\b/i, email: /\b(mailbox(es)?|emails?)\b/i, OneDrive: /onedrive/i };
+const reEsc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Problems in an AI email → [{ level: 'red'|'amber', text }]. text: the email as plain text; facts: what it was told; note: the
+ * setup note; machines: every machine name the client has in Atera; leftOut: machines not to raise.
+ */
+export function checkEmail(text, { facts = {}, note = '', machines = [], leftOut = [] } = {}) {
+  const t = String(text || '');
+  const out = [];
+  const add = (level, msg) => { if (!out.some(o => o.text === msg)) out.push({ level, text: msg }); };
+  const sentences = t.split(/(?<=[.!?])\s+|\n+/).map(x => x.trim()).filter(Boolean);
+  const known = (JSON.stringify(facts) + ' ' + note).toLowerCase();
+  const tool = t.match(TOOLS);
+  if (tool) add('red', `Names an internal tool: ${tool[1]}.`);
+  const money = t.match(MONEY);
+  if (money) add('red', `Talks about “${money[1]}”: our costs and billing stay private.`);
+  for (const n of leftOut) if (new RegExp(`\\b${reEsc(n)}\\b`, 'i').test(t)) add('amber', `Mentions ${n}, which you left out: make sure nothing is recommended for it.`);
+  for (const m of machines) {
+    if (!m || leftOut.some(n => n.toUpperCase() === m.toUpperCase())) continue;
+    if (new RegExp(`\\b${reEsc(m)}\\b`, 'i').test(t) && !known.includes(m.toLowerCase())) add('amber', `Names ${m}, which it wasn’t told about.`);
+  }
+  // Numbers: every figure should come from the facts or the note.
+  const allowed = new Set((known.match(/\d+(?:\.\d+)?/g) || []).map(Number));
+  for (const m of t.matchAll(/(?<![\w£$.])(\d+(?:\.\d+)?)(?![\w.]*\d)/g)) { const n = Number(m[1]); if (!allowed.has(n)) add('amber', `Says ${m[1]}, which isn’t in the facts or your note.`); }
+  for (const m of t.matchAll(new RegExp(`\\b(${Object.keys(WORDS).join('|')})\\s+(?:of\\s+(?:your|the|them|those)\\s+)?${COUNTED}\\b`, 'gi'))) {
+    const n = WORDS[m[1].toLowerCase()];
+    if (!allowed.has(n)) add('amber', `Says “${m[0]}”, but ${n} isn’t in the facts or your note.`);
+  }
+  // "Every" / "all" claims about now, one clause at a time ("All of them are monitored by us, and managed antivirus is in place" is two
+  // true claims). Monitored is always true (every machine in Atera is); a product's pitch ("would be backed up") is not a claim.
+  const every = !!facts.protection?.antivirusOnEveryComputer;
+  for (const s of sentences) for (const c of s.split(/,\s*(?:and|but)\s+|;\s*/)) {
+    if (!/\b(every|all)\b/i.test(c) || /\b(would|will|could|can)\b|’d|'d/i.test(c)) continue;
+    if (/antivirus/i.test(c)) { if (!every) add('red', `“${s}”: antivirus isn’t on every computer.`); continue; }
+    if (/\b(computers?|pcs?|machines?|devices?|all of (them|those))\b/i.test(c) && /\b(protected|backed up|up to date|supported|secure|patched)\b/i.test(c))
+      add('amber', `“${s}”: check that’s true of every one.`);
+  }
+  if ((facts.recommendations || []).length && /\b(none of (this|it) is|isn[’']t|is not|not)\s+(really\s+)?urgent\b/i.test(t))
+    add('amber', 'Says it isn’t urgent: this is a sales email, and some of it (no security updates) is time-sensitive.');
+  // Offering backup of what is already backed up.
+  for (const k of facts.microsoft365?.backedUp || []) {
+    const term = COVER_TERMS[k];
+    if (!term) continue;
+    for (const s of sentences) if (/back(ed)?[\s-]?up/i.test(s) && term.test(s) && !/already|(is|are) backed up|covered|in place/i.test(s)) {
+      add('amber', `Offers ${k} backup, but ${k} is already backed up: “${s}”`);
+      break;
+    }
+  }
+  if (/[\u2013\u2014]/.test(t)) add('amber', 'Has a long dash (an AI tell).');
+  for (const w of TELLS) if (new RegExp(`\\b${reEsc(w)}\\b`, 'i').test(t)) add('amber', `Uses “${w}” (an AI tell).`);
+  return out.sort((a, b) => (a.level === b.level ? 0 : a.level === 'red' ? -1 : 1));
+}
