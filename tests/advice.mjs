@@ -137,4 +137,11 @@ assert.deepEqual(ck('ENGINEER-HP2 should be replaced.', { leftOut: ['ENGINEER-HP
 assert.deepEqual(ck('Acronis backs it up and our margin is fine.').map(x => x.split(':')[0]), ['red', 'red']);
 assert.deepEqual(ck('It works seamlessly — and it is seamless.'), ['amber: Has a long dash (an AI tell).', 'amber: Uses “seamless” (an AI tell).']);
 
+// — Open deals and products added by hand (19 Oct 2026). —
+const dealt = adviceTopics({ client: 'Cowans', gaps: [{ product: hornet, strength: 2, deal: { status: 'proposed', id: 31, since: '2026-10-19' } },
+  { product: keeper, strength: 2, deal: { status: 'idea', id: 12 } }, { product: keeper, strength: 0, added: true }] });
+assert.deepEqual(dealt.map(t => [t.key, t.checked, t.deal?.status || null, t.added]),
+  [['product:email_security', false, 'proposed', false], ['product:keeper', true, 'idea', false]], 'Proposed: listed, unticked; an idea ticked; no product twice');
+assert.deepEqual(adviceTopics({ client: 'Cowans', gaps: [{ product: keeper, strength: 0, added: true }] }).map(t => [t.checked, t.added]), [[true, true]], 'added by hand: ticked');
+
 console.log('advice: ok');

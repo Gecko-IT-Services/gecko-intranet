@@ -28,7 +28,8 @@ import { vendorMarks, productPart } from '../core/vendors.js';
 import { connectSupabase } from '../core/supabase.js';
 import {
   summariseDns, summarisePageSpeed, clientGaps, withoutOpen, pipelineTotals, fillTemplate,
-  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns, holds, mapCell, chaseView, newOpportunity
+  emailDomain, serviceLabel, renewalsDue, evaluate, THRESHOLDS, unitValue, dealState, jobFromDeal, boardColumns, holds, mapCell, chaseView, newOpportunity,
+  withDeals, notHeld
 } from '../core/opportunities.js';
 import { sameClient } from '../core/client.js';
 import { tilt, reorder, placeRows } from '../core/jobs.js';
@@ -1350,9 +1351,12 @@ export async function adviceFor(clientName) {
   if (!OPP.clients.length) await load();
   if (OPP.error) throw OPP.error;
   const c = OPP.clients.find(x => x.name === clientName) || OPP.clients.find(x => sameClient(x.name, clientName));
-  if (!c) return { name: clientName, gaps: [], products: OPP.products, contact: '', contactName: '' };
-  const gaps = withoutOpen(clientGaps(analyse(c).client, OPP.products, OPP.statuses[c.name] || {}), OPP.opps, c.name);
-  return { name: c.name, gaps, products: OPP.products, contact: c.contact || '', contactName: c.contactName || '' };
+  if (!c) return { name: clientName, gaps: [], more: [], products: OPP.products, contact: '', contactName: '' };
+  const a = analyse(c).client, statuses = OPP.statuses[c.name] || {};
+  // Open deals stay (marked), so a Proposed product can still be emailed about; anything else they don't have can be added by hand.
+  const gaps = withDeals(clientGaps(a, OPP.products, statuses), OPP.opps, c.name);
+  const more = withDeals(notHeld(a, OPP.products, statuses).filter(p => !gaps.some(g => g.product.key === p.key)).map(product => ({ product, strength: 0, findings: [] })), OPP.opps, c.name);
+  return { name: c.name, gaps, more, products: OPP.products, contact: c.contact || '', contactName: c.contactName || '' };
 }
 
 /** After an advice email is drafted: each product in it becomes a Proposed deal (an open idea moves to Proposed; nothing is doubled). */

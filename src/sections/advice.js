@@ -72,10 +72,11 @@ async function load(name) {
         mailboxes: use('protected_mailbox_storage') > 0, onedrive: use('protected_one_drive_storage') > 0 } : null
     } : null;
     const topics = withM365Cover(adviceTopics({ client: name, device: up, coverage: cov, gaps: opp.gaps, products: opp.products }), acronis?.m365 || null);
+    const extra = { more: opp.more || [], products: opp.products, m365: acronis?.m365 || null };
     const lines = repeating.filter(r => same(r.contact_name, name)).flatMap(r => r.line_items || []);
     const site = sites.find(x => same(x.name, name) && x.raw?.Deactivated !== true && Number(x.raw?.TotalEndpoints) > 0);
     const myAgents = agents.filter(a => same(a.customer_name, name));
-    AD.data = { topics, main, facts: { agents: myAgents, device: up, acronis, antivirus: site ? Number(site.raw?.TotalEndpoints) || true : 0, services: servicesFrom(lines) } };
+    AD.data = { topics, main, ...extra, facts: { agents: myAgents, device: up, acronis, antivirus: site ? Number(site.raw?.TotalEndpoints) || true : 0, services: servicesFrom(lines) } };
     emailCheck(main?.email);
     for (const t of topics) AD.ticked.set(t.key, t.checked);
   } catch (err) {
@@ -159,7 +160,10 @@ function body() {
     <div class="ad-do"><button type="button" class="btn btn-sm${dirty ? ' btn-primary' : ''}" data-ad-act="save-note"${dirty ? '' : ' disabled'}>${dirty ? 'Save' : 'Saved'}</button>
       <span>${AD.note.trim() ? '' : 'Nothing written yet: emails will only know what Gecko HQ can see.'}</span></div>
   </section>`;
-  const list = topics.length ? `<ul class="ad-topics">${topics.map(topicHtml).join('')}</ul>` : '<p class="ad-none">Nothing to raise right now: every device is supported and nothing in the catalogue fits. An IT summary can still be written.</p>';
+  const canAdd = (AD.data.more || []).filter(m => !topics.some(t => t.productKey === m.product.key));
+  // Any catalogue product they don't have, for what Gecko HQ can't see (Philip, 19 Oct 2026: "this is a sales tool").
+  const add = canAdd.length ? `<label class="ad-add"><span>Add a product to sell</span><select data-ad-add><option value="">Choose from the catalogue…</option>${canAdd.map(m => `<option value="${escapeHtml(m.product.key)}">${escapeHtml(m.product.name)}${m.deal ? ` (${m.deal.status === 'proposed' ? 'Proposed' : 'idea'} in the pipeline)` : ''}</option>`).join('')}</select></label>` : '';
+  const list = (topics.length ? `<ul class="ad-topics">${topics.map(topicHtml).join('')}</ul>` : '<p class="ad-none">Nothing to raise right now: every device is supported and nothing in the catalogue fits. Add a product below, or write an IT summary.</p>') + add;
   const preview = AD.writing ? `<p class="ad-none">Writing the ${AD.writing === 'summary' ? 'IT summary' : 'email'}…</p>`
     : AD.ai ? AD.ai.html : mail ? mail.html : '<p class="ad-none">Tick at least one item to build the email, or write an IT summary.</p>';
   const can = !AD.writing && !AD.sending;
@@ -234,13 +238,34 @@ function topicHtml(t) {
   return `<li class="ad-topic${on ? ' on' : ''}">
     <label class="ad-tick"><input type="checkbox" data-ad-tick="${escapeHtml(t.key)}"${on ? ' checked' : ''}>
       <span class="ad-title">${vendorMarks(MARK[t.key] || t.title)}${escapeHtml(t.title)}</span>
-      <span class="badge badge-${SOURCE[t.source][0]}">${escapeHtml(SOURCE[t.source][1])}</span></label>
+      <span class="badge badge-${SOURCE[t.source][0]}">${escapeHtml(SOURCE[t.source][1])}</span>${dealBadge(t)}</label>
     ${why ? `<p class="ad-why">${escapeHtml(why)}</p>` : ''}
     ${t.summary ? `<p class="ad-sum">${escapeHtml(t.summary)}</p>` : ''}
     ${shown.length ? `<ul class="ad-items">${shown.map(i => itemHtml(t, i)).join('')}</ul>` : ''}
     ${t.items.length > 4 ? `<button type="button" class="ad-more" data-ad-more="${escapeHtml(t.key)}">${open ? 'Show fewer' : `and ${t.items.length - 4} more`}</button>` : ''}
     ${t.price ? `<p class="ad-price">${escapeHtml(t.price)}</p>` : ''}
   </li>`;
+}
+
+const shortDay = d => (d ? new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '');
+/** Where the product already is in the pipeline, or that it was added by hand. */
+function dealBadge(t) {
+  if (t.added) return ' <span class="badge badge-blue">Added by you</span>';
+  if (!t.deal) return '';
+  return t.deal.status === 'proposed'
+    ? ` <span class="badge badge-amber" title="Already proposed: an email went on ${escapeHtml(shortDay(t.deal.since))}. Tick it to write again.">Proposed ${escapeHtml(shortDay(t.deal.since))}</span>`
+    : ' <span class="badge badge-amber">Idea in the pipeline</span>';
+}
+
+/** Add a catalogue product to the email by hand: it joins the list ticked, worded from the catalogue like any other. */
+function addProduct(key) {
+  const m = (AD.data.more || []).find(x => x.product.key === key);
+  if (!m) return;
+  const [t] = withM365Cover(adviceTopics({ client: AD.client, gaps: [{ ...m, added: true }], products: AD.data.products }), AD.data.m365).filter(x => x.productKey === key);
+  if (!t) { toast(`${m.product.name} has no email wording in the catalogue yet: add it on Opportunities › Products.`, 'error', 8000); draw(); return; }
+  AD.data.topics.push(t);
+  AD.ticked.set(t.key, true);
+  AD.subject = ''; draw();
 }
 
 /** One machine or finding under a topic. Machines (devices and protection) have their own tick: unticked = left out for this client. */
@@ -296,6 +321,8 @@ export function wire(root) {
   root.addEventListener('change', e => {
     const t = e.target.closest?.('[data-ad-tick]');
     if (t) { AD.ticked.set(t.dataset.adTick, t.checked); AD.subject = ''; draw(); }
+    const ad = e.target.closest?.('[data-ad-add]');
+    if (ad && ad.value) addProduct(ad.value);
     const it = e.target.closest?.('[data-ad-item]');
     if (it) setLeftOut(it.dataset.adItem, it.checked);
   });

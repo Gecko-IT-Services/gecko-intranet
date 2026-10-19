@@ -352,6 +352,23 @@ export function withoutOpen(gaps, opportunities, clientName) {
   return gaps.filter(g => !open.has(g.product.key));
 }
 
+/**
+ * For a client's advice email (Philip, 19 Oct 2026: "i would like to send cowans an email to go for hornet security, that should be
+ * on the list"): open deals are what you want to write about, so they stay, marked { deal: { status, id, since } }.
+ */
+export function withDeals(gaps, opportunities, clientName) {
+  const open = opportunities.filter(o => o.client_name === clientName && (o.status === 'idea' || o.status === 'proposed'));
+  return gaps.map(g => {
+    const o = open.filter(x => x.product_key === g.product.key).sort((a, b) => (a.status === 'proposed' ? -1 : 1) - (b.status === 'proposed' ? -1 : 1))[0];
+    return o ? { ...g, deal: { status: o.status, id: o.id, since: String(o.modified_at || o.created_at || '').slice(0, 10) } } : g;
+  });
+}
+
+/** Active catalogue products a client doesn't have (and hasn't been marked as having or not applicable): what can be added by hand. */
+export function notHeld(client, products, statuses = {}) {
+  return products.filter(p => p.active && !['has', 'not_applicable'].includes(statuses[p.key]) && !holds(client, p).has);
+}
+
 /** Pipeline headline: open MRR, open one-off, won MRR this month and in total. */
 export function pipelineTotals(opps, now = new Date()) {
   const month = now.toISOString().slice(0, 7);

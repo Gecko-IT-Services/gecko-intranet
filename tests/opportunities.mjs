@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {
   classifyMx, spfStatus, dmarcPolicy, summariseDns, summarisePageSpeed, ticketHits,
   holds, evaluate, clientGaps, withoutOpen, pipelineTotals, fillTemplate, priceSentence, unitValue, emailDomain, THRESHOLDS,
-  renewalsDue, chaseView
+  renewalsDue, chaseView, withDeals, notHeld
 } from '../src/core/opportunities.js';
 
 const NOW = new Date('2026-10-08T09:00:00Z');
@@ -338,3 +338,15 @@ assert.deepEqual(cv.chase.map(o => o.id), [8, 10, 9, 7, 5, 4, 6], 'late, to set 
 assert.deepEqual(cv.couldSell.map(g => [g.product.key, g.items.map(o => o.client_name)]),
   [['voxone_mig', ['Freeston', 'Waterside']], ['hornet', ['Snowskool']]], 'by product, most clients first, clients by name');
 assert.deepEqual(chaseView([], CP, CD), { chase: [], couldSell: [] });
+
+// — Advice email: open deals stay on the list, marked; anything they don't have can be added (Cowans' Hornetsecurity, 19 Oct 2026). —
+const g2 = [{ product: hornet, strength: 2 }, { product: dmarc, strength: 1 }];
+const deals = [{ id: 31, client_name: 'Acme Ltd', product_key: 'email_security', status: 'proposed', modified_at: '2026-10-19T09:00:00Z' },
+  { id: 32, client_name: 'Acme Ltd', product_key: 'email_security', status: 'idea', modified_at: '2026-10-01T09:00:00Z' },
+  { id: 12, client_name: 'Other', product_key: 'email_auth', status: 'idea' }, { id: 40, client_name: 'Acme Ltd', product_key: 'email_auth', status: 'won' }];
+assert.deepEqual(withDeals(g2, deals, 'Acme Ltd').map(g => [g.product.key, g.deal || null]),
+  [['email_security', { status: 'proposed', id: 31, since: '2026-10-19' }], ['email_auth', null]], 'the Proposed deal wins over an idea; won and other clients\' deals don\'t count');
+assert.equal(withoutOpen(g2, deals, 'Acme Ltd').length, 1, 'the Opportunities page still hides open ones');
+assert.deepEqual(notHeld(base, [hornet, voxone, m365, win11]).map(p => p.key), ['email_security', 'voxone'], 'not M365 (they have it), not inactive');
+assert.deepEqual(notHeld(base, [hornet, voxone], { voxone: 'has', email_security: 'not_interested' }).map(p => p.key), ['email_security'], 'said no before can still be added');
+console.log('opportunities: ok (+advice deals)');
