@@ -202,6 +202,8 @@
 }
 #section-client .ad-setup textarea:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
 #section-client .ad-write { display: flex; flex-wrap: wrap; gap: 6px; }
+#section-client .ad-stale { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border: 1px solid var(--amber); border-radius: var(--radius-sm); font-size: 13px; color: var(--white); }
+#section-client .ad-stale[hidden] { display: none; }
 #section-client .ad-mode { margin: 0; font-size: 12px; color: var(--muted); }
 #section-client .ad-preview[contenteditable="true"] { outline: 2px dashed transparent; outline-offset: 2px; }
 #section-client .ad-preview[contenteditable="true"]:focus { outline-color: var(--green); }
