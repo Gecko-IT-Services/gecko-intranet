@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { fromCatalogue, adviceTopics, composeEmail, emailAuth, servicesFrom, summaryFacts, adviceFacts, withM365Cover, leaveOut, itemKey, factsPanel, checkEmail, withEvidence, themeFigures } from '../src/core/advice.js';
+import { fromCatalogue, adviceTopics, composeEmail, emailAuth, servicesFrom, summaryFacts, adviceFacts, withM365Cover, leaveOut, itemKey, factsPanel, checkEmail, withEvidence, themeFigures, quarterFacts } from '../src/core/advice.js';
 
 // Catalogue wording as it is in opportunity_products (18 Oct 2026, shortened).
 const keeper = { key: 'keeper', name: 'Keeper password manager', unit_price: null, price_unit: 'user', email_subject: 'A safer, simpler way to manage passwords at {{client}}',
@@ -158,5 +158,19 @@ assert.equal('evidence' in adviceFacts(evT).recommendations[1], false);
 assert.deepEqual(summaryFacts({ agents, today: '2026-10-19', themes: [phish] }).supportPatterns, [{ theme: 'Suspicious and phishing emails', jobs: 6, hours: 4.5, from: '2026-06-03', to: '2026-10-19' }]);
 assert.match(Object.fromEntries(factsPanel({ recommendations: [] }, { sell: evT.slice(0, 1) })).Selling, /\+ evidence from their support history/);
 assert.deepEqual(checkEmail('We helped with 6 suspicious emails, 4.5 hours of your support time.', { facts: adviceFacts(evT) }), [], 'its figures are known numbers');
+
+// — Quarterly review: the last three months, Gecko HQ's sums. —
+const qe = [
+  { entry_date: '2026-10-19', hours: 0.25, work_type: 'Remote Support', title: 'Moved Lena’s email capture to Jacqui' },
+  { entry_date: '2026-09-02', hours: 1.5, work_type: 'Onsite', title: 'New PC for Dan' },
+  { entry_date: '2026-08-01', hours: 0.75, work_type: 'Remote Support', title: 'Moved Lena’s email capture to Jacqui' },
+  { entry_date: '2026-06-30', hours: 2, work_type: 'Onsite', title: 'Before the quarter' },
+  { entry_date: '2026-08-15', hours: 0.5, work_type: '', title: 'Printer' }];
+const q = quarterFacts(qe, { from: '2026-07-20', to: '2026-10-19' });
+assert.deepEqual([q.jobs, q.hours], [4, 3]);
+assert.deepEqual(q.byType, [{ type: 'Onsite', jobs: 1, hours: 1.5 }, { type: 'Remote Support', jobs: 2, hours: 1 }, { type: 'Support', jobs: 1, hours: 0.5 }]);
+assert.deepEqual(q.examples, ['Moved Lena’s email capture to Jacqui', 'New PC for Dan', 'Printer'], 'newest first, each once');
+assert.equal(Object.fromEntries(factsPanel({ recommendations: [], lastThreeMonths: q }))['Last three months'], '4 jobs, 3 hours: Onsite 1.5h, Remote Support 1h, Support 0.5h');
+assert.equal(quarterFacts([], { from: '2026-07-20', to: '2026-10-19' }).jobs, 0);
 
 console.log('advice: ok');

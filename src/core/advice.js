@@ -301,6 +301,8 @@ export function factsPanel(facts, { kind = 'summary', antivirusCount = null, sel
     if ((facts.servicesFromGecko || []).length) rows.push(['From Gecko', list(facts.servicesFromGecko)]);
     if ((facts.notSeenForAMonth || []).length) rows.push(['Not seen for a month', facts.notSeenForAMonth.map(n => n.name).join(', ')]);
   }
+  const q = facts?.lastThreeMonths;
+  if (q) rows.push(['Last three months', q.jobs ? `${plural(q.jobs, 'job')}, ${q.hours} hours: ${q.byType.map(t => `${t.type} ${t.hours}h`).join(', ')}` : 'no support logged']);
   rows.push(['Recommendations', recs.length ? recs.map(r => `${r.title}${(r.items || []).length ? `: ${r.items.map(i => itemKey(i)).join(', ')}` : ''}`).join(' · ') : 'none ticked']);
   if ((facts?.leaveAlone || []).length) rows.push(['Left out', facts.leaveAlone.join(', ')]);
   return rows;
@@ -367,4 +369,27 @@ export function checkEmail(text, { facts = {}, note = '', machines = [], leftOut
   if (/[\u2013\u2014]/.test(t)) add('amber', 'Has a long dash (an AI tell).');
   for (const w of TELLS) if (new RegExp(`\\b${reEsc(w)}\\b`, 'i').test(t)) add('amber', `Uses “${w}” (an AI tell).`);
   return out.sort((a, b) => (a.level === b.level ? 0 : a.level === 'red' ? -1 : 1));
+}
+
+/* ── Quarterly review (Philip, 19 Oct 2026: "1-3 i like very much"; this is 2): the last three months of support, Gecko HQ's sums. ── */
+
+/**
+ * The last three months from timesheet entries (System, deleted and zero-hour entries already left out by the reader). from/to:
+ * YYYY-MM-DD. → { from, to, jobs, hours, byType: [{ type, jobs, hours }], examples: newest distinct job titles (at most 40) }.
+ */
+export function quarterFacts(entries, { from, to }) {
+  const rows = (entries || []).filter(e => e.entry_date >= from && e.entry_date <= to && Number(e.hours) > 0);
+  const r2 = n => Math.round(n * 100) / 100;
+  const by = new Map();
+  for (const e of rows) {
+    const k = String(e.work_type || '').trim() || 'Support';
+    const x = by.get(k) || { type: k, jobs: 0, hours: 0 };
+    x.jobs++; x.hours = r2(x.hours + Number(e.hours));
+    by.set(k, x);
+  }
+  const seen = new Set();
+  const examples = [...rows].sort((a, b) => String(b.entry_date).localeCompare(String(a.entry_date)))
+    .map(e => String(e.title || e.work_description || '').trim()).filter(t => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase())).slice(0, 40);
+  return { from, to, jobs: rows.length, hours: r2(rows.reduce((t, e) => t + Number(e.hours), 0)),
+    byType: [...by.values()].sort((a, b) => b.hours - a.hours || a.type.localeCompare(b.type)), examples };
 }
