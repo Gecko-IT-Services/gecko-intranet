@@ -61,10 +61,10 @@ export function deviceFindings(a, today) {
   const raw = a.raw || {};
   const os = String(a.os || raw.OS || '');
   const out = [];
-  const add = (level, what, text, fix) => out.push({ level, what, text, fix });
+  const add = (level, what, text, fix, ends) => out.push({ level, what, text, fix, ...(ends ? { ends } : {}) });   // ends: support's last day, for Coming up
   const due = (ends, label) => {
     const left = days(today, ends);
-    return left < 0 ? ['asap', `${label}: no security updates since ${longDate(ends)}`] : left <= 183 ? ['soon', `${label}: support ends ${longDate(ends)}`] : null;
+    return left < 0 ? ['asap', `${label}: no security updates since ${longDate(ends)}`, ends] : left <= 183 ? ['soon', `${label}: support ends ${longDate(ends)}`, ends] : null;
   };
   // Windows
   const win = SUPPORT.windows.find(([re]) => re.test(os));
@@ -76,7 +76,7 @@ export function deviceFindings(a, today) {
       const fix = server ? 'Plan a new server or a supported Windows Server'
         : cpuOk === true ? 'Upgrade to Windows 11 (free on this PC)'
         : cpuOk === false ? 'Replace: the processor can’t run Windows 11' : 'Check the processor, then upgrade or replace';
-      add(d[0], 'Windows', d[1], fix);
+      add(d[0], 'Windows', d[1], fix, d[2]);
     }
   } else if (/windows\s*11/i.test(os)) {
     const build = Number(String(raw.OSBuild || '').split('.')[0]) || 0;
@@ -86,7 +86,7 @@ export function deviceFindings(a, today) {
       const d = due(v[2], `Windows 11 ${v[1]}`);
       // Windows 11 put on a processor Microsoft doesn't support can't be moved to the current version: replace it (Cowans' Sage PC, 18 Oct).
       if (d) add(d[0], 'Windows', d[1], cpuOk === false ? 'Replace: Windows 11 on a processor it doesn’t support can’t take the current version'
-        : 'Install the latest Windows 11 update (free, through Windows Update or Atera)');
+        : 'Install the latest Windows 11 update (free, through Windows Update or Atera)', d[2]);
     }
   } else if (/macos\s*(?:\d+\s*)?(catalina|big sur|monterey|mojave|high sierra)/i.test(os)) {
     add('asap', 'macOS', `${os.replace(/\s*x64$/, '')}: Apple no longer sends security updates`, 'Update macOS, or replace the Mac if it can’t');
@@ -100,7 +100,7 @@ export function deviceFindings(a, today) {
     const stale = o && /2003|2007|2010|2013/.test(o[1]) && major >= 16;
     if (o && !stale) {
       const d = due(o[2], o[1]);
-      if (d) add(d[0], 'Office', d[1], 'Move to Microsoft 365 apps (or Office LTSC 2024)');
+      if (d) add(d[0], 'Office', d[1], 'Move to Microsoft 365 apps (or Office LTSC 2024)', d[2]);
     }
   }
   // Hardware

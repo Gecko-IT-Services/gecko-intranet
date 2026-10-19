@@ -231,6 +231,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - **Monday brief** (19 Oct, `2026-10-19-monday-brief-design.md`): the first Overview load on a Monday puts the week (Do next, last week vs
   the week before, this week, needs a look) in the reader's own Outlook Drafts, once per person per week (`weekly_briefs`); "Make this
   week's brief" any day. Never sent; delegated Mail.ReadWrite only (Philip chose this over a server job). `core/brief.js`, `sections/brief.js`.
+- **Dates that come round** (19 Oct, `2026-10-19-dates-come-round-design.md`): `core/dates.js` `comingUp`: annual Xero renewals (60 days),
+  domain expiry (`domain_dates`, Edge Function `domain-check`, public RDAP, Mondays), VoIP contract ends (90), PSTN switch-off 31 Jan 2027
+  (180), end of support from Upgrades findings' `ends` (120). Into Do next and the brief's Coming up. Warranty dates not built (need Dell/Lenovo keys).
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the

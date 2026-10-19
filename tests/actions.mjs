@@ -57,4 +57,10 @@ assert.equal(many[0].go, 'upgrades');
 assert.equal(by('down:1').title, 'FIPC isn’t on this morning');
 assert.deepEqual(nextActions({ today }), [], 'no sources, nothing');
 assert.equal(valueText({ gbp: 1240, per: 'owed' }), '£1,240 owed');
+// Dates that come round: a billed domain about to lapse is protect; nearer renewals rank higher.
+const dated = nextActions({ today, dates: [
+  { key: 'renewal:r1', kind: 'renewal', group: 'money', client: 'CDA Ltd', title: 'Web Hosting renews for CDA Ltd', why: '', value: { gbp: 174, per: 'once' }, days: 43, go: 'client:advice:CDA Ltd' },
+  { key: 'renewal:r2', kind: 'renewal', group: 'money', client: 'ALS', title: 'Web Hosting renews for ALS', why: '', value: { gbp: 174, per: 'once' }, days: 10, go: 'client:advice:ALS' },
+  { key: 'domain:x', kind: 'domain', group: 'protect', client: 'LS', title: 'Renew lscommercials.co.uk', why: '', value: null, days: 47, go: 'client:contacts:LS' }] });
+assert.deepEqual(dated.map(x => [x.key, x.group]), [['date:domain:x', 'protect'], ['date:renewal:r2', 'money'], ['date:renewal:r1', 'money']]);
 console.log('actions: ok');

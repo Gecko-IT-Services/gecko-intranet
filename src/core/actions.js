@@ -27,9 +27,10 @@ const worth = v => (!v ? 0 : v.per === 'month' ? v.gbp * 12 : v.per === 'owed' ?
  *   reconcile: reconcileAll() result                           overdue:  xero_invoices rows (AUTHORISED, amount due, due date)
  *   opps:      opportunities rows                              ssa:      [{ name, remaining, archived }]
  *   insights:  latest client_insights (kind evidence) per client  products: opportunity_products
- *   upgrades:  core/upgrades.js upgrades().clients             today:    YYYY-MM-DD
+ *   upgrades:  core/upgrades.js upgrades().clients             dates:    core/dates.js comingUp()
+ *   today:     YYYY-MM-DD
  */
-export function nextActions({ devices = [], coverage = [], reconcile = null, overdue = [], opps = [], ssa = [], insights = [], products = [], upgrades = [], today }) {
+export function nextActions({ devices = [], coverage = [], reconcile = null, overdue = [], opps = [], ssa = [], insights = [], products = [], upgrades = [], dates = [], today }) {
   const out = [];
   const add = a => out.push({ value: null, ...a });
   const product = key => products.find(p => p.key === key) || null;
@@ -103,6 +104,13 @@ export function nextActions({ devices = [], coverage = [], reconcile = null, ove
     add({ key: 'win:all', group: 'money', kind: 'windows', client: '', title: `Quote new PCs and Windows 11 upgrades for ${pcs.length} clients`,
       why: `${plural(n, 'PC')} can’t get Windows security updates; most at ${pcs.slice(0, 3).map(c => `${c.name} (${c.rep + c.up})`).join(', ')}.`,
       go: 'upgrades', score: PCS_SCORE });
+  }
+
+  // Dates that come round (core/dates.js): the nearer, the higher. A domain we bill for that's about to lapse is protect.
+  for (const d of dates) {
+    const urgency = d.days <= 14 ? 3 : d.days <= 30 ? 2 : 1;
+    add({ key: `date:${d.key}`, group: d.group, kind: d.kind, client: d.client, title: d.title, why: d.why, value: d.value, go: d.go,
+      score: d.group === 'protect' ? 5e5 - d.days : (worth(d.value) || UNPRICED_SCORE) * urgency });
   }
 
   for (const a of out) if (a.score == null) a.score = worth(a.value) || 50;
