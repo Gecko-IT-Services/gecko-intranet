@@ -6653,6 +6653,14 @@ function ovwPipelineTile(tile, go, svg, p) {
     <div class="k-sub">${p.proposals ? `${p.proposals} proposal${p.proposals === 1 ? '' : 's'} out · <strong>+${escapeHtml(ovwWhole(p.proposalMrr))}/mo</strong>` : 'No proposals out'}</div>`);
 }
 
+/** Do next (src/sections/actions.js): handed what Overview already has; it reads the rest itself. */
+function ovwActionsHtml() {
+  const A = window.GeckoActions;
+  if (!A) return '';
+  const mon = OVW.mon;
+  return A.html({ ssa: OVW.ssaLoaded ? ovwSsaForCore() : [], devices: mon?.devices?.ok ? mon.devices.items : [], coverage: mon?.coverage?.ok ? mon.coverage.red : [] });
+}
+
 function ovwAttentionHtml(core, today) {
   const db = OVW.db || { errors: {} };
   const TK = window.GeckoTasks;
@@ -6828,7 +6836,7 @@ function ovwRenderAll() {
     : OVW.tab === 'monthend' ? ovwMonthEndHtml(me)
     : OVW.tab === 'week' ? ovwReviewHtml(core.review.weekReview(ovwReviewData(), today))
     : (me?.soon ? ovwMonthEndBanner(me) : '') + ovwStatusHtml(core, today) +
-      `<div class="ovw-split"><div class="ovw-col">${ovwAttentionHtml(core, today)}</div>${ovwWeekHtml(core, today)}</div>`;
+      `<div class="ovw-split"><div class="ovw-col">${ovwActionsHtml()}${ovwAttentionHtml(core, today)}</div>${ovwWeekHtml(core, today)}</div>`;
   wrap.innerHTML = `<div class="ovw-tabbar">${tabs}</div><div class="app-pane ovw-pane ${OVW.dir || ''}" id="ovwPane">${pane}</div>`;
   OVW.dir = '';
   window.GeckoTabs?.moveInk(wrap.querySelector('.app-tabs'));

@@ -225,6 +225,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - **Quarterly review** (19 Oct, `2026-10-19-quarterly-review-design.md`): Upgrades & advice › Write quarterly review with AI: IT at a glance +
   the last three months of support (`quarterFacts`, Gecko HQ's sums) → `email-writer` kind `review` (sections: last three months, IT now,
   keep an eye on, recommend), kept in `client_insights`; Outlook draft or Print / save as PDF.
+- **Do next** (19 Oct, `2026-10-19-next-best-action-design.md`): Overview › Today, above Needs attention: protect first (Devices red,
+  Coverage red), then money by value (Reconcile leaks via its `snapshot()`, overdue Xero, quiet Proposed deals, SSA renewals, evidence
+  products not in the pipeline, one line for old PCs). `src/core/actions.js` (`nextActions`), `src/sections/actions.js` (`window.GeckoActions`).
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
