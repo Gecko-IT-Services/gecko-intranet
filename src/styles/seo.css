@@ -1,0 +1,43 @@
+/* SEO (Operations › SEO, 19 Oct 2026): src/sections/seo.js. Figures, badges, buttons and states come from system.css. */
+#section-seo .seo-kpis { margin-bottom: 14px; }
+#section-seo .seo-warn { color: var(--amber); }
+#section-seo .seo-note { margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); font-size: 12px; color: var(--muted); }
+#section-seo .seo-note code { font: 500 12px var(--font-mono); color: var(--white); }
+#section-seo .seo-list { display: grid; gap: 10px; }
+#section-seo .seo-card { padding: 14px 16px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); }
+#section-seo .seo-card.open { border-color: var(--border); }
+#section-seo .seo-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+#section-seo .seo-toggle { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-right: auto; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#section-seo .seo-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+#section-seo .seo-name { font-size: 15px; font-weight: 600; color: var(--white); }
+#section-seo .seo-domain { font: 500 12px var(--font-mono); color: var(--muted); }
+#section-seo .seo-fee { font: 500 12px var(--font-mono); color: var(--green); }
+#section-seo .seo-line { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+#section-seo .seo-scores { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+#section-seo .seo-score { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border: 1px solid var(--border-dim); border-radius: var(--radius-pill); font-size: 11px; color: var(--muted); }
+#section-seo .seo-score b { font: 600 13px var(--font-mono); }
+#section-seo .seo-score.good b { color: var(--green); } #section-seo .seo-score.mid b { color: var(--amber); } #section-seo .seo-score.bad b { color: var(--red); }
+#section-seo .seo-detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-dim); }
+#section-seo .seo-detail h4, #section-seo .seo-add h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--white); text-transform: none; letter-spacing: 0; }
+#section-seo .seo-find, #section-seo .seo-work { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; font-size: 12px; }
+#section-seo .seo-find li { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px; align-items: start; }
+#section-seo .seo-find strong { color: var(--white); font-weight: 600; }
+#section-seo .seo-find p { margin: 2px 0 0; color: var(--muted); }
+#section-seo .seo-ok, #section-seo .seo-muted { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+#section-seo .seo-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0 0 10px; font-size: 12px; }
+#section-seo .seo-facts dt { color: var(--muted); } #section-seo .seo-facts dd { margin: 0; color: var(--white); overflow-wrap: anywhere; }
+#section-seo .seo-work li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; color: var(--white); }
+#section-seo .seo-work li span { font: 500 11px var(--font-mono); color: var(--muted); }
+#section-seo .seo-work em { font-style: normal; color: var(--muted); }
+#section-seo .seo-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#section-seo :is(.seo-log, .seo-about, .seo-add) { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+#section-seo :is(.seo-log, .seo-about, .seo-add) :is(input, select, textarea) {
+  min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm); background: var(--inset);
+  color: var(--white); font: 400 13px var(--font-body);
+}
+#section-seo .seo-log input[name="what"] { flex: 1 1 100%; }
+#section-seo .seo-hours { width: 80px; }
+#section-seo :is(.seo-about, .seo-add) label { display: grid; gap: 4px; font-size: 11px; color: var(--muted); }
+#section-seo .seo-wide { flex: 1 1 100%; } #section-seo .seo-wide textarea { width: 100%; resize: vertical; }
+#section-seo .seo-add { margin-top: 10px; }
+@media (max-width: 640px) { #section-seo :is(input, select, textarea) { font-size: 16px; } }
