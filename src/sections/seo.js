@@ -14,9 +14,9 @@
 import { toast, escapeHtml, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { sameClient } from '../core/client.js';
-import { STATUS, siteState, seoFee } from '../core/seo.js';
+import { STATUS, siteState, seoFee, searchSummary, sparkline } from '../core/seo.js';
 
-const SE = { sites: null, checks: [], work: [], repeating: [], error: null, busy: '', open: new Set(), adding: false };
+const SE = { sites: null, checks: [], work: [], repeating: [], google: null, days: [], queries: [], error: null, busy: '', open: new Set(), adding: false };
 const els = id => document.getElementById(id);
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
@@ -36,6 +36,14 @@ async function load() {
       sb.from('seo_checks').select('*').order('checked_at', { ascending: false }).limit(200).then(must),
       sb.from('seo_work').select('*').gte('done_on', since).order('done_on', { ascending: false }).then(must),
       sb.from('xero_repeating_invoices').select('contact_name,status,period,line_items').then(must)
+    ]);
+    // Search Console (20 Oct): before its tables exist (this update), none; the rest of the page works.
+    const soft = q => q.then(({ data, error }) => (error ? null : data));
+    const dayFrom = new Date(Date.now() - 130 * 86400000).toISOString().slice(0, 10);
+    [SE.google, SE.days, SE.queries] = await Promise.all([
+      soft(sb.from('google_status').select('*').eq('id', 1).maybeSingle()),
+      soft(sb.from('seo_search_days').select('*').gte('day', dayFrom)).then(r => r || []),
+      soft(sb.from('seo_search_queries').select('*').order('clicks', { ascending: false })).then(r => r || [])
     ]);
   } catch (err) {
     SE.error = err;
@@ -65,7 +73,36 @@ function render() {
     <div class="kpi"><span class="kpi-label">To fix</span><span class="kpi-value${all.some(x => x.flags.includes('problem')) ? ' seo-warn' : ''}">${all.reduce((t, x) => t + x.findings.filter(f => f.level !== 'info').length, 0)}</span><span class="kpi-sub">across ${all.length} site${all.length === 1 ? '' : 's'}</span></div>
   </div>`;
   const keyNote = SE.checks.length && !SE.checks.some(c => c.pagespeed) ? `<p class="seo-note">Google’s own speed and SEO scores appear once a free PageSpeed key is added (Supabase › Edge Functions › Secrets: <code>PAGESPEED_API_KEY</code>). The checks below don’t need it.</p>` : '';
-  mount.innerHTML = `<div class="app-pane">${figures}${keyNote}<div class="seo-list">${all.map(card).join('')}</div>${SE.adding ? addForm() : ''}</div>`;
+  mount.innerHTML = `<div class="app-pane">${figures}${googleLine()}${keyNote}<div class="seo-list">${all.map(card).join('')}</div>${SE.adding ? addForm() : ''}</div>`;
+}
+
+/** Search Console: connected or not, last sync, Connect / Sync now. */
+function googleLine() {
+  const g = SE.google;
+  if (g === null) return '';
+  if (!g?.connected) return `<div class="seo-gsc"><span><strong>Search Console</strong> not connected: connect it to see which searches find each site, clicks and position.</span>
+    <button type="button" class="btn btn-sm btn-primary" data-seo-act="gsc-connect">Connect Search Console</button></div>`;
+  const props = (g.properties || []).length;
+  return `<div class="seo-gsc${g.last_sync_ok === false ? ' bad' : ''}"><span><strong>Search Console</strong> ${escapeHtml(g.google_email || 'connected')} · ${props} propert${props === 1 ? 'y' : 'ies'}${g.last_sync_at ? ` · synced ${escapeHtml(when(g.last_sync_at))}` : ''}${g.last_sync_ok === false ? ` · <em>${escapeHtml(g.last_error)}</em>` : ''}</span>
+    <button type="button" class="btn btn-sm btn-ghost" data-seo-act="gsc-sync"${SE.busy ? ' disabled' : ''}>${SE.busy === 'gsc' ? 'Syncing…' : 'Sync now'}</button></div>`;
+}
+
+const pct = n => `${(n * 100).toFixed(1)}%`;
+const delta = (a, b, better = 'up') => {
+  if (b == null || a == null || !b) return '';
+  const up = a > b, same = a === b;
+  const good = same ? '' : (better === 'up') === up ? 'good' : 'bad';
+  return `<em class="seo-delta ${good}">${same ? 'same' : `${up ? '▲' : '▼'} ${Math.abs(Math.round((a - b) / b * 100))}%`}</em>`;
+};
+/** The last 28 days from Search Console, or why there's nothing. */
+function searchRow(s) {
+  if (!SE.google?.connected) return '';
+  const sum = searchSummary(SE.days.filter(d => d.site_id === s.id), today());
+  if (!sum) return `<p class="seo-line">Search Console: ${(SE.google.properties || []).length ? `${escapeHtml(s.domain)} isn’t among the properties this Google account can see. Add it (Domain property) in Search Console, or give this account access.` : 'no figures yet.'}</p>`;
+  const n = sum.now, b = sum.before;
+  return `<div class="seo-search"><span class="seo-stat"><b>${n.clicks}</b>clicks ${delta(n.clicks, b.clicks)}</span><span class="seo-stat"><b>${n.impressions}</b>times shown ${delta(n.impressions, b.impressions)}</span>
+    <span class="seo-stat"><b>${n.position ?? '–'}</b>average position ${delta(n.position, b.position, 'down')}</span><span class="seo-stat"><b>${pct(n.ctr)}</b>click rate</span>
+    <span class="seo-sparkwrap" title="Clicks a day, last 90 days">${sparkline(sum.series)}</span><span class="seo-period">28 days to ${escapeHtml(day(sum.end))}${sum.stale ? ' · not updated lately' : ''}</span></div>`;
 }
 
 function card(x) {
@@ -86,7 +123,7 @@ function card(x) {
         <span class="seo-name">${escapeHtml(s.client_name)}</span><span class="seo-domain">${escapeHtml(s.domain)}</span></button>
       <span class="badge badge-${badge}">${escapeHtml(status)}</span>${x.fee ? `<span class="seo-fee">${escapeHtml(money(x.fee))} a month</span>` : ''}
     </header>
-    <p class="seo-line">${checkLine}${workLine ? ` · ${workLine}` : ''}</p>${scores}
+    <p class="seo-line">${checkLine}${workLine ? ` · ${workLine}` : ''}</p>${scores}${searchRow(s)}
     ${open ? detail(x) : ''}
   </article>`;
 }
@@ -108,6 +145,7 @@ function detail(x) {
         <a class="btn btn-sm btn-ghost" href="https://pagespeed.web.dev/analysis?url=${encodeURIComponent(`https://${s.domain}/`)}" target="_blank" rel="noopener">PageSpeed Insights</a>
         <a class="btn btn-sm btn-ghost" href="https://search.google.com/search-console?resource_id=${encodeURIComponent(`sc-domain:${s.domain}`)}" target="_blank" rel="noopener">Search Console</a>
         ${clientLink(s.client_name)}</div></section>
+    ${queriesHtml(s)}
     <section><h4>Work done</h4>
       ${work.length ? `<ul class="seo-work">${work.map(w => `<li><span>${escapeHtml(day(w.done_on))}</span><div>${escapeHtml(w.what)}${w.minutes ? ` <em>${Math.round(w.minutes / 6) / 10}h</em>` : ''}${w.done_by ? ` <em>· ${escapeHtml(w.done_by.split(' ')[0])}</em>` : ''}</div></li>`).join('')}</ul>` : '<p class="seo-muted">Nothing logged yet.</p>'}
       <form class="seo-log" data-seo-log="${s.id}"><input name="what" required maxlength="300" placeholder="What was done, e.g. Published a blog post on lock changes; 3 Google Business posts">
@@ -121,6 +159,15 @@ function detail(x) {
         <label class="seo-wide">Notes <textarea name="notes" rows="3">${escapeHtml(s.notes || '')}</textarea></label>
         <button class="btn btn-sm" type="submit">Save</button></form></section>
   </div>`;
+}
+
+/** The searches that found the site (last 28 days, top 15), with what to aim at: page 2 (positions 11 to 20) is the quickest win. */
+function queriesHtml(s) {
+  const q = SE.queries.filter(r => r.site_id === s.id).slice(0, 15);
+  if (!q.length) return '';
+  return `<section class="seo-qwrap"><h4>Searches that found it <span class="seo-muted">last 28 days</span></h4><table class="seo-q"><thead><tr><th>Search</th><th>Clicks</th><th>Shown</th><th>Position</th></tr></thead><tbody>
+    ${q.map(r => `<tr><td>${escapeHtml(r.query)}</td><td>${r.clicks}</td><td>${r.impressions}</td><td class="${Number(r.position) <= 10 ? 'good' : Number(r.position) <= 20 ? 'near' : ''}">${Number(r.position).toFixed(1)}</td></tr>`).join('')}</tbody></table>
+    <p class="seo-muted">Position 1–10 is page one of Google (green). 11–20 (amber) is page two: the quickest wins.</p></section>`;
 }
 
 function addForm() {
@@ -157,6 +204,38 @@ async function checkNow(id) {
   }
 }
 
+async function connectGoogle() {
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const { data, error } = await sb.functions.invoke('google-auth', { body: {} });
+    if (error || !data?.url) throw new Error(data?.error || error?.message || 'No sign-in link came back');
+    location.href = data.url;   // Google's consent screen; google-callback brings you back here (#google=…)
+  } catch (err) {
+    toast(`Couldn’t start the Google sign-in: ${err.message || err}`, 'error', 10000);
+  }
+}
+async function syncGoogle() {
+  SE.busy = 'gsc'; render();
+  try {
+    const sb = await connectSupabase({ interactive: true });
+    const { data, error } = await sb.functions.invoke('gsc-sync', { body: {} });
+    if (error) throw new Error(error.message);
+    if (data?.ok === false) throw new Error(data.error);
+    toast(`Search Console synced: ${data.matched} of ${data.sites} sites found.`, 'success');
+  } catch (err) {
+    toast(`Search Console didn’t sync: ${err.message || err}`, 'error', 10000);
+  } finally { SE.busy = ''; await load(); }
+}
+/** Back from Google's consent screen (#google=… on the address, saved by src/main.js). */
+function googleReturn() {
+  let r = null;
+  try { r = JSON.parse(sessionStorage.getItem('gecko.googleResult') || 'null'); sessionStorage.removeItem('gecko.googleResult'); } catch { /* storage blocked */ }
+  if (!r) return;
+  if (r.result === 'connected') toast(`Search Console connected: ${r.detail}.`, 'success', 8000);
+  else if (r.result === 'connected-sync-failed') toast(`Search Console connected, but the first sync failed: ${r.detail}`, 'warning', 10000);
+  else toast(`Search Console wasn’t connected: ${r.detail || 'cancelled'}`, 'error', 10000);
+}
+
 /** For quick find and others: open the page with one site's card open. */
 export function open(id) { if (id) SE.open.add(Number(id)); render(); }
 
@@ -170,6 +249,8 @@ export function init() {
     if (a === 'reload') load();
     if (a === 'check') checkNow(e.target.closest('[data-id]').dataset.id);
     if (a === 'cancel') { SE.adding = false; render(); }
+    if (a === 'gsc-connect') connectGoogle();
+    if (a === 'gsc-sync') syncGoogle();
   });
   section?.addEventListener('submit', e => {
     e.preventDefault();
@@ -187,5 +268,6 @@ export function init() {
   });
   els('seoAdd')?.addEventListener('click', () => { SE.adding = true; render(); els('seoWrap')?.querySelector('[data-seo-add] input')?.focus(); });
   els('seoCheckAll')?.addEventListener('click', () => checkNow(null));
+  googleReturn();
   load();
 }

@@ -120,6 +120,19 @@ find.init();
 window.GeckoChangelog = changelog;
 changelog.init();
 
+// Back from Google's consent screen (supabase/functions/google-callback, Search Console for SEO): keep the result, open SEO when signed in.
+if (location.hash.startsWith('#google=')) {
+  const p = new URLSearchParams(location.hash.slice(1));
+  try { sessionStorage.setItem('gecko.googleResult', JSON.stringify({ result: p.get('google'), detail: p.get('detail') || '' })); } catch { /* storage blocked */ }
+  history.replaceState(null, '', location.pathname + location.search);
+  let tries = 0;
+  const open = setInterval(() => {
+    const name = (document.getElementById('userName')?.textContent || '').trim();
+    const signedIn = name && name !== 'Not signed in';
+    if ((signedIn && typeof window.navTo === 'function') || ++tries > 120) { clearInterval(open); if (signedIn) window.navTo('seo'); }
+  }, 500);
+}
+
 // Back from Xero's consent screen (supabase/functions/xero-callback): keep the result for the
 // Jobs section, tidy the address bar, and open Jobs once the portal is signed in.
 if (location.hash.startsWith('#xero=')) {

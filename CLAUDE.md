@@ -239,7 +239,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   details and Help with this; download SVG or print to PDF. `core/network.js`, `sections/network.js`. Network equipment not drawn yet.
 - Operations › **SEO** (19 Oct, `2026-10-20-seo-design.md`): sites we do SEO for (`seo_sites`: ALS active, Clarke Lane setting up, CDA proposed),
   weekly home-page check (Edge Function `seo-check`, `seo_checks`; PageSpeed scores when `PAGESPEED_API_KEY` is set), findings with the fix
-  (`core/seo.js`), monthly work log (`seo_work`); Do next flags no work by the 15th and sites hidden from Google. Search Console not connected.
+  (`core/seo.js`), monthly work log (`seo_work`); Do next flags no work by the 15th and sites hidden from Google.
+  Search Console (20 Oct, `2026-10-20-search-console-design.md`): Connect once (Edge Functions `google-auth`/`google-callback`, secrets
+  `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, tokens in `private.google_tokens`), daily `gsc-sync` into `seo_search_days`/`seo_search_queries`.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the

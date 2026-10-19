@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { findings, siteState, seoFee, WORK_BY_DAY } from '../src/core/seo.js';
+import { findings, siteState, seoFee, WORK_BY_DAY, searchSummary, sparkline } from '../src/core/seo.js';
 
 const good = { onpage: { status: 200, https: true, ms: 900, title: 'Locksmith in Lymington & the New Forest | ALS', titleLength: 47,
   description: 'Fast, friendly local locksmiths covering Lymington, Brockenhurst and the New Forest. 24 hour call-out, no call-out fee.', descriptionLength: 118,
@@ -36,4 +36,17 @@ const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 assert.equal(seoFee(rep, same, 'ALS Locksmiths'), 500);
 assert.equal(seoFee(rep, same, 'MSA Safety'), 0);
 assert.match(findings({ onpage: { ...good.onpage, https: false, httpsError: 'invalid peer certificate: NotValidForName' } })[0].text, /broken: browsers show “Not secure”/);
+// Search Console: the last 28 days against the 28 before, ending at the newest day there is.
+const dayRows = Array.from({ length: 60 }, (_, i) => { const d = new Date(Date.UTC(2026, 9, 17) - i * 86400000).toISOString().slice(0, 10);
+  return { day: d, clicks: i < 28 ? 3 : 1, impressions: 100, position: i < 28 ? 8 : 12 }; });
+const ss = searchSummary(dayRows, '2026-10-19');
+assert.equal(ss.end, '2026-10-17');
+assert.deepEqual(ss.now, { clicks: 84, impressions: 2800, ctr: 0.03, position: 8 });
+assert.deepEqual([ss.before.clicks, ss.before.position], [28, 12]);
+assert.equal(ss.series.length, 90);
+assert.equal(ss.series[89], 3);
+assert.equal(ss.stale, false);
+assert.equal(searchSummary([], '2026-10-19'), null);
+assert.equal(searchSummary(dayRows, '2026-11-01').stale, true, 'two weeks without new figures: say so');
+assert.match(sparkline([0, 1, 4, 2]), /^<svg class="seo-spark"[^>]*><polyline points="0\.0,34\.0 /);
 console.log('seo: ok');
