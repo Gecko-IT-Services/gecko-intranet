@@ -15,9 +15,13 @@ export function domainOf(text: string) {
   return m ? m[1].replace(/^www\./, '') : '';
 }
 
+const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+
 async function rdap(domain: string) {
   const url = /\.uk$/.test(domain) && !/\.uk\.com$/.test(domain) ? `https://rdap.nominet.uk/uk/domain/${domain}` : `https://rdap.org/domain/${domain}`;
-  const res = await fetch(url, { headers: { accept: 'application/rdap+json' }, redirect: 'follow' });
+  // The registries limit how fast they're asked (Nominet answered 429 on the first run, 19 Oct 2026): pause, and retry when told to.
+  let res = await fetch(url, { headers: { accept: 'application/rdap+json' }, redirect: 'follow' });
+  for (let i = 0; res.status === 429 && i < 3; i++) { await wait(4000 * (i + 1)); res = await fetch(url, { headers: { accept: 'application/rdap+json' }, redirect: 'follow' }); }
   if (res.status === 404) return { error: 'not found in the registry' };
   if (!res.ok) return { error: `registry said ${res.status}` };
   const body = await res.json();
@@ -43,6 +47,7 @@ export async function check() {
   for (const [domain, e] of found) {
     let r: any;
     try { r = await rdap(domain); } catch (err) { r = { error: String((err as Error).message || err).slice(0, 200) }; }
+    await wait(1200);
     await sql`insert into public.domain_dates (domain, client_name, sources, billed, expires_on, registrar, error, checked_at)
               values (${domain}, ${e.client}, ${[...e.sources]}, ${e.billed}, ${r.expires || null}, ${r.registrar || ''}, ${r.error || ''}, now())
               on conflict (domain) do update set client_name = excluded.client_name, sources = excluded.sources, billed = excluded.billed,
