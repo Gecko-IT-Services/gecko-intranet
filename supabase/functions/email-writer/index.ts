@@ -1,13 +1,17 @@
 // Writes a client email with Claude from facts Gecko HQ already holds plus the client's context note. Staff only; one call per
 // email, no tools; every email logged with its cost in public.ai_email_log, under a daily cap. Returns { subject, html } for the
 // page to show, edit and save to Outlook Drafts (nothing is sent from here).
-// Secret: ANTHROPIC_API_KEY. Optional: EMAIL_DAILY_LIMIT (default 40), EMAIL_MODEL, EMAIL_PRICE_IN / EMAIL_PRICE_OUT ($ per million tokens).
+// Secret: ANTHROPIC_API_KEY. Optional: EMAIL_DAILY_LIMIT (default 40), EMAIL_MODEL (default claude-haiku-5-5), EMAIL_PRICE_IN / EMAIL_PRICE_OUT ($ per million tokens).
 // Design: docs/superpowers/specs/2026-10-19-ai-client-emails-design.md
 import { cors, json, sql, staffEmail } from '../_shared/xero.ts';
 
-const MODEL = Deno.env.get('EMAIL_MODEL') || 'claude-sonnet-5-5';
+// Haiku 5.5 from 19 Oct 2026 (Philip: "lets try Haiku 5.5 as the main model"); EMAIL_MODEL=claude-sonnet-5-5 goes back.
+const MODEL = Deno.env.get('EMAIL_MODEL') || 'claude-haiku-5-5';
 const DAILY_LIMIT = Number(Deno.env.get('EMAIL_DAILY_LIMIT') || 40);
-const PRICE_IN = Number(Deno.env.get('EMAIL_PRICE_IN') || 3), PRICE_OUT = Number(Deno.env.get('EMAIL_PRICE_OUT') || 15);
+// $ per million tokens in / out (Anthropic's list prices, Oct 2026), so ai_email_log shows what each email really cost.
+const PRICES: Record<string, [number, number]> = { 'claude-haiku-5-5': [0.10, 0.50], 'claude-sonnet-5-5': [2, 10], 'claude-opus-5-5': [4, 20] };
+const PRICE_IN = Number(Deno.env.get('EMAIL_PRICE_IN') || (PRICES[MODEL] || PRICES['claude-sonnet-5-5'])[0]);
+const PRICE_OUT = Number(Deno.env.get('EMAIL_PRICE_OUT') || (PRICES[MODEL] || PRICES['claude-sonnet-5-5'])[1]);
 
 const RULES = `You write emails from Gecko IT Services, a small UK managed IT provider, to the main contact at one of its clients.
 The person sending is named in "sender". Write as them, in the first person, warm and plain, like a trusted local IT partner. UK English.
@@ -77,7 +81,7 @@ async function write(input: any) {
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
       // A plain-text reply shape (forcing a tool isn’t supported on Sonnet 5.5, and JSON broke on long HTML, 19 Oct).
-      model: MODEL, max_tokens: 4000,
+      model: MODEL, max_tokens: 8000,   // room for its thinking as well as a long email
       system: RULES + '\n\nReply in exactly this shape and nothing else:\nSUBJECT: <a short, specific, friendly subject>\n---\n<the email body as HTML>',
       messages: [{ role: 'user', content: JSON.stringify({
         kind: input.kind, client: input.client, to_first_name: input.firstName || '', sender: input.sender || '',

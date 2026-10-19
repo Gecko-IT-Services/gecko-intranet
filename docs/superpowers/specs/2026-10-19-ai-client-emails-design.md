@@ -16,7 +16,7 @@ Client page › Upgrades & advice:
 
 ## How (Edge Function `email-writer`)
 
-One call to Claude per email (`EMAIL_MODEL`, default claude-sonnet-5-5), no tools, forced to return `{ subject, html }`; the html is
+One call to Claude per email (`EMAIL_MODEL`, default claude-haiku-5-5 since 19 Oct; it was claude-sonnet-5-5), no tools, forced to return `{ subject, html }`; the html is
 cut down to p/h3/ul/ol/li/strong/em/br with no attributes before it reaches the page. Staff only. Every email is logged in
 `ai_email_log` (who, client, kind, tokens, estimated $ at `EMAIL_PRICE_IN`/`EMAIL_PRICE_OUT`), under `EMAIL_DAILY_LIMIT` (40) a day.
 Secret: `ANTHROPIC_API_KEY` (Philip creates it at console.anthropic.com, with a monthly spend limit there).
@@ -27,7 +27,10 @@ within 3 days are told), nor billing, prices we pay, margins or tool names. Emai
 public DNS in the browser. The rules (system prompt) say: facts only, the setup note shapes tone and content and wins where it says
 something was agreed, never quote the note, UK English, warm and plain, no pressure, quote prices only as given.
 
-Estimated cost: about 1–2p per email at Sonnet prices; the page shows each one's estimate.
+Cost: the Cowans test on Sonnet 5.5 was 3,468 tokens in / 3,045 out, about $0.037 (3p; the log said $0.056 because it priced at the
+older $3/$15). On Haiku 5.5 ($0.10/$0.50 per million) the same email is about $0.002. Philip, 19 Oct: "lets try Haiku 5.5 as the main
+model, lets see how good it is"; if the writing isn't good enough, set the secret `EMAIL_MODEL` to claude-sonnet-5-5. The log now
+prices each email at its own model's rate.
 
 Also from the Cowans test: Windows 11 on a processor Microsoft doesn't support (Sage PC, i7-4771, 21H2) is now **Replace** in Upgrades,
 not "update"; user names like `AzureAD\ChrisWyeth` read "Chris Wyeth".
