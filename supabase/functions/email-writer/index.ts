@@ -28,7 +28,23 @@ Kind "advice": the ticked recommendations only. Kind "summary": an "IT at a glan
 backed up, good news worth saying) followed by the recommendations.
 
 HTML only with <p>, <h3>, <ul>, <ol>, <li>, <strong>, <em>, <br>. No styles, no images, no signature block beyond a short sign-off with
-the sender's first name (their email signature is added automatically).`;
+the sender's first name (their email signature is added automatically).
+
+Write like a person, not a chatbot (Philip's "humanizer" rules, from Wikipedia's "Signs of AI writing", 19 Oct 2026):
+- No em dashes or en dashes at all. Use a full stop, a comma, a colon or brackets instead.
+- None of these words: crucial, delve, enhance, foster, garner, highlight (as a verb), intricate, key (as an adjective), landscape,
+  pivotal, seamless, showcase, tapestry, testament, underscore, vibrant, robust, leverage, streamline, additionally, moreover.
+- Plain verbs: "is", "has", "runs", "needs". Not "serves as", "stands as", "boasts", "features", "offers".
+- Don't group things in threes by habit; give as many as there really are.
+- No "not only… but also", no "it's not just X, it's Y", no clipped add-ons like "no fuss" or "no downtime" tacked on the end.
+- No bolded label at the start of every bullet ("Security: …"). Bullets are short plain sentences or names. Bold sparingly, if at all.
+- No filler ("in order to", "due to the fact that", "it's worth noting", "it is important to note") and no stacked hedging.
+- No stock openers or closers: not "I hope this email finds you well", "I wanted to reach out", "Exciting times ahead", "the future
+  looks bright", "don't hesitate to", "please feel free to". One "I hope all is well" is fine if it suits the note's tone.
+- No puffing up ("vital role", "game-changer", "peace of mind" more than once, "take your IT to the next level"), no sycophancy.
+- Vary sentence length. Short and long. Use contractions (we'll, you're, it's) as people do in email.
+- Sentence-case headings, no emojis, straight quotes.
+Before you answer, reread the email, ask "what in this sounds AI-written?", and fix it.`;
 
 const ALLOWED = new Set(['p', 'h3', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'b', 'i']);
 /** Only the allowed tags, with no attributes; everything else dropped (its text kept). */
@@ -41,7 +57,8 @@ export function clean(html: string) {
 }
 
 async function write(input: any) {
-  const key = (Deno.env.get('ANTHROPIC_API_KEY') || '').trim();
+  const key = (Deno.env.get('ANTHROPIC_API_KEY') || '').replace(/[\s"'\u2018\u2019\u201C\u201D\u200B-\u200D\uFEFF]/g, '');   // pasted keys pick up spaces and quotes
+  if (key && !/^sk-ant-/.test(key)) throw new Error('ANTHROPIC_API_KEY doesn’t start with sk-ant-: copy the key again from the Claude Console (API keys)');
   if (!key) throw new Error('ANTHROPIC_API_KEY is not set in Supabase › Edge Functions › Secrets');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -59,7 +76,9 @@ async function write(input: any) {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`Claude ${res.status}: ${body?.error?.message || 'no answer'}`);
   const out = (body.content || []).find((c: any) => c.type === 'tool_use')?.input || {};
-  return { subject: String(out.subject || '').slice(0, 200), html: clean(out.html), usage: body.usage || {} };
+  // Safety net for the one rule that is easiest to check: no em or en dashes reach the client.
+  const undash = (t: string) => t.replace(/(\d)\s*[\u2013\u2014]\s*(?=[£$]?\d)/g, '$1 to ').replace(/\s*[\u2014\u2013]\s*/g, ', ').replace(/,\s*,/g, ',');
+  return { subject: undash(String(out.subject || '')).slice(0, 200), html: undash(clean(out.html)), usage: body.usage || {} };
 }
 
 Deno.serve(async req => {

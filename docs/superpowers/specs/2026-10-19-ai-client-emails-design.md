@@ -37,3 +37,12 @@ not "update"; user names like `AzureAD\ChrisWyeth` read "Chris Wyeth".
 - Writing the notes for every client automatically: the point is Gecko's own words.
 - Sending from Gecko HQ: drafts only.
 - A client-page summary of the notes elsewhere (Summary tab): later, if useful.
+
+## Humanizer rules (19 Oct)
+
+Philip: "can you use a humanizer skill with these emails?" His humanizer skill (Wikipedia's "Signs of AI writing") can't run inside the
+Edge Function, so its rules that matter for a short client email are in the writer's instructions: no em/en dashes, no AI vocabulary
+list, plain is/has verbs, no habitual threes, no "not only… but", no bolded bullet labels, no filler or stock openers/closers, no
+puffery, varied sentence length, contractions, sentence-case headings, and a self-check before answering. As a safety net the function
+replaces any em/en dash left in the subject or body (a dash between numbers becomes "to"). The key is also cleaned of pasted spaces and
+quotes and must start sk-ant- (the first two runs failed with 401 invalid x-api-key).
