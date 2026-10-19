@@ -1,12 +1,13 @@
 // Writes a client email with Claude from facts Gecko HQ already holds plus the client's context note. Staff only; one call per
 // email, no tools; every email logged with its cost in public.ai_email_log, under a daily cap. Returns { subject, html } for the
 // page to show, edit and save to Outlook Drafts (nothing is sent from here).
-// Secret: ANTHROPIC_API_KEY. Optional: EMAIL_DAILY_LIMIT (default 40), EMAIL_MODEL (default claude-haiku-5-5), EMAIL_PRICE_IN / EMAIL_PRICE_OUT ($ per million tokens).
+// Secret: ANTHROPIC_API_KEY. Optional: EMAIL_DAILY_LIMIT (default 40), EMAIL_MODEL (default claude-sonnet-5-5), EMAIL_PRICE_IN / EMAIL_PRICE_OUT ($ per million tokens).
 // Design: docs/superpowers/specs/2026-10-19-ai-client-emails-design.md
 import { cors, json, sql, staffEmail } from '../_shared/xero.ts';
 
-// Haiku 5.5 from 19 Oct 2026 (Philip: "lets try Haiku 5.5 as the main model"); EMAIL_MODEL=claude-sonnet-5-5 goes back.
-const MODEL = Deno.env.get('EMAIL_MODEL') || 'claude-haiku-5-5';
+// Sonnet 5.5 (Philip, 19 Oct 2026, after trying Haiku 5.5: "these emails will go to the customer… it needs to be impressive not hole
+// ridden"). Haiku wrote well but contradicted itself and ignored given facts; at ~3.5p an email the better judgement is worth it.
+const MODEL = Deno.env.get('EMAIL_MODEL') || 'claude-sonnet-5-5';
 const DAILY_LIMIT = Number(Deno.env.get('EMAIL_DAILY_LIMIT') || 40);
 // $ per million tokens in / out (Anthropic's list prices, Oct 2026), so ai_email_log shows what each email really cost.
 const PRICES: Record<string, [number, number]> = { 'claude-haiku-5-5': [0.10, 0.50], 'claude-sonnet-5-5': [2, 10], 'claude-opus-5-5': [4, 20] };
