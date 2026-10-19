@@ -194,6 +194,18 @@
 #section-client .cl-warn-text { color: var(--amber); }
 
 /* Upgrades & advice tab (src/sections/advice.js): what to raise on the left, the email on the right. */
+#section-client .ad-setup { margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card); display: grid; gap: 8px; }
+#section-client .ad-setup .ad-head { margin: 0; }
+#section-client .ad-setup textarea {
+  width: 100%; min-height: 120px; resize: vertical; padding: 10px 12px; border: 1px solid var(--border-dim); border-radius: var(--radius-sm);
+  background: var(--inset); color: var(--white); font: 13px/1.5 var(--font-body);
+}
+#section-client .ad-setup textarea:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+#section-client .ad-write { display: flex; flex-wrap: wrap; gap: 6px; }
+#section-client .ad-mode { margin: 0; font-size: 12px; color: var(--muted); }
+#section-client .ad-preview[contenteditable="true"] { outline: 2px dashed transparent; outline-offset: 2px; }
+#section-client .ad-preview[contenteditable="true"]:focus { outline-color: var(--green); }
+#section-client .ad-preview h3 { margin: 14px 0 6px; font-size: 15px; }
 #section-client .ad-wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; width: 100%; }
 #section-client .ad-head { margin: 0 0 8px; }
 #section-client .ad-head h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--white); }

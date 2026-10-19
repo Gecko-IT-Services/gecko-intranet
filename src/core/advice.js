@@ -42,14 +42,16 @@ export function adviceTopics({ client, device = null, coverage = null, gaps = []
   const devs = device?.devices || [];
   // Windows 10/7 PCs: upgrade free where they can, replace where they can't.
   const win = devs.filter(d => d.plan === 'upgrade' || d.plan === 'replace' || (d.findings.some(f => f.what === 'Windows' && f.level === 'asap' && /Windows (10|7|8)/.test(f.text)) && d.plan !== 'server'));
+  // (a Windows 11 PC on an unsupported processor is plan 'replace' too, and is told apart in its note)
   if (win.length) {
     const cat = prod('windows11') ? fromCatalogue(prod('windows11'), client) : null;
     const up = win.filter(d => d.plan === 'upgrade'), rep = win.filter(d => d.plan === 'replace');
     out.push({ key: 'windows', source: 'devices', productKey: 'windows11', checked: true,
-      title: `${plural(win.length, 'computer')} on an unsupported version of Windows`,
+      title: `${plural(win.length, 'computer')} that can’t get Windows security updates`,
       subject: `Windows 10 computers at ${client}`,
       why: cat?.why || WINDOWS_WHY,
       items: win.map(d => ({ name: who(d), note: d.plan === 'upgrade' ? 'can move to Windows 11 at no cost for the licence'
+        : d.plan === 'replace' && /Windows 11/.test(d.os || '') ? 'runs Windows 11 on hardware Microsoft doesn’t support, so it can’t take the current version; we’d recommend replacing it'
         : d.plan === 'replace' ? 'too old to run Windows 11, so we’d recommend replacing it' : 'needs checking: upgrade or replace' })),
       summary: [up.length && `${plural(up.length, 'can be upgraded', 'can be upgraded')} free`, rep.length && `${plural(rep.length, 'needs', 'need')} replacing`].filter(Boolean).join(', '),
       benefits: cat?.benefits?.length ? cat.benefits : WINDOWS_BENEFITS });
@@ -141,3 +143,62 @@ export function composeEmail({ client, firstName = '', sender = '', topics = [] 
     `<p>${esc(close)}</p>`, '<p>Just reply to this email or give me a call and we’ll take it from there.</p>', `<p>${esc(sign).replace(/\n/g, '<br>')}</p>`].join('\n');
   return { subject: possessive(subject), text: possessive(text), html: possessive(html) };
 }
+
+// ─── Facts for the AI email writer (19 Oct: Philip chose AI-written emails from a context note) ───────────────────
+// Only what the client may be told. Counts that would expose our own gaps (devices missing antivirus, a backup that failed)
+// are never passed: the writer can't mention what it isn't given.
+
+/** SPF / DKIM / DMARC from public DNS answers → client-facing states. */
+export function emailAuth({ mx = [], txt = [], dmarc = [], dkim = [] }) {
+  const spf = txt.find(t => /v=spf1/i.test(t)) || '';
+  const d = dmarc.find(t => /v=DMARC1/i.test(t)) || '';
+  const policy = (d.match(/;\s*p=(\w+)/i) || [])[1] || '';
+  return {
+    provider: mx.some(m => /protection\.outlook\.com/i.test(m)) ? 'Microsoft 365 (no separate filtering service in front)'
+      : mx.some(m => /hornetsecurity|mimecast|barracuda|proofpoint/i.test(m)) ? 'a dedicated filtering service' : mx.length ? 'other' : 'unknown',
+    spf: spf ? (/-all/.test(spf) ? 'set up, strict' : 'set up, lenient') : 'missing',
+    dkim: dkim.length ? 'set up' : 'not found',
+    dmarc: d ? (policy === 'reject' || policy === 'quarantine' ? `set up, enforced (${policy})` : 'set up, monitoring only') : 'missing'
+  };
+}
+
+const SERVICE_WORDS = [[/m365|microsoft 365|office 365/i, 'Microsoft 365 licences'], [/exclaimer|signature/i, 'Email signatures'],
+  [/web hosting|website hosting/i, 'Website hosting'], [/domain/i, 'Domain renewal'], [/internet security|antivirus|opentext|webroot/i, 'Business antivirus'],
+  [/backup/i, 'Backups'], [/work from home/i, 'Secure remote access'], [/keeper|password/i, 'Password manager'], [/hornet/i, 'Email filtering'],
+  [/support|ssa|retainer/i, 'IT support'], [/voip|voxone|phone/i, 'Phones']];
+/** What the client gets from Gecko, in its words, from its repeating invoice lines (no prices, no tool names). */
+export function servicesFrom(lines) {
+  const out = new Set();
+  for (const l of lines || []) for (const [re, name] of SERVICE_WORDS) if (re.test(String(l.description || l))) out.add(name);
+  return [...out];
+}
+
+/**
+ * The "IT at a glance" facts. agents: the client's atera_agents rows (with raw); device: its upgrades() entry; acronis: { machines:
+ * [{ name, lastSuccess }], m365: { accounts, sharepoint, teams, mailboxes, onedrive } } ; antivirus: true when Webroot covers the client;
+ * services: servicesFrom(); email: emailAuth(); topics: adviceTopics() (all, as recommendations); today: YYYY-MM-DD.
+ */
+export function summaryFacts({ agents = [], device = null, acronis = null, antivirus = false, services = [], email = null, topics = [], today }) {
+  const day = 86400000, at = new Date(today + 'T12:00:00Z').getTime();
+  const recent = agents.filter(a => a.last_seen && at - new Date(a.last_seen).getTime() <= 30 * day);
+  const quiet = agents.filter(a => !a.last_seen || at - new Date(a.last_seen).getTime() > 30 * day);
+  const os = {};
+  for (const a of recent) { const k = /windows 11/i.test(a.os) ? 'Windows 11' : /windows 10/i.test(a.os) ? 'Windows 10' : /windows 7/i.test(a.os) ? 'Windows 7' : /server/i.test(a.os) ? 'Windows Server' : /mac/i.test(a.os) ? 'Mac' : 'Other'; os[k] = (os[k] || 0) + 1; }
+  const m365apps = recent.filter(a => /365/i.test(a.raw?.Office || '') || (Number(String(a.raw?.OfficeFullVersion || '').split('.')[0]) >= 16 && !/2016|2019|2021/.test(a.raw?.Office || ''))).length;
+  // A backup is only told as current when it is: a late one is ours to fix, never the client's news.
+  const freshBackups = (acronis?.machines || []).filter(m => m.lastSuccess && at - new Date(m.lastSuccess).getTime() <= 3 * day)
+    .map(m => ({ machine: m.name, lastGoodBackup: String(m.lastSuccess).slice(0, 10) }));
+  return {
+    computers: { inUseLastMonth: recent.length, byWindowsVersion: os, onCurrentMicrosoft365Apps: m365apps, monitored: recent.length > 0 },
+    notSeenForAMonth: quiet.map(a => ({ name: a.machine_name, lastSeen: a.last_seen ? String(a.last_seen).slice(0, 10) : 'never' })),
+    microsoft365: acronis?.m365 ? { accounts: acronis.m365.accounts, backedUp: [acronis.m365.sharepoint && 'SharePoint sites', acronis.m365.teams && 'Teams',
+      acronis.m365.mailboxes && 'email', acronis.m365.onedrive && 'OneDrive'].filter(Boolean), notBackedUp: [!acronis.m365.mailboxes && 'email', !acronis.m365.onedrive && 'OneDrive'].filter(Boolean) } : null,
+    email,
+    protection: { managedAntivirus: !!antivirus, nightlyBackups: freshBackups },
+    servicesFromGecko: services,
+    recommendations: topics.map(t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '' }))
+  };
+}
+
+/** The ticked topics as facts for an advice email. */
+export const adviceFacts = topics => ({ recommendations: topics.map(t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '' })) });

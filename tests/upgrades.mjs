@@ -64,4 +64,9 @@ const t = taskFor(w);
 assert.equal(t.title, 'Upgrades for West Country Fires: replace 1 PC, upgrade 1 to Windows 11, update 1 Windows 11');
 assert.match(t.note, /PAULAPCNEW \(Paula\): Replace/);
 
+// Cowans' Sage PC: Windows 11 21H2 on a 4th-gen i7 → replace, not "update".
+assert.match(texts(dev('Microsoft Windows 11 Pro  x64', { OSBuild: '22000.2538', Processor: 'Intel(R) Core(TM) i7-4771 CPU @ 3.50GHz' }))[0], /asap Windows: Replace: Windows 11 on a processor/);
+assert.equal(upgrades([{ customer_name: 'C', machine_name: 'SAGEPC', os: 'Microsoft Windows 11 Pro  x64', last_seen: '2026-10-18T10:00:00Z', last_user: 'AzureAD\\ChrisWyeth', raw: { OSBuild: '22000.1', Processor: 'Intel(R) Core(TM) i7-4771' } }], today).clients[0].devices[0].user, 'Chris Wyeth');
+assert.equal(upgrades([{ customer_name: 'C', machine_name: 'SAGEPC', os: 'Microsoft Windows 11 Pro  x64', last_seen: '2026-10-18T10:00:00Z', raw: { OSBuild: '22000.1', Processor: 'Intel(R) Core(TM) i7-4771' } }], today).clients[0].devices[0].plan, 'replace');
+
 console.log('upgrades: ok');
