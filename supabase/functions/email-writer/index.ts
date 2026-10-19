@@ -56,6 +56,14 @@ export function clean(html: string) {
     .trim();
 }
 
+/** The first JSON object in Claude's reply → { subject, html }; tolerant of code fences and words around it. */
+export function parseEmail(text: string) {
+  const t = String(text || '').replace(/^```(?:json)?\s*|\s*```$/g, '');
+  const start = t.indexOf('{'), end = t.lastIndexOf('}');
+  try { const o = JSON.parse(t.slice(start, end + 1)); return { subject: String(o.subject || ''), html: String(o.html || '') }; }
+  catch { return { subject: '', html: '' }; }
+}
+
 async function write(input: any) {
   const key = (Deno.env.get('ANTHROPIC_API_KEY') || '').replace(/[\s"'\u2018\u2019\u201C\u201D\u200B-\u200D\uFEFF]/g, '');   // pasted keys pick up spaces and quotes
   if (key && !/^sk-ant-/.test(key)) throw new Error('ANTHROPIC_API_KEY doesn’t start with sk-ant-: copy the key again from the Claude Console (API keys)');
@@ -64,10 +72,9 @@ async function write(input: any) {
     method: 'POST',
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
-      model: MODEL, max_tokens: 2500, system: RULES,
-      tools: [{ name: 'email', description: 'The finished email.', input_schema: { type: 'object', additionalProperties: false, required: ['subject', 'html'],
-        properties: { subject: { type: 'string', description: 'Short, specific, friendly. No client name if it reads awkwardly.' }, html: { type: 'string' } } } }],
-      tool_choice: { type: 'tool', name: 'email' },
+      // Plain JSON in the reply (forcing a tool isn't supported on every model: Sonnet 5.5 refused it, 19 Oct).
+      model: MODEL, max_tokens: 3000,
+      system: RULES + '\n\nReply with ONLY a JSON object, nothing before or after it: {"subject": "…", "html": "…"}. The subject is short, specific and friendly.',
       messages: [{ role: 'user', content: JSON.stringify({
         kind: input.kind, client: input.client, to_first_name: input.firstName || '', sender: input.sender || '',
         how_they_are_set_up: input.note || '', facts: input.facts || {} }) }]
@@ -75,7 +82,9 @@ async function write(input: any) {
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`Claude ${res.status}: ${body?.error?.message || 'no answer'}`);
-  const out = (body.content || []).find((c: any) => c.type === 'tool_use')?.input || {};
+  const text = (body.content || []).filter((c: any) => c.type === 'text').map((c: any) => c.text).join('');
+  const out = parseEmail(text);
+  if (!out.html) throw new Error('Claude didn’t return an email this time: try again');
   // Safety net for the one rule that is easiest to check: no em or en dashes reach the client.
   const undash = (t: string) => t.replace(/(\d)\s*[\u2013\u2014]\s*(?=[£$]?\d)/g, '$1 to ').replace(/\s*[\u2014\u2013]\s*/g, ', ').replace(/,\s*,/g, ',');
   return { subject: undash(String(out.subject || '')).slice(0, 200), html: undash(clean(out.html)), usage: body.usage || {} };
