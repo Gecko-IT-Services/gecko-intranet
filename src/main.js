@@ -24,6 +24,7 @@ import * as atera from './sections/atera.js';
 import * as devices from './sections/devices.js';
 import * as coverage from './sections/coverage.js';
 import * as actions from './sections/actions.js';
+import * as brief from './sections/brief.js';
 import * as reconcile from './sections/reconcile.js';
 import * as upgradesSection from './sections/upgrades.js';
 import * as analytics from './sections/analytics.js';
@@ -69,6 +70,9 @@ window.GeckoMonitor = { backups: backups.snapshot, alerts: alerts.snapshot, cove
 // Overview › Today › Do next (next best action, 19 Oct 2026): the classic script asks for the card's markup.
 window.GeckoActions = { html: actions.html };
 actions.init();
+// The Monday brief (19 Oct 2026): Overview builds its input (ovwBriefInput in index.html) only when it's needed.
+window.GeckoBrief = { lineHtml: brief.lineHtml, auto: brief.auto };
+brief.init(() => window.ovwBriefInput());
 // Same client under different names (Xero, Clients, SSA): Timesheets' Log time from a client page.
 window.GeckoClientMatch = sameClient;
 // The shared tab strip (the shell's hub strip uses it too).

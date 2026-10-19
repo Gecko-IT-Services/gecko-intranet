@@ -271,3 +271,12 @@
   #section-overview .na-row-end { flex-direction: column; align-items: flex-end; gap: 4px; }
   #section-overview .na-card .ovw-sub { display: none; }
 }
+
+/* Monday brief (19 Oct 2026, src/sections/brief.js): one quiet line under the status tiles. */
+#section-overview .ovw-brief {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
+  margin: 0 0 16px; padding: 10px 14px; border: 1px solid var(--border-dim); border-radius: var(--radius); background: var(--card);
+  font-size: 13px; color: var(--muted);
+}
+#section-overview .ovw-brief strong { color: var(--white); margin-right: 4px; }
+#section-overview .ovw-brief-err { font-style: normal; color: var(--amber); }
