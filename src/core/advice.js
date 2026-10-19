@@ -69,7 +69,7 @@ export function adviceTopics({ client, device = null, coverage = null, gaps = []
   if (office.length) {
     out.push({ key: 'office', source: 'devices', productKey: null, checked: true,
       title: `${plural(office.length, 'computer')} on an old version of Office`, subject: `Old versions of Office at ${client}`,
-      why: 'Older versions of Microsoft Office (2016, 2019 and earlier) no longer receive security updates. Documents and email attachments are one of the most common ways in for attackers, so it is worth moving to a supported version.',
+      why: 'Office 2021 and older versions (2019, 2016 and earlier) no longer receive security updates; Office 2021’s support ended on 13 October 2026. Documents and email attachments are one of the most common ways in for attackers, so it is worth moving to a supported version.',
       items: office.map(d => ({ name: who(d), note: (d.findings.find(f => f.what === 'Office')?.text || '').replace(/:.*$/, '') })),
       benefits: ['Always up to date: new features and security fixes arrive automatically', 'The same apps on PCs, Macs, tablets and phones',
         'Often included in your Microsoft 365 plan already, so there may be nothing extra to pay', 'Installed and set up by us'] });
@@ -106,6 +106,26 @@ export function adviceTopics({ client, device = null, coverage = null, gaps = []
       price: p.unit_price != null && p.unit_price !== '' ? priceSentence(p, {}) : '' });
   }
   return out;
+}
+
+/**
+ * Microsoft 365 backup offered only for what isn't backed up already (Cowans, 19 Oct 2026: SharePoint and Teams were covered, and
+ * the email offered them anyway). m365: { sharepoint, teams, mailboxes, onedrive } from Acronis, or null when unknown (unchanged).
+ * Everything covered → the topic goes.
+ */
+export function withM365Cover(topics, m365) {
+  if (!m365) return topics;
+  const have = [m365.sharepoint && 'SharePoint sites', m365.teams && 'Teams', m365.mailboxes && 'email', m365.onedrive && 'OneDrive'].filter(Boolean);
+  const missing = [!m365.mailboxes && 'email', !m365.onedrive && 'OneDrive', !m365.sharepoint && 'SharePoint sites', !m365.teams && 'Teams'].filter(Boolean);
+  const list = xs => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0] || '');
+  return topics.flatMap(t => {
+    if (t.productKey !== 'm365_backup') return [t];
+    if (!missing.length) return [];
+    return [{ ...t, title: `Backing up ${list(missing)}`,
+      items: [...(have.length ? [{ name: 'Already backed up', note: list(have) }] : []), { name: 'Not backed up yet', note: list(missing) }],
+      benefits: [`${list(missing).replace(/^./, c => c.toUpperCase())} backed up automatically every day${have.length ? `, alongside the ${list(have)} we already back up` : ''}`,
+        ...t.benefits.filter(b => !/every mailbox|onedrive|sharepoint|teams/i.test(b))] }];
+  });
 }
 
 /**
@@ -175,7 +195,8 @@ export function servicesFrom(lines) {
 
 /**
  * The "IT at a glance" facts. agents: the client's atera_agents rows (with raw); device: its upgrades() entry; acronis: { machines:
- * [{ name, lastSuccess }], m365: { accounts, sharepoint, teams, mailboxes, onedrive } } ; antivirus: true when Webroot covers the client;
+ * [{ name, lastSuccess }], m365: { accounts, sharepoint, teams, mailboxes, onedrive } } ; antivirus: how many computers Webroot covers
+ * (0 = none; true = yes, count unknown);
  * services: servicesFrom(); email: emailAuth(); topics: adviceTopics() (all, as recommendations); today: YYYY-MM-DD.
  */
 export function summaryFacts({ agents = [], device = null, acronis = null, antivirus = false, services = [], email = null, topics = [], today }) {
@@ -194,7 +215,9 @@ export function summaryFacts({ agents = [], device = null, acronis = null, antiv
     microsoft365: acronis?.m365 ? { accounts: acronis.m365.accounts, backedUp: [acronis.m365.sharepoint && 'SharePoint sites', acronis.m365.teams && 'Teams',
       acronis.m365.mailboxes && 'email', acronis.m365.onedrive && 'OneDrive'].filter(Boolean), notBackedUp: [!acronis.m365.mailboxes && 'email', !acronis.m365.onedrive && 'OneDrive'].filter(Boolean) } : null,
     email,
-    protection: { managedAntivirus: !!antivirus, nightlyBackups: freshBackups },
+    // "On every computer" only when Webroot's count reaches the computers in use; a shortfall is ours to fix, never the client's news.
+    protection: { managedAntivirus: !!antivirus, antivirusOnEveryComputer: typeof antivirus === 'number' && antivirus >= recent.length && recent.length > 0,
+      nightlyBackups: freshBackups },
     servicesFromGecko: services,
     recommendations: topics.map(t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '' }))
   };
