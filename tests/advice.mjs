@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { fromCatalogue, adviceTopics, composeEmail } from '../src/core/advice.js';
+import { fromCatalogue, adviceTopics, composeEmail, emailAuth, servicesFrom, summaryFacts, adviceFacts } from '../src/core/advice.js';
 
 // Catalogue wording as it is in opportunity_products (18 Oct 2026, shortened).
 const keeper = { key: 'keeper', name: 'Keeper password manager', unit_price: null, price_unit: 'user', email_subject: 'A safer, simpler way to manage passwords at {{client}}',
@@ -28,7 +28,7 @@ const topics = adviceTopics({ client: 'West Country Fires', device, coverage, ga
 assert.deepEqual(topics.map(t => [t.key, t.checked]), [['windows', true], ['server', true], ['office', true], ['update', false], ['backup', true], ['product:email_security', true], ['product:keeper', false]],
   'devices first; the routine Windows 11 update unticked; catalogue Windows 11 not repeated; strong gaps ticked');
 const w = topics[0];
-assert.equal(w.title, '2 computers on an unsupported version of Windows');
+assert.equal(w.title, '2 computers that can’t get Windows security updates');
 assert.deepEqual(w.items.map(i => i.name), ['PAULAPCNEW (Paula)', 'SAGEPC (Dannii)']);
 assert.match(w.items[0].note, /replacing/);
 assert.match(w.items[1].note, /no cost/);
@@ -41,7 +41,7 @@ const pick = topics.filter(t => t.checked);
 const mail = composeEmail({ client: 'West Country Fires', firstName: 'Tim', sender: 'Kind regards,\nPhilip Morris\nGecko IT Services', topics: pick });
 assert.equal(mail.subject, 'Keeping West Country Fires\' IT secure and up to date', 'a name ending in s: just the apostrophe');
 assert.match(mail.text, /^Hi Tim,\n\nI hope all is well at West Country Fires\./);
-assert.match(mail.text, /1\. 2 computers on an unsupported version of Windows/);
+assert.match(mail.text, /1\. 2 computers that can’t get Windows security updates/);
 assert.match(mail.text, /• PAULAPCNEW \(Paula\): too old to run Windows 11/);
 assert.match(mail.text, /What it means for you:\n• Security updates again/);
 assert.match(mail.text, /we’ll send a clear quote for anything that has a cost/);
@@ -56,5 +56,27 @@ assert.equal(one.subject, 'A safer, simpler way to manage passwords at West Coun
 assert.match(one.text, /^Hi there,/);
 assert.doesNotMatch(one.text, /^1\./m);
 assert.match(one.text, /no obligation/);
+
+// — Facts for the AI writer (Cowans, 18–19 Oct 2026). —
+assert.deepEqual(emailAuth({ mx: ['0 cowanconsult-co-uk.mail.protection.outlook.com.'], txt: ['"v=spf1 include:spf.protection.outlook.com include:spf.exclaimer.net -all"'],
+  dmarc: ['"v=DMARC1; p=quarantine; rua=mailto:dmarc@cowanconsult.co.uk; pct=100"'], dkim: ['selector1-…'] }),
+  { provider: 'Microsoft 365 (no separate filtering service in front)', spf: 'set up, strict', dkim: 'set up', dmarc: 'set up, enforced (quarantine)' });
+assert.equal(emailAuth({}).dmarc, 'missing');
+assert.deepEqual(servicesFrom(['Atera - Internet Security & Backup & Work from Home (x5)', 'Web Hosting - 1 year', 'Domain Renewal - cowanconsult.co.uk', 'M365 Subscription', 'Exclaimer Signature Server Side']).sort(),
+  ['Backups', 'Business antivirus', 'Domain renewal', 'Email signatures', 'Microsoft 365 licences', 'Secure remote access', 'Website hosting']);
+const agents = [
+  { machine_name: 'CHRIS-PC', os: 'Microsoft Windows 11 Pro  x64', last_seen: '2026-10-16T10:00:00Z', raw: { Office: 'Microsoft Office 365 Business', OfficeFullVersion: '16.0.1' } },
+  { machine_name: 'TEKLA', os: 'Microsoft Windows 10 Pro  x64', last_seen: '2026-10-18T10:00:00Z', raw: {} },
+  { machine_name: 'CCL-FILE-SERVER', os: 'Microsoft Windows 11 Pro  x64', last_seen: '2026-10-18T10:00:00Z', raw: { Office: 'Microsoft Office Professional Plus 2019', OfficeFullVersion: '16.0.1' } },
+  { machine_name: 'ENGINEER-IOW', os: 'Microsoft Windows 10 Home  x64', last_seen: '2024-06-10T10:00:00Z', raw: {} }];
+const sf = summaryFacts({ agents, today: '2026-10-19', antivirus: true, services: ['Backups'], topics: [],
+  acronis: { machines: [{ name: 'SagePC', lastSuccess: '2026-10-18T18:15:02Z' }, { name: 'OldPC', lastSuccess: '2026-04-18T19:40:39Z' }],
+    m365: { accounts: 15, sharepoint: true, teams: true, mailboxes: false, onedrive: false } } });
+assert.deepEqual(sf.computers, { inUseLastMonth: 3, byWindowsVersion: { 'Windows 11': 2, 'Windows 10': 1 }, onCurrentMicrosoft365Apps: 1, monitored: true });
+assert.deepEqual(sf.notSeenForAMonth, [{ name: 'ENGINEER-IOW', lastSeen: '2024-06-10' }]);
+assert.deepEqual(sf.protection.nightlyBackups, [{ machine: 'SagePC', lastGoodBackup: '2026-10-18' }], 'a stale backup is never told as current');
+assert.deepEqual(sf.microsoft365, { accounts: 15, backedUp: ['SharePoint sites', 'Teams'], notBackedUp: ['email', 'OneDrive'] });
+assert.doesNotMatch(JSON.stringify(sf), /Atera|Acronis|Webroot|margin|cost/i, 'nothing internal in the facts');
+assert.equal(adviceFacts(pick).recommendations.length, pick.length);
 
 console.log('advice: ok');

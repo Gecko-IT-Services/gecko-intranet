@@ -83,7 +83,9 @@ export function deviceFindings(a, today) {
     const v = [...SUPPORT.win11].reverse().find(([b]) => build >= b);
     if (v && !enterprise) {
       const d = due(v[2], `Windows 11 ${v[1]}`);
-      if (d) add(d[0], 'Windows', d[1], 'Install the latest Windows 11 update (free, through Windows Update or Atera)');
+      // Windows 11 put on a processor Microsoft doesn't support can't be moved to the current version: replace it (Cowans' Sage PC, 18 Oct).
+      if (d) add(d[0], 'Windows', d[1], cpuOk === false ? 'Replace: Windows 11 on a processor it doesn’t support can’t take the current version'
+        : 'Install the latest Windows 11 update (free, through Windows Update or Atera)');
     }
   } else if (/macos\s*(?:\d+\s*)?(catalina|big sur|monterey|mojave|high sierra)/i.test(os)) {
     add('asap', 'macOS', `${os.replace(/\s*x64$/, '')}: Apple no longer sends security updates`, 'Update macOS, or replace the Mac if it can’t');
@@ -131,7 +133,8 @@ export function upgrades(agents, today) {
       : findings.find(f => /server/i.test(f.fix)) ? 'server' : findings.find(f => /latest Windows 11 update/.test(f.fix)) ? 'update'
       : findings.find(f => f.what === 'Office' && f.level === 'asap') ? 'office' : 'other';
     const e = by.get(a.customer_name) || { name: a.customer_name, own: isInternal(a.customer_name), devices: [] };
-    e.devices.push({ name: a.machine_name, user: String(a.last_user || a.raw?.LastLoginUser || '').split(/[\\/]/).pop().trim(), os: String(a.os || '').replace(/^Microsoft\s+|\s+x64$/g, ''),
+    e.devices.push({ name: a.machine_name, user: String(a.last_user || a.raw?.LastLoginUser || '').split(/[\\/]/).pop().replace(/\s*\(.*$/, '').trim()
+        .replace(/([a-z])([A-Z])/g, '$1 $2'),   // "AzureAD\\ChrisWyeth" → "Chris Wyeth" os: String(a.os || '').replace(/^Microsoft\s+|\s+x64$/g, ''),
       model: a.model || a.raw?.VendorBrandModel || '', lastSeen: a.last_seen, url: a.raw?.AppViewUrl || '', findings, level, plan,
       office: findings.some(f => f.what === 'Office' && f.level === 'asap') });
     by.set(a.customer_name, e);

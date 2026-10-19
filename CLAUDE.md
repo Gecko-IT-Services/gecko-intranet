@@ -261,6 +261,10 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - A Claude-powered question box (Edge Function `ask`) was built, then removed the same day at Philip's request: the
   Anthropic API is paid per question and he wants no running cost. Don't re-add without asking. Design note and git
   history (`2026-10-11-ask-gecko-hq-design.md`) have it.
+- **Exception, 19 Oct 2026 (Philip chose it):** AI-written client emails only. Edge Function `email-writer` (secret
+  `ANTHROPIC_API_KEY`, ~1–2p an email, logged in `ai_email_log`, `EMAIL_DAILY_LIMIT` 40/day) writes the advice email or an
+  "IT at a glance" email from client-safe facts plus `client_notes.setup` ("How <client> is set up, in our words", client page ›
+  Upgrades & advice). Design `2026-10-19-ai-client-emails-design.md`. Any other paid AI still needs asking.
 
 ## Jobs (from 8 Oct 2026)
 - `src/sections/jobs.js` + `src/core/jobs.js` (tests `tests/jobs.mjs`); design note
