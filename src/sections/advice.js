@@ -16,7 +16,7 @@ import { toast, escapeHtml } from '../core/ui.js';
 import { graphFetch } from '../core/graph.js';
 import { connectSupabase } from '../core/supabase.js';
 import { adviceTopics, composeEmail, summaryFacts, adviceFacts, emailAuth, servicesFrom, withM365Cover, leaveOut, itemKey, factsPanel, checkEmail,
-  withEvidence, themeFigures } from '../core/advice.js';
+  withEvidence, themeFigures, quarterFacts } from '../core/advice.js';
 import { upgrades } from '../core/upgrades.js';
 import { coverage, coverageFor } from '../core/coverage.js';
 import { sameAteraClient } from '../core/devices.js';
@@ -29,6 +29,8 @@ import { adviceFor, proposeFromAdvice } from './opportunities.js';
 const AD = { client: '', data: null, error: null, loading: false, ticked: new Map(), subject: '', sending: false, open: new Set(), note: '', noteSaved: '', leftOut: [], ai: null, writing: '' };
 const must = ({ data, error }) => { if (error) throw new Error(error.message || 'Database request failed'); return data; };
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+const daysAgo = n => new Date(Date.now() - n * 86400000).toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+const KIND = { advice: 'email', summary: 'IT summary', review: 'quarterly review' };
 const myName = () => (document.getElementById('userName')?.textContent || '').trim();
 const SOURCE = { devices: ['blue', 'Devices'], protection: ['red', 'Protection'], opportunity: ['green', 'Opportunity'] };
 const MARK = { windows: 'Windows', office: 'Microsoft Office', server: 'Windows', update: 'Windows', backup: 'Acronis backup' };
@@ -62,7 +64,7 @@ async function load(name) {
     // Six months of the client's own timesheet notes, for "What we keep fixing" (timesheets hold SSA clients' work).
     const ssaIds = ssaRows.filter(r => same(r.name, name)).map(r => r.id);
     const since = new Date(Date.now() - 183 * 86400000).toISOString().slice(0, 10);
-    const entries = ssaIds.length ? await readAll(() => sb.from('timesheet_entries').select('id,entry_date,title,work_description,hours,engineer')
+    const entries = ssaIds.length ? await readAll(() => sb.from('timesheet_entries').select('id,entry_date,title,work_description,work_type,hours,engineer')
       .in('client_id', ssaIds).gte('entry_date', since).is('deleted_at', null).gt('hours', 0).neq('engineer', 'System').order('id')) : [];
     AD.evidence = insights.find(i => same(i.client_name, name)) || null;
     const up = upgrades(agents.filter(a => same(a.customer_name, name)), today()).clients[0] || null;
@@ -122,6 +124,8 @@ const chosen = () => withEvidence(leaveOut((AD.data?.topics || []).filter(t => A
 /** What the AI is told for an email of this kind, as things stand now. */
 function currentFacts(kind) {
   const f = AD.data.facts;
+  // The quarterly review: IT at a glance plus the last three months of support (Gecko HQ's sums from the timesheets).
+  if (kind === 'review') return { ...currentFacts('summary'), lastThreeMonths: quarterFacts(AD.data.entries || [], { from: daysAgo(91), to: today() }) };
   return kind === 'summary'
     ? summaryFacts({ ...f, email: AD.data.email || null, topics: chosen(), leftOut: AD.leftOut, themes: themes(), today: today() })   // the ticked topics only
     : adviceFacts(chosen(), AD.leftOut);
@@ -141,7 +145,7 @@ function checks(fromScreen = false) {
 }
 /** What the AI will be told, to read before spending anything. */
 function factsBox() {
-  const f = currentFacts('summary');
+  const f = currentFacts('review');
   const rows = factsPanel(f, { kind: 'summary', antivirusCount: typeof AD.data.facts.antivirus === 'number' ? AD.data.facts.antivirus : null,
     sell: chosen().filter(t => t.productKey) });
   const pick = label => rows.find(r => r[0] === label)?.[1] || '';
@@ -150,7 +154,7 @@ function factsBox() {
   return `<details class="ad-facts"${AD.factsOpen ? ' open' : ''} data-ad-facts>
     <summary>What the AI will be told <span>${escapeHtml(head)}</span></summary>
     <dl>${rows.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>
-    <p>Plus your note. An “IT at a glance” email gets all of this; an advice email only the recommendations. Antivirus counts are for you: the email is only told “in place” or “on every computer”.</p>
+    <p>Plus your note. The quarterly review gets all of this; “IT at a glance” all but the last three months; an advice email only the recommendations. Antivirus counts are for you: the email is only told “in place” or “on every computer”.</p>
   </details>`;
 }
 const firstName = () => String(AD.data?.main?.name || '').trim().split(/\s+/)[0] || '';
@@ -175,7 +179,7 @@ function body() {
   // Any catalogue product they don't have, for what Gecko HQ can't see (Philip, 19 Oct 2026: "this is a sales tool").
   const add = canAdd.length ? `<label class="ad-add"><span>Add a product to sell</span><select data-ad-add><option value="">Choose from the catalogue…</option>${canAdd.map(m => `<option value="${escapeHtml(m.product.key)}">${escapeHtml(m.product.name)}${m.deal ? ` (${m.deal.status === 'proposed' ? 'Proposed' : 'idea'} in the pipeline)` : ''}</option>`).join('')}</select></label>` : '';
   const list = (topics.length ? `<ul class="ad-topics">${topics.map(topicHtml).join('')}</ul>` : '<p class="ad-none">Nothing to raise right now: every device is supported and nothing in the catalogue fits. Add a product below, or write an IT summary.</p>') + add;
-  const preview = AD.writing ? `<p class="ad-none">Writing the ${AD.writing === 'summary' ? 'IT summary' : 'email'}…</p>`
+  const preview = AD.writing ? `<p class="ad-none">Writing the ${KIND[AD.writing]}…</p>`
     : AD.ai ? AD.ai.html : mail ? mail.html : '<p class="ad-none">Tick at least one item to build the email, or write an IT summary.</p>';
   const can = !AD.writing && !AD.sending;
   return `${setup}<div class="ad-wrap">
@@ -190,6 +194,8 @@ function body() {
         <div class="ad-write">
           <button type="button" class="btn btn-sm btn-primary" data-ad-act="ai-advice"${can && picked.length ? '' : ' disabled'}>Write advice email with AI</button>
           <button type="button" class="btn btn-sm" data-ad-act="ai-summary"${can ? '' : ' disabled'}>Write “IT at a glance” with AI</button>
+          <button type="button" class="btn btn-sm" data-ad-act="ai-review"${can ? '' : ' disabled'}>Write quarterly review with AI</button>
+          ${AD.ai?.kind === 'review' ? '<button type="button" class="btn btn-sm btn-ghost" data-ad-act="print">Print or save as PDF</button>' : ''}
           ${AD.ai ? '<button type="button" class="btn btn-sm btn-ghost" data-ad-act="template">Back to the plain version</button>' : ''}
         </div>
         <p class="ad-mode">${AD.ai ? `Written by AI from the facts and your notes${AD.ai.costUsd ? ` (about ${escapeHtml((AD.ai.costUsd * 100).toFixed(1))}¢)` : ''}. Click into it to change anything.` : 'Plain version, built from the ticked items. AI writes a version that uses your notes.'}</p>
@@ -202,14 +208,14 @@ function body() {
         <div class="ad-preview"${AD.ai ? ' contenteditable="true" data-ad-preview' : ''}>${preview}</div>
         <div class="ad-do">
           <button type="button" class="btn btn-primary" data-ad-act="draft"${(AD.ai || picked.length) && can ? '' : ' disabled'}${AD.sending ? ' aria-busy="true"' : ''}>${AD.sending ? 'Saving draft…' : 'Draft email in Outlook'}</button>
-          <span>${AD.ai ? (AD.ai.kind === 'summary' ? 'IT summary' : `${picked.length} item${picked.length === 1 ? '' : 's'}`) : `${picked.length} of ${topics.length} item${topics.length === 1 ? '' : 's'}`}${picked.some(t => t.productKey) && AD.ai?.kind !== 'summary' ? ' · products in it become Proposed in the pipeline' : ''}</span>
+          <span>${AD.ai ? (AD.ai.kind !== 'advice' ? KIND[AD.ai.kind].replace(/^./, c => c.toUpperCase()) : `${picked.length} item${picked.length === 1 ? '' : 's'}`) : `${picked.length} of ${topics.length} item${topics.length === 1 ? '' : 's'}`}${picked.some(t => t.productKey) && AD.ai?.kind !== 'summary' ? ' · products in it become Proposed in the pipeline' : ''}</span>
         </div>
       </div>
     </section>
   </div>`;
 }
 
-/** Ask the email writer (Edge Function) for an AI version: kind 'advice' (ticked items) or 'summary' (IT at a glance). */
+/** Ask the email writer (Edge Function) for an AI version: kind 'advice' (ticked items), 'summary' (IT at a glance) or 'review' (quarterly review). */
 async function writeWithAi(kind) {
   if (AD.writing) return;
   if (AD.note !== AD.noteSaved) await saveNote();
@@ -352,6 +358,22 @@ async function setLeftOut(key, include) {
   }
 }
 
+/** The quarterly review on its own page, to print or save as a PDF for the meeting (the browser's own print dialog). */
+function printReview() {
+  const html = document.querySelector('[data-ad-preview]')?.innerHTML || AD.ai?.html || '';
+  const w = window.open('', '_blank');
+  if (!w) { toast('The browser blocked the new window: allow pop-ups for Gecko HQ, then try again.', 'error', 8000); return; }
+  const title = escapeHtml(AD.subject || AD.ai.subject || `IT review: ${AD.client}`);
+  w.document.write(`<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><title>${title}</title><style>
+    body { font: 15px/1.55 -apple-system, "Segoe UI", Arial, sans-serif; color: #111; max-width: 680px; margin: 40px auto; padding: 0 24px; }
+    h1 { font-size: 22px; margin: 0 0 4px; } .who { color: #555; margin: 0 0 24px; } h3 { font-size: 16px; margin: 22px 0 6px; }
+    ul, ol { padding-left: 22px; } li { margin: 3px 0; } @media print { body { margin: 0 auto; } }
+  </style></head><body><h1>${title}</h1><p class="who">${escapeHtml(AD.client)} · prepared by ${escapeHtml(myName() || 'Gecko IT Services')}, Gecko IT Services · ${escapeHtml(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))}</p>${html}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
+}
+
 async function draft() {
   const picked = chosen();
   if ((!picked.length && !AD.ai) || AD.sending) return;
@@ -416,6 +438,8 @@ export function wire(root) {
     if (a === 'save-note') saveNote();
     if (a === 'ai-advice') writeWithAi('advice');
     if (a === 'ai-summary') writeWithAi('summary');
+    if (a === 'ai-review') writeWithAi('review');
+    if (a === 'print') printReview();
     if (a === 'rewrite' && AD.ai) writeWithAi(AD.ai.kind);
     if (a === 'template') { AD.ai = null; AD.subject = ''; draw(); }
     if (a === 'reload') { const n = AD.client; AD.client = ''; html(n); draw(); }

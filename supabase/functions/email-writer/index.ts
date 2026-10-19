@@ -41,6 +41,12 @@ Be specific: name the computers and people the facts name. Keep it short enough 
 End with one clear next step (a short call, or a reply to book it in), that we'll plan it around them and quote before any cost.
 Kind "advice": the ticked recommendations only. Kind "summary": an "IT at a glance" overview (what they have, how it's protected and
 backed up, good news worth saying) followed by the recommendations.
+Kind "review": a quarterly IT review, sent ahead of a short review meeting (Philip, 19 Oct 2026: "what we did, what changed, what's at
+risk, what to propose"). Sections with <h3> headings, in this order: the last three months (facts.lastThreeMonths: jobs and hours as
+given, the kinds of work, and a few highlights picked from its examples, in plain words, nothing internal; facts.supportPatterns for
+what kept coming back); their IT now (as in "IT at a glance", briefly); worth keeping an eye on (risks only from the facts, stated
+plainly); what we'd recommend (the recommendations, with evidence and prices as given). End by suggesting a short review call or visit
+and asking when suits. It can be longer than an email, but keep it to what can be read in five minutes.
 
 HTML only with <p>, <h3>, <ul>, <ol>, <li>, <strong>, <em>, <br>. No styles, no images, no signature block beyond a short sign-off with
 the sender's first name (their email signature is added automatically).
@@ -122,7 +128,7 @@ Deno.serve(async req => {
     if (!email) return json({ error: 'Not allowed' }, 403);
     const input = await req.json().catch(() => ({}));
     const client = String(input.client || '').trim();
-    if (!client || !['advice', 'summary'].includes(input.kind)) return json({ ok: false, error: 'Which client, and which kind of email?' }, 400);
+    if (!client || !['advice', 'summary', 'review'].includes(input.kind)) return json({ ok: false, error: 'Which client, and which kind of email?' }, 400);
     const [{ n }] = await sql`select count(*)::int as n from public.ai_email_log where created_at > now() - interval '1 day'`;
     if (n >= DAILY_LIMIT) return json({ ok: false, error: `Today's limit of ${DAILY_LIMIT} AI emails is reached (EMAIL_DAILY_LIMIT in Supabase secrets).` });
     try {
@@ -130,6 +136,10 @@ Deno.serve(async req => {
       const cost = ((r.usage.input_tokens || 0) * PRICE_IN + (r.usage.output_tokens || 0) * PRICE_OUT) / 1e6;
       await sql`insert into public.ai_email_log (client_name, kind, created_by, model, input_tokens, output_tokens, cost_usd)
                 values (${client}, ${input.kind}, ${email}, ${MODEL}, ${r.usage.input_tokens || 0}, ${r.usage.output_tokens || 0}, ${cost})`;
+      // A quarterly review is kept with the client (client_insights), so the last one can be looked back on.
+      if (input.kind === 'review') await sql`insert into public.client_insights (client_name, kind, data, period_from, period_to, model, created_by)
+        values (${client}, 'review', ${sql.json({ subject: r.subject, html: r.html, costUsd: cost })}, ${input.facts?.lastThreeMonths?.from || null},
+                ${input.facts?.lastThreeMonths?.to || null}, ${MODEL}, ${email})`;
       return json({ ok: true, subject: r.subject, html: r.html, costUsd: Math.round(cost * 10000) / 10000 });
     } catch (err) {
       const message = String((err as Error).message || err).slice(0, 400);
