@@ -16,7 +16,8 @@ export function findings(check) {
   if (p.status && p.status >= 400) add('red', `The home page answered ${p.status}`, 'Get the site back up first: nothing else counts while it’s down.');
   if (p.noindex) add('red', 'It tells Google not to list it (noindex)', 'Turn off “Discourage search engines” in WordPress (Settings › Reading) or Rank Math’s noindex.');
   if (p.robotsBlocksAll) add('red', 'robots.txt blocks every search engine', 'Remove “Disallow: /” from robots.txt.');
-  if (p.https === false) add('red', 'It doesn’t open on https', 'Redirect http to https; Google ranks secure sites higher.');
+  if (p.https === false) add('red', p.httpsError ? 'The secure (https) version is broken: browsers show “Not secure”' : 'It doesn’t open on https',
+    p.httpsError ? `Fix the SSL certificate (${p.httpsError}) and redirect http to https; Google ranks secure sites higher.` : 'Redirect http to https; Google ranks secure sites higher.');
   if (!p.title) add('red', 'The home page has no title', 'Set an SEO title in Rank Math: business, service and town.');
   else if (p.titleLength > 60) add('amber', `The title is ${p.titleLength} characters; Google shows about 60`, 'Shorten it so the important words come first.');
   else if (p.titleLength < 20) add('amber', `The title is only ${p.titleLength} characters`, 'Say what they do and where, e.g. “Locksmith in Lymington | ALS”.');

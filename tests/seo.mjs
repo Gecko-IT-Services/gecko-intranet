@@ -35,4 +35,5 @@ const rep = [{ contact_name: 'ALS Locksmiths', status: 'AUTHORISED', period: 1, 
 const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 assert.equal(seoFee(rep, same, 'ALS Locksmiths'), 500);
 assert.equal(seoFee(rep, same, 'MSA Safety'), 0);
+assert.match(findings({ onpage: { ...good.onpage, https: false, httpsError: 'invalid peer certificate: NotValidForName' } })[0].text, /broken: browsers show “Not secure”/);
 console.log('seo: ok');
