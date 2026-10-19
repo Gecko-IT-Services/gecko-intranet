@@ -14,6 +14,7 @@
 
 import { toast, escapeHtml, clientLink, syncTableLabels } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
+import { readAll } from '../core/rows.js';
 import { coverage, STALE_WORKING_HOURS } from '../core/coverage.js';
 import { ATERA_NAMES } from '../core/devices.js';
 
@@ -27,7 +28,7 @@ const LEVEL = { red: ['red', 'Needs action'], amber: ['amber', 'Look soon'], inf
 async function read(sb) {
   const [tenants, items, atera, status] = await Promise.all([
     sb.from('acronis_tenants').select('tenant_id,name,kind').then(must),
-    sb.from('acronis_items').select('kind,tenant_id,raw').in('kind', ['resource_status', 'agent', 'usage', 'alert']).then(must),
+    readAll(() => sb.from('acronis_items').select('kind,tenant_id,raw').in('kind', ['resource_status', 'agent', 'usage', 'alert']).order('kind').order('item_id')),
     sb.from('atera_agents').select('customer_name,machine_name,device_type,os,online').then(must),
     sb.from('acronis_status').select('*').eq('id', 1).maybeSingle().then(must)
   ]);
