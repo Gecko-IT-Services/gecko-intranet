@@ -6930,8 +6930,8 @@ async function ovwLoadMonitor({ interactive = false } = {}) {
   OVW.monLoading = true;
   if (OVW.tab === 'today') ovwRenderAll();
   try {
-    const [backups, alerts, coverage] = await Promise.all([mon.backups({ hours: 24, interactive }), mon.alerts({ days: 2, interactive }), mon.coverage ? mon.coverage() : null]);
-    OVW.mon = { backups, alerts, coverage, at: new Date() };
+    const [backups, alerts, coverage, devices] = await Promise.all([mon.backups({ hours: 24, interactive }), mon.alerts({ days: 2, interactive }), mon.coverage ? mon.coverage() : null, mon.devices ? mon.devices() : null]);
+    OVW.mon = { backups, alerts, coverage, devices, at: new Date() };
   } finally {
     OVW.monLoading = false;
     ovwRenderAll();
@@ -6954,8 +6954,9 @@ function ovwRenderHead() {
 /** Red items on Today: failed backups, critical alerts, money overdue, SSA clients out of hours. */
 function ovwTodayRedCount(core, today) {
   const b = OVW.mon?.backups, a = OVW.mon?.alerts;
-  const cv = OVW.mon?.coverage;
-  let n = (b?.ok ? b.failing.length : 0) + (a?.ok ? a.needing.filter(i => i.level === 'critical').length : 0) + (cv?.ok ? cv.red.length : 0);
+  const cv = OVW.mon?.coverage, dv = OVW.mon?.devices;
+  let n = (b?.ok ? b.failing.length : 0) + (a?.ok ? a.needing.filter(i => i.level === 'critical').length : 0) + (cv?.ok ? cv.red.length : 0)
+    + (dv?.ok ? dv.items.filter(i => i.level === 'red').length : 0);
   const db = OVW.db;
   if (db?.inv && core.money({ inv: db.inv, rep: db.rep || [], jobs: db.jobs || [], opps: [] }, today).owed.overdue > 0) n += 1;
   n += OVW.ssaClients.filter(c => !c.archived && c.hoursRemaining != null && c.hoursRemaining <= 0).length;
@@ -7012,11 +7013,24 @@ function ovwStatusHtml(core, today) {
   return `<div class="ovw-stats">${backups}${alerts}${money}${support}${jobs}${team}</div>`;
 }
 
-/** Monitoring's rows for Needs attention: failed backups, coverage gaps (Acronis direct), alerts that need a look, backups with warnings. */
+/** Monitoring's rows for Needs attention: failed backups, PCs not on this morning and servers gone quiet (Atera, core/offline.js),
+    coverage gaps (Acronis direct), alerts that need a look, backups with warnings. */
 function ovwMonitorItems() {
-  const b = OVW.mon?.backups, a = OVW.mon?.alerts, cv = OVW.mon?.coverage;
+  const b = OVW.mon?.backups, a = OVW.mon?.alerts, cv = OVW.mon?.coverage, dv = OVW.mon?.devices;
   const rows = [];
   if (b?.ok) for (const j of b.failing) rows.push({ level: 'red', who: j.client, title: `Backup failed: ${j.what}${j.plan ? ` (${j.plan})` : ''}`, detail: j.reason, goKey: 'backups' });
+  if (dv?.ok) {
+    const seen = iso => new Date(iso).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+    const one = i => rows.push({ level: i.level, who: i.customer, goKey: 'devices',
+      title: i.server ? `Server offline: ${i.machine}` : `Not on this morning: ${i.machine}${i.user ? ` (${i.user})` : ''}`,
+      detail: `Last checked in ${seen(i.lastSeen)}. Possible reason: ${i.reasons[0].text.split(/[.:]\s/)[0].replace(/^Or i/, 'I')}.` });
+    const amber = dv.items.filter(i => i.level === 'amber');
+    dv.items.filter(i => i.level === 'red').forEach(one);
+    // While it's still learning which PCs are on every day, several ambers are one line rather than a list.
+    if (amber.length > 3) rows.push({ level: 'amber', who: '', goKey: 'devices', title: `${amber.length} PCs not on yet this morning`,
+      detail: amber.slice(0, 5).map(i => `${i.machine} (${i.customer})`).join(', ') + (amber.length > 5 ? '…' : '') });
+    else amber.forEach(one);
+  }
   if (cv?.ok) for (const i of cv.red) rows.push({ level: 'red', who: i.client, title: `Not covered: ${i.what}`, detail: i.text, goKey: 'coverage' });
   if (a?.ok) for (const i of a.needing) rows.push({ level: i.level === 'critical' ? 'red' : 'amber', who: i.client, title: `${i.device}: ${i.label}`, detail: i.why, goKey: 'alerts' });
   if (b?.ok && b.warnings.length) rows.push({ level: 'amber', who: '', title: `${b.warnings.length} backup${b.warnings.length === 1 ? '' : 's'} finished with warnings`, detail: [...new Set(b.warnings.map(w => w.client))].slice(0, 4).join(', '), goKey: 'backups' });

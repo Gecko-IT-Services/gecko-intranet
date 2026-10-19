@@ -64,7 +64,7 @@ window.GeckoSections.commands = { init: commands.init };
 window.GeckoSections.analytics = { init: analytics.init, show: analytics.show };
 window.GeckoSections.client = { init: client.init, open: client.open, current: client.current };
 // Overview › Today reads the last day of backups and alerts through these (support@ mailbox).
-window.GeckoMonitor = { backups: backups.snapshot, alerts: alerts.snapshot, coverage: coverage.snapshot };
+window.GeckoMonitor = { backups: backups.snapshot, alerts: alerts.snapshot, coverage: coverage.snapshot, devices: devices.snapshot };
 // Same client under different names (Xero, Clients, SSA): Timesheets' Log time from a client page.
 window.GeckoClientMatch = sameClient;
 // The shared tab strip (the shell's hub strip uses it too).

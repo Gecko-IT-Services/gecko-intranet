@@ -135,7 +135,8 @@ export function upgrades(agents, today) {
       : findings.find(f => f.what === 'Office' && f.level === 'asap') ? 'office' : 'other';
     const e = by.get(a.customer_name) || { name: a.customer_name, own: isInternal(a.customer_name), devices: [] };
     e.devices.push({ name: a.machine_name, user: String(a.last_user || a.raw?.LastLoginUser || '').split(/[\\/]/).pop().replace(/\s*\(.*$/, '').trim()
-        .replace(/([a-z])([A-Z])/g, '$1 $2'),   // "AzureAD\\ChrisWyeth" → "Chris Wyeth" os: String(a.os || '').replace(/^Microsoft\s+|\s+x64$/g, ''),
+        .replace(/([a-z])([A-Z])/g, '$1 $2'),   // "AzureAD\\ChrisWyeth" → "Chris Wyeth"
+      os: String(a.os || '').replace(/^Microsoft\s+|\s+x64$/g, ''),
       model: a.model || a.raw?.VendorBrandModel || '', lastSeen: a.last_seen, url: a.raw?.AppViewUrl || '', findings, level, plan,
       office: findings.some(f => f.what === 'Office' && f.level === 'asap') });
     by.set(a.customer_name, e);
