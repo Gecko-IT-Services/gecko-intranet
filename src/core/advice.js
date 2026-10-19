@@ -202,7 +202,8 @@ export function servicesFrom(lines) {
  * (0 = none; true = yes, count unknown);
  * services: servicesFrom(); email: emailAuth(); topics: adviceTopics() (all, as recommendations); today: YYYY-MM-DD.
  */
-export function summaryFacts({ agents = [], device = null, acronis = null, antivirus = false, services = [], email = null, topics = [], leftOut = [], today }) {
+export function summaryFacts({ agents = [], device = null, acronis = null, antivirus = false, services = [], email = null, topics = [], leftOut = [], themes = [], today }) {
+  const supportPatterns = themes.map(t => ({ theme: t.theme, jobs: t.jobs, hours: t.hours, from: t.from, to: t.to }));
   const day = 86400000, at = new Date(today + 'T12:00:00Z').getTime();
   const recent = agents.filter(a => a.last_seen && at - new Date(a.last_seen).getTime() <= 30 * day);
   const quiet = agents.filter(a => !a.last_seen || at - new Date(a.last_seen).getTime() > 30 * day);
@@ -222,13 +223,34 @@ export function summaryFacts({ agents = [], device = null, acronis = null, antiv
     protection: { managedAntivirus: !!antivirus, antivirusOnEveryComputer: typeof antivirus === 'number' && antivirus >= recent.length && recent.length > 0,
       nightlyBackups: freshBackups },
     servicesFromGecko: services,
-    recommendations: topics.map(t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '' })),
+    recommendations: topics.map(recFacts),
+    ...(supportPatterns.length ? { supportPatterns } : {}),
     ...(leftOut.length ? { leaveAlone: leftOut } : {})
   };
 }
 
+/** One recommendation as the writer sees it; evidence (their own support history) only when there is some. */
+const recFacts = t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '', ...(t.evidence ? { evidence: t.evidence } : {}) });
+
+const monthYear = d => new Date(String(d).slice(0, 10) + 'T12:00:00Z').toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+/** "6 jobs (4.5 hours of support) between Jun 2026 and Oct 2026" from a "What we keep fixing" theme; the figures are Gecko HQ's sums. */
+export const themeFigures = t => `${plural(t.jobs, 'job')} (${t.hours} hour${t.hours === 1 ? '' : 's'} of support) ${monthYear(t.from) === monthYear(t.to) ? `in ${monthYear(t.to)}` : `between ${monthYear(t.from)} and ${monthYear(t.to)}`}`;
+
+/**
+ * "What we keep fixing" themes attached to the product topic that would stop them (Philip, 19 Oct 2026: AI finds the patterns in six
+ * months of timesheet notes; real evidence sells better than a catalogue paragraph). Topics without a matching theme are unchanged.
+ */
+export function withEvidence(topics, themes = []) {
+  if (!themes.length) return topics;
+  return topics.map(t => {
+    const hits = themes.filter(x => x.product_key && x.product_key === t.productKey);
+    if (!hits.length) return t;
+    return { ...t, evidence: hits.map(x => `${x.theme}: ${themeFigures(x)}. ${x.client_line}`.trim()).join(' ') };
+  });
+}
+
 /** The ticked topics as facts for an advice email; leftOut: machines Gecko chose not to raise. */
-export const adviceFacts = (topics, leftOut = []) => ({ recommendations: topics.map(t => ({ title: t.title, why: t.why, items: t.items, benefits: t.benefits, price: t.price || '' })),
+export const adviceFacts = (topics, leftOut = []) => ({ recommendations: topics.map(recFacts),
   ...(leftOut.length ? { leaveAlone: leftOut } : {}) });
 
 /* ── Leave out one machine (Philip, 19 Oct 2026: ENGINEER-HP2 is the Windows 7 PC kept for TimFram, and only a whole topic could
@@ -263,7 +285,7 @@ export function factsPanel(facts, { kind = 'summary', antivirusCount = null, sel
   const rows = [];
   const recs = facts?.recommendations || [];
   // A sales tool first (Philip, 19 Oct 2026: "i want to be using this to sell gaps in the product range"): what's being sold, at the top.
-  rows.push(['Selling', sell.length ? sell.map(t => `${t.title}${t.price ? ` (${t.price.replace(/\.$/, '').replace(/^.*?\bis\s+(?=£)/, '')})` : ''}`).join(' · ') : 'no products ticked: tick a gap under What to raise to sell it']);
+  rows.push(['Selling', sell.length ? sell.map(t => `${t.title}${t.price ? ` (${t.price.replace(/\.$/, '').replace(/^.*?\bis\s+(?=£)/, '')})` : ''}${t.evidence ? ' + evidence from their support history' : ''}`).join(' · ') : 'no products ticked: tick a gap under What to raise to sell it']);
   if (kind === 'summary') {
     const c = facts.computers || {};
     const os = Object.entries(c.byWindowsVersion || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${k}`).join(', ');

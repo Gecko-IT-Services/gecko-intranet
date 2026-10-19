@@ -216,6 +216,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   own check of the AI email (`checkEmail`: tool names, money words, numbers not in the facts, every/all claims, offering what's already
   backed up, "not urgent"). The setup note is background on the client, not instructions. Open deals stay on the list (Proposed / Idea badges, `withDeals`)
   and any catalogue product they don't have can be added by hand (`notHeld`).
+  **What we keep fixing** (19 Oct, `2026-10-19-what-we-keep-fixing-design.md`): AI (Edge Function `client-ai`, kind `evidence`) groups six
+  months of a client's timesheet notes into recurring themes with the product that would stop each; Gecko HQ sums jobs and hours itself;
+  kept in `client_insights`; the theme becomes `evidence` on that product in the email (`withEvidence`).
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
@@ -273,7 +276,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - **Exception, 19 Oct 2026 (Philip chose it):** AI-written client emails only. Edge Function `email-writer` (secret
   `ANTHROPIC_API_KEY`; Claude Sonnet 5.5, ~3.5p an email (Haiku 5.5 tried 19 Oct: ~0.3p but contradicted itself and ignored facts, so not for client emails), logged in `ai_email_log`, `EMAIL_DAILY_LIMIT` 40/day) writes the advice email or an
   "IT at a glance" email from client-safe facts plus `client_notes.setup` ("How <client> is set up, in our words", client page ›
-  Upgrades & advice). Design `2026-10-19-ai-client-emails-design.md`. Any other paid AI still needs asking.
+  Upgrades & advice). Design `2026-10-19-ai-client-emails-design.md`. `client-ai` (same key, log and daily cap) does the client read-outs Philip chose on 19 Oct (evidence;
+  then incident help and the quarterly review). Any other paid AI still needs asking.
 
 ## Jobs (from 8 Oct 2026)
 - `src/sections/jobs.js` + `src/core/jobs.js` (tests `tests/jobs.mjs`); design note
