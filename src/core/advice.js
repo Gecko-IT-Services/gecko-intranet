@@ -100,7 +100,10 @@ export function adviceTopics({ client, device = null, coverage = null, gaps = []
     if (!p || covered.has(p.key)) continue;
     const cat = fromCatalogue(p, client);
     if (!cat.why && !cat.benefits.length) continue;
-    out.push({ key: `product:${p.key}`, source: 'opportunity', productKey: p.key, checked: (g.strength || 0) >= 2,
+    covered.add(p.key);   // each product once
+    // A Proposed deal has had an email already: there, unticked. An idea is ticked like any strong gap; one added by hand, ticked.
+    out.push({ key: `product:${p.key}`, source: 'opportunity', productKey: p.key, deal: g.deal || null, added: !!g.added,
+      checked: !!g.added || (g.deal?.status !== 'proposed' && (g.strength || 0) >= 2),
       title: p.name, subject: String(p.email_subject || p.name).replace(/\{\{client\}\}/g, client),
       why: cat.why, items: (g.findings || []).map(f => ({ name: f, note: '' })), benefits: cat.benefits,
       price: p.unit_price != null && p.unit_price !== '' ? priceSentence(p, {}) : '' });

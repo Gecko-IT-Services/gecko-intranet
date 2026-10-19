@@ -33,3 +33,13 @@ Two principles from Philip while it was built:
 ## Not done
 - No AI second pass to review the email (cost, and the checks catch the known holes deterministically).
 - Product gaps (catalogue findings) can't be left out item by item: they are reasons, not machines; untick the product.
+
+## Selling what's in the pipeline, and anything else (19 Oct 2026, later)
+Philip: "i would like to send cowans an email to go for hornet security, that should be on the list". It had been: drafting an
+advice email turned it into a Proposed deal, and the list dropped every product with an open deal (`withoutOpen`, right for the
+Opportunities page, wrong for a sales email). Now:
+- Open deals stay on Upgrades & advice, marked **Proposed 19 Oct** (unticked: an email has gone once) or **Idea in the pipeline**
+  (ticked like any strong gap). `withDeals()`. The Opportunities page still hides them.
+- **Add a product to sell**: any active catalogue product the client doesn't have (and isn't marked has / not applicable) can be
+  added by hand, ticked, worded from the catalogue. `notHeld()`. A product said no to before can still be added.
+- `adviceTopics` lists each product once.

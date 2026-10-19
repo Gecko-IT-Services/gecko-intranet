@@ -214,7 +214,8 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   19 Oct (`2026-10-19-advice-facts-and-checks-design.md`): a **sales tool** (Philip: "sell gaps in the product range"); machines untick
   one by one (`client_notes.left_out`, `leaveOut`), **What the AI will be told** panel with Selling first (`factsPanel`), and Gecko HQ's
   own check of the AI email (`checkEmail`: tool names, money words, numbers not in the facts, every/all claims, offering what's already
-  backed up, "not urgent"). The setup note is background on the client, not instructions.
+  backed up, "not urgent"). The setup note is background on the client, not instructions. Open deals stay on the list (Proposed / Idea badges, `withDeals`)
+  and any catalogue product they don't have can be added by hand (`notHeld`).
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the
