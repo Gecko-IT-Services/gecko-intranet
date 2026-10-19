@@ -43,7 +43,7 @@ export function comingUp({ annual = [], domains = [], dealer = [], upgrades = []
   for (const d of domains.filter(x => x.expires_on)) {
     const soon = daysUntil(today, d.expires_on) <= 14;
     // Ours to renew: billed as a domain in Xero, or registered through Clook (Gecko's reseller account) for a client we invoice hosting to.
-    const ours = d.billed || (/clook/i.test(d.registrar || '') && (d.sources || []).includes('xero'));
+    const ours = d.billed || (/clook/i.test(d.registrar || '') && (d.sources || []).some(s => s === 'xero' || s === 'hosting'));
     add(LEAD.domain, d.expires_on, ours
       ? { key: `domain:${d.domain}`, kind: 'domain', group: 'protect', client: d.client_name, title: `Renew ${d.domain} for ${d.client_name || 'a client'}`,
           why: `Expires ${longDay(d.expires_on)}${d.registrar ? ` at ${d.registrar}` : ''}; we look after it. A lapsed domain stops their email and website.`, go: `client:contacts:${d.client_name}` }
