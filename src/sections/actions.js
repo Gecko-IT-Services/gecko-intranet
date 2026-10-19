@@ -17,6 +17,8 @@ import { connectSupabase } from '../core/supabase.js';
 import { upgrades } from '../core/upgrades.js';
 import { nextActions, valueText } from '../core/actions.js';
 import { comingUp } from '../core/dates.js';
+import { siteState, seoFee } from '../core/seo.js';
+import { sameClient } from '../core/client.js';
 import { snapshot as reconcileSnapshot } from './reconcile.js';
 
 const NA = { raw: null, missing: [], loading: false, at: 0, ext: {}, all: false, waiting: [] };
@@ -39,17 +41,24 @@ async function load() {
       sb.from('atera_agents').select('customer_name,machine_name,device_type,os,last_seen,last_user,model,raw').then(must),
       sb.from('xero_repeating_invoices').select('repeating_invoice_id,contact_name,status,period,next_date,line_items').gte('period', 11).then(must),
       sb.from('domain_dates').select('*').then(must),
-      sb.from('voip_dealer_services').select('id,client_name,service,quantity,contract_end').then(must)
+      sb.from('voip_dealer_services').select('id,client_name,service,quantity,contract_end').then(must),
+      Promise.all([sb.from('seo_sites').select('*').neq('status', 'paused').then(must),
+        sb.from('seo_checks').select('site_id,checked_at,onpage,pagespeed,error').order('checked_at', { ascending: false }).limit(100).then(must),
+        sb.from('seo_work').select('site_id,done_on,minutes').gte('done_on', new Date(Date.now() - 120 * 86400000).toISOString().slice(0, 10)).then(must),
+        sb.from('xero_repeating_invoices').select('contact_name,status,period,line_items').eq('period', 1).then(must)])
     ]);
-    const [rec, inv, opps, ins, products, agents, annual, domains, dealer] = tries.map(t => (t.status === 'fulfilled' ? t.value : null));
-    const names = ['the reconcile', 'Xero invoices', 'the pipeline', 'What we keep fixing', 'the catalogue', 'Atera devices', 'annual renewals', 'domain dates', 'VoIP contracts'];
+    const [rec, inv, opps, ins, products, agents, annual, domains, dealer, seoRaw] = tries.map(t => (t.status === 'fulfilled' ? t.value : null));
+    const names = ['the reconcile', 'Xero invoices', 'the pipeline', 'What we keep fixing', 'the catalogue', 'Atera devices', 'annual renewals', 'domain dates', 'VoIP contracts', 'SEO'];
     NA.missing = tries.map((t, i) => (t.status === 'rejected' ? `${names[i]} (${t.reason?.message || t.reason})` : null)).filter(Boolean);
     const latest = [];
     for (const i of ins || []) if (!latest.some(x => x.client_name === i.client_name)) latest.push(i);
     const up = agents ? upgrades(agents, today()).clients : [];
     // Dates that come round (core/dates.js): into the list, and kept whole for the Monday brief's Coming up.
     NA.dates = comingUp({ annual: annual || [], domains: domains || [], dealer: dealer || [], upgrades: up, today: today() });
-    NA.raw = { reconcile: rec, overdue: inv || [], opps: opps || [], insights: latest, products: products || [], upgrades: up, dates: NA.dates };
+    const [seoSites, seoChecks, seoWork, monthly] = seoRaw || [[], [], [], []];
+    const seo = seoSites.map(s => siteState(s, { checks: seoChecks.filter(c => c.site_id === s.id), work: seoWork.filter(w => w.site_id === s.id),
+      fee: seoFee(monthly, sameClient, s.client_name), today: today() }));
+    NA.raw = { reconcile: rec, overdue: inv || [], opps: opps || [], insights: latest, products: products || [], upgrades: up, dates: NA.dates, seo };
     NA.at = Date.now();
   } catch (err) {
     NA.raw = null; NA.missing = [`everything (${err.message || err})`];

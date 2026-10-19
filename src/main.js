@@ -32,6 +32,7 @@ import * as tasks from './sections/tasks.js';
 import * as find from './sections/find.js';
 import * as changelog from './sections/changelog.js';
 import * as commands from './sections/commands.js';
+import * as seo from './sections/seo.js';
 import { sameClient } from './core/client.js';
 import * as tabs from './core/tabs.js';
 import * as icons from './core/icons.js';
@@ -63,6 +64,7 @@ window.GeckoSections.coverage = { init: coverage.init };
 window.GeckoSections.reconcile = { init: reconcile.init };
 window.GeckoSections.upgrades = { init: upgradesSection.init };
 window.GeckoSections.commands = { init: commands.init };
+window.GeckoSections.seo = { init: seo.init, open: seo.open };
 window.GeckoSections.analytics = { init: analytics.init, show: analytics.show };
 window.GeckoSections.client = { init: client.init, open: client.open, current: client.current };
 // Overview › Today reads the last day of backups and alerts through these (support@ mailbox).

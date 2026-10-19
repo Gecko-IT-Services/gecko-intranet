@@ -46,7 +46,7 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
   `--red`, `--muted`, `--radius`; fonts Schibsted Grotesk / JetBrains Mono); section
   CSS scoped under `#section-<key>`. `ponytail:` comments mark accepted ceilings.
 - Sidebar (Philip, 9 Oct, 8 entries; Analytics added under Home 10 Oct, so 9): Home (Overview, Analytics) · Sales (Clients, Opportunities, Jobs) · Operations
-  (Timesheets, Monitoring, Commands) · Admin (Team, Settings). Commands (18 Oct) draws `docs/commands.md` like a GitHub README
+  (Timesheets, Monitoring, SEO, Commands) · Admin (Team, Settings). Commands (18 Oct) draws `docs/commands.md` like a GitHub README
   with copy buttons; `{name}` in a code box is a blank to type into (`src/core/markdown.js`, `2026-10-18-commands-design.md`). **Hubs** group sections under one entry with the
   shared tab strip: Clients = Directory + Profitability + Licences + Atera + Reconcile + client page; Monitoring = Backups + Coverage + Alerts + Devices + Upgrades;
   Team = Overview (`src/sections/team.js`: who's in, holiday left as day tokens, next four weeks, hours, mileage to claim)
@@ -237,6 +237,9 @@ the Claude app) during 6–7 Oct 2026. This file is the handoff from that work.
 - Client page › **Network** (19 Oct, `2026-10-19-client-network-design.md`): an automatic Visio-style drawing: sites from Atera's internet
   addresses (named once, `client_sites`), home/remote workers, cloud services; lenses Health / Backups / Antivirus; click a machine for
   details and Help with this; download SVG or print to PDF. `core/network.js`, `sections/network.js`. Network equipment not drawn yet.
+- Operations › **SEO** (19 Oct, `2026-10-20-seo-design.md`): sites we do SEO for (`seo_sites`: ALS active, Clarke Lane setting up, CDA proposed),
+  weekly home-page check (Edge Function `seo-check`, `seo_checks`; PageSpeed scores when `PAGESPEED_API_KEY` is set), findings with the fix
+  (`core/seo.js`), monthly work log (`seo_work`); Do next flags no work by the 15th and sites hidden from Google. Search Console not connected.
 - **VoIP Unlimited: Gecko is both reseller and dealer** (Philip, 8 Oct). Reseller = Gecko bills
   the client (service lines). Dealer = the client buys direct from VoIP Unlimited under the dealer
   account (support@gecko-it.com) and Gecko earns monthly commission, invoiced in Xero to the

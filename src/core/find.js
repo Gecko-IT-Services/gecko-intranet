@@ -34,6 +34,7 @@ export const PAGES = [
   ['Timesheets › Log time', 'timesheets', 'log'], ['Timesheets › SSA dashboard', 'timesheets', 'ssa'], ['Timesheets › Weekly summary', 'timesheets', 'week'],
   ['Monitoring › Backups', 'backups'], ['Monitoring › Coverage', 'coverage'], ['Monitoring › Alerts', 'alerts'], ['Monitoring › Devices', 'devices'], ['Monitoring › Upgrades', 'upgrades'],
   ['Commands', 'commands'],
+  ['SEO', 'seo'],
   ['Team › Overview', 'team'], ['Team › Leave', 'leave'], ['Team › Mileage', 'mileage'],
   ['Settings', 'settings'], ['Settings › Change log', 'settings']
 ].map(([label, section, tab = '']) => ({ label, open: { kind: 'page', section, tab } }));

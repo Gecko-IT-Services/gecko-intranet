@@ -63,4 +63,11 @@ const dated = nextActions({ today, dates: [
   { key: 'renewal:r2', kind: 'renewal', group: 'money', client: 'ALS', title: 'Web Hosting renews for ALS', why: '', value: { gbp: 174, per: 'once' }, days: 10, go: 'client:advice:ALS' },
   { key: 'domain:x', kind: 'domain', group: 'protect', client: 'LS', title: 'Renew lscommercials.co.uk', why: '', value: null, days: 47, go: 'client:contacts:LS' }] });
 assert.deepEqual(dated.map(x => [x.key, x.group]), [['date:domain:x', 'protect'], ['date:renewal:r2', 'money'], ['date:renewal:r1', 'money']]);
+// SEO: a hidden site is protect; an active client with nothing logged by the 15th, with its fee.
+const seoA = nextActions({ today, seo: [
+  { site: { id: 1, client_name: 'ALS Locksmiths', domain: 'newforestlocksmith.com', status: 'active' }, findings: [], flags: ['no-work'], fee: 500, lastWork: { done_on: '2026-09-20' } },
+  { site: { id: 2, client_name: 'Clarke Lane Engineering', domain: 'clarke-lane.co.uk', status: 'setup' }, findings: [{ level: 'red', text: 'It tells Google not to list it (noindex)', fix: 'Turn it off' }], flags: ['problem'], fee: 0 },
+  { site: { id: 3, client_name: 'CDA Ltd', domain: 'cdaluminium.uk.com', status: 'proposed' }, findings: [{ level: 'red', text: 'x', fix: 'y' }], flags: ['problem'], fee: 0 }] });
+assert.deepEqual(seoA.map(x => [x.key, x.group, valueText(x.value)]), [['seo-problem:2', 'protect', ''], ['seo-work:1', 'money', '£500 a month']], 'a proposed site’s problems are a sales point, not a task');
+assert.equal(seoA[1].title, 'Do this month’s SEO for ALS Locksmiths');
 console.log('actions: ok');
