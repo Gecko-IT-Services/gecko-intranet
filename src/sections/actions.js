@@ -16,6 +16,7 @@ import { escapeHtml, clientLink } from '../core/ui.js';
 import { connectSupabase } from '../core/supabase.js';
 import { upgrades } from '../core/upgrades.js';
 import { nextActions, valueText } from '../core/actions.js';
+import { comingUp } from '../core/dates.js';
 import { snapshot as reconcileSnapshot } from './reconcile.js';
 
 const NA = { raw: null, missing: [], loading: false, at: 0, ext: {}, all: false, waiting: [] };
@@ -35,15 +36,20 @@ async function load() {
       sb.from('opportunities').select('id,client_name,product_key,title,status,mrr,one_off,modified_at,follow_up_on').in('status', ['idea', 'proposed', 'won']).then(must),
       sb.from('client_insights').select('client_name,data,created_at').eq('kind', 'evidence').order('created_at', { ascending: false }).then(must),
       sb.from('opportunity_products').select('key,name,active,default_mrr,default_one_off').then(must),
-      sb.from('atera_agents').select('customer_name,machine_name,device_type,os,last_seen,last_user,model,raw').then(must)
+      sb.from('atera_agents').select('customer_name,machine_name,device_type,os,last_seen,last_user,model,raw').then(must),
+      sb.from('xero_repeating_invoices').select('repeating_invoice_id,contact_name,status,period,next_date,line_items').gte('period', 11).then(must),
+      sb.from('domain_dates').select('*').then(must),
+      sb.from('voip_dealer_services').select('id,client_name,service,quantity,contract_end').then(must)
     ]);
-    const [rec, inv, opps, ins, products, agents] = tries.map(t => (t.status === 'fulfilled' ? t.value : null));
-    const names = ['the reconcile', 'Xero invoices', 'the pipeline', 'What we keep fixing', 'the catalogue', 'Atera devices'];
+    const [rec, inv, opps, ins, products, agents, annual, domains, dealer] = tries.map(t => (t.status === 'fulfilled' ? t.value : null));
+    const names = ['the reconcile', 'Xero invoices', 'the pipeline', 'What we keep fixing', 'the catalogue', 'Atera devices', 'annual renewals', 'domain dates', 'VoIP contracts'];
     NA.missing = tries.map((t, i) => (t.status === 'rejected' ? `${names[i]} (${t.reason?.message || t.reason})` : null)).filter(Boolean);
     const latest = [];
     for (const i of ins || []) if (!latest.some(x => x.client_name === i.client_name)) latest.push(i);
-    NA.raw = { reconcile: rec, overdue: inv || [], opps: opps || [], insights: latest, products: products || [],
-      upgrades: agents ? upgrades(agents, today()).clients : [] };
+    const up = agents ? upgrades(agents, today()).clients : [];
+    // Dates that come round (core/dates.js): into the list, and kept whole for the Monday brief's Coming up.
+    NA.dates = comingUp({ annual: annual || [], domains: domains || [], dealer: dealer || [], upgrades: up, today: today() });
+    NA.raw = { reconcile: rec, overdue: inv || [], opps: opps || [], insights: latest, products: products || [], upgrades: up, dates: NA.dates };
     NA.at = Date.now();
   } catch (err) {
     NA.raw = null; NA.missing = [`everything (${err.message || err})`];
@@ -86,7 +92,7 @@ export function html(ext = {}) {
 
 /** The list as it stands, for the Monday brief: { list, missing }, or null before the first read. */
 export function current() {
-  return NA.raw || NA.missing.length ? { list: NA.raw ? nextActions({ ...NA.raw, ...NA.ext, today: today() }) : [], missing: NA.missing } : null;
+  return NA.raw || NA.missing.length ? { list: NA.raw ? nextActions({ ...NA.raw, ...NA.ext, today: today() }) : [], dates: NA.dates || [], missing: NA.missing } : null;
 }
 /** Resolves once the first read has finished (at once if it has). */
 export const whenReady = () => (NA.raw || (!NA.loading && NA.missing.length) ? Promise.resolve() : new Promise(r => NA.waiting.push(r)));

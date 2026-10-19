@@ -62,7 +62,7 @@ async function make(input, { auto = false } = {}) {
     }
     await Promise.race([whenReady(), new Promise(r => setTimeout(r, 20000))]);
     const a = current();
-    const { subject, html } = mondayBrief({ ...input, actions: a?.list || [], missing: [...(input.missing || []), ...(a ? a.missing : ['Do next'])] });
+    const { subject, html } = mondayBrief({ ...input, actions: (a?.list || []).filter(x => !x.key.startsWith('date:')), dates: a?.dates || [], missing: [...(input.missing || []), ...(a ? a.missing : ['Do next'])] });
     await graphFetch('/me/messages', { method: 'POST', scopes: ['Mail.ReadWrite'], interactive: !auto,
       body: JSON.stringify({ subject, body: { contentType: 'HTML', content: html }, toRecipients: [{ emailAddress: { address: input.email } }] }) });
     const at = new Date().toISOString();

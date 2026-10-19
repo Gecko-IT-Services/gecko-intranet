@@ -25,7 +25,7 @@ export function weekKey(today) {
  * weekReview() for last week; ahead: core/overview.js thisWeek() for this week; attention: core/overview.js attention() items (tasks
  * and info left out here); missing: sources that weren't read (named, so a short brief never passes for a quiet week); url: Gecko HQ.
  */
-export function mondayBrief({ today, first = '', actions = [], last = null, ahead = null, attention = [], missing = [], url = '' }) {
+export function mondayBrief({ today, first = '', actions = [], dates = [], last = null, ahead = null, attention = [], missing = [], url = '' }) {
   const parts = [];
   const section = (title, items) => { if (items.length) parts.push(`<h3>${esc(title)}</h3><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul>`); };
 
@@ -56,6 +56,9 @@ export function mondayBrief({ today, first = '', actions = [], last = null, ahea
     if (ahead.goingOut?.count) items.push(`${plural(ahead.goingOut.count, 'repeating invoice')} going out, ${gbp(ahead.goingOut.value)}.`);
     section('This week', items);
   }
+
+  // Dates that come round (core/dates.js), soonest first, with how long is left.
+  section('Coming up', dates.slice(0, 12).map(d => `<strong>${esc(dayName(d.date))}</strong> (${d.days === 0 ? 'today' : d.days === 1 ? 'tomorrow' : `in ${d.days} days`}): ${esc(d.title)}${d.value ? ` · ${esc(valueText(d.value))}` : ''}`));
 
   section('Needs a look', attention.filter(i => !i.task && i.level !== 'info').slice(0, 8).map(i => `${i.level === 'red' ? '<strong>' : ''}${esc(i.title)}${i.level === 'red' ? '</strong>' : ''}${i.detail ? `: ${esc(i.detail)}` : ''}`));
 

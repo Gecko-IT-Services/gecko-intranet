@@ -29,4 +29,7 @@ assert.doesNotMatch(b.html, /FYI/, 'info and tasks left out');
 const quiet = mondayBrief({ today: '2026-10-26' });
 assert.match(quiet.html, /Nothing to chase, bill or protect/);
 assert.match(mondayBrief({ today: '2026-10-26', actions: Array.from({ length: 12 }, (_, i) => ({ title: `A${i}`, why: '' })) }).html, /Do next \(top 8 of 12\)/);
+const withDates = mondayBrief({ today: '2026-10-26', dates: [{ date: '2026-10-28', days: 2, title: 'cowanconsult.co.uk expires 28 Oct 2026' },
+  { date: '2026-12-01', days: 36, title: 'Web Hosting renews for CDA Ltd', value: { gbp: 174, per: 'once' } }] });
+assert.match(withDates.html, /<h3>Coming up<\/h3><ul><li><strong>Wed 28 Oct<\/strong> \(in 2 days\): cowanconsult\.co\.uk expires 28 Oct 2026<\/li><li><strong>Tue 1 Dec<\/strong> \(in 36 days\): Web Hosting renews for CDA Ltd · £174 one-off<\/li><\/ul>/);
 console.log('brief: ok');
