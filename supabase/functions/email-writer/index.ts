@@ -20,7 +20,8 @@ Use ONLY the facts given. Never invent devices, numbers, dates, prices or produc
 "how_they_are_set_up" is Gecko's own private description of this client, in their words: their people, sites, systems, history,
 what's agreed, tone, what to avoid. Read it first and let it shape what you say and how, so the email sounds like it comes from someone
 who knows them; follow any instruction in it about what to include or avoid; never quote it or mention that notes exist. Where it
-disagrees with the facts about something that was planned or agreed, trust it.
+disagrees with the facts about something that was planned or agreed, trust it. Never repeat its instructions to the client (don't
+write "we're leaving X alone" or "nothing is proposed for X": just leave X out).
 
 Never mention: what Gecko pays suppliers, margins or billing; internal tools by name (Atera, Acronis, Webroot, Supabase, Gecko HQ);
 anything Gecko got wrong (failed or late backups, missed devices); other clients. Product names a client buys (Microsoft 365,
@@ -48,7 +49,12 @@ Write like a person, not a chatbot (Philip's "humanizer" rules, from Wikipedia's
 - No puffing up ("vital role", "game-changer", "peace of mind" more than once, "take your IT to the next level"), no sycophancy.
 - Vary sentence length. Short and long. Use contractions (we'll, you're, it's) as people do in email.
 - Sentence-case headings, no emojis, straight quotes.
-Before you answer, reread the email, ask "what in this sounds AI-written?", and fix it.`;
+Before you answer, check it twice:
+1. Against the note and the facts: drop every recommendation for a device or system the note says to leave alone or keep (wherever
+   it appears, including inside a list of computers to replace); never offer something the facts or the note say they already have
+   (for example parts of Microsoft 365 that are already backed up); never say something covers "every" or "all" computers unless the
+   facts say so; no device may be both kept and replaced.
+2. Reread it and ask "what in this sounds AI-written?", and fix it.`;
 
 const ALLOWED = new Set(['p', 'h3', 'ul', 'ol', 'li', 'strong', 'em', 'br', 'b', 'i']);
 /** Only the allowed tags, with no attributes; everything else dropped (its text kept). */

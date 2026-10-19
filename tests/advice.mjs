@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { fromCatalogue, adviceTopics, composeEmail, emailAuth, servicesFrom, summaryFacts, adviceFacts } from '../src/core/advice.js';
+import { fromCatalogue, adviceTopics, composeEmail, emailAuth, servicesFrom, summaryFacts, adviceFacts, withM365Cover } from '../src/core/advice.js';
 
 // Catalogue wording as it is in opportunity_products (18 Oct 2026, shortened).
 const keeper = { key: 'keeper', name: 'Keeper password manager', unit_price: null, price_unit: 'user', email_subject: 'A safer, simpler way to manage passwords at {{client}}',
@@ -78,5 +78,20 @@ assert.deepEqual(sf.protection.nightlyBackups, [{ machine: 'SagePC', lastGoodBac
 assert.deepEqual(sf.microsoft365, { accounts: 15, backedUp: ['SharePoint sites', 'Teams'], notBackedUp: ['email', 'OneDrive'] });
 assert.doesNotMatch(JSON.stringify(sf), /Atera|Acronis|Webroot|margin|cost/i, 'nothing internal in the facts');
 assert.equal(adviceFacts(pick).recommendations.length, pick.length);
+assert.equal(sf.protection.antivirusOnEveryComputer, false, 'a yes with no count never becomes "every computer"');
+const sfAv = n => summaryFacts({ agents, today: '2026-10-19', antivirus: n }).protection;
+assert.deepEqual([sfAv(17).antivirusOnEveryComputer, sfAv(3).antivirusOnEveryComputer, sfAv(2).antivirusOnEveryComputer, sfAv(0).managedAntivirus], [true, true, false, false],
+  '3 computers in use: 3 covered is every one, 2 is not');
+
+// — Microsoft 365 backup offered only for what isn't covered (Cowans, 19 Oct 2026). —
+const m365b = { key: 'product:m365_backup', productKey: 'm365_backup', title: 'Microsoft 365 backup (Acronis)', items: [],
+  benefits: ['Every mailbox, OneDrive, SharePoint site and Teams backed up automatically, every day', 'Copies kept separately from Microsoft, in UK data centres'] };
+const [cov] = withM365Cover([m365b], { sharepoint: true, teams: true, mailboxes: false, onedrive: false });
+assert.equal(cov.title, 'Backing up email and OneDrive');
+assert.deepEqual(cov.items, [{ name: 'Already backed up', note: 'SharePoint sites and Teams' }, { name: 'Not backed up yet', note: 'email and OneDrive' }]);
+assert.deepEqual(cov.benefits, ['Email and OneDrive backed up automatically every day, alongside the SharePoint sites and Teams we already back up', 'Copies kept separately from Microsoft, in UK data centres']);
+assert.deepEqual(withM365Cover([m365b], { sharepoint: true, teams: true, mailboxes: true, onedrive: true }), [], 'all covered: nothing to offer');
+assert.equal(withM365Cover([m365b], null)[0], m365b, 'unknown: unchanged');
+assert.match(adviceTopics({ client: 'X', device }).find(t => t.key === 'office').why, /Office 2021 and older/);
 
 console.log('advice: ok');

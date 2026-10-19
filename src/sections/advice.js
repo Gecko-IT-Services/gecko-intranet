@@ -15,7 +15,7 @@
 import { toast, escapeHtml } from '../core/ui.js';
 import { graphFetch } from '../core/graph.js';
 import { connectSupabase } from '../core/supabase.js';
-import { adviceTopics, composeEmail, summaryFacts, adviceFacts, emailAuth, servicesFrom } from '../core/advice.js';
+import { adviceTopics, composeEmail, summaryFacts, adviceFacts, emailAuth, servicesFrom, withM365Cover } from '../core/advice.js';
 import { upgrades } from '../core/upgrades.js';
 import { coverage, coverageFor } from '../core/coverage.js';
 import { sameAteraClient } from '../core/devices.js';
@@ -56,7 +56,6 @@ async function load(name) {
     if (AD.client !== name) return;
     const up = upgrades(agents.filter(a => same(a.customer_name, name)), today()).clients[0] || null;
     const cov = coverageFor(coverage(tenants, items, agents, new Date()), name);
-    const topics = adviceTopics({ client: name, device: up, coverage: cov, gaps: opp.gaps, products: opp.products });
     const main = mainContact(contacts.filter(c => same(c.client_name, name)), opp.contact ? { name: opp.contactName, email: opp.contact } : null);
     const note = notes.find(n => n.client_name === name) || notes.find(n => same(n.client_name, name));
     AD.note = AD.noteSaved = note?.setup || '';
@@ -70,10 +69,11 @@ async function load(name) {
       m365: use('pw_base_m365_seats') ? { accounts: use('pw_base_m365_seats'), sharepoint: use('pw_base_m365_sharepoint_sites') > 0, teams: use('pw_base_m365_teams') > 0,
         mailboxes: use('protected_mailbox_storage') > 0, onedrive: use('protected_one_drive_storage') > 0 } : null
     } : null;
+    const topics = withM365Cover(adviceTopics({ client: name, device: up, coverage: cov, gaps: opp.gaps, products: opp.products }), acronis?.m365 || null);
     const lines = repeating.filter(r => same(r.contact_name, name)).flatMap(r => r.line_items || []);
     const site = sites.find(x => same(x.name, name) && x.raw?.Deactivated !== true && Number(x.raw?.TotalEndpoints) > 0);
     const myAgents = agents.filter(a => same(a.customer_name, name));
-    AD.data = { topics, main, facts: { agents: myAgents, device: up, acronis, antivirus: !!site, services: servicesFrom(lines) } };
+    AD.data = { topics, main, facts: { agents: myAgents, device: up, acronis, antivirus: site ? Number(site.raw?.TotalEndpoints) || true : 0, services: servicesFrom(lines) } };
     emailCheck(main?.email);
     for (const t of topics) AD.ticked.set(t.key, t.checked);
   } catch (err) {
@@ -162,7 +162,7 @@ async function writeWithAi(kind) {
   if (AD.note !== AD.noteSaved) await saveNote();
   const f = AD.data.facts;
   const facts = kind === 'summary'
-    ? summaryFacts({ ...f, email: AD.data.email || null, topics: AD.data.topics.filter(t => t.key !== 'update' || AD.ticked.get(t.key)), today: today() })
+    ? summaryFacts({ ...f, email: AD.data.email || null, topics: chosen(), today: today() })   // the ticked topics, so unticking one keeps it out of the AI email too
     : adviceFacts(chosen());
   AD.writing = kind; AD.subject = ''; draw();
   try {
